@@ -102,12 +102,12 @@ class CommentsNewsFilter extends NewsFilter {
 		//	* style == full
 		//  * emulate == false
 		//  * plugin == not set
-		 if (!(($mode['style'] == 'full') && (!$mode['emulate']) && (!isset($mode['plugin'])))) {
-      // No, we don't need to show comments
-      $tvars['vars']['plugin_comments'] = '';
+		if (!(($mode['style'] == 'full') && (!$mode['emulate']) && (!isset($mode['plugin'])))) {
+                // No, we don't need to show comments
+                $tvars['vars']['plugin_comments'] = '';
 
-      return 1;
-    }
+                return 1;
+                }
 		// ******************************************** //
 		// Yeah, let's show comments here
 		// ******************************************** //
