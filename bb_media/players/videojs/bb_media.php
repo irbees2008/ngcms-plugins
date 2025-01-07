@@ -1,14 +1,19 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die ('HAL');
+
 add_act('index', 'bbMediaInclude');
+
 function bbMediaInclude() {
 
-	register_htmlvar('css', admin_url . '/plugins/bb_media/players/videojs/lib/video-js.min.css');
-	register_htmlvar('js', admin_url . '/plugins/bb_media/players/videojs/lib/ie8/videojs-ie8.min.js');
-	register_htmlvar('js', admin_url . '/plugins/bb_media/players/videojs/lib/video.min.js');
-	register_htmlvar('plain', '<script> videojs.options.flash.swf = "' . admin_url . '/plugins/bb_media/players/videojs/lib/video-js.swf"; </script>');
+	register_htmlvar('css', admin_url . '/plugins/bb_media/players/videojs/lib/video-js.css');
+	register_htmlvar('css', admin_url . '/plugins/bb_media/players/videojs/lib/themes/'.pluginGetVariable('bb_media', 'theme_player').'.css');
+	
+	register_htmlvar('js', admin_url . '/plugins/bb_media/players/videojs/lib/video.js');
+	register_htmlvar('js', admin_url . '/plugins/bb_media/players/videojs/lib/lang/ru.js');
+
 	register_htmlvar('js', admin_url . '/plugins/bb_media/players/videojs/lib/plugins/youtube/youtube.min.js');
+
 }
 
 function bbMediaProcess($content) {
@@ -148,7 +153,10 @@ function bbMediaProcess($content) {
 			} else {
 				$poster = "";
 			}
-			array_push($rdest, "<video class='video-js vjs-default-skin vjs-big-play-centered' " . (implode(' ', $outkeys)) . " " . $poster . " data-setup='" . $data_setup . "'>" . $src . "</video>");
+			
+			$theme_player = pluginGetVariable('bb_media', 'theme_player');
+			
+			array_push($rdest, "<video class='video-js vjs-theme-".$theme_player."' " . (implode(' ', $outkeys)) . " " . $poster . " data-setup='" . $data_setup . "'>" . $src . "</video>");
 		}
 
 		return str_replace($rsrc, $rdest, $content);

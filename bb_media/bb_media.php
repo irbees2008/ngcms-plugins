@@ -30,6 +30,25 @@ class BBmediaNewsfilter extends NewsFilter {
 	}
 }
 
+class BBmediaStaticFilter extends StaticFilter {
+	
+	public function __construct() {
+
+		$player_name = pluginGetVariable('bb_media', 'player_name');
+		$player_handler = __DIR__ . '/players/' . $player_name . '/bb_media.php';
+		if (file_exists($player_handler)) {
+			include_once($player_handler);
+		}
+	}
+	
+	public function showStatic($staticID, $SQLstatic, &$tvars, $mode) {
+		if (($t = bbMediaProcess($tvars['content'])) !== false) {
+			$tvars['content'] = $t;
+		}
+	}
+}
+
 // Preload plugin tags
+register_filter('static','bb_media', new BBmediaStaticFilter);
 register_filter('news', 'bb_media', new BBmediaNewsFilter);
 
