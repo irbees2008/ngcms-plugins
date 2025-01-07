@@ -1,0 +1,19 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ 
+ID: uprofile_del
+Name: Удаление профиля
+Version: 0.1
+Acts: ppages, plugin.uprofile
+File: uprofile_del.php
+Install: install.php
+Deinstall: deinstall.php
+Type: plugin
+Description: Возможность пользователю удалить свой аккаунт с сайта
+Author: KachalkinGeorg
+Author_URI: 
+Icon: <i class='fa fa-user-times fa-2x'></i>
+Title: Удаление профиля
+Information: Пользователь сайта может удалить свой профиль.
+Preinstall: no
