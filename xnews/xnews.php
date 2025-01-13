@@ -163,7 +163,7 @@ function xNewsShowBlock($params) {
 		//print "categoryList [".var_export($categoryList, true)."]";
 		$catFilter = array();
 		foreach ($categoryList as $cat) {
-			$catFilter [] = "(catid regexp '[[:<:]](" . trim($cat) . ")[[:>:]]')";
+			$catFilter[] = "(catid regexp '\\\\b(" . trim($cat) . ")\\\\b')";
 		}
 		$filterList [] = '(' . join(' OR ', $catFilter) . ')';
 	}

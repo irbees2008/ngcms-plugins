@@ -289,7 +289,7 @@ final class XFilter
 
         // Generate the list of categories excluding 'skipcat' list.
         foreach ($this->skippedCategories as $skip) {
-            $this->addToFilter('SQL', "`catid` NOT REGEXP '[[:<:]](".$skip.")[[:>:]]'");
+            $this->addToFilter('SQL', "`catid` NOT REGEXP '\\\\b(" . $skip . ")\\\\b'");
         }
 
         foreach ($this->requested as $k => $v) {
@@ -477,7 +477,7 @@ final class XFilter
                         FROM ".prefix."_news
                         WHERE `xfields_$id` != '' ".
                             ($this->category
-                                ? " AND `catid` REGEXP '[[:<:]](".$this->category.")[[:>:]]'"
+                            ? " AND `catid` REGEXP '\\\\b(" . $this->category . ")\\\\b'"
                                 : '')."
                         GROUP BY xtext
                         ORDER BY xtext ASC"

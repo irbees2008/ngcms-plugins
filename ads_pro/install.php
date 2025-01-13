@@ -1,30 +1,39 @@
 <?php
-if (!defined('NGCMS')) die ('HAL');
-function plugin_ads_pro_install($action) {
+if (!defined('NGCMS')) {
+	die('HAL');
+}
 
-	$db_create = array(
-		array(
+function plugin_ads_pro_install($action)
+{
+	$db_create = [
+		[
 			'table'  => 'ads_pro',
 			'action' => 'cmodify',
-			'key'    => 'primary key (id)',
-			'fields' => array(
-				array('action' => 'cmodify', 'name' => 'id', 'type' => 'int(11)', 'params' => 'UNSIGNED NOT NULL AUTO_INCREMENT'),
-				array('action' => 'cmodify', 'name' => 'ads_blok', 'type' => 'text', 'params' => 'NOT NULL')
-			)
-		)
-	);
+			'key'    => 'PRIMARY KEY (id)',
+			'fields' => [
+				['action' => 'cmodify', 'name' => 'id', 'type' => 'INT(11)', 'params' => 'UNSIGNED NOT NULL AUTO_INCREMENT'],
+				['action' => 'cmodify', 'name' => 'ads_blok', 'type' => 'TEXT', 'params' => 'NOT NULL'],
+			],
+		],
+	];
+
 	switch ($action) {
 		case 'confirm':
-			generate_install_page('ads_pro', 'Cейчас плагин будет установлен');
+			generate_install_page('ads_pro', 'Сейчас плагин будет установлен');
 			break;
+
 		case 'autoapply':
 		case 'apply':
-			if (fixdb_plugin_install('ads_pro', $db_create, 'install', ($action == 'autoapply') ? true : false)) {
+			$autoApply = ($action === 'autoapply');
+			if (fixdb_plugin_install('ads_pro', $db_create, 'install', $autoApply)) {
 				plugin_mark_installed('ads_pro');
 			} else {
 				return false;
 			}
 			break;
+
+		default:
+			return false; // Обработка неизвестного действия
 	}
 
 	return true;

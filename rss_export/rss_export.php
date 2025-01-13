@@ -52,7 +52,7 @@ function plugin_rss_export_generate($catname = '') {
 	setlocale(LC_TIME, 'en_EN');
 	if (is_array($xcat)) {
 		$orderBy = ($xcat['orderby'] && in_array($xcat['orderby'], array('id desc', 'id asc', 'postdate desc', 'postdate asc', 'title desc', 'title asc'))) ? $xcat['orderby'] : 'id desc';
-		$query = "select * from " . prefix . "_news where catid regexp '[[:<:]](" . $xcat['id'] . ")[[:>:]]' and approve=1 " . (($delay > 0) ? (" and ((postdate + " . intval($delay * 60) . ") < unix_timestamp(now())) ") : '') . "order by " . $orderBy;
+		$query = "select * from " . prefix . "_news where catid regexp '\\\\b(" . $xcat['id'] . ")\\\\b' and approve=1 " . (($delay > 0) ? (" and ((postdate + " . intval($delay * 60) . ") < unix_timestamp(now())) ") : '') . "order by " . $orderBy;
 	} else {
 		$query = "select * from " . prefix . "_news where approve=1" . (($delay > 0) ? (" and ((postdate + " . intval($delay * 60) . ") < unix_timestamp(now())) ") : '') . " order by id desc";
 	}
