@@ -24,8 +24,8 @@ function plugin_gallery_install($action)
                 ['action' => 'cmodify', 'name' => 'icon', 'type' => 'varchar(255)', 'params' => "default ''"],
                 ['action' => 'cmodify', 'name' => 'name', 'type' => 'varchar(255)', 'params' => "default ''"],
                 ['action' => 'cmodify', 'name' => 'title', 'type' => 'varchar(50)', 'params' => "default ''"],
-                ['action' => 'cmodify', 'name' => 'description', 'type' => 'text', 'params' => "default ''"],
-                ['action' => 'cmodify', 'name' => 'keywords', 'type' => 'text', 'params' => "default ''"],
+                ['action' => 'cmodify', 'name' => 'description', 'type' => 'text'],
+                ['action' => 'cmodify', 'name' => 'keywords', 'type' => 'text'],
                 ['action' => 'cmodify', 'name' => 'position', 'type' => 'int(11)', 'params' => 'default 0'],
                 ['action' => 'cmodify', 'name' => 'images_count', 'type' => 'smallint(3)', 'params' => 'default 12'],
                 ['action' => 'cmodify', 'name' => 'if_active', 'type' => 'tinyint(1)', 'params' => 'default 0'],
@@ -56,20 +56,21 @@ function plugin_gallery_install($action)
     $ULIB->registerCommand(
         'gallery',
         '',
-        ['vars' => [
-            '' => [
-                'matchRegex' => '.+?',
-                'descr' => [
-                    $config['default_lang'] => $lang['gallery:ULIB_main'],
+        [
+            'vars' => [
+                '' => [
+                    'matchRegex' => '.+?',
+                    'descr' => [
+                        $config['default_lang'] => $lang['gallery:ULIB_main'],
+                    ],
+                ],
+                'page' => [
+                    'matchRegex' => '\d{1,4}',
+                    'descr' => [
+                        $config['default_lang'] => $lang['gallery:ULIB_page'],
+                    ],
                 ],
             ],
-            'page' => [
-                'matchRegex' => '\d{1,4}',
-                'descr' => [
-                    $config['default_lang'] => $lang['gallery:ULIB_page'],
-                ],
-            ],
-        ],
             'descr' => [$config['default_lang'] => $lang['gallery:ULIB_main_d']],
         ]
     );
@@ -77,26 +78,27 @@ function plugin_gallery_install($action)
     $ULIB->registerCommand(
         'gallery',
         'gallery',
-        ['vars' => [
-            'name' => [
-                'matchRegex' => '.+?',
-                'descr' => [
-                    $config['default_lang'] => $lang['gallery:ULIB_name'],
+        [
+            'vars' => [
+                'name' => [
+                    'matchRegex' => '.+?',
+                    'descr' => [
+                        $config['default_lang'] => $lang['gallery:ULIB_name'],
+                    ],
+                ],
+                'id' => [
+                    'matchRegex' => '\d{1,4}',
+                    'descr' => [
+                        $config['default_lang'] => $lang['gallery:ULIB_id'],
+                    ],
+                ],
+                'page' => [
+                    'matchRegex' => '\d{1,4}',
+                    'descr' => [
+                        $config['default_lang'] => $lang['gallery:ULIB_page'],
+                    ],
                 ],
             ],
-            'id' => [
-                'matchRegex' => '\d{1,4}',
-                'descr' => [
-                    $config['default_lang'] => $lang['gallery:ULIB_id'],
-                ],
-            ],
-            'page' => [
-                'matchRegex' => '\d{1,4}',
-                'descr' => [
-                    $config['default_lang'] => $lang['gallery:ULIB_page'],
-                ],
-            ],
-        ],
             'descr' => [$config['default_lang'] => $lang['gallery:ULIB_gallery_d']],
         ]
     );
@@ -104,26 +106,27 @@ function plugin_gallery_install($action)
     $ULIB->registerCommand(
         'gallery',
         'image',
-        ['vars' => [
-            'gallery' => [
-                'matchRegex' => '.+?',
-                'descr' => [
-                    $config['default_lang'] => $lang['gallery:ULIB_name'],
+        [
+            'vars' => [
+                'gallery' => [
+                    'matchRegex' => '.+?',
+                    'descr' => [
+                        $config['default_lang'] => $lang['gallery:ULIB_name'],
+                    ],
+                ],
+                'name' => [
+                    'matchRegex' => '.+?',
+                    'descr' => [
+                        $config['default_lang'] => $lang['gallery:ULIB_image_name'],
+                    ],
+                ],
+                'id' => [
+                    'matchRegex' => '\d{1,4}',
+                    'descr' => [
+                        $config['default_lang'] => $lang['gallery:ULIB_image_id'],
+                    ],
                 ],
             ],
-            'name' => [
-                'matchRegex' => '.+?',
-                'descr' => [
-                    $config['default_lang'] => $lang['gallery:ULIB_image_name'],
-                ],
-            ],
-            'id' => [
-                'matchRegex' => '\d{1,4}',
-                'descr' => [
-                    $config['default_lang'] => $lang['gallery:ULIB_image_id'],
-                ],
-            ],
-        ],
             'descr' => [$config['default_lang'] => $lang['gallery:ULIB_image_d']],
         ]
     );
@@ -131,26 +134,27 @@ function plugin_gallery_install($action)
     $ULIB->registerCommand(
         'gallery',
         'widget',
-        ['vars' => [
-            'name' => [
-                'matchRegex' => '.+?',
-                'descr' => [
-                    $config['default_lang'] => $lang['gallery:label_widget_name'],
+        [
+            'vars' => [
+                'name' => [
+                    'matchRegex' => '.+?',
+                    'descr' => [
+                        $config['default_lang'] => $lang['gallery:label_widget_name'],
+                    ],
+                ],
+                'id' => [
+                    'matchRegex' => '\d{1,4}',
+                    'descr' => [
+                        $config['default_lang'] => 'Код виджета',
+                    ],
+                ],
+                'sort' => [
+                    'matchRegex' => '\d{1,4}',
+                    'descr' => [
+                        $config['default_lang'] => 'Сортировка',
+                    ],
                 ],
             ],
-            'id' => [
-                'matchRegex' => '\d{1,4}',
-                'descr' => [
-                    $config['default_lang'] => 'Код виджета',
-                ],
-            ],
-            'sort' => [
-                'matchRegex' => '\d{1,4}',
-                'descr' => [
-                    $config['default_lang'] => 'Сортировка',
-                ],
-            ],
-        ],
             'descr' => [$config['default_lang'] => $lang['gallery:ULIB_gallery_d']],
         ]
     );
@@ -172,10 +176,8 @@ function plugin_gallery_install($action)
                     1 => 'name',
                     2 => 'page',
                 ],
-                'reqCheck' => [
-                ],
-                'setVars' => [
-                ],
+                'reqCheck' => [],
+                'setVars' => [],
                 'genrMAP' => [
                     0 => [
                         0 => 0,
@@ -223,10 +225,8 @@ function plugin_gallery_install($action)
                     2 => 'name',
                     3 => 'page',
                 ],
-                'reqCheck' => [
-                ],
-                'setVars' => [
-                ],
+                'reqCheck' => [],
+                'setVars' => [],
                 'genrMAP' => [
                     0 => [
                         0 => 0,
@@ -282,10 +282,8 @@ function plugin_gallery_install($action)
                 'regexMap' => [
                     1 => 'page',
                 ],
-                'reqCheck' => [
-                ],
-                'setVars' => [
-                ],
+                'reqCheck' => [],
+                'setVars' => [],
                 'genrMAP' => [
                     0 => [
                         0 => 0,
@@ -322,17 +320,19 @@ function plugin_gallery_install($action)
             if (fixdb_plugin_install('gallery', $db_update, 'install', ('autoapply' === $action) ? true : false)) {
 
                 // Обновляем поле module в комментариях, если не задано
-                $mysql->query('update '.prefix."_comments set module='news' where module=''");
+                $mysql->query('update ' . prefix . "_comments set module='news' where module=''");
 
                 // Set default values if values are not set [for new variables]
-                foreach ([
-                    'if_description' => 1,
-                    'if_keywords' => 1,
-                    'galleries_count' => 6,
-                    'skin' => 'basic',
-                    'cache' => 1,
-                    'cache_expire' => 60,
-                ] as $k => $v) {
+                foreach (
+                    [
+                        'if_description' => 1,
+                        'if_keywords' => 1,
+                        'galleries_count' => 6,
+                        'skin' => 'basic',
+                        'cache' => 1,
+                        'cache_expire' => 60,
+                    ] as $k => $v
+                ) {
                     pluginSetVariable('gallery', $k, $v);
                 }
 
