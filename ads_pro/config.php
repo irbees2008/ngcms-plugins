@@ -37,8 +37,7 @@ switch ($_REQUEST['action']) {
 	default:
 		main();
 }
-function main()
-{
+function main() {
 
 	global $tpl, $lang;
 	$tpath = locatePluginTemplates(array('conf.main', 'conf.general'), 'ads_pro', 1);
@@ -65,8 +64,7 @@ function main()
 	print $tpl->show('conf.main');
 }
 
-function main_submit()
-{
+function main_submit() {
 
 	global $tpl, $lang;
 	$chg = 0;
@@ -91,8 +89,7 @@ function main_submit()
 	main();
 }
 
-function showlist()
-{
+function showlist() {
 
 	global $tpl, $lang;
 	$tpath = locatePluginTemplates(array('conf.main', 'conf.list', 'conf.list.row'), 'ads_pro', 1);
@@ -129,8 +126,7 @@ function showlist()
 	print $tpl->show('conf.main');
 }
 
-function add()
-{
+function add() {
 
 	global $mysql, $tpl, $lang;
 	$PluginsList = getPluginsActiveList();
@@ -146,7 +142,7 @@ function add()
 				if ($id == $kk) {
 					$var = $vv;
 					$name = $k ? $k : '';
-					break (2);
+					break(2);
 				}
 			}
 		}
@@ -242,20 +238,23 @@ function add()
 	print $tpl->show('conf.main');
 }
 
-function add_submit()
-{
+function add_submit() {
 
 	global $mysql, $parse, $lang;
 	$id = isset($_REQUEST['id']) ? intval($_REQUEST['id']) : 0;
 	$name = $parse->translit(trim(secure_html(convert($_REQUEST['name']))));
 	if (!$name) $name = 0;
-	$description = trim(secure_html(convert($_REQUEST['description'])));
+	$description = trim(secure_html($_REQUEST['description']));
 	$type = intval($_REQUEST['type']);
-	$location = $_REQUEST['location'];
-	array_walk_recursive($location, intval);
+	$location = array($_REQUEST['location']);
+
+	array_walk_recursive($location, function ($value, $key) {
+		//var_dump("{$key} -> {$value}");
+	});
+
 	$state = intval($_REQUEST['state']);
-	$start_view = GetTimeStamp(trim(secure_html(convert($_REQUEST['start_view']))));
-	$end_view = GetTimeStamp(trim(secure_html(convert($_REQUEST['end_view']))));
+	$start_view = GetTimeStamp(intval($_REQUEST['start_view']));
+	$end_view = GetTimeStamp(intval($_REQUEST['end_view']));
 	$ads_blok = $_REQUEST['ads_blok'];
 	$var = pluginGetVariable('ads_pro', 'data');
 	if (!$id) {
@@ -293,8 +292,7 @@ function add_submit()
 	showlist();
 }
 
-function move($action)
-{
+function move($action) {
 
 	$id = intval($_REQUEST['id']);
 	$var = pluginGetVariable('ads_pro', 'data');
@@ -344,8 +342,7 @@ function move($action)
 	showlist();
 }
 
-function GetTimeStamp($date)
-{
+function GetTimeStamp($date) {
 
 	$stamp = explode(' ', $date);
 	$tdate = null;
@@ -362,22 +359,21 @@ function GetTimeStamp($date)
 			return null;
 			break;
 	}
-	if (!is_array($tdate) && count($tdate) != 3)
+	if (!is_array($tdate) && (isset($tdate) ? count($tdate) : '') != 3)
 		$tdate = null;
-	if (!is_array($ttime) && count($ttime) != 2)
+	if (!is_array($ttime) && (isset($ttime) ? count($ttime) : '') != 2)
 		$ttime = null;
 	if ($tdate === null && $ttime === null)
 		return null;
 	if ($tdate === null) $tdate = array(0, 0, 0);
 	if ($ttime === null) $ttime = array(0, 0);
-	$tstamp = mktime($ttime[0], $ttime[1], 0, $tdate[1], $tdate[2], $tdate[0]);
+	$tstamp = mktime($ttime[0], $ttime[1], 0, intval($tdate[1]), $tdate[2], $tdate[0]);
 	if ($tstamp < 0) return null;
 
 	return $tstamp;
 }
 
-function delete()
-{
+function delete() {
 
 	global $mysql, $lang;
 	$id = intval($_REQUEST['id']);
@@ -407,8 +403,7 @@ function delete()
 	showlist();
 }
 
-function clear_cash()
-{
+function clear_cash() {
 
 	if (($dir = get_plugcache_dir('ads_pro'))) {
 		if ($handle = opendir($dir)) {
