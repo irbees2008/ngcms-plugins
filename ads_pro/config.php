@@ -85,8 +85,10 @@ function main_submit() {
 	}
 	if ($chg) {
 		pluginsSaveConfig();
+
 	}
-	main();
+	//main();
+	print_commit_complete('ads_pro');
 }
 
 function showlist() {
@@ -289,7 +291,8 @@ function add_submit() {
 	pluginSetVariable('ads_pro', 'data', $var);
 	pluginsSaveConfig();
 	clear_cash();
-	showlist();
+	//showlist();
+	print_commit_complete('ads_pro');
 }
 
 function move($action) {
