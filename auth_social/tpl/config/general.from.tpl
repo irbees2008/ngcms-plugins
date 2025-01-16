@@ -1,6 +1,6 @@
 <form method="post" action="">
 
-	<table width="100%" border="0" class="content">
+	<table class="table table-sm extra-config">
 
 
 		<tr>
@@ -312,14 +312,8 @@
 </tr>
 -->
 
-	<table border="0" width="100%" cellspacing="0" cellpadding="0">
-		<tr>
-			<td width="100%" colspan="2">&nbsp;</td>
-		</tr>
-		<tr>
-			<td width="100%" colspan="2" class="contentEdit" align="center">
-				<input name="submit" type="submit" value="Сохранить" class="button"/>
-			</td>
-		</tr>
-	</table>
+<div class="card-footer text-center">
+			<button type="submit" name="submit"class="btn btn-outline-success">Сохранить изменения</button>
+		</div>
+		
 </form>

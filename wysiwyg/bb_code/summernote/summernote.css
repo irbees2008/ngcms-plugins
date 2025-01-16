@@ -1,0 +1,62 @@
+.note-editor .note-editing-area .note-editable {
+    background: white;
+}
+
+.note-editor .note-dropdown-item {
+    white-space: nowrap;
+}
+
+.note-editor .dropdown-toggle:after {
+    display: none;
+}
+
+.note-editor .note-toolbar .note-para .note-dropdown-menu {
+    min-width: 238px;
+}
+
+.note-editor .note-toolbar .note-bbCode .note-dropdown-menu {
+    min-width: 230px;
+}
+
+.note-editor .note-toolbar .fa {
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.note-editor .note-toolbar .fa:before {
+    vertical-align: middle;
+}
+
+.note-editor:not(.codeview) .note-advanced {
+    display: none;
+}
+/* SPOILERs */
+.spoiler {
+    border:solid 1px #adbac6;
+    background:#ebeef7;
+    margin:5px 0px 5px 0px;
+    padding: 0px;
+    clear:both;
+}
+.spoiler .sp-head {
+    padding:4px 0 4px 2px;
+    cursor: pointer;
+}
+.spoiler .sp-head b {
+    background:url(../images/spoiler-plus.gif) no-repeat;
+    float:left;
+    width:9px;
+    height:9px;
+    margin:2px 4px 0 2px
+}
+.spoiler .sp-head b.expanded {
+    background:url(../images/spoiler-minus.gif) no-repeat;
+    float:left;
+    width:9px;
+    height:9px;
+}
+.spoiler .sp-body {
+    border-top:solid 1px #adbac6;
+    background: #f7f8fc;
+    display: none;
+}

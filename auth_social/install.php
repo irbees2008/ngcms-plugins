@@ -8,8 +8,8 @@ function plugin_auth_social_install($action) {
 			'action' => 'cmodify',
 			'fields' => array(
 				array('action' => 'cmodify', 'name' => 'provider', 'type' => 'varchar(255)', 'params' => 'DEFAULT \'\''),
-				array('action' => 'cmodify', 'name' => 'social_id', 'type' => 'text', 'params' => 'DEFAULT \'\''),
-				array('action' => 'cmodify', 'name' => 'social_page', 'type' => 'text', 'params' => 'DEFAULT \'\''),
+				array('action' => 'cmodify', 'name' => 'social_id', 'type' => 'text', 'params' => 'DEFAULT NULL'),
+				array('action' => 'cmodify', 'name' => 'social_page', 'type' => 'text', 'params' => 'DEFAULT NULL'),
 				array('action' => 'cmodify', 'name' => 'sex', 'type' => 'varchar(255)', 'params' => 'DEFAULT \'\''),
 				array('action' => 'cmodify', 'name' => 'birthday', 'type' => 'varchar(255)', 'params' => 'DEFAULT \'\''),
 			)
