@@ -1,11 +1,18 @@
-<nav aria-label="breadcrumb">
-	<ol class="breadcrumb">
-		<li class="breadcrumb-item"><a href="{{ admin_url }}"><i class="fa fa-home"></i></a></li>
-		<li class="breadcrumb-item"><a href="?mod=extras">{{ lang['extras'] }}</a></li>
-		<li class="breadcrumb-item"><a href="?mod=extra-config&plugin=xfields&section={{ sectionID }}">{{ lang.xfconfig['config_text'] }} xfields</a></li>
-		<li class="breadcrumb-item active" aria-current="page">{% if (not flags.editMode) %}{{ lang.xfconfig['title_add'] }}{% else %}{{ lang.xfconfig['title_edit'] }} ({{ id }}){% endif %}</li>
-	</ol>
-</nav>
+<div class="container-fluid">
+	<div class="row mb-2">
+	  <div class="col-sm-6 d-none d-md-block ">
+			<h1 class="m-0 text-dark">xfields</h1>
+	  </div><!-- /.col -->
+	  <div class="col-sm-6">
+		<ol class="breadcrumb float-sm-right">
+			<li class="breadcrumb-item"><a href="{{ admin_url }}"><i class="fa fa-home"></i></a></li>
+			<li class="breadcrumb-item"><a href="?mod=extras">{{ lang['extras'] }}</a></li>
+			<li class="breadcrumb-item"><a href="?mod=extra-config&plugin=xfields&section={{ sectionID }}">{{ lang.xfconfig['config_text'] }} xfields</a></li>
+			<li class="breadcrumb-item active" aria-current="page">{% if (not flags.editMode) %}{{ lang.xfconfig['title_add'] }}{% else %}{{ lang.xfconfig['title_edit'] }} ({{ id }}){% endif %}</li>
+		</ol>
+	  </div><!-- /.col -->
+	</div><!-- /.row -->
+</div>
 
 <div id="edit_yakor"></div>
 

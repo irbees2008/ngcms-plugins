@@ -1,11 +1,18 @@
-<nav aria-label="breadcrumb">
-	<ol class="breadcrumb">
-		<li class="breadcrumb-item"><a href="{{ admin_url }}"><i class="fa fa-home"></i></a></li>
-		<li class="breadcrumb-item"><a href="?mod=extras">{{ lang['extras'] }}</a></li>
-		<li class="breadcrumb-item"><a href="?mod=extra-config&plugin=xfields">xfields</a></li>
-		<li class="breadcrumb-item active" aria-current="page">{{ lang.xfconfig['list'] }}</li>
-	</ol>
-</nav>
+<div class="container-fluid">
+	<div class="row mb-2">
+	  <div class="col-sm-6 d-none d-md-block ">
+			<h1 class="m-0 text-dark">xfields</h1>
+	  </div><!-- /.col -->
+	  <div class="col-sm-6">
+		<ol class="breadcrumb float-sm-right">
+			<li class="breadcrumb-item"><a href="{{ admin_url }}"><i class="fa fa-home"></i></a></li>
+			<li class="breadcrumb-item"><a href="?mod=extras">{{ lang['extras'] }}</a></li>
+			<li class="breadcrumb-item"><a href="?mod=extra-config&plugin=xfields">xfields</a></li>
+			<li class="breadcrumb-item active" aria-current="page">{{ lang.xfconfig['list'] }}</li>
+		</ol>
+	  </div><!-- /.col -->
+	</div><!-- /.row -->
+</div>
 
 <ul class="nav nav-pills mb-3 d-md-flex d-block" role="tablist">
 	<li class="nav-item">

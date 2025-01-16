@@ -113,7 +113,7 @@ function showFieldList()
         $xEntry['options'] = $options;
         $xEntries[] = $xEntry;
     }
-    if (!count($xf[$sectionID])) {
+    if (!is_array($xf[$sectionID])) {
         $output = $lang['xfconfig']['nof'];
     }
     $tVars = [
