@@ -11,7 +11,8 @@ switch ($_REQUEST['action']) {
 	default:
 		show_xsyslog();
 }
-function show_xsyslog() {
+function show_xsyslog()
+{
 
 	global $tpl, $mysql, $lang, $twig, $confArray;
 	$tpath = locatePluginTemplates(array('main', 'list_xsyslog', 'list_entries'), 'xsyslog', 1);
@@ -47,9 +48,9 @@ function show_xsyslog() {
 		array_push($conditions, "username = " . db_squote($fAuthorName));
 	}
 
-    if ($fStatus !== null) {
-        array_push($conditions, "status = " . (int)$fStatus);
-    }
+	if ($fStatus !== null) {
+		array_push($conditions, "status = " . (int)$fStatus);
+	}
 
 	if ($fPlugin) {
 		array_push($conditions, "plugin = " . db_squote($fPlugin));
@@ -105,8 +106,8 @@ function show_xsyslog() {
 		'rpp'        => $news_per_page,
 		'an'         => secure_html($fAuthorName),
 		'fstatus'    => $fStatus,
-		'catPlugins' => makeVARList(array('obj' => 'plugin', 'name' => 'fplugins', 'selected' => $fPlugin, 'class' => 'bfsortlist', 'doempty' => 1)),
-		'catItems'   => makeVARList(array('obj' => 'item', 'name' => 'fitems', 'selected' => $fItem, 'class' => 'bfsortlist', 'doempty' => 1)),
+		'catPlugins' => makeVARList(array('obj' => 'plugin', 'name' => 'fplugins', 'selected' => $fPlugin, 'class' => 'form-control bfsortlist', 'doempty' => 1)),
+		'catItems'   => makeVARList(array('obj' => 'item', 'name' => 'fitems', 'selected' => $fItem, 'class' => 'form-control bfsortlist', 'doempty' => 1)),
 		'fDateStart' => $fDateStart ? $fDateStart : '',
 		'fDateEnd'   => $fDateEnd ? $fDateEnd : '',
 	);
@@ -133,7 +134,8 @@ function show_xsyslog() {
 // * noHeader		- Don't write header (<select>..</select>) in output
 // * returnOptArray	- FLAG: if we should return OPTIONS (with values) array instead of data
 // * obj	- objects to show
-function makeVARList($params = array()) {
+function makeVARList($params = array())
+{
 
 	global $lang, $mysql;
 	$optList = array();
@@ -154,16 +156,16 @@ function makeVARList($params = array()) {
 				">\n";
 		}
 		if (isset($params['doempty']) && $params['doempty']) {
-			$out .= "<option " . (((isset($params['greyempty']) && $params['greyempty'])) ? 'style="background: #c41e3a;" ' : '') . "value=\"0\">" . $lang['no_cat'] . "</option>\n";
-			$optList [] = array('k' => 0, 'v' => $lang['nocat']);
+			$out .= "<option  class='form-control bfstatus' " . (((isset($params['greyempty']) && $params['greyempty'])) ? 'style="background: #c41e3a;" ' : '') . "value=\"0\">" . $lang['no_cat'] . "</option>\n";
+			$optList[] = array('k' => 0, 'v' => $lang['nocat']);
 		}
 		if (isset($params['doall']) && $params['doall']) {
-			$out .= "<option value=\"" . (isset($params['allmarker']) ? $params['allmarker'] : '') . "\">" . $lang['sh_all'] . "</option>\n";
-			$optList [] = array('k' => (isset($params['allmarker']) ? $params['allmarker'] : ''), 'v' => $lang['sh_all']);
+			$out .= "<option  class='form-control bfstatus' value=\"" . (isset($params['allmarker']) ? $params['allmarker'] : '') . "\">" . $lang['sh_all'] . "</option>\n";
+			$optList[] = array('k' => (isset($params['allmarker']) ? $params['allmarker'] : ''), 'v' => $lang['sh_all']);
 		}
 		if (isset($params['dowithout']) && $params['dowithout']) {
-			$out .= "<option value=\"0\"" . (((!is_null($params['selected'])) && ($params['selected'] == 0)) ? ' selected="selected"' : '') . ">" . $lang['sh_empty'] . "</option>\n";
-			$optList [] = array('k' => 0, 'v' => $lang['sh_empty']);
+			$out .= "<option class='form-control bfstatus'  value=\"0\"" . (((!is_null($params['selected'])) && ($params['selected'] == 0)) ? ' selected="selected"' : '') . ">" . $lang['sh_empty'] . "</option>\n";
+			$optList[] = array('k' => 0, 'v' => $lang['sh_empty']);
 		}
 	}
 	$catz = array();
@@ -180,7 +182,7 @@ function makeVARList($params = array()) {
 		}
 		if (isset($params['checkarea']) && $params['checkarea']) {
 			$out .= str_repeat('&#8212; ', $v['poslevel']) .
-				'<label><input type="checkbox" name="' .
+				'<label><input type="checkbox"  class="form-control bfstatus" name="' .
 				$name .
 				'_' .
 				$v[$obj] .
@@ -191,8 +193,8 @@ function makeVARList($params = array()) {
 				$v[$obj] .
 				"</label><br/>\n";
 		} else {
-			$out .= "<option value=\"" . ((isset($params['nameval']) && $params['nameval']) ? $v[$obj] : $v[$obj]) . "\"" . ((isset($params['selected']) && ($v[$obj] == $params['selected'])) ? ' selected="selected"' : '') . ($v['alt_url'] != '' ? ' disabled="disabled" style="background: #c41e3a;"' : '') . ">" . str_repeat('&#8212; ', $v['poslevel']) . $v[$obj] . "</option>\n";
-			$optList [] = array('k' => ((isset($params['nameval']) && $params['nameval']) ? $v[$obj] : $v[$obj]), 'v' => str_repeat('&#8212; ', $v['poslevel']) . $v[$obj]);
+			$out .= "<option   class='form-control bfstatus' value=\"" . ((isset($params['nameval']) && $params['nameval']) ? $v[$obj] : $v[$obj]) . "\"" . ((isset($params['selected']) && ($v[$obj] == $params['selected'])) ? ' selected="selected"' : '') . ($v['alt_url'] != '' ? ' disabled="disabled" style="background: #c41e3a;"' : '') . ">" . str_repeat('&#8212; ', $v['poslevel']) . $v[$obj] . "</option>\n";
+			$optList[] = array('k' => ((isset($params['nameval']) && $params['nameval']) ? $v[$obj] : $v[$obj]), 'v' => str_repeat('&#8212; ', $v['poslevel']) . $v[$obj]);
 		}
 	}
 	if (!isset($params['checkarea']) || !$params['checkarea']) {
@@ -206,7 +208,8 @@ function makeVARList($params = array()) {
 	return $out;
 }
 
-function redirect_xsyslog($url) {
+function redirect_xsyslog($url)
+{
 
 	if (headers_sent()) {
 		echo "<script>document.location.href='{$url}';</script>\n";
