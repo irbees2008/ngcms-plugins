@@ -21,12 +21,14 @@
 				<td>{% if entry.required %}{{ lang['gbconfig']['settings_yes'] }}{% else %}{{ lang['gbconfig']['settings_no'] }}{% endif %}</td>
 				<td nowrap>
 					<a href="?mod=extra-config&plugin=guestbook&action=edit_field&id={{ entry.id }}" title="{{ lang['gbconfig']['actions_edit'] }}">
-						<img src="{{ skins_url }}/images/add_edit.png" alt="EDIT" width="12" height="12"/>
+<i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+
 					</a>
 				</td>
 				<td nowrap>
 					<a onclick="return confirm('{{ lang['gbconfig']['actions_confirm'] }} {{ entry.id }}?');" href="?mod=extra-config&plugin=guestbook&action=drop_field&id={{ entry.id }}" title="{{ lang['gbconfig']['actions_drop'] }}">
-						<img src="{{ skins_url }}/images/delete.gif" alt="DEL" width="12" height="12"/>
+<i class="fa fa-times" aria-hidden="true"></i>
+
 					</a>
 				</td>
 			</tr>

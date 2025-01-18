@@ -22,12 +22,14 @@
 				<td width="10%" class="contentEntry1">{% if entry.status == '1' %}{{ lang['gbconfig']['message_active'] }}{% elseif entry.status == '0' %}{{ lang['gbconfig']['message_inactive'] }}{% endif %}</td>
 				<td nowrap style="text-align: center;">
 					<a href="?mod=extra-config&plugin=guestbook&action=edit_message&id={{ entry.id }}" title="{{ lang['gbconfig']['message_edit'] }}">
-						<img src="{{ skins_url }}/images/add_edit.png" alt="EDIT" width="12" height="12"/>
+<i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+
 					</a>
 				</td>
 				<td nowrap style="text-align: center;">
 					<a onclick="return confirm('{{ lang['gbconfig']['message_confirm'] }}');" href="?mod=extra-config&plugin=guestbook&action=delete_message&id={{ entry.id }}" title="{{ lang['gbconfig']['message_delete'] }}">
-						<img src="{{ skins_url }}/images/delete.gif" alt="DEL" width="12" height="12"/>
+<i class="fa fa-times" aria-hidden="true"></i>
+
 					</a>
 				</td>
 				<td width="5%" class="contentEntry1">

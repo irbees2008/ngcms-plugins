@@ -1,66 +1,70 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 pluginsLoadConfig();
 LoadPluginLang('guestbook', 'config', '', 'gbconfig', '#');
 switch ($_REQUEST['action']) {
-	case 'manage_fields'  :
+	case 'manage_fields':
 		manage_fields();
 		break;
-	case 'add_field'      :
+	case 'add_field':
 		add_field();
 		break;
-	case 'edit_field'     :
-		edit_field();
+	case 'edit_field':
+		edit_field($_REQUEST['id']);
 		break;
-	case 'drop_field'     :
+	case 'drop_field':
 		drop_field();
 		manage_fields();
 		break;
-	case 'insert_field'   :
+	case 'insert_field':
 		$result = insert_field();
-		if ($result === true) manage_fields(); else add_field();
+		if ($result === true) manage_fields();
+		else add_field();
 		break;
-	case 'update_field'   :
+	case 'update_field':
 		$result = update_field();
-		if ($result === true) manage_fields(); else edit_field($result);
+		if ($result === true) manage_fields();
+		else edit_field($result);
 		break;
-	case 'options'        :
+	case 'options':
 		show_options();
 		break;
-	case 'show_messages'  :
+	case 'show_messages':
 		show_messages();
 		break;
-	case 'edit_message'   :
+	case 'edit_message':
 		$result = edit_message();
 		if ($result === true) show_messages();
 		break;
-	case 'delete_message' :
+	case 'delete_message':
 		delete_message();
 		show_messages();
 		break;
-	case 'delete_social'  :
+	case 'delete_social':
 		$result = delete_social();
 		edit_message($result);
 		break;
-	case 'modify'         :
+	case 'modify':
 		modify();
 		show_messages();
 		break;
-	case 'social'         :
+	case 'social':
 		social_config();
 		break;
-	default               :
+	default:
 		show_options();
 }
 /*
  * Add field page
  */
-function add_field() {
+function add_field()
+{
 
 	global $twig;
 	$xt = $twig->loadTemplate('plugins/guestbook/tpl/config/manage_fields.add.tpl');
 	$xg = $twig->loadTemplate('plugins/guestbook/tpl/config/main.tpl');
+	$tVars = [];
 	$tVars = array(
 		'entries' => $xt->render($tVars),
 	);
@@ -70,7 +74,8 @@ function add_field() {
 /*
  * Insert field callback
  */
-function insert_field() {
+function insert_field()
+{
 
 	global $mysql, $lang;
 	$id = $_REQUEST['id'];
@@ -114,12 +119,13 @@ function insert_field() {
 		return false;
 	}
 	// Everything is correct - update DB
-	$mysql->query("INSERT INTO " . prefix . "_guestbook_fields VALUES(" .
-		db_squote($id) . ", " .
-		db_squote($name) . ", " .
-		db_squote($placeholder) . ", " .
-		db_squote($default) . ", " .
-		db_squote($required) . ")"
+	$mysql->query(
+		"INSERT INTO " . prefix . "_guestbook_fields VALUES(" .
+			db_squote($id) . ", " .
+			db_squote($name) . ", " .
+			db_squote($placeholder) . ", " .
+			db_squote($default) . ", " .
+			db_squote($required) . ")"
 	);
 	$mysql->query("ALTER TABLE " . prefix . "_guestbook ADD " . $id . " VARCHAR(50) NOT NULL DEFAULT ''");
 	msg(array("text" => $lang['gbconfig']['msgo_field_add_success']));
@@ -130,7 +136,8 @@ function insert_field() {
 /*
  * Edit field page
  */
-function edit_field($id) {
+function edit_field($id)
+{
 
 	global $mysql, $twig, $lang;
 	$field = array();
@@ -162,7 +169,8 @@ function edit_field($id) {
 /*
  * Update field callback
  */
-function update_field() {
+function update_field()
+{
 
 	global $mysql, $lang;
 	$id = $_REQUEST['id'];
@@ -181,12 +189,13 @@ function update_field() {
 		return $id;
 	}
 	// Everything is correct - update DB
-	$mysql->query("UPDATE " . prefix . "_guestbook_fields SET " .
-		"name = " . db_squote($name) . ", " .
-		"placeholder = " . db_squote($placeholder) . ", " .
-		"default_value = " . db_squote($default) . ", " .
-		'required =' . db_squote($required) .
-		" WHERE id = " . db_squote($id)
+	$mysql->query(
+		"UPDATE " . prefix . "_guestbook_fields SET " .
+			"name = " . db_squote($name) . ", " .
+			"placeholder = " . db_squote($placeholder) . ", " .
+			"default_value = " . db_squote($default) . ", " .
+			'required =' . db_squote($required) .
+			" WHERE id = " . db_squote($id)
 	);
 	msg(array("text" => $lang['gbconfig']['msgo_field_edit_success']));
 
@@ -196,7 +205,8 @@ function update_field() {
 /*
  * Drop field callback
  */
-function drop_field() {
+function drop_field()
+{
 
 	global $mysql, $lang;
 	$id = $_REQUEST['id'];
@@ -214,7 +224,8 @@ function drop_field() {
 /*
  * List fields page
  */
-function manage_fields() {
+function manage_fields()
+{
 
 	global $mysql, $twig, $lang;
 	$fields = $mysql->select("select * from " . prefix . "_guestbook_fields");
@@ -239,7 +250,8 @@ function manage_fields() {
 	print $xg->render($tVars);
 }
 
-function show_options() {
+function show_options()
+{
 
 	global $tpl, $mysql, $lang, $twig;
 	$tpath = locatePluginTemplates(array('config/main', 'config/settings'), 'guestbook', 1);
@@ -261,40 +273,44 @@ function show_options() {
 		if (isset($_REQUEST['url']) && intval($_REQUEST['url']) == 1) {
 			$ULIB = new urlLibrary();
 			$ULIB->loadConfig();
-			$ULIB->registerCommand('guestbook', '',
+			$ULIB->registerCommand(
+				'guestbook',
+				'',
 				array(
 					'vars'  => array(
 						'page' =>
+						array(
+							'matchRegex' => '\\d{1,4}',
+							'descr'      =>
 							array(
-								'matchRegex' => '\\d{1,4}',
-								'descr'      =>
-									array(
-										'russian' => 'Страница',
-									),
+								'russian' => 'Страница',
 							),
+						),
 						'act'  =>
+						array(
+							'matchRegex' => '.+?',
+							'descr'      =>
 							array(
-								'matchRegex' => '.+?',
-								'descr'      =>
-									array(
-										'russian' => 'action',
-									),
+								'russian' => 'action',
 							),
+						),
 					),
 					'descr' => array('russian' => 'Гостевая книга'),
 				)
 			);
-			$ULIB->registerCommand('guestbook', 'edit',
+			$ULIB->registerCommand(
+				'guestbook',
+				'edit',
 				array(
 					'vars'  => array(
 						'id' =>
+						array(
+							'matchRegex' => '\\d+',
+							'descr'      =>
 							array(
-								'matchRegex' => '\\d+',
-								'descr'      =>
-									array(
-										'russian' => 'ID записи',
-									),
+								'russian' => 'ID записи',
 							),
+						),
 					),
 					'descr' => array('russian' => 'Редактирование'),
 				)
@@ -354,7 +370,8 @@ function show_options() {
 	print $xg->render($tVars);
 }
 
-function show_messages() {
+function show_messages()
+{
 
 	global $tpl, $mysql, $lang, $twig, $config, $PHP_SELF;
 	$tpath = locatePluginTemplates(array('config/main', 'config/messages_list'), 'guestbook', 1);
@@ -395,7 +412,8 @@ function show_messages() {
 	print $xg->render($tVars);
 }
 
-function delete_social() {
+function delete_social()
+{
 
 	global $mysql, $lang;
 	$id = intval($_REQUEST['id']);
@@ -424,7 +442,8 @@ function delete_social() {
 	return $id;
 }
 
-function delete_message() {
+function delete_message()
+{
 
 	global $mysql, $lang;
 	$id = intval($_REQUEST['id']);
@@ -436,7 +455,8 @@ function delete_message() {
 	return msg(array("text" => $lang['gbconfig']['msgo_deleted_one']));
 }
 
-function edit_message($mid) {
+function edit_message($mid)
+{
 
 	global $tpl, $mysql, $lang, $twig, $config;
 	$tpath = locatePluginTemplates(array('config/main', 'config/messages_edit'), 'guestbook', 1);
@@ -544,28 +564,29 @@ function edit_message($mid) {
 /*
  * Bulk operaions apply callback
  */
-function modify() {
+function modify()
+{
 
 	global $mysql, $lang;
-	$selected_news = $_REQUEST['selected_message'];
+	$selected_news[] = $_REQUEST['selected_message'];
 	$subaction = $_REQUEST['subaction'];
 	if (empty($subaction)) {
 		return msg(array("type" => "error", "text" => $lang['gbconfig']['msge_wrong_action']));
 	}
 	switch ($subaction) {
-		case 'mass_approve'   :
+		case 'mass_approve':
 			$active = 'status = 1';
 			$msg = $lang['gbconfig']['msgo_activated'];
 			break;
-		case 'mass_forbidden' :
+		case 'mass_forbidden':
 			$active = 'status = 0';
 			$msg = $lang['gbconfig']['msgo_deactivated'];
 			break;
-		case 'mass_delete'    :
+		case 'mass_delete':
 			$del = true;
 			$msg = $lang['gbconfig']['msgo_deleted'];
 			break;
-		default               :
+		default:
 			return msg(array("type" => "error", "text" => $lang['gbconfig']['msge_wrong_action']));
 	}
 	// get messages list
@@ -587,7 +608,8 @@ function modify() {
 /*
  * Social config page
  */
-function social_config() {
+function social_config()
+{
 
 	global $tpl, $mysql, $lang, $twig;
 	$tpath = locatePluginTemplates(array('config/main', 'config/social'), 'guestbook', 1);
