@@ -1,6 +1,7 @@
 <form action="?mod=extra-config&plugin=guestbook&action=update_field&id={{ field.id }}" method="POST" name="fieldForm">
 	<fieldset class="admGroup">
-		<legend class="title">{{ lang['gbconfig']['f_edit_title'] }} {{ field.name }}</legend>
+		<legend class="title">{{ lang['gbconfig']['f_edit_title'] }}
+			{{ field.name }}</legend>
 		<table border="0" cellspacing="1" cellpadding="1" class="content">
 			<tr class="contRow1">
 				<td width="20%">{{ lang['gbconfig']['f_id'] }}</td>
@@ -21,14 +22,15 @@
 			<tr class="contRow1">
 				<td width="20%">{{ lang['gbconfig']['f_required'] }}</td>
 				<td>
-					<input type="checkbox" name="required" value="{{ field.required }}" {% if field.required %}checked="checked"{% endif %}/>
+					<input type="checkbox" name="required" value="{{ field.required }}" {% if field.required %} checked="checked" {% endif %}/>
 				</td>
 			</tr>
-			<tr class="contRow1">
-				<td colspan=2 align="center">
-					<input type="submit" class="button" value="{{ lang['gbconfig']['btn_edit_field'] }}">
-				</td>
-			</tr>
+
 		</table>
 	</fieldset>
+	<div class="card-footer text-center">
+		<button type="submit" name="submit" class="btn btn-outline-success">{{ lang['gbconfig']['btn_edit_field'] }}</button>
+
+	</div>
+
 </form>

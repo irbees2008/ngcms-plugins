@@ -22,11 +22,12 @@
 				<td width="20%">{{ lang['gbconfig']['f_required'] }}</td>
 				<td><input type="checkbox" name="required"/></td>
 			</tr>
-			<tr class="contRow1">
-				<td colspan=2 align="center">
-					<input type="submit" class="button" value="{{ lang['gbconfig']['btn_add_field'] }}">
-				</td>
-			</tr>
+
 		</table>
 	</fieldset>
+	<div class="card-footer text-center">
+		<button type="submit" name="submit" class="btn btn-outline-success">{{ lang['gbconfig']['btn_add_field'] }}</button>
+
+	</div>
+
 </form>

@@ -6,8 +6,8 @@
 				<td class="contentEntry1" valign="top">{{ lang['gbconfig']['settings_usmilies'] }}</td>
 				<td class="contentEntry2" valign="top">
 					<select name="usmilies">
-						<option value="1" {% if usmilies == '1' %}selected{% endif %}>{{ lang['gbconfig']['settings_yes'] }}</option>
-						<option value="0" {% if usmilies == '0' %}selected{% endif %}>{{ lang['gbconfig']['settings_no'] }}</option>
+						<option value="1" {% if usmilies == '1' %} selected {% endif %}>{{ lang['gbconfig']['settings_yes'] }}</option>
+						<option value="0" {% if usmilies == '0' %} selected {% endif %}>{{ lang['gbconfig']['settings_no'] }}</option>
 					</select>
 				</td>
 			</tr>
@@ -15,8 +15,8 @@
 				<td class="contentEntry1" valign="top">{{ lang['gbconfig']['settings_bbcodes'] }}</td>
 				<td class="contentEntry2" valign="top">
 					<select name="ubbcodes">
-						<option value="1" {% if ubbcodes == '1' %}selected{% endif %}>{{ lang['gbconfig']['settings_yes'] }}</option>
-						<option value="0" {% if ubbcodes == '0' %}selected{% endif %}>{{ lang['gbconfig']['settings_no'] }}</option>
+						<option value="1" {% if ubbcodes == '1' %} selected {% endif %}>{{ lang['gbconfig']['settings_yes'] }}</option>
+						<option value="0" {% if ubbcodes == '0' %} selected {% endif %}>{{ lang['gbconfig']['settings_no'] }}</option>
 					</select>
 				</td>
 			</tr>
@@ -41,8 +41,8 @@
 				<td class="contentEntry1" valign="top">{{ lang['gbconfig']['settings_order'] }}</td>
 				<td class="contentEntry2" valign="top">
 					<select name="order">
-						<option value="DESC" {% if order == 'DESC' %}selected{% endif %}>{{ lang['gbconfig']['settings_order_desc'] }}</option>
-						<option value="ASC" {% if order == 'ASC' %}selected{% endif %}>{{ lang['gbconfig']['settings_order_asc'] }}</option>
+						<option value="DESC" {% if order == 'DESC' %} selected {% endif %}>{{ lang['gbconfig']['settings_order_desc'] }}</option>
+						<option value="ASC" {% if order == 'ASC' %} selected {% endif %}>{{ lang['gbconfig']['settings_order_asc'] }}</option>
 					</select>
 				</td>
 			</tr>
@@ -55,8 +55,8 @@
 				<td class="contentEntry1" valign="top">{{ lang['gbconfig']['settings_url'] }}</td>
 				<td class="contentEntry2" valign="top">
 					<select name="url">
-						<option value="0" {% if url == '0' %}selected{% endif %}>{{ lang['gbconfig']['settings_no'] }}</option>
-						<option value="1" {% if url == '1' %}selected{% endif %}>{{ lang['gbconfig']['settings_yes'] }}</option>
+						<option value="0" {% if url == '0' %} selected {% endif %}>{{ lang['gbconfig']['settings_no'] }}</option>
+						<option value="1" {% if url == '1' %} selected {% endif %}>{{ lang['gbconfig']['settings_yes'] }}</option>
 					</select>
 				</td>
 			</tr>
@@ -70,8 +70,8 @@
 				<td class="contentEntry1" valign="top">{{ lang['gbconfig']['settings_anonymous'] }}</td>
 				<td class="contentEntry2" valign="top">
 					<select name="guests">
-						<option value="1" {% if guests == '1' %}selected{% endif %}>{{ lang['gbconfig']['settings_yes'] }}</option>
-						<option value="0" {% if guests == '0' %}selected{% endif %}>{{ lang['gbconfig']['settings_no'] }}</option>
+						<option value="1" {% if guests == '1' %} selected {% endif %}>{{ lang['gbconfig']['settings_yes'] }}</option>
+						<option value="0" {% if guests == '0' %} selected {% endif %}>{{ lang['gbconfig']['settings_no'] }}</option>
 					</select>
 				</td>
 			</tr>
@@ -79,8 +79,8 @@
 				<td class="contentEntry1" valign="top">{{ lang['gbconfig']['settings_captcha'] }}</td>
 				<td class="contentEntry2" valign="top">
 					<select name="ecaptcha">
-						<option value="1" {% if ecaptcha == '1' %}selected{% endif %}>{{ lang['gbconfig']['settings_yes'] }}</option>
-						<option value="0" {% if ecaptcha == '0' %}selected{% endif %}>{{ lang['gbconfig']['settings_no'] }}</option>
+						<option value="1" {% if ecaptcha == '1' %} selected {% endif %}>{{ lang['gbconfig']['settings_yes'] }}</option>
+						<option value="0" {% if ecaptcha == '0' %} selected {% endif %}>{{ lang['gbconfig']['settings_no'] }}</option>
 					</select>
 				</td>
 			</tr>
@@ -98,8 +98,8 @@
 				<td class="contentEntry1" valign="top">{{ lang['gbconfig']['settings_approve'] }}</td>
 				<td class="contentEntry2" valign="top">
 					<select name="approve_msg">
-						<option value="1" {% if approve_msg == '1' %}selected{% endif %}>{{ lang['gbconfig']['settings_yes'] }}</option>
-						<option value="0" {% if approve_msg == '0' %}selected{% endif %}>{{ lang['gbconfig']['settings_no'] }}</option>
+						<option value="1" {% if approve_msg == '1' %} selected {% endif %}>{{ lang['gbconfig']['settings_yes'] }}</option>
+						<option value="0" {% if approve_msg == '0' %} selected {% endif %}>{{ lang['gbconfig']['settings_no'] }}</option>
 					</select>
 				</td>
 			</tr>
@@ -122,14 +122,10 @@
 		</table>
 	</fieldset>
 
-	<table border="0" width="100%" cellspacing="0" cellpadding="0">
-		<tr>
-			<td width="100%" colspan="2">&nbsp;</td>
-		</tr>
-		<tr>
-			<td width="100%" colspan="2" class="contentEdit" align="center">
-				<input name="submit" type="submit" value="{{ lang['gbconfig']['settings_save'] }}" class="button"/>
-			</td>
-		</tr>
-	</table>
+	<div class="card-footer text-center">
+
+		<input name="submit" type="submit" value="{{ lang['gbconfig']['settings_save'] }}" class="btn btn-outline-success"/>
+
+	</div>
+
 </form>

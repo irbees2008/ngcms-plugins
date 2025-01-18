@@ -1,12 +1,13 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 //
 // Configuration file for plugin
 //
 pluginsLoadConfig();
 //LoadPluginLang($plugin, 'main');
-function plugin_guestbook_install($action) {
+function plugin_guestbook_install($action)
+{
 
 	global $lang;
 	if ($action != 'autoapply') loadPluginLang('guestbook', 'config', '', '', ':');
@@ -19,12 +20,12 @@ function plugin_guestbook_install($action) {
 				array('action' => 'create', 'name' => 'id', 'type' => 'int', 'params' => 'not null auto_increment'),
 				array('action' => 'create', 'name' => 'postdate', 'type' => 'int', 'params' => "not null default '0'"),
 				array('action' => 'create', 'name' => 'message', 'type' => 'text', 'params' => 'not null'),
-				array('action' => 'create', 'name' => 'answer', 'type' => 'text', 'params' => "not null default ''"),
+				array('action' => 'create', 'name' => 'answer', 'type' => 'text', 'params' => 'not null'), // Убрано значение по умолчанию
 				array('action' => 'create', 'name' => 'author', 'type' => 'varchar(50)', 'params' => "not null default ''"),
 				array('action' => 'create', 'name' => 'ip', 'type' => 'varchar(40)', 'params' => "not null default ''"),
 				array('action' => 'create', 'name' => 'status', 'type' => 'int', 'params' => "not null default '0'"),
-				array('action' => 'create', 'name' => 'fields', 'type' => 'text'),
-				array('action' => 'create', 'name' => 'social', 'type' => 'text'),
+				array('action' => 'create', 'name' => 'fields', 'type' => 'text'), // Убрано значение по умолчанию
+				array('action' => 'create', 'name' => 'social', 'type' => 'text'), // Убрано значение по умолчанию
 			)
 		),
 		array(
@@ -77,5 +78,3 @@ function plugin_guestbook_install($action) {
 
 	return true;
 }
-
-?>

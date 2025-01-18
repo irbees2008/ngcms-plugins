@@ -1,6 +1,6 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 //
 // Install script for plugin.
 // $action: possible action modes
@@ -9,7 +9,8 @@ if (!defined('NGCMS')) die ('HAL');
 //	autoapply       - apply installation in automatic mode [INSTALL script]
 //
 pluginsLoadConfig();
-function plugin_wpinger_install($action) {
+function plugin_wpinger_install($action)
+{
 
 	global $lang;
 	if ($action != 'autoapply')
@@ -21,16 +22,31 @@ function plugin_wpinger_install($action) {
 			break;
 		case 'autoapply':
 		case 'apply':
-			// Now we need to set some default params
+			// Установка параметров по умолчанию
 			$params = array(
 				'proxy' => 1,
 				'urls'  => "http://ping.blogs.yandex.ru/RPC2\nhttp://blogsearch.google.ru/ping/RPC2",
 			);
+
+			// Установка параметров через extra_set_param
 			foreach ($params as $k => $v) {
-				extra_set_param('wpinger', $k, $v);
+				if (!extra_set_param('wpinger', $k, $v)) {
+					error_log("Failed to set param: {$k} => {$v}");
+					return false;
+				}
 			}
-			plugin_mark_installed('wpinger');
+
+			// Пометка плагина как установленного
+			if (!plugin_mark_installed('wpinger')) {
+				error_log("Failed to mark plugin 'wpinger' as installed.");
+				return false;
+			}
+
+			// Финальные изменения
 			extra_commit_changes();
+			$url = home . "/engine/admin.php?mod=extras";
+			header("HTTP/1.1 301 Moved Permanently");
+			header("Location: {$url}");
 			break;
 	}
 

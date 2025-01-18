@@ -31,10 +31,11 @@
 				</td>
 			</tr>
 		{% endfor %}
-		<tr>
-			<td colspan="5" style="text-align: left; padding: 10px 10px 0 0;">
-				<a href="?mod=extra-config&plugin=guestbook&action=add_field">Добавить новое поле</a>
-			</td>
-		</tr>
+		
 	</table>
+<div class="card-footer text-center">
+<a href="?mod=extra-config&plugin=guestbook&action=add_field" class="btn btn-outline-success">Добавить новое поле</a>
+
+</div>
+
 </form>

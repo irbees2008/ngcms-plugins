@@ -1,4 +1,5 @@
-<form method="post" action="">
+<form
+	method="post" action="">
 	<!-- VK -->
 	<fieldset class="admGroup">
 		<legend class="title">{{ lang['gbconfig']['social_vkontakte'] }}</legend>
@@ -75,14 +76,10 @@
 		</table>
 	</fieldset>
 
-	<table border="0" width="100%" cellspacing="0" cellpadding="0">
-		<tr>
-			<td width="100%" colspan="2">&nbsp;</td>
-		</tr>
-		<tr>
-			<td width="100%" colspan="2" class="contentEdit" align="center">
-				<input name="submit" type="submit" value="{{ lang['gbconfig']['settings_save'] }}" class="button"/>
-			</td>
-		</tr>
-	</table>
+	<div class="card-footer text-center">
+
+		<input name="submit" type="submit" value="{{ lang['gbconfig']['settings_save'] }}" class="btn btn-outline-success"/>
+
+	</div>
+
 </form>
