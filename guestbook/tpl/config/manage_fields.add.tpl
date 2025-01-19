@@ -1,33 +1,38 @@
 <form action="?mod=extra-config&plugin=guestbook&action=insert_field" method="POST" name="fieldForm">
-	<fieldset class="admGroup">
-		<legend class="title">{{ lang['gbconfig']['f_add_title'] }}</legend>
-		<table border="0" cellspacing="1" cellpadding="1" class="content">
-			<tr class="contRow1">
-				<td width="20%">{{ lang['gbconfig']['f_id'] }}</td>
-				<td><input type="text" name="id" size="50"></td>
-			</tr>
-			<tr class="contRow1">
-				<td width="20%">{{ lang['gbconfig']['f_name'] }}</td>
-				<td><input type="text" name="name" size="50"/></td>
-			</tr>
-			<tr class="contRow1">
-				<td width="20%">{{ lang['gbconfig']['f_placeholder'] }}</td>
-				<td><input type="text" name="placeholder" size="50"/></td>
-			</tr>
-			<tr class="contRow1">
-				<td width="20%">{{ lang['gbconfig']['f_default_value'] }}</td>
-				<td><input type="text" name="default_value" size="50"/></td>
-			</tr>
-			<tr class="contRow1">
-				<td width="20%">{{ lang['gbconfig']['f_required'] }}</td>
-				<td><input type="checkbox" name="required"/></td>
-			</tr>
-
-		</table>
-	</fieldset>
-	<div class="card-footer text-center">
-		<button type="submit" name="submit" class="btn btn-outline-success">{{ lang['gbconfig']['btn_add_field'] }}</button>
-
-	</div>
-
-</form>
+        <fieldset class="admGroup">
+            <legend class="title">{{ lang['gbconfig']['f_add_title'] }}</legend>
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <tbody>
+                        <tr>
+                            <th scope="row" style="width: 20%;">{{ lang['gbconfig']['f_id'] }}</th>
+                            <td><input type="text" name="id" class="form-control" size="50"/></td>
+                        </tr>
+                        <tr>
+                            <th scope="row" style="width: 20%;">{{ lang['gbconfig']['f_name'] }}</th>
+                            <td><input type="text" name="name" class="form-control" size="50"/></td>
+                        </tr>
+                        <tr>
+                            <th scope="row" style="width: 20%;">{{ lang['gbconfig']['f_placeholder'] }}</th>
+                            <td><input type="text" name="placeholder" class="form-control" size="50"/></td>
+                        </tr>
+                        <tr>
+                            <th scope="row" style="width: 20%;">{{ lang['gbconfig']['f_default_value'] }}</th>
+                            <td><input type="text" name="default_value" class="form-control" size="50"/></td>
+                        </tr>
+                        <tr>
+                            <th scope="row" style="width: 20%;">{{ lang['gbconfig']['f_required'] }}</th>
+                            <td>
+                                <div class="form-check">
+                                    <input type="checkbox" name="required" class="form-check-input"/>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </fieldset>
+        <div class="card-footer text-center">
+            <button type="submit" name="submit" class="btn btn-outline-success">{{ lang['gbconfig']['btn_add_field'] }}</button>
+        </div>
+    </form>

@@ -1,43 +1,45 @@
 <form method="post" action="">
-	<input type="hidden" name="mod" value="extra-config"/>
-	<input type="hidden" name="plugin" value="guestbook"/>
-	<input type="hidden" name="action" value="save_fields"/>
+        <input type="hidden" name="mod" value="extra-config"/>
+        <input type="hidden" name="plugin" value="guestbook"/>
+        <input type="hidden" name="action" value="save_fields"/>
 
-	<table width="100%" border="0">
-		<tr class="contHead" align="left">
-			<td width="10%">{{ lang['gbconfig']['f_id'] }}</td>
-			<td width="15%">{{ lang['gbconfig']['f_name'] }}</td>
-			<td width="30%">{{ lang['gbconfig']['f_placeholder'] }}</td>
-			<td width="30%">{{ lang['gbconfig']['f_default_value'] }}</td>
-			<td width="10%">{{ lang['gbconfig']['f_required'] }}</td>
-			<td width="5%" colspan="2">{{ lang['gbconfig']['actions_title'] }}</td>
-		</tr>
-		{% for entry in entries %}
-			<tr align="left" class="contRow1">
-				<td>{{ entry.id }}</td>
-				<td>{{ entry.name }}</td>
-				<td>{{ entry.placeholder }}</td>
-				<td>{{ entry.default_value }}</td>
-				<td>{% if entry.required %}{{ lang['gbconfig']['settings_yes'] }}{% else %}{{ lang['gbconfig']['settings_no'] }}{% endif %}</td>
-				<td nowrap>
-					<a href="?mod=extra-config&plugin=guestbook&action=edit_field&id={{ entry.id }}" title="{{ lang['gbconfig']['actions_edit'] }}">
-<i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="thead-dark">
+                    <tr>
+                        <th scope="col" style="width: 10%;">{{ lang['gbconfig']['f_id'] }}</th>
+                        <th scope="col" style="width: 15%;">{{ lang['gbconfig']['f_name'] }}</th>
+                        <th scope="col" style="width: 30%;">{{ lang['gbconfig']['f_placeholder'] }}</th>
+                        <th scope="col" style="width: 30%;">{{ lang['gbconfig']['f_default_value'] }}</th>
+                        <th scope="col" style="width: 10%;">{{ lang['gbconfig']['f_required'] }}</th>
+                        <th colspan="2" scope="col" style="width: 5%;" class="text-center">{{ lang['gbconfig']['actions_title'] }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in entries %}
+                        <tr class="align-middle">
+                            <td>{{ entry.id }}</td>
+                            <td>{{ entry.name }}</td>
+                            <td>{{ entry.placeholder }}</td>
+                            <td>{{ entry.default_value }}</td>
+                            <td>{% if entry.required %}{{ lang['gbconfig']['settings_yes'] }}{% else %}{{ lang['gbconfig']['settings_no'] }}{% endif %}</td>
+                            <td class="text-center">
+                                <a href="?mod=extra-config&plugin=guestbook&action=edit_field&id={{ entry.id }}" title="{{ lang['gbconfig']['actions_edit'] }}">
+                                     <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                                </a>
+                            </td>
+                            <td class="text-center">
+                                <a onclick="return confirm('{{ lang['gbconfig']['actions_confirm'] }} {{ entry.id }}?');" href="?mod=extra-config&plugin=guestbook&action=drop_field&id={{ entry.id }}" title="{{ lang['gbconfig']['actions_drop'] }}">
+                                     <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
-					</a>
-				</td>
-				<td nowrap>
-					<a onclick="return confirm('{{ lang['gbconfig']['actions_confirm'] }} {{ entry.id }}?');" href="?mod=extra-config&plugin=guestbook&action=drop_field&id={{ entry.id }}" title="{{ lang['gbconfig']['actions_drop'] }}">
-<i class="fa fa-times" aria-hidden="true"></i>
-
-					</a>
-				</td>
-			</tr>
-		{% endfor %}
-		
-	</table>
-<div class="card-footer text-center">
-<a href="?mod=extra-config&plugin=guestbook&action=add_field" class="btn btn-outline-success">Добавить новое поле</a>
-
-</div>
-
-</form>
+        <div class="card-footer text-center">
+            <a href="?mod=extra-config&plugin=guestbook&action=add_field" class="btn btn-outline-success">{{ lang['gbconfig']['btn_add_field'] }}</a>
+        </div>
+    </form>
