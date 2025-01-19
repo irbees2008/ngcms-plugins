@@ -21,7 +21,8 @@ switch ($_REQUEST['action']) {
 	default:
 		show_faq();
 }
-function show_add_faq() {
+function show_add_faq()
+{
 
 	global $tpl, $mysql, $lang, $twig;
 	$tpath = locatePluginTemplates(array('main', 'add_faq'), 'faq', 1);
@@ -68,7 +69,8 @@ function show_add_faq() {
 	print $xg->render($tVars);
 }
 
-function show_edit_faq() {
+function show_edit_faq()
+{
 
 	global $tpl, $mysql, $lang, $twig;
 	$tpath = locatePluginTemplates(array('main', 'edit_faq'), 'faq', 1);
@@ -126,7 +128,8 @@ function show_edit_faq() {
 	print $xg->render($tVars);
 }
 
-function modify() {
+function modify()
+{
 
 	global $mysql;
 	$selected_faq = $_REQUEST['selected_faq'];
@@ -135,13 +138,13 @@ function modify() {
 		return msg(array("type" => "error", "text" => "Ошибка, вы не выбрали записи"));
 	}
 	switch ($subaction) {
-		case 'mass_approve'      :
+		case 'mass_approve':
 			$active = 'active = 1';
 			break;
-		case 'mass_forbidden'    :
+		case 'mass_forbidden':
 			$active = 'active = 0';
 			break;
-		case 'mass_delete'       :
+		case 'mass_delete':
 			$del = true;
 			break;
 	}
@@ -161,7 +164,8 @@ function modify() {
 	msg(array("type" => "info", "info" => $result));
 }
 
-function show_faq() {
+function show_faq()
+{
 
 	global $tpl, $mysql, $lang, $twig;
 	$tpath = locatePluginTemplates(array('main', 'list_faq'), 'faq', 1);
@@ -205,7 +209,8 @@ function show_faq() {
 	print $xg->render($tVars);
 }
 
-function redirect_faq($url) {
+function redirect_faq($url)
+{
 
 	if (headers_sent()) {
 		echo "<script>document.location.href='{$url}';</script>\n";

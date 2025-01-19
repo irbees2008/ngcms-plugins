@@ -1,25 +1,41 @@
-<div style="text-align : left;">
-	<table class="content" border="0" cellspacing="0" cellpadding="0" align="center">
-		<tr>
-			<td width="100%" colspan="2" class="contentHead">
-				<img src="{{ skins_url }}/images/nav.gif" hspace="8" alt=""/><a href="admin.php?mod=extras" title="Плагины">Плагины</a>
-				&#8594; <a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=faq">Вопросы и ответы</a></td>
-		</tr>
+<div class="container-fluid">
+	<div class="row mb-2">
+		<div class="col-sm-6 d-none d-md-block ">
+			<h1 class="m-0 text-dark">FAQ</h1>
+		</div>
+		<!-- /.col -->
+		<div class="col-sm-6">
+			<ol class="breadcrumb float-sm-right">
+				<li class="breadcrumb-item">
+					<a href="admin.php">
+						<i class="fa fa-home"></i>
+					</a>
+				</li>
+				<li class="breadcrumb-item">
+					<a href="admin.php?mod=extras">Управление плагинами</a>
+				</li>
+				<li class="breadcrumb-item active" aria-current="page">Вопросы и ответы</li>
 
-	</table>
+			</ol>
+		</div>
+		<!-- /.col -->
+	</div>
+	<!-- /.row -->
+</div>
 
-	<table border="0" cellspacing="0" cellpadding="0" width="100%">
-		<tr align="center">
-			<td width="100%" class="contentNav" align="center" style="background-repeat: no-repeat; background-position: left;">
-				<input type="button" onmousedown="javascript:window.location.href='{{ admin_url }}/admin.php?mod=extra-config&plugin=faq'" value="Список вопросов" class="navbutton"/>
-				<input type="button" onmousedown="javascript:window.location.href='{{ admin_url }}/admin.php?mod=extra-config&plugin=faq&action=add_faq'" value="Добавить вопрос" class="navbutton"/>
-			</td>
-		</tr>
-		<tr>
-			<td>&nbsp;</td>
-		</tr>
-	</table>
+<div class="card">
+	<h5 class="card-header">FAQ</h5>
+	<div class="container mt-5">
 
-	{{ entries }}
+		<div class="btn-group" role="group" aria-label="Basic example">
+
+			<input type="button" onmousedown="javascript:window.location.href='{{ admin_url }}/admin.php?mod=extra-config&plugin=faq'" value="Список вопросов" class="btn btn-outline-success"/>
+			<input type="button" onmousedown="javascript:window.location.href='{{ admin_url }}/admin.php?mod=extra-config&plugin=faq&action=add_faq'" value="Добавить вопрос" class="btn btn-outline-success"/>
+		</div>
+	</div>
+	<div class="container mt-5">
+
+		{{ entries }}
+	</div>
 
 </div>
