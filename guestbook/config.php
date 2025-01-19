@@ -34,7 +34,7 @@ switch ($_REQUEST['action']) {
 		show_messages();
 		break;
 	case 'edit_message':
-		$result = edit_message();
+		$result = edit_message($_REQUEST['id']);
 		if ($result === true) show_messages();
 		break;
 	case 'delete_message':
