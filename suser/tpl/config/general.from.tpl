@@ -1,68 +1,99 @@
 <form method="post" action="">
-	<tr>
-		<td colspan=2>
-			<fieldset class="admGroup">
-				<legend class="title">Общие настройки</legend>
-				<table width="100%" border="0" class="content">
-					<tr>
-						<td class="contentEntry1" valign=top>Кол-во пользователей для отображения на одной странице<br/>
-						</td>
-						<td class="contentEntry2" valign=top>
-							<input name="user_per_page" type="text" title="Кол-во пользователей для отображения на одной странице" size="5" value="{user_per_page}"/>
-						</td>
-					</tr>
-					<tr>
-						<td class="contentEntry1" valign=top>Title для страницы плагина<br/>
-							<small></small>
-						</td>
-						<td class="contentEntry2" valign=top>
-							<input name="title_plg" type="text" title="Описание" size="50" value="{title_plg}"/></td>
-					</tr>
-					<tr>
-						<td class="contentEntry1" valign=top>Описание для страницы плагина<br/>
-							<small></small>
-						</td>
-						<td class="contentEntry2" valign=top>
-							<input name="description" type="text" title="Описание" size="50" value="{description}"/>
-						</td>
-					</tr>
-					<tr>
-						<td class="contentEntry1" valign=top>Ключевые слова для страницы плагина<br/>
-							<small></small>
-						</td>
-						<td class="contentEntry2" valign=top>
-							<input name="keywords" type="text" title="Ключевые слова" size="50" value="{keywords}"/>
-						</td>
-					</tr>
-				</table>
-			</fieldset>
-			<fieldset class="admGroup">
-				<legend class="title">Настройки отображения</legend>
-				<table width="100%" border="0" class="content">
-					<tr>
-						<td class="contentEntry1" valign=top>Выберите каталог из которого плагин будет брать шаблоны для
-							отображения<br/>
-							<small><b>Шаблон сайта</b> - плагин будет пытаться взять шаблоны из общего шаблона сайта; в
-								случае недоступности - шаблоны будут взяты из собственного каталога плагина<br/><b>Плагин</b>
-								- шаблоны будут браться из собственного каталога плагина
-							</small>
-							<br/></td>
-						<td class="contentEntry2" valign=top><select name="localsource">{localsource}</select></td>
-					</tr>
+	<!-- Общие настройки -->
+	<fieldset class="border p-3 mb-4">
+		<legend class="w-auto">Общие настройки</legend>
+		<div class="form-group row">
+			<label for="user_per_page" class="col-sm-4 col-form-label"
+				>Кол-во пользователей для отображения на одной странице</label
+			>
+			<div class="col-sm-8">
+				<input
+					type="text"
+					class="form-control"
+					id="user_per_page"
+					name="user_per_page"
+					title="Кол-во пользователей для отображения на одной странице"
+					value="{user_per_page}"
+					size="5" />
+			</div>
+		</div>
+		<div class="form-group row">
+			<label for="title_plg" class="col-sm-4 col-form-label"
+				>Title для страницы плагина</label
+			>
+			<div class="col-sm-8">
+				<input
+					type="text"
+					class="form-control"
+					id="title_plg"
+					name="title_plg"
+					title="Описание"
+					value="{title_plg}"
+					size="50" />
+			</div>
+		</div>
+		<div class="form-group row">
+			<label for="description" class="col-sm-4 col-form-label"
+				>Описание для страницы плагина</label
+			>
+			<div class="col-sm-8">
+				<input
+					type="text"
+					class="form-control"
+					id="description"
+					name="description"
+					title="Описание"
+					value="{description}"
+					size="50" />
+			</div>
+		</div>
+		<div class="form-group row">
+			<label for="keywords" class="col-sm-4 col-form-label"
+				>Ключевые слова для страницы плагина</label
+			>
+			<div class="col-sm-8">
+				<input
+					type="text"
+					class="form-control"
+					id="keywords"
+					name="keywords"
+					title="Ключевые слова"
+					value="{keywords}"
+					size="50" />
+			</div>
+		</div>
+	</fieldset>
 
-				</table>
-			</fieldset>
-		</td>
-	</tr>
+	<!-- Настройки отображения -->
+	<fieldset class="border p-3 mb-4">
+		<legend class="w-auto">Настройки отображения</legend>
+		<div class="form-group row">
+			<label for="localsource" class="col-sm-4 col-form-label"
+				>Выберите каталог из которого плагин будет брать шаблоны для
+				отображения</label
+			>
+			<div class="col-sm-8">
+				<select class="form-control" id="localsource" name="localsource">
+					{localsource}
+				</select>
+				<small class="form-text text-muted">
+					<b>Шаблон сайта</b>
+					- плагин будет пытаться взять шаблоны из общего шаблона сайта; в
+					случае недоступности - шаблоны будут взяты из собственного каталога
+					плагина<br />
+					<b>Плагин</b>
+					- шаблоны будут браться из собственного каталога плагина
+				</small>
+			</div>
+		</div>
+	</fieldset>
 
-	<table border="0" width="100%" cellspacing="0" cellpadding="0">
-		<tr>
-			<td width="100%" colspan="2">&nbsp;</td>
-		</tr>
-		<tr>
-			<td width="100%" colspan="2" class="contentEdit" align="center">
-				<input name="submit" type="submit" value="Сохранить" class="button"/>
-			</td>
-		</tr>
-	</table>
+	<!-- Кнопка Сохранить -->
+	<div class="row">
+		<div class="col text-center">
+			<button name="submit" type="submit" class="btn btn-primary">
+				Сохранить
+			</button>
+		</div>
+	</div>
 </form>

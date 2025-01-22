@@ -1,6 +1,6 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 pluginsLoadConfig();
 LoadPluginLang('suser', 'config', '', '', '#');
 switch ($_REQUEST['action']) {
@@ -10,7 +10,8 @@ switch ($_REQUEST['action']) {
 	default:
 		main();
 }
-function url() {
+function url()
+{
 
 	global $tpl;
 	$tpath = locatePluginTemplates(array('config/main', 'config/url'), 'suser', 1);
@@ -18,14 +19,18 @@ function url() {
 		if (isset($_REQUEST['url']) && !empty($_REQUEST['url'])) {
 			$ULIB = new urlLibrary();
 			$ULIB->loadConfig();
-			$ULIB->registerCommand('suser', '',
+			$ULIB->registerCommand(
+				'suser',
+				'',
 				array(
 					'vars'  =>
-						array(),
+					array(),
 					'descr' => array('russian' => 'Список пользователей'),
 				)
 			);
-			$ULIB->registerCommand('suser', 'search',
+			$ULIB->registerCommand(
+				'suser',
+				'search',
 				array(
 					'vars'  => array(),
 					'descr' => array('russian' => 'Поиск пользователей'),
@@ -57,7 +62,8 @@ function url() {
 	print $tpl->show('main');
 }
 
-function main() {
+function main()
+{
 
 	global $tpl;
 	$tpath = locatePluginTemplates(array('config/main', 'config/general.from'), 'suser', 1);
@@ -96,7 +102,8 @@ function main() {
 	print $tpl->show('main');
 }
 
-function redirect_suser($url) {
+function redirect_suser($url)
+{
 
 	if (headers_sent()) {
 		echo "<script>document.location.href='{$url}';</script>\n";

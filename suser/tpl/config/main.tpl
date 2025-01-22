@@ -1,25 +1,42 @@
-<div style="text-align : left;">
-	<table class="content" border="0" cellspacing="0" cellpadding="0" align="center">
-		<tr>
-			<td width="100%" colspan="2" class="contentHead"><img src="{skins_url}/images/nav.gif" hspace="8" alt=""/>Настройка
-				плагина: Список пользователей => {global}
-			</td>
-		</tr>
-		<tr>
-			<td>&nbsp;</td>
-		</tr>
-	</table>
+<div class="container-fluid">
+	<div class="row mb-2">
+		<div class="col-sm-6 d-none d-md-block ">
+			<h1 class="m-0 text-dark">suser</h1>
 
-	<table border="0" cellspacing="0" cellpadding="0" width="100%">
-		<tr align="center">
-			<td width="100%" class="contentNav" align="center" style="background-repeat: no-repeat; background-position: left;">
-				<input type="button" onmousedown="javascript:window.location.href='{admin_url}/admin.php?mod=extra-config&plugin=suser'" value="Общие" class="navbutton"/>
-				<input type="button" onmousedown="javascript:window.location.href='{admin_url}/admin.php?mod=extra-config&plugin=suser&action=url'" value="ЧПУ" class="navbutton"/>
-			</td>
-		</tr>
-	</table>
-	<br/>
+		</div>
+		<!-- /.col -->
+		<div class="col-sm-6">
+			<ol class="breadcrumb float-sm-right">
+				<li class="breadcrumb-item">
+					<a href="admin.php">
+						<i class="fa fa-home"></i>
+					</a>
+				</li>
+				<li class="breadcrumb-item">
+					<a href="admin.php?mod=extras">Управление плагинами</a>
+				</li>
+				<li class="breadcrumb-item">Список пользователей - {global}</li>
+			</ol>
+		</div>
+		<!-- /.col -->
+	</div>
+	<!-- /.row -->
+</div>
 
-	{entries}
+<div class="container mt-5">
+	<div class="card">
+		<h5 class="card-header">suser</h5>
 
+		<div class="card-body">
+			<div class="btn-group mb-3" role="group">
+
+				<input type="button" onmousedown="javascript:window.location.href='{admin_url}/admin.php?mod=extra-config&plugin=suser'" value="Общие" class="btn btn-outline-success"/>
+
+				<input type="button" onmousedown="javascript:window.location.href='{admin_url}/admin.php?mod=extra-config&plugin=suser&action=url'" value="ЧПУ" class="btn btn-outline-success"/>
+			</div>
+
+			{entries}
+
+		</div>
+	</div>
 </div>

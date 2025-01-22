@@ -1,5 +1,5 @@
 <?php
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 register_plugin_page('suser', '', 'suser_show', 0);
 register_plugin_page('suser', 'search', 'suser_search', 0);
 LoadPluginLang('suser', 'main', '', '', '#');
@@ -8,13 +8,15 @@ add_act('index_post', 'suser_header_show');
 if (xmode()) {
 	LoadPluginLibrary('xfields', 'common');
 }
-function xmode() {
+function xmode()
+{
 
 	// check if xfields plugin is active
 	return (getPluginStatusActive('xfields')) ? true : false;
 }
 
-function suser_header_show($params) {
+function suser_header_show()
+{
 
 	global $CurrentHandler, $SYSTEM_FLAGS, $template, $lang;
 	if (checkLinkAvailable('suser', 'list')) {
@@ -39,13 +41,15 @@ function suser_header_show($params) {
 			$titles = str_replace(
 				array('%name_site%', '%group%', '%num%'),
 				array($SYSTEM_FLAGS['info']['title']['header'], $SYSTEM_FLAGS['info']['title']['group'], $pageNo),
-				$lang['suser']['titles']);
+				$lang['suser']['titles']
+			);
 			break;
 	}
 	$template['vars']['titles'] = trim($titles);
 }
 
-function get_entries($row) {
+function get_entries($row)
+{
 
 	// fill template variables  
 	return array(
@@ -65,7 +69,8 @@ function get_entries($row) {
 	);
 }
 
-function get_xflist() {
+function get_xflist()
+{
 
 	// generate xfields list for template   
 	if (!xmode()) return false;
@@ -76,10 +81,11 @@ function get_xflist() {
 		}
 	}
 
-	return count($xfList) ? $xfList : false;
+	return is_array($xfList) ? $xfList : false;
 }
 
-function xfields_fill($row, $tEntry) {
+function xfields_fill($row, $tEntry)
+{
 
 	// fill xfields variables for template
 	$xdata = $row['xfields'] ? xf_decode($row['xfields']) : array();
@@ -91,7 +97,8 @@ function xfields_fill($row, $tEntry) {
 	return $tEntry;
 }
 
-function suser_search($params) {
+function suser_search($params)
+{
 
 	global $catz, $twig, $catmap, $mysql, $config, $userROW, $tpl, $parse, $template, $lang, $PFILTERS, $SYSTEM_FLAGS, $CurrentHandler;
 	$tpath = locatePluginTemplates(array('suser', 'usersearch'), 'suser', pluginGetVariable('suser', 'localsource'));
@@ -101,7 +108,7 @@ function suser_search($params) {
 		include_once root . 'conf/extras/xfields/config.php';
 		foreach ($xarray['users'] as $id => $data) {
 			switch ($data['type']) {
-				case 'text'  :
+				case 'text':
 					$val = '<select name="xfields_' . $id . '" >';
 					if (!$data['required']) $val .= '<option value="">' . $lang['sh_all'] . '</option>';
 					foreach ($mysql->select("SELECT DISTINCT xfields_" . $id . " AS xtext FROM " . prefix . "_users ORDER BY xfields_" . $id . " ASC") as $row) {
@@ -120,10 +127,10 @@ function suser_search($params) {
 						}
 					$val .= '</select>';
 					break;
-				case 'textarea' :
+				case 'textarea':
 					$val = '';
 					break;
-				case 'images' :
+				case 'images':
 					$val = '';
 					break;
 			}
@@ -165,7 +172,8 @@ function suser_search($params) {
 	$template['vars']['mainblock'] = $xt->render($tVars);
 }
 
-function suser_show($params) {
+function suser_show($params)
+{
 
 	global $catz, $twig, $catmap, $mysql, $config, $userROW, $tpl, $parse, $template, $lang, $PFILTERS, $SYSTEM_FLAGS, $CurrentHandler, $xmod;
 	$tpath = locatePluginTemplates(array('suser', 'userlist'), 'suser', pluginGetVariable('suser', 'localsource'));
@@ -269,10 +277,12 @@ function suser_show($params) {
 		),
 		'prevlink' => array(
 			'true' => !empty($limitStart) ? 1 : 0,
-			'link' => str_replace('%page%',
+			'link' => str_replace(
+				'%page%',
 				"$1",
-				str_replace('%link%',
-					checkLinkAvailable('suser') ?
+				str_replace(
+					'%link%',
+					checkLinkAvailable('suser', '') ?
 						generatePageLink(array('pluginName' => 'suser', 'params' => array(), 'xparams' => array('username' => $username, 'show_group' => $show_group, 'sort_by' => $sort_by, 'sort_dir' => $sort_dir), 'paginator' => array('page', 1, false)), $prev = floor($limitStart / $limitCount)) :
 						generatePageLink(array('pluginName' => 'core', 'pluginHandler' => 'plugin', 'params' => array('plugin' => 'suser'), 'xparams' => array('username' => $username, 'show_group' => $show_group, 'sort_by' => $sort_by, 'sort_dir' => $sort_dir), 'paginator' => array('page', 1, false)), $prev = floor($limitStart / $limitCount)),
 					isset($navigations['prevlink']) ? $navigations['prevlink'] : ''
@@ -281,10 +291,12 @@ function suser_show($params) {
 		),
 		'nextlink' => array(
 			'true' => ($prev + 2 <= $countPages) ? 1 : 0,
-			'link' => str_replace('%page%',
+			'link' => str_replace(
+				'%page%',
 				"$1",
-				str_replace('%link%',
-					checkLinkAvailable('suser') ?
+				str_replace(
+					'%link%',
+					checkLinkAvailable('suser', '') ?
 						generatePageLink(array('pluginName' => 'suser', 'params' => array(), 'xparams' => array('username' => $username, 'show_group' => $show_group, 'sort_by' => $sort_by, 'sort_dir' => $sort_dir), 'paginator' => array('page', 1, false)), $prev + 2) :
 						generatePageLink(array('pluginName' => 'core', 'pluginHandler' => 'plugin', 'params' => array('plugin' => 'suser'), 'xparams' => array('username' => $username, 'show_group' => $show_group, 'sort_by' => $sort_by, 'sort_dir' => $sort_dir), 'paginator' => array('page', 1, false)), $prev + 2),
 					isset($navigations['nextlink']) ? $navigations['nextlink'] : ''
@@ -295,7 +307,8 @@ function suser_show($params) {
 	$template['vars']['mainblock'] .= $xt->render($tVars);
 }
 
-function secureinput_suser($text) {
+function secureinput_suser($text)
+{
 
 	if (!is_array($text)) {
 		$text = trim($text);
@@ -309,28 +322,32 @@ function secureinput_suser($text) {
 	return $text;
 }
 
-function securemysql_suser($sql) {
+function securemysql_suser($sql)
+{
 
 	$sql = db_squote($sql);
 
 	return $sql;
 }
 
-function securenum_suser($value) {
+function securenum_suser($value)
+{
 
 	$value = intval($value);
 
 	return $value;
 }
 
-function LoadVariables_suser() {
+function LoadVariables_suser()
+{
 
 	$tpath = locatePluginTemplates(array(':'), 'suser', pluginGetVariable('suser', 'localsource'));
 
 	return parse_ini_file($tpath[':'] . '/variables.ini', true);
 }
 
-function link_profile_suser($id, $act = '', $name) {
+function link_profile_suser($id, $act = '', $name)
+{
 
 	$id = intval($id);
 	switch ($act) {
@@ -349,7 +366,8 @@ function link_profile_suser($id, $act = '', $name) {
 	return $url;
 }
 
-function redirect_link_suser($url) {
+function redirect_link_suser($url)
+{
 
 	if (headers_sent()) {
 		echo "<script>document.location.href='{$url}';</script>\n";
@@ -361,7 +379,8 @@ function redirect_link_suser($url) {
 	}
 }
 
-function information_suser($info, $title = 'Информация', $error_404 = false) {
+function information_suser($info, $title = 'Информация', $error_404 = false)
+{
 
 	global $twig, $SYSTEM_FLAGS, $CurrentHandler, $template;
 	$CurrentHandler['handlerName'] = 'erro404';
