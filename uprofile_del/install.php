@@ -13,9 +13,18 @@ function plugin_uprofile_del_install($action) {
 		loadPluginLang('uprofile_del', 'config', '', '', ':');
 
 	if (!getPluginStatusActive('uprofile')) {
-		msg(['type' => 'error', 'text' => $lang['uprofile_del:uprofile_error']]);
-		return print_msg( 'warning', $lang['uprofile_del:uprofile_del'], $lang['uprofile_del:uprofile_error'], 'javascript:history.go(-1)' );
+		msg(['type' => 'error', 'text' => $lang['uprofile_del:uprofile_del'], 'info' =>  $lang['uprofile_del:uprofile_error']]);
 	}
+	
+	$db_update = array(
+		array(
+			'table'  => 'users',
+			'action' => 'cmodify',
+			'fields' => array(
+				array('action' => 'cmodify', 'name' => 'user_act', 'type' => 'int(6)', 'params' => "DEFAULT '0'"),
+			)
+		),
+	);
 	
 	switch ($action) {
 		case 'confirm':
@@ -23,8 +32,12 @@ function plugin_uprofile_del_install($action) {
 			break;
 		case 'autoapply':
 		case 'apply':
-			plugin_mark_installed('uprofile_del');
-			create_uprofile_del_urls();
+			if (fixdb_plugin_install('uprofile_del', $db_update, 'install', ($action == 'autoapply') ? true : false)) {
+				plugin_mark_installed('uprofile_del');
+				create_uprofile_del_urls();
+			} else {
+				return false;
+			}
 			
             extra_commit_changes();
 			
