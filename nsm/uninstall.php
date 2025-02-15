@@ -13,8 +13,12 @@ if ($_REQUEST['action'] == 'commit') {
 	$ULIB->removeCommand('nsm', 'edit');
 	$ULIB->removeCommand('nsm', 'del');
 	$ULIB->saveConfig();
-	plugin_mark_deinstalled($plugin);
+	
+plugin_mark_deinstalled('nsm');
+    $url = home . "/engine/admin.php?mod=extras";
+    header("HTTP/1.1 301 Moved Permanently");
+    header("Location: {$url}");
 } else {
-	generate_install_page($plugin, "Удаление NSM", 'deinstall');
+	$text = 'Cейчас плагин будет удален';
+	generate_install_page('nsm', "Удаление NSM", 'deinstall');
 }
-?>
