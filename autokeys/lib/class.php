@@ -148,27 +148,33 @@ class AutoKeyword
 	}
 }
 
-function akeysGetKeys($params)
-{
-	$cfg = [
-		'content'         => ($params['content'] ?? '') . ' this is content',
-		'title'           => $params['title'] ?? '',
-		'min_word_length' => intval(pluginGetVariable('autokeys', 'length') ?? 5),
-		'max_word_length' => intval(pluginGetVariable('autokeys', 'sub') ?? 100),
-		'min_word_occur'  => intval(pluginGetVariable('autokeys', 'occur') ?? 2),
-		'word_sum'        => intval(pluginGetVariable('autokeys', 'sum') ?? 245),
-		'block_word'      => pluginGetVariable('autokeys', 'block_y') ?? false,
-		'block_array'     => pluginGetVariable('autokeys', 'block'),
-		'good_word'       => pluginGetVariable('autokeys', 'good_y') ?? false,
-		'good_array'      => pluginGetVariable('autokeys', 'good'),
-		'add_title'       => intval(pluginGetVariable('autokeys', 'add_title') ?? 0),
-		'word_count'      => intval(pluginGetVariable('autokeys', 'count') ?? 245),
-		'good_b'          => pluginGetVariable('autokeys', 'good_b') ?? false,
-	];
+function akeysGetKeys($params) {
 
-	$keyword = new AutoKeyword($cfg, "windows-1251");
-	$words = substr($keyword->parse_words(), 0, $cfg['word_sum']);
-	$words = substr($words, 0, strrpos($words, ', '));
+	$cfg = array(
+		'content'         => $params['content'] . ' this is content',
+		'title'           => $params['title'],
+		'min_word_length' => (intval(pluginGetVariable('autokeys', 'length'))) ? intval(pluginGetVariable('autokeys', 'length')) : 5,
+		'max_word_length' => (intval(pluginGetVariable('autokeys', 'sub'))) ? intval(pluginGetVariable('autokeys', 'sub')) : 100,
+		'min_word_occur'  => (intval(pluginGetVariable('autokeys', 'occur'))) ? intval(pluginGetVariable('autokeys', 'occur')) : 2,
+		'word_sum'        => (intval(pluginGetVariable('autokeys', 'sum'))) ? intval(pluginGetVariable('autokeys', 'sum')) : 245,
+		'block_word'      => pluginGetVariable('autokeys', 'block_y') ? pluginGetVariable('autokeys', 'block_y') : false,
+		'block_array'     => pluginGetVariable('autokeys', 'block'),
+		'good_word'       => pluginGetVariable('autokeys', 'good_y') ? pluginGetVariable('autokeys', 'good_y') : false,
+		'good_array'      => pluginGetVariable('autokeys', 'good'),
+		'add_title'       => (intval(pluginGetVariable('autokeys', 'add_title'))) ? intval(pluginGetVariable('autokeys', 'add_title')) : 0,
+		'word_count'      => (intval(pluginGetVariable('autokeys', 'count'))) ? intval(pluginGetVariable('autokeys', 'count')) : 245,
+		'good_b'          => pluginGetVariable('autokeys', 'good_b') ? pluginGetVariable('autokeys', 'good_b') : false,
+	);
+
+	$keyword = new AutoKeyword($cfg, "utf-8");
+
+	$words = $keyword->parse_words();
+	$words = implode(', ', array_slice(explode(', ', $words), 0, $cfg['word_count']));
+
+
+	if (!empty($words)) {
+		$words = rtrim($words, ', ');
+	}
 
 	return $words;
 }

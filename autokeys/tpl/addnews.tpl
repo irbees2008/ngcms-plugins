@@ -1,67 +1,71 @@
-<tr>
-	<td width="100%" class="contentHead" colspan="3"><img src="/engine/skins/default/images/nav.gif" hspace="8" alt=""/>Автоматическая
-		генерация ключевых слов
-	</td>
-</tr>
-<tr>
-	<td colspan="3">
-		<table width="100%">
-			<tr>
-				<td>
-					<input type="checkbox" id="autokeys_generate" name="autokeys_generate" value="1" {% if (flags.checked) %} checked="checked" {% endif %}class="check"/>
-				</td>
-				<td><label for="autokeys_generate">Генерировать keywords?</label></td>
-			</tr>
-			<tr>
-				<td colspan="2">
-					<div id="autokeysArea" style="border: #EEEEEE 1px solid; height: 30px; text-align: center;" onclick="autokeysAjaxUpdate();">
-						.. сгенерировать сейчас..
-					</div>
-					<input type="button" id="autokeysButton" value="Перенести.." onclick="autokeysSetKeywords();"/>
-			</tr>
-		</table>
-	</td>
-</tr>
-<script language="javascript">
-	var autokeysAjaxUpdate = function () {
-		var content = '';
+<div class="form-row mb-3">
+	<label class="col-lg-3 col-form-label">Автоматическая генерация ключевых слов</label>
+	<div class="col-lg-9">
+		<div class="form-check mb-3">
+			<input type="checkbox" id="autokeys_generate" name="autokeys_generate" value="1" {% if (flags.checked) %} checked="checked" {% endif %} class="form-check-input"/>
+			<label class="form-check-label" for="autokeys_generate">
+				Генерировать keywords?
+			</label>
+		</div>
 
-		$('[id*=ng_news_content]').each(function(index, element) {
-			content += $(element).val() + ' ';
-		});
+		<div id="autokeysArea" style="border: #EEEEEE 1px solid; height: 30px; text-align: center; color: darkgoldenrod;" onclick="autokeysAjaxUpdate(); return false;" class="mb-3">
+			.. сгенерировать сейчас..
+		</div>
 
-		ngShowLoading();
+		<div class="d-flex justify-content-center">
+			<button type="button" id="autokeysButton" class="btn btn-outline-dark" onclick="autokeysSetKeywords(); return false;">
+				Перенести
+			</button>
+		</div>
+	</div>
+</div>
 
-		$.post('/engine/rpc.php', {
-			json: 1,
-			methodName: 'plugin.autokeys.generate',
-			rndval: new Date().getTime(),
-			params: json_encode({
-				'title': $('#newsTitle').val(),
-				'content': content
-			})
-		}, function (data) {
-			ngHideLoading();
-			// Try to decode incoming data
-			try {
-				resTX = eval('(' + data + ')');
-			} catch (err) {
-				alert('Error parsing JSON output. Result: ' + data);
-			}
-			if (!resTX['status']) {
-				ngNotifyWindow('Error [' + resTX['errorCode'] + ']: ' + resTX['errorText'], 'ERROR');
-			}
+<script language="javascript">var autokeysAjaxUpdate = function () {
 
-			$("#autokeysArea").html(resTX['data']);
-			$("#autokeysButton").show();
-		}, "text").error(function () {
-			ngHideLoading();
-			ngNotifyWindow('HTTP error during request', 'ERROR');
-		});
-	};
-	$("#autokeysButton").hide();
+ngShowLoading();
+$.post('/engine/rpc.php', {
+json: 1,
+methodName: 'plugin.autokeys.generate',
+rndval: new Date().getTime(),
+params: json_encode(
+{
+'title': $('#newsTitle').val(),
+'content': $('#ng_news_content_short').val() + ' ' + $('#ng_news_content_full').val()
+}
+)
+}, function (data) {
+ngHideLoading();
+// Try to decode incoming data
+try {
+resTX = eval('(' + data + ')');
+} catch (err) {
+ngNotifySticker('Error parsing JSON output. Result: ' + linkTX.response, {
+className: 'stickers-danger',
+sticked: 'true',
+closeBTN: true
+});
+}
+if (!resTX['status']) {
+ngNotifySticker('Error [' + resTX['errorCode'] + ']: ' + resTX['errorText'], {
+className: 'stickers-danger',
+sticked: 'true',
+closeBTN: true
+});
+}
 
-	var autokeysSetKeywords = function () {
-		$("#newsKeywords").val($("#autokeysArea").html());
-	}
-</script>
+$("#autokeysArea").html(resTX['data']);
+$("#autokeysButton").show();
+}, "text").error(function () {
+ngHideLoading();
+ngNotifySticker('HTTP error during request', {
+className: 'stickers-danger',
+sticked: 'true',
+closeBTN: true
+});
+});
+};
+$("#autokeysButton").hide();
+
+var autokeysSetKeywords = function () { // Используем атрибут name для выбора элементов
+$("textarea[name='keywords']").val($("#autokeysArea").html());
+}</script>
