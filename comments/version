@@ -19,3 +19,4 @@ Information: Реализует функционал работы с комме�
 Preinstall: default_no
 Preinstall_vars: cache="1"; cacheExpire="3600";
 Library: lib; inc/comments.lib.php
+MinEngineBuild: 3740369

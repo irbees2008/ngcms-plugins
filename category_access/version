@@ -10,3 +10,4 @@ Information: Плагин позволяет Вам управлять дост�
 Author: Ivan Litvinenko (Amarelius)
 Author_URI: http://arnit.com.ua/
 preinstall: no
+MinEngineBuild: 3740369
