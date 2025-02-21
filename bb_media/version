@@ -13,3 +13,4 @@ Type: plugin
 Title: BB код [MEDIA]
 Description: BB код [MEDIA]
 Author: Vitaly A. Ponomarev
+MinEngineBuild: 3740369

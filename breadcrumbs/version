@@ -13,3 +13,4 @@ Description: Показывает посетителю его местонахо
 Author: Alexey N. Zhukov (Wolverine)
 Author_URI: http://digitalplace.ru/
 Preinstall: no
+MinEngineBuild: 3740369
