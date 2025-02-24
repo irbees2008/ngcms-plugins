@@ -18,3 +18,5 @@ Author_URI: http://ngcms.ru/
 URI: http://no_url.com/
 Title: Облако тегов
 Information: Показывает массив ключевых слов, созданных в новости. Чем чаще ключевое слово встречается в новостях, тем сильнее выделяется данное слово в &quot;облаке&quot;.
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-tags fa-3x" aria-hidden="true"></i>

@@ -248,10 +248,10 @@ function add_submit() {
 	if (!$name) $name = 0;
 	$description = trim(secure_html($_REQUEST['description']));
 	$type = intval($_REQUEST['type']);
-	$location = array($_REQUEST['location']);
+	$location = $_REQUEST['location'] ?? [];
+	array_walk_recursive($location, function (&$value) {
+		$value = intval($value);
 
-	array_walk_recursive($location, function ($value, $key) {
-		//var_dump("{$key} -> {$value}");
 	});
 
 	$state = intval($_REQUEST['state']);
@@ -261,7 +261,8 @@ function add_submit() {
 	$var = pluginGetVariable('ads_pro', 'data');
 	if (!$id) {
 		$mysql->query("insert into " . prefix . "_ads_pro (ads_blok) values (" . db_squote($ads_blok) . ")");
-		$id = intval($mysql->lastid("ads_pro"));
+		$row = $mysql->record('select id from ' . prefix . '_ads_pro ORDER BY id DESC LIMIT 1');
+		$id = $row['id'];
 	} else {
 		$t_update = $mysql->query("update " . prefix . "_ads_pro set ads_blok=" . db_squote($ads_blok) . " where id=" . db_squote($id) . " limit 1");
 		$t_name = 0;
@@ -346,34 +347,34 @@ function move($action) {
 }
 
 function GetTimeStamp($date) {
+    $parts = explode(' ', trim($date));
+    if (count($parts) > 2) {
+        return null;
+    }
 
-	$stamp = explode(' ', $date);
-	$tdate = null;
-	$ttime = null;
-	switch (count($stamp)) {
-		case 1:
-			$tdate = explode('.', $stamp[0]);
-			break;
-		case 2:
-			$tdate = explode('.', $stamp[0]);
-			$ttime = explode(':', $stamp[1]);
-			break;
-		default:
-			return null;
-			break;
+    $tdate = explode('.', $parts[0]);
+    if (count($tdate) !== 3 || !is_numeric($tdate[0]) || !is_numeric($tdate[1]) || !is_numeric($tdate[2])) {
+        return null;
+    }
+
+    $ttime = [0, 0];
+    if (isset($parts[1])) {
+        $ttime = explode(':', $parts[1]);
+        if (count($ttime) !== 2 || !is_numeric($ttime[0]) || !is_numeric($ttime[1])) {
+            return null;
+        }
+    }
+
+    list($day, $month, $year) = $tdate;
+    list($hour, $minute) = $ttime;
+
+    if ($year < 0 || $month < 1 || $month > 12 || $day < 1 || $day > 31) {
+        return null;
 	}
-	if (!is_array($tdate) && (isset($tdate) ? count($tdate) : '') != 3)
-		$tdate = null;
-	if (!is_array($ttime) && (isset($ttime) ? count($ttime) : '') != 2)
-		$ttime = null;
-	if ($tdate === null && $ttime === null)
-		return null;
-	if ($tdate === null) $tdate = array(0, 0, 0);
-	if ($ttime === null) $ttime = array(0, 0);
-	$tstamp = mktime($ttime[0], $ttime[1], 0, intval($tdate[1]), $tdate[2], $tdate[0]);
-	if ($tstamp < 0) return null;
 
-	return $tstamp;
+    $timestamp = mktime((int)$hour, (int)$minute, 0, (int)$month, (int)$day, (int)$year);
+
+    return $timestamp;
 }
 
 function delete() {

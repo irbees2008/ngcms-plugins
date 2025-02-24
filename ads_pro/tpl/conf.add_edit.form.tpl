@@ -9,11 +9,11 @@
 		cellRight = row.insertCell(1);
 		cellRight.setAttribute('align', 'left');
 
-		var el = '<select name="location[' + iteration + '][mode]" onchange="AddSubBlok(this, ' + iteration + ');"><option value="0">{l_ads_pro:around}</option><option value="1">{l_ads_pro:main}</option><option value="2">{l_ads_pro:not_main}</option><option value="3">{l_ads_pro:category}</option><option value=4>{l_ads_pro:static}</option>[support_news]<option value=5>{l_ads_pro:news}</option>[/support_news]<option value=6>{l_ads_pro:plugins}</option></select>';
+		var el = '<select name="location[' + iteration + '][mode]" onchange="AddSubBlok(this, ' + iteration + ');"><option value=0>{l_ads_pro:around}</option><option value=1>{l_ads_pro:main}</option><option value=2>{l_ads_pro:not_main}</option><option value=3>{l_ads_pro:category}</option><option value=4>{l_ads_pro:static}</option>[support_news]<option value=5>{l_ads_pro:news}</option>[/support_news]<option value=6>{l_ads_pro:plugins}</option></select>';
 
 		cellRight.innerHTML += el;
 
-		el = '<select name="location[' + iteration + '][view]"><option value="0">{l_ads_pro:view}</option><option value="1">{l_ads_pro:not_view}</option></select>';
+		el = '<select name="location[' + iteration + '][view]"><option value=0>{l_ads_pro:view}</option><option value=1>{l_ads_pro:not_view}</option></select>';
 
 		cellRight.innerHTML += el;
 	}
