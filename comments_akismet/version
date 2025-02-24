@@ -15,3 +15,5 @@ Author_URI: http://ngcms.ru/forum/profile.php?id=2348
 Title: Antispam
 Information: Фильтрует спам в комментариях
 Preinstall: no
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-exclamation-triangle fa-3x" aria-hidden="true"></i>

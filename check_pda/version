@@ -8,3 +8,5 @@ Description: check_pda
 Author: Rostunov S. U.
 Author_URI: http://rostunov.com/
 preinstall: no
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-tablet fa-3x" aria-hidden="true"></i>
