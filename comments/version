@@ -20,3 +20,4 @@ Preinstall: default_no
 Preinstall_vars: cache="1"; cacheExpire="3600";
 Library: lib; inc/comments.lib.php
 MinEngineBuild: 3740369
+Icons: <i class="fa fa-comments-o fa-3x" aria-hidden="true"></i>

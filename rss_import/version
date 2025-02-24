@@ -15,3 +15,5 @@ Title: RSS news importer
 Information: Импорт новостей через RSS
 Preinstall: default_no
 Preinstall_vars: cache="1"; cacheExpire="3600";
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-rss fa-3x" aria-hidden="true"></i>

@@ -17,4 +17,5 @@ Author_URI: http://ngcms.ru/
 Title: Генератор Google SiteMap
 Information: Позволяет создавать SiteMap для вашего сайта
 Library: common; lib/common.php
-MinEngineBuild: 2020731
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-map-o fa-3x" aria-hidden="true"></i>

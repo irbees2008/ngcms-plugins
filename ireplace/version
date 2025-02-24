@@ -10,3 +10,5 @@ Type: maintanance
 Description: Замена подстрок в БД
 Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru/
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-exchange fa-3x" aria-hidden="true"></i>

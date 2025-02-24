@@ -9,3 +9,4 @@ Author: Ivan Litvinenko (Amarelius)
 Author_URI: http://arnit.com.ua/
 preinstall: no
 MinEngineBuild: 3740369
+Icons: <i class="fa fa-trash-o fa-3x" aria-hidden="true"></i>
