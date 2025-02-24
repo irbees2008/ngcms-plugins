@@ -17,3 +17,4 @@ Preinstall_vars: maxnum="12"; counter="1"; cache="1"; cacheExpire="3600";
 Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru/
 MinEngineBuild: 2020731
+Icons: <i class="fa fa-archive fa-3x" aria-hidden="true"></i>

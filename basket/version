@@ -18,3 +18,5 @@ Author_URI: http://ngcms.ru
 Title: Корзина заказа
 Information: Позволяет откладывать товары в корзину
 Preinstall: no
+MinEngineBuild: 111111
+Icons: <i class="fa fa-cart-plus fa-3x" aria-hidden="true"></i>
