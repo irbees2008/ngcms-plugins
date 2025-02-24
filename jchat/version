@@ -16,3 +16,5 @@ Description: AJAX based чат для сайта
 Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru/
 Information: Благодаря этому плагину вы сможете добавить на ваш сайт ЧАТ (на базе технологии AJAX)
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-comments fa-3x" aria-hidden="true"></i>

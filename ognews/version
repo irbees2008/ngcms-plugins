@@ -9,3 +9,5 @@ Information: ognews example
 Author: Rostunov Sergey,irbees2008
 Author_URI: http://rostunov.com/  https://ngcmshak.ru
 preinstall: no
+MinEngineBuild: 3740369
+Icons: <i class="fa Example of terminal fa-terminal fa-3x" aria-hidden="true"></i>

@@ -17,3 +17,5 @@ Title: Последние комментарии
 Information: Отображение последних комментариев, оставленных на страницах сайта
 Preinstall: default_no
 Preinstall_vars: cache="1"; cacheExpire="3600";
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-commenting fa-3x" aria-hidden="true"></i>

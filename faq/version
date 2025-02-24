@@ -13,4 +13,4 @@ Author: Rostunov Sergey
 Author_URI: http://rostunov.com
 preinstall: no
 MinEngineBuild: 3740369
-Icons: <i class="fa fa-comments fa-3x" aria-hidden="true"></i>
+Icons: <i class="fa fa-question fa-3x" aria-hidden="true"></i>

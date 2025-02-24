@@ -15,3 +15,5 @@ Author_URI: http://digitalplace.ru/
 Title: Предыдущая и следующая новости
 Information: Добавляет новые переменные управления следующей и предыдущей новостью.
 Preinstall: no
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-newspaper-o fa-3x" aria-hidden="true"></i>
