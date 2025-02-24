@@ -19,3 +19,5 @@ Title: Личные сообщения
 Information: Плагин организует возможность обмена приватными сообщениями между зарегистрированными пользователями сайта
 Preinstall: default_no
 Library: lib; lib/pm.lib.php
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-envelope-o fa-3x" aria-hidden="true"></i>

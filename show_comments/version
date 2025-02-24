@@ -10,3 +10,5 @@ Type: maintanance
 Description: Плагин выводит список всех комментариев на сайте
 Author: Rostunov Sergey
 Author_URI: http://rostunov.com/
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-comment-o fa-3x" aria-hidden="true"></i>

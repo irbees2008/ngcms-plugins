@@ -10,3 +10,5 @@ Information: -
 Author: Nail' R. Davydov (ROZARD)
 Author_URI: http://rozard.ngdemo.ru
 preinstall: no
+MinEngineBuild: 
+Icons: <i class="fa fa-link fa-3x" aria-hidden="true"></i>

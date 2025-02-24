@@ -16,3 +16,5 @@ Author_URI: http://rostunov.com
 Install: install.php
 Deinstall: uninstall.php
 preinstall: no
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-comment fa-3x" aria-hidden="true"></i>
