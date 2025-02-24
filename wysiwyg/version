@@ -10,4 +10,5 @@ Information:
 Author: Nail' R. Davydov (ROZARD)
 Author_URI: http://ngcms.ru/
 preinstall: no
-MinEngineBuild: 20200731
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-text-height fa-3x" aria-hidden="true"></i>

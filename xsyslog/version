@@ -8,3 +8,5 @@ Description: Просмотр журнала действий пользоват
 Author: Rostunov Sergey
 Author_URI: http://rostunov.com
 preinstall: no
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-bar-chart fa-3x" aria-hidden="true"></i>

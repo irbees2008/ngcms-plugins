@@ -17,3 +17,5 @@ Author_URI:
 Title: Удаление профиля
 Information: Пользователь сайта может удалить свой профиль.
 Preinstall: no
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-user-times fa-3x" aria-hidden="true"></i>

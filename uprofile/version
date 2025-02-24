@@ -16,4 +16,5 @@ Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru/
 preinstall: yes
 Library: lib; lib/uprofile.lib.php
-MinEngineBuild: 2020731
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-user-o fa-3x" aria-hidden="true"></i>
