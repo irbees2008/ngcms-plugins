@@ -8,4 +8,5 @@ Config:config.php
 Type: plugin
 Description: Автоматическое добавление поля keywords
 Author: Maxym A. Dogadaylo
-MinEngineBuild: 2024731
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-key fa-3x" aria-hidden="true"></i>

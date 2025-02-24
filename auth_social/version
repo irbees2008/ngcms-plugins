@@ -15,3 +15,4 @@ Description: Аутентификация через ВК, Google, Yandex, Faceb
 Author: Rostunov Sergey
 Author_URI: http://rostunov.com/
 Information: Аутентификация через ВК, Google, Yandex, Facebook и т.д.
+Icons: <i class="fa fa-sign-in fa-3x" aria-hidden="true"></i>

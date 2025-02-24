@@ -12,3 +12,4 @@ Information: Позволяет редактировать часто измен
 Author: Ivan Litvinenko (Amarelius)
 Author_URI: http://arnit.com.ua/
 preinstall: no
+Icons: <i class="fa fa-info fa-3x" aria-hidden="true"></i>
