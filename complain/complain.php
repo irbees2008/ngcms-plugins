@@ -22,7 +22,9 @@ function plugin_complain_screen() {
 	global $template, $tpl, $lang, $mysql, $userROW;
 	global $SUPRESS_TEMPLATE_SHOW;
 	loadPluginLang('complain', 'main', '', '', ':');
-	$SUPRESS_TEMPLATE_SHOW = 1;
+	
+	$SUPRESS_TEMPLATE_SHOW = pluginGetVariable('complain', 'extform') ? 1 : pluginGetVariable('complain', 'extform');
+	
 	// Determine paths for all template files
 	$tpath = locatePluginTemplates(array('list.entry', 'list.header', 'infoblock'), 'complain', pluginGetVariable('complain', 'localsource'));
 	// No access for unregistered users
@@ -86,10 +88,13 @@ function plugin_complain_screen() {
 		$tpl->vars('list.entry', $tvars);
 		$entries .= $tpl->show('list.entry');
 	}
+	
+
 	$sselect = '';
 	for ($i = 2; $i < 5; $i++) $sselect .= '<option value="' . $i . '">' . $lang['complain:status.' . $i] . '</option>';
 	$tpl->template('list.header', $tpath['list.header']);
 	$tvars = array();
+	$tvars['regx']['#\[extform\](.*?)\[\/extform\]#is'] = $SUPRESS_TEMPLATE_SHOW ? '$1' : '';	
 	$tvars['vars'] = array('entries' => $entries, 'status_options' => $sselect, 'form_url' => generateLink('core', 'plugin', array('plugin' => 'complain', 'handler' => 'update')), 'ETEXT' => json_encode($etext));
 	$tpl->vars('list.header', $tvars);
 	$template['vars']['mainblock'] = $tpl->show('list.header');
