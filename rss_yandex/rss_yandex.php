@@ -1,26 +1,29 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die ('HAL');
+
 include_once root . "/includes/news.php";
+
 register_plugin_page('rss_yandex', '', 'plugin_rss_yandex', 0);
 register_plugin_page('rss_yandex', 'category', 'plugin_rss_yandex_category', 0);
-function plugin_rss_yandex() {
 
+function plugin_rss_yandex() {
 	plugin_rss_yandex_generate();
 }
 
 function plugin_rss_yandex_category($params) {
 
-	$category = filter_var($_REQUEST['category'], FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_HIGH);
-	plugin_rss_yandex_generate($category);
+	plugin_rss_yandex_generate($params['category']);
 }
 
 function plugin_rss_yandex_generate($catname = '') {
 
-	global $lang, $PFILTERS, $template, $config, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $mysql, $catz, $catmap, $parse, $twigStringLoader;
+	global $lang, $PFILTERS, $template, $config, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $mysql, $catz, $parse;
+	
 	// Initiate instance of TWIG engine with string loader
-	$twigString = new Twig_Environment($twigStringLoader);
+	//$twigString = new Twig_Environment($twigStringLoader);
 	// Disable executing of `index` action (widget plugins and so on..)
+	
 	actionDisable('index');
 	// Suppress templates
 	$SUPRESS_TEMPLATE_SHOW = 1;
@@ -30,7 +33,8 @@ function plugin_rss_yandex_generate($catname = '') {
 		header('HTTP/1.1 404 Not found');
 		exit;
 	}
-	@header('Content-type: text/xml; charset=utf-8');
+	// Set correct HTTP headers for RSS feed
+	header('Content-Type: application/rss+xml; charset=utf-8');
 	// Generate header
 	$xcat = (($catname != '') && isset($catz[$catname])) ? $catz[$catname] : '';
 	// Generate cache file name [ we should take into account SWITCHER plugin ]
@@ -58,7 +62,7 @@ function plugin_rss_yandex_generate($catname = '') {
 	$orderBy = "id desc";
 	if (is_array($xcat)) {
 		$orderBy = ($xcat['orderby'] && in_array($xcat['orderby'], array('id desc', 'id asc', 'postdate desc', 'postdate asc', 'title desc', 'title asc'))) ? $xcat['orderby'] : 'id desc';
-		$query = "select * from " . prefix . "_news where catid regexp '\\\\b(" . $xcat['id'] . ")\\\\b' and approve=1 ";
+		$query = "select * from " . prefix . "_news where catid regexp '[[:<:]](" . $xcat['id'] . ")[[:>:]]' and approve=1 ";
 	} else {
 		$query = "select * from " . prefix . "_news where approve=1 ";
 	}
@@ -89,67 +93,114 @@ function plugin_rss_yandex_generate($catname = '') {
 			}
 		}
 	}
-	$newsTitleFormat = pluginGetVariable('rss_yandex', 'news_title') ? pluginGetVariable('rss_yandex', 'news_title') : '{% if masterCategoryName %}{{masterCategoryName}} :: {% endif %}{{newsTitle}}';
+
 	foreach ($sqlData as $row) {
-		// Make standart system call in 'export' mode
-		$newsVars = news_showone($row['id'], '', array('emulate' => $row, 'style' => 'exportVars', 'extractEmbeddedItems' => pluginGetVariable('rss_yandex', 'textEnclosureEnabled') ? 1 : 0, 'plugin' => 'rss_yandex'));
+		// Make standard system call in 'export' mode
+		$newsVars = news_showone($row['id'], '', array(
+			'emulate' => $row,
+			'style' => 'exportVars',
+			'extractEmbeddedItems' => pluginGetVariable('rss_yandex', 'textEnclosureEnabled') ? 1 : 0,
+			'plugin' => 'rss_yandex'
+		));
+
+		$export_mode = 'export_body';
+		switch (pluginGetVariable('rss_yandex', 'full_format')) {
+			case '1':
+				$export_mode = 'export_short';
+				break;
+			case '2':
+				$export_mode = 'export_full';
+				break;
+		}
+		$content = news_showone($row['id'], '', array('emulate' => $row, 'style' => $export_mode, 'plugin' => 'rss_yandex'));
+
 		$enclosureList = array();
+
 		// Check if Enclosure `xfields` integration is activated
-		if (pluginGetVariable('rss_yandex', 'xfEnclosureEnabled') && (true || getPluginStatusActive('xfields'))) {
-			// Load (if needed XFIELDS plugin
+		if (pluginGetVariable('rss_yandex', 'xfEnclosureEnabled') && getPluginStatusActive('xfields')) {
 			include_once(root . "/plugins/xfields/xfields.php");
 			if (is_array($xfd = xf_decode($row['xfields'])) && isset($xfd[pluginGetVariable('rss_yandex', 'xfEnclosure')])) {
-				// Check enclosure field type
+				$enclosureUrl = '';
 				if ($enclosureIsImages) {
-					// images
 					if (isset($encImages[$row['id']])) {
-						$enclosureList [] = '   <enclosure url="' . ($encImages[$row['id']]['storage'] ? $config['attach_url'] : $config['images_url']) . '/' . $encImages[$row['id']]['folder'] . '/' . $encImages[$row['id']]['name'] . '" />';
+						$enclosureUrl = ($encImages[$row['id']]['storage'] ? $config['attach_url'] : $config['images_url']) . '/' . $encImages[$row['id']]['folder'] . '/' . $encImages[$row['id']]['name'];
 					}
 				} else {
-					// text
-					$enclosureList [] = '   <enclosure url="' . $xfd[pluginGetVariable('rss_yandex', 'xfEnclosure')] . '" />';
+					$enclosureUrl = $xfd[pluginGetVariable('rss_yandex', 'xfEnclosure')];
+				}
+
+				if ($enclosureUrl) {
+					$fileSize = 0;
+					$mimeType = 'application/octet-stream';
+
+					if (filter_var($enclosureUrl, FILTER_VALIDATE_URL)) {
+						$headers = @get_headers($enclosureUrl, 1);
+						$fileSize = isset($headers['Content-Length']) ? $headers['Content-Length'] : 0;
+						$mimeType = isset($headers['Content-Type']) ? $headers['Content-Type'] : 'application/octet-stream';
+					} else {
+						if (file_exists($enclosureUrl)) {
+							$fileSize = @filesize($enclosureUrl);
+							$mimeType = mime_content_type($enclosureUrl);
+						}
+					}
+
+					$enclosureList[] = '   <enclosure url="' . $enclosureUrl . '" length="' . $fileSize . '" type="' . $mimeType . '" />';
 				}
 			}
 		}
+
 		// Check if embedded items should be exported in enclosure
 		if (pluginGetVariable('rss_yandex', 'textEnclosureEnabled') && isset($newsVars['news']['embed']['images']) && is_array($newsVars['news']['embed']['images'])) {
 			foreach ($newsVars['news']['embed']['images'] as $url) {
-				// Check for absolute link
-				if (!preg_match('#^http(s{0,1})\:\/\/#', $url)) $url = home . $url;
-				$enclosureList [] = '   <enclosure url="' . $url . '" />';
+				if (!preg_match('#^http(s{0,1})\:\/\/#', $url)) {
+					$url = home . $url;
+				}
+
+				$fileSize = 0;
+				$mimeType = 'image/jpeg';
+
+				if (filter_var($url, FILTER_VALIDATE_URL)) {
+					$headers = @get_headers($url, 1);
+					$fileSize = isset($headers['Content-Length']) ? $headers['Content-Length'] : 0;
+					$mimeType = isset($headers['Content-Type']) ? $headers['Content-Type'] : 'image/jpeg';
+				}
+
+				$enclosureList[] = '   <enclosure url="' . $url . '" length="' . $fileSize . '" type="' . $mimeType . '" />';
 			}
 		}
-		// Calculate news category list
-		$catList = array();
-		foreach (explode(",", $row['catid']) as $v) {
-			if (isset($catmap[$v])) {
-				$catList [] = $catz[$catmap[$v]]['name'];
-			}
+
+		$newsTitleFormat = str_replace(
+			array('%site_title%', '%news_title%', '%cat_title%'),
+			array($config['home_title'], secure_html($row['title']), GetCategories($row['catid'], true)),
+			pluginGetVariable('rss_yandex', 'news_title')
+		);
+
+		// Обрезаем описание до 500 символов и убираем HTML-теги
+		$shortDescription = strip_tags($newsVars['short-story']); // Убираем HTML-теги
+		$shortDescription = mb_substr($shortDescription, 0, 500, 'UTF-8'); // Обрезаем до 500 символов
+		if (mb_strlen($newsVars['short-story'], 'UTF-8') > 500) {
+			$shortDescription .= '...'; // Добавляем многоточие, если текст был обрезан
 		}
-		$masterCategoryName = '';
-		if (count($catList))
-			$masterCategoryName = $catList[0];
-		//var_dump($newsTitleFormat);
-		//var_dump($masterCategoryName);
-		//$mCatName = $masterCategoryName;
-		//var_dump("<title><![CDATA[".($twigString->render($newsTitleFormat, array('siteTitle' => $config['home_title'], 'newsTitle' => mb_convert_encoding($row['title'], "Windows-1251"), 'masterCategoryName' => $masterCategoryName)))."]]></title>\n");
+
 		$output .= "  <item>\n";
-		$output .= "   <title><![CDATA[" . iconv("UTF-8", "windows-1251", ($twigString->render($newsTitleFormat, array('siteTitle' => iconv("windows-1251", "UTF-8", $config['home_title']), 'newsTitle' => iconv("windows-1251", "UTF-8", $row['title']), 'masterCategoryName' => iconv("windows-1251", "UTF-8", $masterCategoryName))))) . "]]></title>\n";
+		$output .= "   <title><![CDATA[" . $newsTitleFormat . "]]></title>\n";
 		$output .= "   <link><![CDATA[" . newsGenerateLink($row, false, 0, true) . "]]></link>\n";
 		$output .= "   <pubDate>" . gmstrftime('%a, %d %b %Y %H:%M:%S GMT', $row['postdate']) . "</pubDate>\n";
-		$output .= "   <yandex:full-text>" . strip_tags((pluginGetVariable('rss_yandex', 'full_format') ? $newsVars['short-story'] . ' ' : '') . $newsVars['full-story']) . "</yandex:full-text>\n";
-		$output .= "   <description><![CDATA[" . $newsVars['short-story'] . "]]></description>\n";
+		$output .= "   <yandex:full-text>" . htmlspecialchars($content) . "</yandex:full-text>\n";
+		$output .= "   <description><![CDATA[" . htmlspecialchars($shortDescription) . "]]></description>\n";
+
 		// Generate list of enclosures
 		$output .= join("\n", $enclosureList);
-		if (count($enclosureList)) $output .= "\n";
-		//var_dump(GetCategories($row['catid'], true));
+		if (count($enclosureList)) {
+			$output .= "\n";
+		}
+
 		if (is_array($xcat)) {
 			$main_cat_name = $xcat['name'];
 		} else {
 			$main_cat_name = explode(',', GetCategories($row['catid'], true));
 			$main_cat_name = $main_cat_name[0];
 		}
-		//$output .= "   <category>".GetCategories($row['catid'], true)."</category>\n";
 		$output .= "   <category>" . $main_cat_name . "</category>\n";
 		$output .= "   <guid isPermaLink=\"false\">" . home . "?id=" . $row['id'] . "</guid>\n";
 		$output .= "  </item>\n";
@@ -157,7 +208,7 @@ function plugin_rss_yandex_generate($catname = '') {
 	setlocale(LC_TIME, $old_locale);
 	$output .= " </channel>\n</rss>\n";
 	// Print output
-	print iconv("windows-1251", "UTF-8", $output);
+	print $output;
 	if (pluginGetVariable('rss_yandex', 'cache')) {
 		cacheStoreFile($cacheFileName, $output, 'rss_yandex');
 	}
@@ -165,32 +216,49 @@ function plugin_rss_yandex_generate($catname = '') {
 
 function plugin_rss_yandex_mk_header($xcat) {
 
-	global $config, $twigStringLoader;
+	global $config;
 	// Initiate instance of TWIG engine with string loader
-	$twigString = new Twig_Environment($twigStringLoader);
-	$feedTitleFormat = pluginGetVariable('rss_yandex', 'feed_title') ? pluginGetVariable('rss_yandex', 'feed_title') : '{{siteTitle}}';
-	// Generate RSS header
-	$line = '<?xml version="1.0" encoding="utf-8"?>' . "\n";
-	$line .= ' <rss xmlns:yandex="http://news.yandex.ru" xmlns:media="http://search.yahoo.com/mrss/" version="2.0">' . "\n";
-	$line .= " <channel>\n";
-	// Channel title
-	$line .= "  <title><![CDATA[" . iconv("UTF-8", "windows-1251", ($twigString->render($feedTitleFormat, array('siteTitle' => iconv("windows-1251", "UTF-8", $config['home_title']))))) . "]]></title>\n";
-	// LINK
-	$line .= "  <link><![CDATA[" . $config['home_url'] . "]]></link>\n";
-	// Description
-	$line .= "  <description><![CDATA[" . $config['description'] . "]]></description>\n";
-	// Image
-	$imgInfo = array(
-		'url'   => pluginGetVariable('rss_yandex', 'feed_image_url') ? pluginGetVariable('rss_yandex', 'feed_image_url') : 'http://ngcms.ru/templates/ngcms2/images/logo.png',
-		'title' => pluginGetVariable('rss_yandex', 'feed_image_title') ? pluginGetVariable('rss_yandex', 'feed_image_title') : 'Next generation CMS demo RSS feed',
-		'link'  => pluginGetVariable('rss_yandex', 'feed_image_link') ? pluginGetVariable('rss_yandex', 'feed_image_link') : 'http://ngcms.ru/',
-	);
-	$line .= " <image>\n";
-	$line .= "  <url>" . $imgInfo['url'] . "</url>\n";
-	$line .= "  <title><![CDATA[" . $imgInfo['title'] . "]]></title>\n";
-	$line .= "  <link>" . $imgInfo['link'] . "</link>\n";
-	$line .= " </image>\n";
-	$line .= "  <generator><![CDATA[Plugin rss_yandex (0.01) // Next Generation CMS (" . engineVersion . ")]]></generator>\n";
 
-	return $line;
-}
+	$feedTitleFormat = str_replace('%site_title%', $config['home_title'], pluginGetVariable('rss_yandex', 'feed_title')); 
+	// Generate RSS header
+	$line = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+$line .= ' <rss xmlns:yandex="http://news.yandex.ru" xmlns:media="http://search.yahoo.com/mrss/"
+    xmlns:turbo="http://turbo.yandex.ru" version="2.0">' . "\n";
+    $line .= " <channel>\n";
+        // Channel title
+        $line .= " <title>
+            <![CDATA[" . $feedTitleFormat/* $config['home_title'] . (is_array($xcat) ? ' :: ' . $xcat['name'] : '') */ . "]]>
+        </title>\n";
+        // LINK
+        $line .= "
+        <link>
+        <![CDATA[" . $config['home_url'] . "]]>
+        </link>\n";
+        // Description
+        $line .= " <description>
+            <![CDATA[" . $config['description'] . "]]>
+        </description>\n";
+        // Image
+        $imgInfo = array(
+        'url' => pluginGetVariable('rss_yandex', 'feed_image_url') ? pluginGetVariable('rss_yandex', 'feed_image_url') :
+        'http://ngcms.ru/templates/ngcms2/images/logo.png',
+        'title' => pluginGetVariable('rss_yandex', 'feed_image_title') ? pluginGetVariable('rss_yandex',
+        'feed_image_title') : 'Next generation CMS demo RSS feed',
+        'link' => pluginGetVariable('rss_yandex', 'feed_image_link') ? pluginGetVariable('rss_yandex',
+        'feed_image_link') : 'http://ngcms.ru/',
+        );
+        $line .= " <image>\n";
+            $line .= " <url>" . $imgInfo['url'] . "</url>\n";
+            $line .= " <title>
+                <![CDATA[" . $imgInfo['title'] . "]]>
+            </title>\n";
+            $line .= "
+            <link>" . $imgInfo['link'] . "</link>\n";
+            $line .= "
+        </image>\n";
+        $line .= " <generator>
+            <![CDATA[Plugin rss_yandex (0.01) // Next Generation CMS (" . engineVersion . ")]]>
+        </generator>\n";
+
+        return $line;
+        }
