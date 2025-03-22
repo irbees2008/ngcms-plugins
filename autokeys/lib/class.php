@@ -50,46 +50,10 @@ class AutoKeyword
 
 	public function replace_chars($content)
 	{
-		$content = strtolower($content);
-		$content = strip_tags($content);
-
-		if ($this->wordB) {
-			$content = preg_replace('![b](.*?)[/b]!si', '$1 $1', $content);
-		}
-
-		$punctuations = [
-			',',
-			')',
-			'(',
-			'.',
-			"'",
-			'"',
-			'<',
-			'>',
-			';',
-			'!',
-			'?',
-			'/',
-			'-',
-			'_',
-			'[',
-			']',
-			':',
-			'+',
-			'=',
-			'#',
-			'$',
-			'&quot;',
-			'&copy;',
-			'&gt;',
-			'&lt;',
-			chr(10),
-			chr(13),
-			chr(9)
-		];
-		$punctuations = array_merge($this->wordBlockArray, $punctuations);
-		$content = str_replace($punctuations, ' ', $content);
-		$content = preg_replace('/ {2,}/si', ' ', $content);
+		$content = strtolower($content); // Приводим текст к нижнему регистру
+		$content = strip_tags($content); // Удаляем HTML-теги
+		$content = preg_replace('/[^\p{L}\p{N}\s]/u', '', $content); // Удаляем все символы, кроме букв, цифр и пробелов
+		$content = preg_replace('/\s+/', ' ', $content); // Удаляем лишние пробелы
 
 		return $content;
 	}
@@ -170,7 +134,6 @@ function akeysGetKeys($params) {
 
 	$words = $keyword->parse_words();
 	$words = implode(', ', array_slice(explode(', ', $words), 0, $cfg['word_count']));
-
 
 	if (!empty($words)) {
 		$words = rtrim($words, ', ');
