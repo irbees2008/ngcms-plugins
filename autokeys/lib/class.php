@@ -1,8 +1,18 @@
 <?php
-
+// Подключаем необходимые файлы Morphos вручную
+require __DIR__ . '/morphos/src/Cases.php'; // Подключаем интерфейс Cases
+require __DIR__ . '/morphos/src/CasesHelper.php'; // Подключаем интерфейс Cases
+require __DIR__ . '/morphos/src/BaseInflection.php'; // Подключаем BaseInflection
+require __DIR__ . '/morphos/src/Russian/RussianCasesHelper.php'; // Подключаем RussianCasesHelper
+require __DIR__ . '/morphos/src/Russian/RussianLanguage.php'; // Подключаем RussianLanguage
+require __DIR__ . '/morphos/src/Russian/Cases.php'; // Подключаем Cases
+require __DIR__ . '/morphos/src/Gender.php';
+require __DIR__ . '/morphos/src/Russian/NounDeclension.php'; // Подключаем NounDeclension
+require __DIR__ . '/morphos/src/S.php'; // Подключаем S
+// Теперь можно использовать класс Morphos\Russian\NounDeclension
+use Morphos\Russian\NounDeclension;
 class AutoKeyword
 {
-
 	public $contents;
 	public $encoding;
 	public $keywords;
@@ -72,6 +82,13 @@ class AutoKeyword
 				!in_array($val, $common) &&
 				!is_numeric($val)
 			) {
+				// Склоняем слово в родительный падеж с помощью Morphos
+				try {
+					$val = NounDeclension::getCase($val, 'именительный');
+				} catch (Exception $e) {
+					// Если слово не найдено в словаре, пропускаем его
+					continue;
+				}
 				$k[] = $val;
 			}
 		}
@@ -112,8 +129,8 @@ class AutoKeyword
 	}
 }
 
-function akeysGetKeys($params) {
-
+function akeysGetKeys($params)
+{
 	$cfg = array(
 		'content'         => $params['content'] . ' this is content',
 		'title'           => $params['title'],
