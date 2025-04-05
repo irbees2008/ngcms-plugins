@@ -1,7 +1,8 @@
 <?php
 # protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
-function plugin_bb_media_install($action) {
+if (!defined('NGCMS')) die('HAL');
+function plugin_bb_media_install($action)
+{
 
 	switch ($action) {
 		case 'confirm':
@@ -17,6 +18,9 @@ function plugin_bb_media_install($action) {
 			}
 			pluginsSaveConfig();
 			plugin_mark_installed('bb_media');
+			$url = home . "/engine/admin.php?mod=extras";
+			header("HTTP/1.1 301 Moved Permanently");
+			header("Location: {$url}");
 			break;
 	}
 
