@@ -102,7 +102,7 @@ function saveForm()
         'template'    => $_REQUEST['template'],
         'emails'      => $emails,
         'description' => $_REQUEST['description'],
-        'active'      => $_REQUEST['active'],
+        'active' => intval($_REQUEST['active'] ?? 0),
         'flags'       => $flags,
         'subj'        => $_REQUEST['subj'],
     ];
@@ -285,7 +285,8 @@ function showFormRow()
             $xsel .= '<option value="'.$ts.'"'.(($xRow['type'] == $ts) ? ' selected' : '').'>'.$lang['feedback:field_type_'.$ts];
         }
         $tVars['field']['type']['options'] = $xsel;
-        $tVars['field']['select_options'] = implode("\n", $xRow['options']);
+        $options = is_array($xRow['options']) ? $xRow['options'] : explode("\n", $xRow['options']);
+        $tVars['field']['select_options'] = implode("\n", $options);
         $tVars['field']['required']['options'] = [0, 1];
         $tVars['field']['auto']['options'] = [0, 1, 2, 3];
         $tVars['field']['block']['options'] = [0, 1, 2];
