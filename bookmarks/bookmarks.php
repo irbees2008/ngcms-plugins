@@ -76,19 +76,16 @@ $bookmarks_script = '
 			futuAlertCloseButton.appendChild(futuAlertCloseButtonIcon);
 		}
 	
-	
 		var futuAlertText = document.createElement(\'div\');
 		futuAlertText.className = \'futu_alert_text\';
 		futuAlert.appendChild(futuAlertText);
 
-		
 		futuAlertText.innerHTML = text;
 		
 		futuAlert.style.position = \'relative\';
 		futuAlert.style.top = \'0\';
 		futuAlert.style.display = \'block\';
 
-	
 		if (!close) {
 			/* addEvent("click",function(){
 				document.getElementById(\'futu_alerts_holder\').removeChild(futuAlert);
@@ -351,8 +348,8 @@ function bookmarks_t() {
 		$tVars['counter'] = $tVars['counter'] ? $tVars['counter'] : '';
 	} else $tVars['counter'] = '';
 	$xt = $twig->loadTemplate($tpath['ajax.add.remove.links.style'] . 'ajax.add.remove.links.style.tpl');
-	header("Content-Type: text/html; charset=Windows-1251");
-	//echo iconv('WINDOWS-1251', 'UTF-8', $tpl -> show('ajax.add.remove.links.style'));
+	header("Content-Type: text/html; charset=utf-8", true);
+	//echo $tpl -> show('ajax.add.remove.links.style');
 	echo $xt->render($tVars) . ($action == 'delete' ? '<!-- add -->' : '<!-- delete -->');
 }
 

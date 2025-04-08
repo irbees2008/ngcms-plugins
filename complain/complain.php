@@ -72,7 +72,7 @@ function plugin_complain_screen() {
 			'status'         => $lang['complain:status.' . $crow['status']],
 		);
 		if ($crow['error_text'])
-			$etext[$crow['id']] = iconv('Windows-1251', 'UTF-8', $crow['error_text']);
+			$etext[$crow['id']] = $crow['error_text'];
 		// Check if user have enough permissions to make any changes in this report
 		if (($userROW['status'] == 1) ||
 			(in_array($userROW['name'], $admins)) ||
@@ -89,7 +89,6 @@ function plugin_complain_screen() {
 		$entries .= $tpl->show('list.entry');
 	}
 	
-
 	$sselect = '';
 	for ($i = 2; $i < 5; $i++) $sselect .= '<option value="' . $i . '">' . $lang['complain:status.' . $i] . '</option>';
 	$tpl->template('list.header', $tpath['list.header']);
@@ -120,7 +119,7 @@ function plugin_complain_add() {
 	$err = '';
 	foreach (explode("\n", pluginGetVariable('complain', 'errlist')) as $erow) {
 		if (preg_match('#^(\d+)\|(.+?)$#', trim($erow), $m)) {
-			$err .= '<option value="' . $m[1] . '">' . htmlspecialchars($m[2], ENT_COMPAT | ENT_HTML401, 'cp1251') . '</option>' . "\n";
+			$err .= '<option value="' . $m[1] . '">' . htmlspecialchars($m[2], ENT_COMPAT | ENT_HTML401, 'utf-8') . '</option>' . "\n";
 		}
 	}
 	$txvars = array();
@@ -361,7 +360,7 @@ class ComplainNewsFilter extends NewsFilter {
 		$err = '';
 		foreach (explode("\n", pluginGetVariable('complain', 'errlist')) as $erow) {
 			if (preg_match('#^(\d+)\|(.+?)$#', trim($erow), $m)) {
-				$err .= '<option value="' . $m[1] . '">' . htmlspecialchars($m[2], ENT_COMPAT | ENT_HTML401, 'cp1251') . '</option>' . "\n";
+				$err .= '<option value="' . $m[1] . '">' . htmlspecialchars($m[2], ENT_COMPAT | ENT_HTML401, 'utf-8') . '</option>' . "\n";
 			}
 		}
 		$txvars = array();

@@ -74,7 +74,7 @@ function xf_decode(string $text = null): array
         }
 
         // Если не получилось конвертировать, то пытаемся изменить кодировку.
-        $converted = mb_convert_encoding($serialized, 'CP1251');
+        $converted = mb_convert_encoding($serialized, 'utf-8');
 
         // Пытаемся десериализовать строку.
         $xfields = unserialize($converted);
@@ -83,7 +83,7 @@ function xf_decode(string $text = null): array
         if (is_array($xfields)) {
             return array_map(function ($xfield) {
                 // Обратно конвертируем и возвращаем каждое поле.
-                return mb_convert_encoding($xfield, 'UTF-8', 'CP1251');
+                return $xfield;
             }, $xfields);
         }
 

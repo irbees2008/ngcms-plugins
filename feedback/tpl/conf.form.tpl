@@ -156,15 +156,7 @@
 								</div>
 							</td>
 						</tr>
-						<!-- <tr>
-							<td width="50%">
-								Исправление <b>UTF-8</b> кодировки
-								<small class="form-text text-muted">Преобразовывать данные из формы в кодировку Win-1251, если они пришли в UTF-8</small>
-							</td>
-							<td width="50%">
-								<input type="hidden" name="utf8" value="1" {{ flags.utf8 ? 'checked="checked"' : '' }} />
-							</td>
-						</tr> -->
+						
 					</tbody>
 				</table>
 
