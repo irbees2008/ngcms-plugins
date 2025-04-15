@@ -1,26 +1,35 @@
-<table border="0" cellspacing="0" cellpadding="0" class="content" align="center">
-	<tr align="left" class="contHead">
-		<td width="10%" nowrap>#</td>
-		<td width="40%">Название</td>
-		<td width="60%">Заголовок</td>
-		<td width="80%">Действие</td>
-	</tr>
-	{{ entries }}
-	<tr>
-		<td width="100%" colspan="8">&nbsp;</td>
-	</tr>
+<div class="container-fluid mt-3">
+	<div class="card">
+		<div
+			class="card-body p-0">
+			<!-- Заголовок таблицы -->
+			<div class="table-responsive">
+				<table class="table table-striped table-hover mb-0">
+					<thead class="table-light">
+						<tr>
+							<th scope="col" style="width: 10%;" class="text-nowrap">#</th>
+							<th scope="col" style="width: 40%;">Название</th>
+							<th scope="col" style="width: 60%;">Заголовок</th>
+							<th scope="col" style="width: 80%;">Действие</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{ entries }}
+					</tbody>
+				</table>
+			</div>
 
-	<tfoot>
-	<tr>
-		<td colspan="8" class="contentEdit" align="right">
-			<input class="button" onmousedown="javascript:window.location.href='{{ admin_url }}/admin.php?mod=extra-config&plugin=simple_title_pro&action=send_title&do=cat'" value="Добавить категорию"/>
-		</td>
-	</tr>
-	</tfoot>
-	<tr>
-		<td width="100%" colspan="8">&nbsp;</td>
-	</tr>
-	<tr>
-		<td align="center" colspan="8" class="contentHead">{{ pagesss }}</td>
-	</tr>
-</table>
+			<!-- Кнопка добавления -->
+			<div class="card-footer bg-transparent border-0 d-flex justify-content-end">
+				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=simple_title_pro&action=send_title&do=cat" class="btn btn-primary">
+					Добавить категорию
+				</a>
+			</div>
+
+			<!-- Пагинация -->
+			<div class="card-footer bg-transparent border-0 text-center">
+				{{ pagesss }}
+			</div>
+		</div>
+	</div>
+</div>

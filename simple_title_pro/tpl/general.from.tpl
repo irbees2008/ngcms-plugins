@@ -1,167 +1,194 @@
-<form method="post" action="">
-	<tr>
-		<td colspan=2>
-			<fieldset class="admGroup">
-				<legend class="title">Настройки админки</legend>
-				<table width="100%" border="0" class="content">
-					<tr>
-						<td class="contentEntry1" valign=top>Количество записей в категории<br/>
-							<small></small>
-						</td>
-						<td class="contentEntry2" valign=top>{{ num_cat.error }}
-							<input name="num_cat" type="text" title="Количество записей в категории" size=40 value="{{ num_cat.print }}"/>
-						</td>
-					</tr>
-					<tr>
-						<td class="contentEntry1" valign=top>Количество записей в новостях<br/>
-							<small></small>
-						</td>
-						<td class="contentEntry2" valign=top>{{ num_news.error }}
-							<input name="num_news" type="text" title="Количество записей в новостях" size=40 value="{{ num_news.print }}"/>
-						</td>
-					</tr>
-					<tr>
-						<td class="contentEntry1" valign=top>Количество записей в статике<br/>
-							<small></small>
-						</td>
-						<td class="contentEntry2" valign=top>{{ num_static.error }}
-							<input name="num_static" type="text" title="Количество записей в статике" size=40 value="{{ num_static.print }}"/>
-						</td>
-					</tr>
-				</table>
-			</fieldset>
-		</td>
-	</tr>
-	<tr>
-		<td colspan=2>
-			<fieldset class="admGroup">
-				<legend class="title">Настройки &lt;title&gt;&lt;/title&gt;</legend>
-				<table width="100%" border="0" class="content">
-					<tr>
-						<td class="contentEntry1" valign=top>Заголовок в категории <br/>
-							<small>Текст поля &lt;title&gt;&lt;/title&gt; для категории (разрешено %cat%, %num% и
-								%home%)
-							</small>
-						</td>
-						<td class="contentEntry2" valign=top>{{ c_title.error }}
-							<input name="c_title" type="text" title="Заголовок в категории" size=40 value="{{ c_title.print }}"/>
-						</td>
-					</tr>
-					<tr>
-						<td class="contentEntry1" valign=top>Заголовок в полной новости<br/>
-							<small>Текст поля &lt;title&gt;&lt;/title&gt; в полной новости (разрешено %cat%, %title%,
-								%home%, %num%)
-							</small>
-						</td>
-						<td class="contentEntry2" valign=top>{{ n_title.error }}
-							<input name="n_title" type="text" title="Заголовок в полной новости" size=40 value="{{ n_title.print }}"/>
-						</td>
-					</tr>
-					<tr>
-						<td class="contentEntry1" valign=top>Заголовок главной страницы<br/>
-							<small>Текст поля &lt;title&gt;&lt;/title&gt; главной страницы (разрешено %home% %num%)
-							</small>
-						</td>
-						<td class="contentEntry2" valign=top>{{ m_title.error }}
-							<input name="m_title" type="text" title="Заголовок главной страницы" size=40 value="{{ m_title.print }}"/>
-						</td>
-					</tr>
-					<tr>
-						<td class="contentEntry1" valign=top>Заголовок статической страницы<br/>
-							<small>Текст поля &lt;title&gt;&lt;/title&gt; статической страницы (разрешено %home% и
-								%static%)
-							</small>
-						</td>
-						<td class="contentEntry2" valign=top>{{ static_title.error }}
-							<input name="static_title" type="text" title="Заголовок статической страницы" size=40 value="{{ static_title.print }}"/>
-						</td>
-					</tr>
-					<tr>
-						<td class="contentEntry1" valign=top>Заголовок остальных страницы<br/>
-							<small>Текст поля &lt;title>&lt;/title> других страниц (профиль пользователя, личный
-								профиль) (разрешено %home%, %other%, %html% и %num%)
-							</small>
-						</td>
-						<td class="contentEntry2" valign=top>{{ o_title.error }}
-							<input name="o_title" type="text" title="Заголовок остальных страницы" size=40 value="{{ o_title.print }}"/>
-						</td>
-					</tr>
-					<tr>
-						<td class="contentEntry1" valign=top>Дополнительная информация для страницы<br/>
-							<small>Вывод дополнительной информацию о странице (прим. имя тега) - данных передадутся в
-								переменную %html%
-							</small>
-						</td>
-						<td class="contentEntry2" valign=top>{{ html_secure.error }}
-							<input name="html_secure" type="text" title="Дополнительная информация для страницы" size=40 value="{{ html_secure.print }}"/>
-						</td>
-					</tr>
-					<tr>
-						<td class="contentEntry1" valign=top>Страница ошибки 404<br/>
-							<small>Вывод дополнительной информацию о странице (прим. имя тега) - данных передадутся в
-								переменную %html%
-							</small>
-						</td>
-						<td class="contentEntry2" valign=top>{{ e_title.error }}
-							<input name="e_title" type="text" title="Дополнительная информация для страницы" size=40 value="{{ e_title.print }}"/>
-						</td>
-					</tr>
-					<tr>
-						<td class="contentEntry1" valign=top>Плагины исключения<br/>
-							<small>Список плагинов на которых работа плагина не распространяется</small>
-						</td>
-						<td class="contentEntry2" valign=top>{{ p_title.error }}
-							<input name="p_title" type="text" title="Список плагинов на которых работа плагина не распространяется" size=40 value="{{ p_title.print }}"/>
-						</td>
-					</tr>
-					<tr>
-						<td class="contentEntry1" valign=top>Номер страницы<br/>
-							<small>Форматирование номера страницы (например, Страница 4 [Страница %count%] - где %count%
-								номер страницы) - данных передадутся в переменную %num%
-							</small>
-						</td>
-						<td class="contentEntry2" valign=top>{{ num_title.error }}
-							<input name="num_title" type="text" title="Номер страницы" size=40 value="{{ num_title.print }}"/>
-						</td>
-					</tr>
-					<tr>
-						<td class="contentEntry1" valign=top><br/>
-							<small>Ключи:<br/><b>%cat%</b> - имя категории<br/><b>%title%</b> - имя
-								новости<br><b>%home%</b> - заголовок сайта<br/><b>%static%</b> - заголовок статической
-								страницы<br/><b>%other%</b> - заголовок любой другой страницы<br></small>
-						</td>
-						<td class="contentEntry2" valign=top></td>
-					</tr>
-				</table>
-			</fieldset>
-		</td>
-	</tr>
-	<tr>
-		<td colspan=2>
-			<fieldset class="admGroup">
-				<legend class="title">Настройка кэша</legend>
-				<table width="100%" border="0" class="content">
-					<tr>
-						<td class="contentEntry1" valign=top>Время жизни кэша<br/>
-							<small>Указывать в днях</small>
-						</td>
-						<td class="contentEntry2" valign=top>{{ cache.error }}
-							<input name="cache" type="text" title="Время жизни кэша" size=40 value="{{ cache.print }}"/>
-						</td>
-					</tr>
-				</table>
-			</fieldset>
-		</td>
-	</tr>
-	<table border="0" width="100%" cellspacing="0" cellpadding="0">
-		<tr>
-			<td width="100%" colspan="2">&nbsp;</td>
-		</tr>
-		<tr>
-			<td width="100%" colspan="2" class="contentEdit" align="center">
-				<input name="submit" type="submit" value="Сохранить" class="button"/>
-			</td>
-		</tr>
-	</table>
+<form
+	method="post" action="" class="container-fluid">
+	<!-- Настройки админки -->
+	<div class="card mb-4">
+		<div class="card-header bg-light">
+			<h5 class="mb-0">Настройки админки</h5>
+		</div>
+		<div class="card-body">
+			<div class="row mb-3">
+				<div class="col-md-4">
+					<label for="num_cat" class="form-label">Количество записей в категории</label>
+				</div>
+				<div class="col-md-8">
+					{{ num_cat.error }}
+					<input name="num_cat" type="text" class="form-control" id="num_cat" value="{{ num_cat.print }}">
+				</div>
+			</div>
+			<div class="row mb-3">
+				<div class="col-md-4">
+					<label for="num_news" class="form-label">Количество записей в новостях</label>
+				</div>
+				<div class="col-md-8">
+					{{ num_news.error }}
+					<input name="num_news" type="text" class="form-control" id="num_news" value="{{ num_news.print }}">
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-4">
+					<label for="num_static" class="form-label">Количество записей в статике</label>
+				</div>
+				<div class="col-md-8">
+					{{ num_static.error }}
+					<input name="num_static" type="text" class="form-control" id="num_static" value="{{ num_static.print }}">
+				</div>
+			</div>
+		</div>
+	</div>
 
+	<!-- Настройки <title> -->
+	<div class="card mb-4">
+		<div class="card-header bg-light">
+			<h5 class="mb-0">Настройки &lt;title&gt;&lt;/title&gt;</h5>
+		</div>
+		<div class="card-body">
+			<div class="row mb-3">
+				<div class="col-md-4">
+					<label for="c_title" class="form-label">Заголовок в категории</label>
+					<small class="text-muted d-block">Разрешено %cat%, %num% и %home%</small>
+				</div>
+				<div class="col-md-8">
+					{{ c_title.error }}
+					<input name="c_title" type="text" class="form-control" id="c_title" value="{{ c_title.print }}">
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-md-4">
+					<label for="n_title" class="form-label">Заголовок в полной новости</label>
+					<small class="text-muted d-block">Разрешено %cat%, %title%, %home%, %num%</small>
+				</div>
+				<div class="col-md-8">
+					{{ n_title.error }}
+					<input name="n_title" type="text" class="form-control" id="n_title" value="{{ n_title.print }}">
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-md-4">
+					<label for="m_title" class="form-label">Заголовок главной страницы</label>
+					<small class="text-muted d-block">Разрешено %home% %num%</small>
+				</div>
+				<div class="col-md-8">
+					{{ m_title.error }}
+					<input name="m_title" type="text" class="form-control" id="m_title" value="{{ m_title.print }}">
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-md-4">
+					<label for="static_title" class="form-label">Заголовок статической страницы</label>
+					<small class="text-muted d-block">Разрешено %home% и %static%</small>
+				</div>
+				<div class="col-md-8">
+					{{ static_title.error }}
+					<input name="static_title" type="text" class="form-control" id="static_title" value="{{ static_title.print }}">
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-md-4">
+					<label for="o_title" class="form-label">Заголовок остальных страниц</label>
+					<small class="text-muted d-block">Разрешено %home%, %other%, %html% и %num%</small>
+				</div>
+				<div class="col-md-8">
+					{{ o_title.error }}
+					<input name="o_title" type="text" class="form-control" id="o_title" value="{{ o_title.print }}">
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-md-4">
+					<label for="html_secure" class="form-label">Дополнительная информация для страницы</label>
+					<small class="text-muted d-block">Передаётся в переменную %html%</small>
+				</div>
+				<div class="col-md-8">
+					{{ html_secure.error }}
+					<input name="html_secure" type="text" class="form-control" id="html_secure" value="{{ html_secure.print }}">
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-md-4">
+					<label for="e_title" class="form-label">Страница ошибки 404</label>
+				</div>
+				<div class="col-md-8">
+					{{ e_title.error }}
+					<input name="e_title" type="text" class="form-control" id="e_title" value="{{ e_title.print }}">
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-md-4">
+					<label for="p_title" class="form-label">Плагины исключения</label>
+					<small class="text-muted d-block">Список плагинов через запятую</small>
+				</div>
+				<div class="col-md-8">
+					{{ p_title.error }}
+					<input name="p_title" type="text" class="form-control" id="p_title" value="{{ p_title.print }}">
+				</div>
+			</div>
+
+			<div class="row">
+				<div class="col-md-4">
+					<label for="num_title" class="form-label">Номер страницы</label>
+					<small class="text-muted d-block">Используйте %count% для номера страницы</small>
+				</div>
+				<div class="col-md-8">
+					{{ num_title.error }}
+					<input name="num_title" type="text" class="form-control" id="num_title" value="{{ num_title.print }}">
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Справка по ключам -->
+	<div class="card mb-4">
+		<div class="card-header bg-light">
+			<h5 class="mb-0">Ключи для заголовков</h5>
+		</div>
+		<div class="card-body">
+			<ul class="list-unstyled">
+				<li>
+					<strong>%cat%</strong>
+					- имя категории</li>
+				<li>
+					<strong>%title%</strong>
+					- имя новости</li>
+				<li>
+					<strong>%home%</strong>
+					- заголовок сайта</li>
+				<li>
+					<strong>%static%</strong>
+					- заголовок статической страницы</li>
+				<li>
+					<strong>%other%</strong>
+					- заголовок любой другой страницы</li>
+			</ul>
+		</div>
+	</div>
+
+	<!-- Настройка кэша -->
+	<div class="card mb-4">
+		<div class="card-header bg-light">
+			<h5 class="mb-0">Настройка кэша</h5>
+		</div>
+		<div class="card-body">
+			<div class="row">
+				<div class="col-md-4">
+					<label for="cache" class="form-label">Время жизни кэша</label>
+					<small class="text-muted d-block">Указывать в днях</small>
+				</div>
+				<div class="col-md-8">
+					{{ cache.error }}
+					<input name="cache" type="text" class="form-control" id="cache" value="{{ cache.print }}">
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Кнопка отправки -->
+	<div class="text-center mb-4">
+		<button name="submit" type="submit" class="btn btn-primary px-4">Сохранить</button>
+	</div>
 </form>

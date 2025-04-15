@@ -107,7 +107,7 @@ function list_news() {
 			'title' => $row['stitle'],
 			'id'    => $row['sid'],
 			'name'  => '<a href="?mod=extra-config&plugin=simple_title_pro&action=send_title&do=news&edit=' . $row['sid'] . '"  />' . $row['name'] . '</a>',
-			'del'   => '<a href="?mod=extra-config&plugin=simple_title_pro&action=del_news&id=' . $row['sid'] . '"  /><img title="Удалить" alt="Удалить" src="/engine/skins/default/images/delete.gif"></a>',
+			'del'   => '<a href="?mod=extra-config&plugin=simple_title_pro&action=del_news&id=' . $row['sid'] . '"  />Удалить</a>',
 		);
 		$entries .= $xe->render($tVars);
 	}
@@ -158,7 +158,7 @@ function list_static() {
 			'title' => $row['stitle'],
 			'id'    => $row['sid'],
 			'name'  => '<a href="?mod=extra-config&plugin=simple_title_pro&action=send_title&do=static&edit=' . $row['sid'] . '"  />' . $row['name'] . '</a>',
-			'del'   => '<a href="?mod=extra-config&plugin=simple_title_pro&action=del_static&id=' . $row['sid'] . '"  /><img title="Удалить" alt="Удалить" src="/engine/skins/default/images/delete.gif"></a>',
+			'del'   => '<a href="?mod=extra-config&plugin=simple_title_pro&action=del_static&id=' . $row['sid'] . '"  />Удалить</a>',
 		);
 		$entries .= $xe->render($tVars);
 	}
@@ -197,7 +197,7 @@ function list_cat() {
 			'title'    => $row['stitle'],
 			'id'       => $row['sid'],
 			'cat_name' => '<a href="?mod=extra-config&plugin=simple_title_pro&action=send_title&do=cat&edit=' . $row['sid'] . '"  />' . $row['cname'] . '</a>',
-			'del'      => '<a href="?mod=extra-config&plugin=simple_title_pro&action=del_cat&id=' . $row['sid'] . '"  /><img title="Удалить" alt="Удалить" src="/engine/skins/default/images/delete.gif"></a>',
+			'del'      => '<a href="?mod=extra-config&plugin=simple_title_pro&action=del_cat&id=' . $row['sid'] . '"  />Удалить</a>',
 		);
 		$entries .= $xe->render($tVars);
 	}
@@ -242,28 +242,43 @@ function send_title() {
 			}
 			if (isset($_REQUEST['submit'])) {
 				$title = secure_html(trim($_REQUEST['title']));
-				if (empty($title))
-					$error_text[] = 'Титле обязательна для заполнения';
-				if (empty($id))
-					$error_text[] = 'id не передан';
-				if ($mysql->result('SELECT 1 FROM ' . prefix . '_simple_title_pro WHERE cat_id = \'' . $id . '\' LIMIT 1') && empty($_REQUEST['edit']))
+				$id = intval($_REQUEST['id'] ?? 0);
+				$edit = intval($_REQUEST['edit'] ?? 0);
+
+				// Очищаем массив ошибок
+				$error_text = [];
+
+				// Проверка обязательных полей
+				if (empty($title)) {
+					$error_text[] = 'Title обязателен для заполнения';
+				}
+				if (empty($id)) {
+					$error_text[] = 'ID не передан';
+				}
+
+				// Проверка существования записи (исправленная версия)
+				$exists = $mysql->result('SELECT COUNT(*) FROM ' . prefix . '_simple_title_pro WHERE cat_id = ' . db_squote($id));
+				if ($exists === false) {
+					$error_text[] = 'Ошибка проверки записи в базе данных';
+				} elseif ($exists > 0 && empty($edit)) {
 					$error_text[] = 'Для этой категории уже есть TITLE';
-				if (empty($error_text) && empty($_REQUEST['edit'])) {
-					$mysql->query('INSERT INTO ' . prefix . '_simple_title_pro (title, cat_id) 
-						VALUES (
-							' . db_squote($title) . ',
-							' . db_squote($id) . '
-						)
-					');
-					redirect_simple_title_pro('?mod=extra-config&plugin=simple_title_pro&action=list_cat');
-				} else if (empty($error_text) && !empty($_REQUEST['edit'])) {
-					$cacheFileName = md5('block_directory_sites_cat' . $frow['cat_id'] . $config['default_lang']) . '.txt';
-					cacheStoreFile($cacheFileName, $title, 'simple_title_pro');
-					$mysql->query('UPDATE ' . prefix . '_simple_title_pro SET 
-						title = ' . db_squote($title) . ',
-						cat_id = ' . db_squote($id) . '
-						WHERE id = \'' . intval($_REQUEST['edit']) . '\'
-					');
+				}
+
+				// Если ошибок нет - выполняем действие
+				if (empty($error_text)) {
+					if (empty($edit)) {
+						// Добавляем новую запись
+						$mysql->query('INSERT INTO ' . prefix . '_simple_title_pro (title, cat_id) 
+                VALUES (' . db_squote($title) . ', ' . db_squote($id) . ')');
+					} else {
+						// Обновляем существующую запись
+						$cacheFileName = md5('block_directory_sites_cat' . $frow['cat_id'] . $config['default_lang']) . '.txt';
+						cacheStoreFile($cacheFileName, $title, 'simple_title_pro');
+						$mysql->query('UPDATE ' . prefix . '_simple_title_pro SET 
+                title = ' . db_squote($title) . ',
+                cat_id = ' . db_squote($id) . '
+                WHERE id = ' . db_squote($edit));
+					}
 					redirect_simple_title_pro('?mod=extra-config&plugin=simple_title_pro&action=list_cat');
 				}
 			}
@@ -283,24 +298,27 @@ function send_title() {
 					$error_text[] = 'Титле обязательна для заполнения';
 				if (empty($id))
 					$error_text[] = 'id не передан';
-				if ($mysql->result('SELECT 1 FROM ' . prefix . '_simple_title_pro WHERE news_id = \'' . $id . '\' LIMIT 1') && empty($_REQUEST['edit']))
+
+				// Исправленная строка 292:
+				$exists = $mysql->result('SELECT COUNT(*) FROM ' . prefix . '_simple_title_pro WHERE news_id = ' . db_squote($id));
+				if ($exists === false) {
+					$error_text[] = 'Ошибка проверки наличия записи';
+				} elseif ($exists > 0 && empty($_REQUEST['edit'])) {
 					$error_text[] = 'Для этой новости уже есть TITLE';
-				if (empty($error_text) && empty($_REQUEST['edit'])) {
-					$mysql->query('INSERT INTO ' . prefix . '_simple_title_pro (title, news_id) 
-						VALUES 
-						(' . db_squote($title) . ',
-							' . db_squote($id) . '
-						)
-					');
-					redirect_simple_title_pro('?mod=extra-config&plugin=simple_title_pro&action=list_news');
-				} else if (empty($error_text) && !empty($_REQUEST['edit'])) {
-					$cacheFileName = md5('block_directory_sites_news' . $frow['news_id'] . $config['default_lang']) . '.txt';
-					cacheStoreFile($cacheFileName, $title, 'simple_title_pro');
-					$mysql->query('UPDATE ' . prefix . '_simple_title_pro SET 
-						title = ' . db_squote($title) . ',
-						news_id = ' . db_squote($id) . '
-						WHERE id = \'' . intval($_REQUEST['edit']) . '\'
-					');
+				}
+
+				if (empty($error_text)) {
+					if (empty($_REQUEST['edit'])) {
+						$mysql->query('INSERT INTO ' . prefix . '_simple_title_pro (title, news_id) 
+                VALUES (' . db_squote($title) . ', ' . db_squote($id) . ')');
+					} else {
+						$cacheFileName = md5('block_directory_sites_news' . $frow['news_id'] . $config['default_lang']) . '.txt';
+						cacheStoreFile($cacheFileName, $title, 'simple_title_pro');
+						$mysql->query('UPDATE ' . prefix . '_simple_title_pro SET 
+                title = ' . db_squote($title) . ',
+                news_id = ' . db_squote($id) . '
+                WHERE id = ' . intval($_REQUEST['edit']));
+					}
 					redirect_simple_title_pro('?mod=extra-config&plugin=simple_title_pro&action=list_news');
 				}
 			}
@@ -317,27 +335,30 @@ function send_title() {
 			if (isset($_REQUEST['submit'])) {
 				$title = secure_html(trim($_REQUEST['title']));
 				if (empty($title))
-					$error_text[] = 'Титле обязательна для заполнения';
+					$error_text[] = 'Title обязателен для заполнения';
 				if (empty($id))
-					$error_text[] = 'id не передан';
-				if ($mysql->result('SELECT 1 FROM ' . prefix . '_simple_title_pro WHERE static_id = \'' . $id . '\' LIMIT 1') && empty($_REQUEST['edit']))
+					$error_text[] = 'ID не передан';
+
+				// Исправленная строка 332:
+				$exists = $mysql->result('SELECT COUNT(*) FROM ' . prefix . '_simple_title_pro WHERE static_id = ' . db_squote($id));
+				if ($exists === false) {
+					$error_text[] = 'Ошибка проверки наличия записи';
+				} elseif ($exists > 0 && empty($_REQUEST['edit'])) {
 					$error_text[] = 'Для этой статики уже есть TITLE';
-				if (empty($error_text) && empty($_REQUEST['edit'])) {
-					$mysql->query('INSERT INTO ' . prefix . '_simple_title_pro (title, static_id) 
-						VALUES 
-						(' . db_squote($title) . ',
-							' . db_squote($id) . '
-						)
-					');
-					redirect_simple_title_pro('?mod=extra-config&plugin=simple_title_pro&action=list_static');
-				} else if (empty($error_text) && !empty($_REQUEST['edit'])) {
-					$cacheFileName = md5('block_directory_sites_static' . $frow['static_id'] . $config['default_lang']) . '.txt';
-					cacheStoreFile($cacheFileName, $title, 'simple_title_pro');
-					$mysql->query('UPDATE ' . prefix . '_simple_title_pro SET 
-						title = ' . db_squote($title) . ',
-						static_id = ' . db_squote($id) . '
-						WHERE id = \'' . intval($_REQUEST['edit']) . '\'
-					');
+				}
+
+				if (empty($error_text)) {
+					if (empty($_REQUEST['edit'])) {
+						$mysql->query('INSERT INTO ' . prefix . '_simple_title_pro (title, static_id) 
+                VALUES (' . db_squote($title) . ', ' . db_squote($id) . ')');
+					} else {
+						$cacheFileName = md5('block_directory_sites_static' . $frow['static_id'] . $config['default_lang']) . '.txt';
+						cacheStoreFile($cacheFileName, $title, 'simple_title_pro');
+						$mysql->query('UPDATE ' . prefix . '_simple_title_pro SET 
+                title = ' . db_squote($title) . ',
+                static_id = ' . db_squote($id) . '
+                WHERE id = ' . intval($_REQUEST['edit']));
+					}
 					redirect_simple_title_pro('?mod=extra-config&plugin=simple_title_pro&action=list_static');
 				}
 			}
@@ -376,7 +397,7 @@ function list_all() {
 			'title'        => $row['stitle'],
 			'id'           => $row['sid'],
 			'cat_name'     => '<a href="?mod=extra-config&plugin=simple_title_pro&action=edit&id=' . $row['sid'] . '"  />' . $row['name'] . '</a>',
-			'cat_name_del' => '<a href="?mod=extra-config&plugin=simple_title_pro&action=del&id=' . $row['id'] . '" /><img title="Удалить" alt="Удалить" src="/engine/skins/default/images/delete.gif"></a>',
+			'cat_name_del' => '<a href="?mod=extra-config&plugin=simple_title_pro&action=del&id=' . $row['id'] . '" />Удалить</a>',
 		);
 		$entries .= $xe->render($tVars);
 	}
@@ -386,7 +407,7 @@ function list_all() {
 			'title'        => $row['stitle'],
 			'id'           => $row['sid'],
 			'cat_name'     => '<a href="?mod=extra-config&plugin=simple_title_pro&action=cat_edit&id=' . $row['sid'] . '"  />' . $row['name'] . '</a>',
-			'cat_name_del' => '<a href="?mod=extra-config&plugin=simple_title_pro&action=cat_name_del&id=' . $row['id'] . '"  /><img title="Удалить" alt="Удалить" src="/engine/skins/default/images/delete.gif"></a>',
+			'cat_name_del' => '<a href="?mod=extra-config&plugin=simple_title_pro&action=cat_name_del&id=' . $row['id'] . '"  />Удалить</a>',
 		);
 		$entries .= $xe->render($tVars);
 	}
@@ -396,7 +417,7 @@ function list_all() {
 			'title'        => $row['stitle'],
 			'id'           => $row['sid'],
 			'cat_name'     => '<a href="?mod=extra-config&plugin=simple_title_pro&action=cat_edit&id=' . $row['sid'] . '"  />' . $row['cname'] . '</a>',
-			'cat_name_del' => '<a href="?mod=extra-config&plugin=simple_title_pro&action=cat_name_del&id=' . $row['id'] . '"  /><img title="Удалить" alt="Удалить" src="/engine/skins/default/images/delete.gif"></a>',
+			'cat_name_del' => '<a href="?mod=extra-config&plugin=simple_title_pro&action=cat_name_del&id=' . $row['id'] . '"  />Удалить</a>',
 		);
 		$entries .= $xe->render($tVars);
 	}

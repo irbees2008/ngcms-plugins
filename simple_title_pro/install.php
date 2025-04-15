@@ -1,9 +1,9 @@
 <?php
 if (!defined('NGCMS')) {
-	die ('HAL');
+	die('HAL');
 }
-function plugin_simple_title_pro_install($action) {
-
+function plugin_simple_title_pro_install($action)
+{
 	$checkVer = explode('.', substr(engineVersion, 0, 5));
 	if ($checkVer['0'] == 0 && $checkVer['1'] == 9 && $checkVer['2'] = 3)
 		$check = true;
@@ -62,6 +62,5 @@ function plugin_simple_title_pro_install($action) {
 			extra_commit_changes();
 			break;
 	}
-
 	return true;
 }
