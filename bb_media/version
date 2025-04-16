@@ -4,7 +4,7 @@
 
 ID: bb_media
 Name: MEDIA bb code
-Version: 0.11
+Version: 0.12
 Acts: static, index, news_short, news_full
 Config: config.php
 File: bb_media.php
