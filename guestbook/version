@@ -4,7 +4,7 @@
 
 ID: guestbook
 Name: Гостевая книга
-Version: 2.1
+Version: 2.2
 Acts: index, twig, ppages
 File: guestbook.php
 Config: config.php

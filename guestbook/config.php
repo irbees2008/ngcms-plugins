@@ -41,26 +41,19 @@ switch ($_REQUEST['action']) {
 		delete_message();
 		show_messages();
 		break;
-	case 'delete_social':
-		$result = delete_social();
-		edit_message($result);
-		break;
 	case 'modify':
 		modify();
 		show_messages();
 		break;
-	case 'social':
-		social_config();
-		break;
 	default:
 		show_options();
 }
+
 /*
  * Add field page
  */
 function add_field()
 {
-
 	global $twig;
 	$xt = $twig->loadTemplate('plugins/guestbook/tpl/config/manage_fields.add.tpl');
 	$xg = $twig->loadTemplate('plugins/guestbook/tpl/config/main.tpl');
@@ -76,7 +69,6 @@ function add_field()
  */
 function insert_field()
 {
-
 	global $mysql, $lang;
 	$id = $_REQUEST['id'];
 	$name = $_REQUEST['name'];
@@ -86,36 +78,30 @@ function insert_field()
 	// Check field ID
 	if (empty($id)) {
 		msg(array("type" => "error", "text" => $lang['gbconfig']['msge_field_id_empty']));
-
 		return false;
 	}
 	// Check if ID is unique
 	$field = $mysql->result('SELECT COUNT(1) FROM ' . prefix . '_guestbook_fields WHERE id = ' . db_squote($id));
 	if (!empty($field)) {
 		msg(array("type" => "error", "text" => $lang['gbconfig']['msge_field_duplicate_id']));
-
 		return false;
 	}
 	// Check for characters
 	if (!preg_match('#^[a-z]+$#', $id)) {
 		msg(array("type" => "error", "text" => $lang['gbconfig']['msge_field_characters']));
-
 		return false;
 	}
 	// Check for length
 	if (strlen($id) < 3) {
 		msg(array("type" => "error", "text" => $lang['gbconfig']['msge_field_id_length']));
-
 		return false;
 	}
 	// Check field name
 	if (empty($name)) {
 		msg(array("type" => "error", "text" => $lang['gbconfig']['msge_field_name_empty']));
-
 		return false;
 	} elseif (strlen($name) < 3) {
 		msg(array("type" => "error", "text" => $lang['gbconfig']['msge_field_name_length']));
-
 		return false;
 	}
 	// Everything is correct - update DB
@@ -129,7 +115,6 @@ function insert_field()
 	);
 	$mysql->query("ALTER TABLE " . prefix . "_guestbook ADD " . $id . " VARCHAR(50) NOT NULL DEFAULT ''");
 	msg(array("text" => $lang['gbconfig']['msgo_field_add_success']));
-
 	return true;
 }
 
@@ -138,7 +123,6 @@ function insert_field()
  */
 function edit_field($id)
 {
-
 	global $mysql, $twig, $lang;
 	$field = array();
 	if (!empty($id) || isset($_REQUEST['id'])) {
@@ -154,7 +138,6 @@ function edit_field($id)
 	if (!count($field)) {
 		msg(array("type" => "error", "text" => $lang['gbconfig']['msge_field_id_not_exist']));
 		manage_fields();
-
 		return;
 	}
 	$tVars['field'] = $field;
@@ -171,7 +154,6 @@ function edit_field($id)
  */
 function update_field()
 {
-
 	global $mysql, $lang;
 	$id = $_REQUEST['id'];
 	$name = $_REQUEST['name'];
@@ -181,11 +163,9 @@ function update_field()
 	// Check field name
 	if (empty($name)) {
 		msg(array("type" => "error", "text" => $lang['gbconfig']['msge_field_name_empty']));
-
 		return $id;
 	} elseif (strlen($name) < 3) {
 		msg(array("type" => "error", "text" => $lang['gbconfig']['msge_field_name_length']));
-
 		return $id;
 	}
 	// Everything is correct - update DB
@@ -198,7 +178,6 @@ function update_field()
 			" WHERE id = " . db_squote($id)
 	);
 	msg(array("text" => $lang['gbconfig']['msgo_field_edit_success']));
-
 	return true;
 }
 
@@ -207,13 +186,11 @@ function update_field()
  */
 function drop_field()
 {
-
 	global $mysql, $lang;
 	$id = $_REQUEST['id'];
 	$field = $mysql->result('SELECT COUNT(1) FROM ' . prefix . '_guestbook_fields WHERE id = ' . db_squote($id));
 	if (empty($field)) {
 		msg(array("type" => "error", "text" => $lang['gbconfig']['msge_field_id_not_exist']));
-
 		return;
 	}
 	$mysql->query("DELETE FROM " . prefix . "_guestbook_fields WHERE id = " . db_squote($id));
@@ -226,7 +203,6 @@ function drop_field()
  */
 function manage_fields()
 {
-
 	global $mysql, $twig, $lang;
 	$fields = $mysql->select("select * from " . prefix . "_guestbook_fields");
 	$tVars = array();
@@ -252,7 +228,6 @@ function manage_fields()
 
 function show_options()
 {
-
 	global $tpl, $mysql, $lang, $twig;
 	$tpath = locatePluginTemplates(array('config/main', 'config/settings'), 'guestbook', 1);
 	if (isset($_REQUEST['submit'])) {
@@ -372,7 +347,6 @@ function show_options()
 
 function show_messages()
 {
-
 	global $tpl, $mysql, $lang, $twig, $config, $PHP_SELF;
 	$tpath = locatePluginTemplates(array('config/main', 'config/messages_list'), 'guestbook', 1);
 	$tVars = array();
@@ -412,52 +386,19 @@ function show_messages()
 	print $xg->render($tVars);
 }
 
-function delete_social()
-{
-
-	global $mysql, $lang;
-	$id = intval($_REQUEST['id']);
-	$soc = secure_html($_REQUEST['soc']);
-	if (!in_array($soc, array('Vkontakte', 'Facebook', 'Google', 'Instagram'))) {
-		msg(array("type" => "error", "text" => $lang['gbconfig']['msge_wrong_action']));
-
-		return $id;
-	}
-	if (!is_array($mysql->record("SELECT id FROM " . prefix . "_guestbook WHERE id=" . db_squote($id)))) {
-		msg(array("type" => "error", "text" => $lang['gbconfig']['msge_wrong_action']));
-
-		return $id;
-	}
-	$entry = $mysql->record("SELECT social FROM " . prefix . "_guestbook WHERE id = " . db_squote($id));
-	$social = unserialize($entry['social']);
-	$new_social = array();
-	foreach ($social as $k => $v) {
-		if ($k != $soc) {
-			$new_social[$k] = $v;
-		}
-	}
-	$mysql->query("UPDATE " . prefix . "_guestbook set social = " . db_squote(serialize($new_social)) . " WHERE id = " . db_squote($id));
-	msg(array("text" => $lang['gbconfig']['msgo_social_deleted']));
-
-	return $id;
-}
-
 function delete_message()
 {
-
 	global $mysql, $lang;
 	$id = intval($_REQUEST['id']);
 	if (!is_array($mysql->record("SELECT id FROM " . prefix . "_guestbook WHERE id=" . db_squote($id)))) {
 		return msg(array("type" => "error", "text" => $lang['gbconfig']['msge_wrong_action']));
 	}
 	$mysql->query("DELETE FROM " . prefix . "_guestbook WHERE id = " . $id);
-
 	return msg(array("text" => $lang['gbconfig']['msgo_deleted_one']));
 }
 
 function edit_message($mid)
 {
-
 	global $tpl, $mysql, $lang, $twig, $config;
 	$tpath = locatePluginTemplates(array('config/main', 'config/messages_edit'), 'guestbook', 1);
 	if (!empty($mid) || isset($_REQUEST['id'])) {
@@ -471,8 +412,8 @@ function edit_message($mid)
 			$errors = array();
 			$author = $_REQUEST['author'];
 			$status = $_REQUEST['status'];
-			$message = str_replace(array("\r\n", "\r"), "\n", convert($_REQUEST['message']));
-			$answer = str_replace(array("\r\n", "\r"), "\n", convert($_REQUEST['answer']));
+			$message = str_replace(array("\r\n", "\r"), "\n", $_REQUEST['message']);
+			$answer = str_replace(array("\r\n", "\r"), "\n", $_REQUEST['answer']);
 			if (empty($author) || empty($message)) {
 				$errors[] = $lang['gbconfig']['msge_field_required'];
 			}
@@ -507,21 +448,10 @@ function edit_message($mid)
 			if (!count($errors)) {
 				$mysql->query('UPDATE ' . prefix . '_guestbook SET ' . $upd_str . ' WHERE id = \'' . intval($id) . '\' ');
 				msg(array("text" => $lang['gbconfig']['msgo_edit_success']));
-
 				return true;
 			} else {
 				msg(array("type" => "error", "text" => implode($errors)));
 			}
-		}
-		// output social data
-		$social = unserialize($row['social']);
-		$profiles = array();
-		foreach ($social as $name => $sid) {
-			$img = $mysql->record("SELECT name, description FROM " . prefix . "_images WHERE id = {$sid}");
-			$profiles[$name] = array(
-				'photo' => $config['images_url'] . '/' . $img['name'],
-				'link'  => $img['description'],
-			);
 		}
 		// output fields data
 		$tFields = array();
@@ -551,8 +481,7 @@ function edit_message($mid)
 		'status'    => $row['status'],
 		'ip'        => $row['ip'],
 		'postdate'  => $row['postdate'],
-		'fields'    => $tFields,
-		'social'    => $profiles
+		'fields'    => $tFields
 	);
 	$xg = $twig->loadTemplate($tpath['config/main'] . 'config/main.tpl');
 	$tVars = array(
@@ -566,7 +495,6 @@ function edit_message($mid)
  */
 function modify()
 {
-
 	global $mysql, $lang;
 	$selected_news[] = $_REQUEST['selected_message'];
 	$subaction = $_REQUEST['subaction'];
@@ -603,53 +531,4 @@ function modify()
 		$mysql->query("DELETE FROM " . prefix . "_guestbook WHERE id IN ({$id})");
 	}
 	msg(array("type" => "info", "info" => sprintf($msg, $id)));
-}
-
-/*
- * Social config page
- */
-function social_config()
-{
-
-	global $tpl, $mysql, $lang, $twig;
-	$tpath = locatePluginTemplates(array('config/main', 'config/social'), 'guestbook', 1);
-	if (isset($_REQUEST['submit'])) {
-		pluginSetVariable('guestbook', 'vk_client_id', secure_html($_REQUEST['vk_client_id']));
-		pluginSetVariable('guestbook', 'vk_client_secret', secure_html($_REQUEST['vk_client_secret']));
-		pluginSetVariable('guestbook', 'facebook_client_id', secure_html($_REQUEST['facebook_client_id']));
-		pluginSetVariable('guestbook', 'facebook_client_secret', secure_html($_REQUEST['facebook_client_secret']));
-		pluginSetVariable('guestbook', 'google_client_id', secure_html($_REQUEST['google_client_id']));
-		pluginSetVariable('guestbook', 'google_client_secret', secure_html($_REQUEST['google_client_secret']));
-		pluginSetVariable('guestbook', 'instagram_client_id', secure_html($_REQUEST['instagram_client_id']));
-		pluginSetVariable('guestbook', 'instagram_client_secret', secure_html($_REQUEST['instagram_client_secret']));
-		pluginsSaveConfig();
-		msg(array("text" => $lang['gbconfig']['msgo_settings_saved']));
-	}
-	$vk_client_id = pluginGetVariable('guestbook', 'vk_client_id');
-	$vk_client_secret = pluginGetVariable('guestbook', 'vk_client_secret');
-	$facebook_client_id = pluginGetVariable('guestbook', 'facebook_client_id');
-	$facebook_client_secret = pluginGetVariable('guestbook', 'facebook_client_secret');
-	$google_client_id = pluginGetVariable('guestbook', 'google_client_id');
-	$google_client_secret = pluginGetVariable('guestbook', 'google_client_secret');
-	$instagram_client_id = pluginGetVariable('guestbook', 'instagram_client_id');
-	$instagram_client_secret = pluginGetVariable('guestbook', 'instagram_client_secret');
-	$xt = $twig->loadTemplate($tpath['config/social'] . 'config/social.tpl');
-	$tVars = array(
-		'skins_url'               => skins_url,
-		'home'                    => home,
-		'tpl_home'                => admin_url,
-		'vk_client_id'            => $vk_client_id,
-		'vk_client_secret'        => $vk_client_secret,
-		'facebook_client_id'      => $facebook_client_id,
-		'facebook_client_secret'  => $facebook_client_secret,
-		'google_client_id'        => $google_client_id,
-		'google_client_secret'    => $google_client_secret,
-		'instagram_client_id'     => $instagram_client_id,
-		'instagram_client_secret' => $instagram_client_secret
-	);
-	$xg = $twig->loadTemplate($tpath['config/main'] . 'config/main.tpl');
-	$tVars = array(
-		'entries' => $xt->render($tVars),
-	);
-	print $xg->render($tVars);
 }

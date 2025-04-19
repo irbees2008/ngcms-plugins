@@ -36,7 +36,7 @@
 				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=guestbook" class="btn btn-outline-success">{{ lang['gbconfig']['menu_settings'] }}</a>
 				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=guestbook&action=show_messages" class="btn btn-outline-success">{{ lang['gbconfig']['menu_messages'] }}</a>
 				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=guestbook&action=manage_fields" class="btn btn-outline-success">{{ lang['gbconfig']['menu_fields'] }}</a>
-				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=guestbook&action=social" class="btn btn-outline-success">{{ lang['gbconfig']['menu_social'] }}</a>
+				
 			</div>
 
 			{{ entries }}

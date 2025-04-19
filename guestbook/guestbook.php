@@ -1,21 +1,21 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 register_plugin_page('guestbook', '', 'guestbook_list');
 register_plugin_page('guestbook', 'edit', 'guestbook_edit');
-register_plugin_page('guestbook', 'social', 'guestbook_social');
 LoadPluginLang('guestbook', 'main', '', '', '#');
 
 /*
  * Add message submit callback
  */
-function msg_add_submit() {
+function msg_add_submit()
+{
 
 	global $template, $tpl, $twig, $userROW, $ip, $config, $mysql, $SYSTEM_FLAGS, $TemplateCache, $lang;
 	$errors = array();
 	// anonymous user
 	if (!is_array($userROW)) {
-		$_POST['author'] = secure_html(convert(trim($_POST['author'])));
+		$_POST['author'] = secure_html(trim($_POST['author']));
 		if (!strlen($_POST['author'])) {
 			$errors[] = $lang['guestbook']['error_req_name'];
 		}
@@ -31,7 +31,7 @@ function msg_add_submit() {
 			}
 		}
 	}
-	$message = secure_html(convert(trim($_POST['content'])));
+	$message = secure_html(trim($_POST['content']));
 	// check for links
 	preg_match("~^(?:(?:https?|ftp|telnet)://(?:[a-z0-9_-]{1,32}(?::[a-z0-9_-]{1,32})?@)?)?(?:(?:[a-z0-9-]{1,128}\.)+(?:ru|su|com|net|org|mil|edu|arpa|gov|biz|info|aero|inc|name|[a-z]{2})|(?!0)(?:(?!0[^.]|255)[0-9]{1,3}\.){3}(?!0|255)[0-9]{1,3})(?:/[a-z0-9.,_@%&?+=\~/-]*)?(?:#[^ '\"&]*)?$~i", $message, $find_url);
 	if (isset($find_url[0])) {
@@ -64,7 +64,7 @@ function msg_add_submit() {
 		$fields[$value['id']] = intval($value['required']);
 		$fmail[] = array(
 			'name'  => $value['name'],
-			'value' => secure_html(convert(trim($_POST[$value['id']])))
+			'value' => secure_html(trim($_POST[$value['id']]))
 		);
 	}
 	$time = time() + ($config['date_adjust'] * 60);
@@ -77,7 +77,7 @@ function msg_add_submit() {
 	);
 	foreach ($fields as $fid => $freq) {
 		if (!empty($_POST[$fid])) {
-			$_POST[$fid] = secure_html(convert(trim($_POST[$fid])));
+			$_POST[$fid] = secure_html(trim($_POST[$fid]));
 			$new_rec[$fid] = db_squote($_POST[$fid]);
 		} elseif ($freq === 1) {
 			$errors[] = $lang['guestbook']['error_field_required'];
@@ -85,21 +85,6 @@ function msg_add_submit() {
 			$new_rec[$fid] = "''";
 		}
 	}
-	// get social images ID
-	$social = array();
-	if (strlen(trim($_POST['Vkontakte_id']))) {
-		$social['Vkontakte'] = $_POST['Vkontakte_id'];
-	}
-	if (strlen(trim($_POST['Facebook_id']))) {
-		$social['Facebook'] = $_POST['Facebook_id'];
-	}
-	if (strlen(trim($_POST['Google_id']))) {
-		$social['Google'] = $_POST['Google_id'];
-	}
-	if (strlen(trim($_POST['Instagram_id']))) {
-		$social['Instagram'] = $_POST['Instagram_id'];
-	}
-	$new_rec['social'] = db_squote(serialize($social));
 	if (!count($errors)) {
 		$mysql->query("INSERT INTO " . prefix . "_guestbook (" . implode(', ', array_keys($new_rec)) . ") values (" . implode(', ', array_values($new_rec)) . ")");
 		$success[] = ($status == 1) ? $lang['guestbook']['success_add_wo_approve'] : $success_msg = $lang['guestbook']['success_add'];
@@ -133,13 +118,14 @@ function msg_add_submit() {
 /*
  * Edit message submit callback
  */
-function msg_edit_submit() {
+function msg_edit_submit()
+{
 
 	global $template, $tpl, $userROW, $ip, $config, $mysql, $twig, $lang;
-	$id = secure_html(convert(trim($_REQUEST['id'])));
-	$author = secure_html(convert(trim($_REQUEST['author'])));
-	$message = secure_html(convert(trim($_REQUEST['content'])));
-	$answer = secure_html(convert(trim($_REQUEST['answer'])));
+	$id = secure_html(trim($_REQUEST['id']));
+	$author = secure_html(trim($_REQUEST['author']));
+	$message = secure_html(trim($_REQUEST['content']));
+	$answer = secure_html(trim($_REQUEST['answer']));
 	$message = str_replace("\r\n", "<br />", $message);
 	if (empty($author) || empty($message)) {
 		$errors[] = $lang['guestbook']['error_field_required'];
@@ -189,7 +175,8 @@ function msg_edit_submit() {
 /*
  * Delete message submit callback
  */
-function msg_delete_submit() {
+function msg_delete_submit()
+{
 
 	global $userROW, $mysql, $template, $lang;
 	if (is_array($userROW) && ($userROW['status'] == "1")) {
@@ -209,20 +196,21 @@ function msg_delete_submit() {
 /*
  * List messages page
  */
-function guestbook_list($params = array()) {
+function guestbook_list($params = array())
+{
 
 	global $template, $tpl, $twig, $userROW, $ip, $config, $mysql, $SYSTEM_FLAGS, $TemplateCache, $CurrentHandler, $lang;
 
 	$SYSTEM_FLAGS['info']['title']['group'] = $lang['guestbook']['title'];
 
 	switch ($_REQUEST['action']) {
-		case 'add'      :
+		case 'add':
 			msg_add_submit();
 			break;
-		case 'edit'     :
+		case 'edit':
 			msg_edit_submit();
 			break;
-		case 'delete'   :
+		case 'delete':
 			msg_delete_submit();
 			break;
 	}
@@ -296,7 +284,8 @@ function guestbook_list($params = array()) {
 	_guestbook_clear_session();
 }
 
-function _guestbook_clear_session() {
+function _guestbook_clear_session()
+{
 
 	unset($_SESSION['guestbook_errors']);
 }
@@ -304,7 +293,8 @@ function _guestbook_clear_session() {
 /*
  * Records list helper
  */
-function _guestbook_records($order, $start, $perpage) {
+function _guestbook_records($order, $start, $perpage)
+{
 
 	global $mysql, $tpl, $userROW, $config, $parse;
 	foreach ($mysql->select("SELECT * FROM " . prefix . "_guestbook WHERE status = 1 ORDER BY id {$order} LIMIT {$start}, {$perpage}") as $row) {
@@ -338,16 +328,6 @@ function _guestbook_records($order, $start, $perpage) {
 		if (empty($date_format)) {
 			$date_format = 'j Q Y';
 		}
-		// get social data
-		$social = unserialize($row['social']);
-		$profiles = array();
-		foreach ($social as $name => $id) {
-			$img = $mysql->record("SELECT name, description FROM " . prefix . "_images WHERE id = {$id}");
-			$profiles[$name] = array(
-				'photo' => $config['images_url'] . '/' . $img['name'],
-				'link'  => $img['description'],
-			);
-		}
 		$comments[] = array(
 			'id'      => $row['id'],
 			'date'    => LangDate($date_format, $row['postdate']),
@@ -358,8 +338,7 @@ function _guestbook_records($order, $start, $perpage) {
 			'comnum'  => $comnum,
 			'edit'    => $editlink,
 			'del'     => $dellink,
-			'fields'  => $comment_fields,
-			'social'  => $profiles
+			'fields'  => $comment_fields
 		);
 	}
 
@@ -369,10 +348,11 @@ function _guestbook_records($order, $start, $perpage) {
 /*
  * Edit message page
  */
-function guestbook_edit() {
+function guestbook_edit()
+{
 
 	global $template, $tpl, $userROW, $ip, $config, $mysql, $twig, $lang, $CurrentHandler;
-	$id = intval(isset($CurrentHandler['params']['id']) ? $CurrentHandler['params']['id'] : (isset($_REQUEST['id']) ? secure_html(convert(trim($_REQUEST['id']))) : ''));
+	$id = intval(isset($CurrentHandler['params']['id']) ? $CurrentHandler['params']['id'] : (isset($_REQUEST['id']) ? secure_html(trim($_REQUEST['id'])) : ''));
 	$tpath = locatePluginTemplates(array('guestbook.edit'), 'guestbook', pluginGetVariable('guestbook', 'localsource'));
 	$xt = $twig->loadTemplate($tpath['guestbook.edit'] . 'guestbook.edit.tpl');
 	// admin permission is required to edit messages
@@ -424,7 +404,8 @@ function guestbook_edit() {
 /*
  * Block display callback
  */
-function guestbook_block($params) {
+function guestbook_block($params)
+{
 
 	global $CurrentHandler, $twig, $config;
 	$count = ($params['count'] > 0) ? intval($params['count']) : 10;
@@ -437,105 +418,4 @@ function guestbook_block($params) {
 	return $xt->render($tVars);
 }
 
-function guestbook_social() {
-
-	global $config, $template, $tpl, $mysql;
-	session_start();
-	$providers = array('Vkontakte', 'Facebook', 'Google', 'Instagram');
-	$auth_config = array(
-		"base_url"  => home . "/engine/plugins/guestbook/lib/hybridauth/",
-		"providers" => array(
-			"Vkontakte" => array(
-				"enabled" => true,
-				"keys"    => array("id" => pluginGetVariable('guestbook', 'vk_client_id'), "secret" => pluginGetVariable('guestbook', 'vk_client_secret')),
-			),
-			"Facebook"  => array(
-				"enabled"   => true,
-				"keys"      => array("id" => pluginGetVariable('guestbook', 'facebook_client_id'), "secret" => pluginGetVariable('guestbook', 'facebook_client_secret')),
-				"scope"     => "email",
-				"display"   => "popup",
-				"auth_type" => "reauthenticate"
-			),
-			"Google"    => array(
-				"enabled"         => true,
-				"keys"            => array("id" => pluginGetVariable('guestbook', 'google_client_id'), "secret" => pluginGetVariable('guestbook', 'google_client_secret')),
-				"scope"           => "https://www.googleapis.com/auth/userinfo.profile",
-				"display"         => "popup",
-				"approval_prompt" => "force"
-			),
-			"Instagram" => array(
-				"enabled" => true,
-				"keys"    => array("id" => pluginGetVariable('guestbook', 'instagram_client_id'), "secret" => pluginGetVariable('guestbook', 'instagram_client_secret')),
-			),
-		)
-	);
-	if (isset($_GET['provider']) && in_array($_GET['provider'], $providers)) {
-		$provider = $_GET['provider'];
-		require_once($_SERVER['DOCUMENT_ROOT'] . '/engine/plugins/guestbook/lib/hybridauth/Hybrid/Auth.php');
-		try {
-			$hybridauth = new Hybrid_Auth($auth_config);
-			$adapter = $hybridauth->authenticate($provider);
-		} catch (Exception $e) {
-			echo "<script>self.close();</script>\n";
-		}
-		$user_profile = $adapter->getUserProfile();
-		// print_r($user_profile);
-		// exit;
-		$profile = ($provider == 'Instagram') ? 'https://www.instagram.com/' . $user_profile->username : $user_profile->profileURL;
-		$photo = $user_profile->photoURL;
-		if (!empty($photo)) {
-			// Prevent duplicate uploads
-			$exist = $mysql->record("SELECT id FROM " . prefix . "_images WHERE description = " . db_squote($profile) . " LIMIT 1");
-			if (!empty($exist['id'])) {
-				$rowID = $exist;
-			} else {
-				addToFiles('newavatar', $photo);
-				@include_once root . 'includes/classes/upload.class.php';
-				// UPLOAD AVATAR
-				if ($_FILES['newavatar']['name']) {
-					$imanage = new image_managment();
-					$fname = $provider . '_' . time() . '_' . strtolower($_FILES['newavatar']['name']);
-					if (!strpos($fname, '.jpg')) {
-						$fname .= '.jpg';
-					}
-					$ftmp = $_FILES['newavatar']['tmp_name'];
-					$mysql->query("INSERT INTO " . prefix . "_images (name, orig_name, description, folder, date, owner_id, category) VALUES ("
-						. db_squote($fname) . ", "
-						. db_squote($fname) . ", "
-						. db_squote($profile) . ", '', unix_timestamp(now()), '1', '0')");
-					$rowID = $mysql->record("select LAST_INSERT_ID() as id");
-					if (copy($ftmp, $config['images_dir'] . $fname)) {
-						$sz = $imanage->get_size($config['images_dir'] . $fname);
-						$mysql->query("update " . prefix . "_images set width=" . db_squote($sz['1']) . ", height=" . db_squote($sz['2']) . " where id = " . db_squote($rowID['id']) . " ");
-					}
-				}
-			}
-			$adapter->logout();
-			echo "<script>window.opener.document.getElementById('" . $provider . "_li').className += 'active'; " .
-				"window.opener.document.getElementById('" . $provider . "_id').value = " . $rowID['id'] . "; self.close();</script>\n";
-		}
-	}
-}
-
-/**
- * Add to $_FILES from external url
- */
-function addToFiles($key, $url) {
-
-	$tempName = tempnam(ini_get('upload_tmp_dir'), 'upload_');
-	$originalName = basename(parse_url($url, PHP_URL_PATH));
-	$imgRawData = file_get_contents($url);
-	file_put_contents($tempName, $imgRawData);
-	$info = getimagesize($tempName);
-	$_FILES[$key] = array(
-		'name'     => $originalName,
-		'type'     => $info['mime'],
-		'tmp_name' => $tempName,
-		'error'    => 0,
-		'size'     => strlen($imgRawData),
-	);
-	//return $_FILES[$key];
-}
-
 twigRegisterFunction('guestbook', 'show', 'guestbook_block');
-?>
