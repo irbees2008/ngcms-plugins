@@ -28,6 +28,7 @@ register_plugin_page('bookmarks', 'modify', 'bookmarks_t', 0);
 register_plugin_page('bookmarks', '', 'bookmarksPage', 0);
 global $lang;
 LoadPluginLang('bookmarks', 'main', '', '', ':');
+
 $bookmarks_script = '
 <script type="text/javascript">
 
@@ -194,6 +195,23 @@ function bookmarks_sql() {
 		$bookmarksList = $mysql->select("SELECT n.id, n.title, n.alt_name, n.catid, n.postdate FROM " . prefix . "_bookmarks AS b LEFT JOIN " . prefix . "_news n ON n.id = b.news_id WHERE b.user_id = " . db_squote($userROW['id']));
 	}
 }
+class BookmarksCoreFilter extends CoreFilter
+{
+	function showUserMenu(&$tVars)
+	{
+		global $mysql, $userROW;
+
+		if (!is_array($userROW)) return;
+
+		$count = $mysql->result('SELECT COUNT(*) FROM ' . prefix . '_bookmarks WHERE user_id = ' . db_squote($userROW['id']));
+		$tVars['p']['bookmarks'] = [
+			'count' => $count ?: 0,
+			'link'  => generatePluginLink('bookmarks', null)
+		];
+	}
+}
+
+register_filter('core.userMenu', 'bookmarks', new BookmarksCoreFilter);
 
 # view bookmarks on sidebar
 function bookmarks_view() {
@@ -348,8 +366,8 @@ function bookmarks_t() {
 		$tVars['counter'] = $tVars['counter'] ? $tVars['counter'] : '';
 	} else $tVars['counter'] = '';
 	$xt = $twig->loadTemplate($tpath['ajax.add.remove.links.style'] . 'ajax.add.remove.links.style.tpl');
-	header("Content-Type: text/html; charset=utf-8", true);
-	//echo $tpl -> show('ajax.add.remove.links.style');
+	header("Content-Type: text/html; charset=utf-8");
+	//echo iconv('WINDOWS-1251', 'UTF-8', $tpl -> show('ajax.add.remove.links.style'));
 	echo $xt->render($tVars) . ($action == 'delete' ? '<!-- add -->' : '<!-- delete -->');
 }
 
