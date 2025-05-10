@@ -3,9 +3,11 @@
 		<td>
 			<table border="0" width="100%" cellspacing="0" cellpadding="0">
 				<tr>
-					
-							<font color="#FFFFFF">Ваши закладки</font></b></td>
-				
+					<td>
+						<b>
+							<font color="#FFFFFF">Ваши закладки</font>
+						</b>
+					</td>
 				</tr>
 			</table>
 		</td>
@@ -14,31 +16,25 @@
 		<td>
 			<table border="0" width="100%" cellspacing="0" cellpadding="0">
 				<tr>
-				
 					<td bgcolor="#FFFFFF">
 						<ul>
 							{% for entry in entries %}
-								<li><a href="{{ entry.link }}">{{ entry.title }}</a></li>
+								<li>
+									<a href="{{ entry.link }}">{{ entry.title }}</a>
+								</li>
 							{% endfor %}
 						</ul>
 						<br/>
 						{% if (count) %}
-<center>
-	<a href="{{ bookmarks_page }}">Все закладки
-		{{count}}
-	</a>
-</center>{% endif %}
-
+							<center>
+								<a href="{{ bookmarks_page }}">Все закладки</a>
+							</center>
+						{% endif %}
 					</td>
-					
 				</tr>
 			</table>
 		</td>
 	</tr>
-	<tr>
-		<td>
-			
-		</td>
-	</tr>
 </table>
-{% if not (count) %}Если закладок нет :){% endif %}
+{% if not (count) %}Если закладок нет :)
+{% endif %}
