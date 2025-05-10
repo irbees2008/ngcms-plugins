@@ -145,7 +145,13 @@ function plugin_nsm_add($tpl_name) {
 
 			return;
 		}
-		$o = addNews(array('no.meta' => true, 'no.files' => true, 'no.editurl' => true));
+		$o = addNews(array(
+			'no.meta' => true,
+			'no.files' => true,
+			'no.editurl' => true,
+			'description' => isset($_POST['description']) ? $_POST['description'] : '',
+			'keywords' => isset($_POST['keywords']) ? $_POST['keywords'] : ''
+		));
 		if (!$o) {
 			plugin_nsm_addForm($tpl_name, json_encode($_POST));
 		} else {
@@ -374,7 +380,6 @@ function plugin_nsm_addForm($tpl_name = 'news.add', $retry = '') {
 			}
 		}
 
-
 		$tfVars = array(
 		//  'entries'   =>  $xfEntries,
 			'xfGC'      =>  json_encode($xf['grp.news']),
@@ -442,6 +447,7 @@ function plugin_nsm_addForm($tpl_name = 'news.add', $retry = '') {
 			'can_publish'         => $perm['personal.publish'],
 			'mondatory_cat'       => (!$perm['personal.nocat']) ? true : false,
 		),
+		'description' => isset($_POST['description']) ? secure_html($_POST['description']) : '',
 	);
 	// Determine paths for all template files
 	$tpath = locatePluginTemplates(array($tpl_name), 'nsm', pluginGetVariable('nsm', 'localsource'));
@@ -622,6 +628,9 @@ function plugin_nsm_editForm($tpl_name = 'news.edit', $retry = '') {
 		}
 		// Prepare table data [if needed]
 		$flagTData = false;
+		$tclist = array();
+		$thlist = array(); // Инициализация пустым массивом
+
 		if (isset($xf['tdata']) && is_array($xf['tdata'])) {
 			// Load table data for specific news
 			$tlist = array();
@@ -638,11 +647,9 @@ function plugin_nsm_editForm($tpl_name = 'news.edit', $retry = '') {
 					}
 					$tEntry[$fId] = $fValue;
 				}
-				$tlist [] = $tEntry;
+				$tlist[] = $tEntry;
 			}
 			// Prepare config
-			$tclist = array();
-			$thlist = array();
 			foreach ($xf['tdata'] as $fId => $fData) {
 				if ($fData['disabled'])
 					continue;
@@ -653,7 +660,7 @@ function plugin_nsm_editForm($tpl_name = 'news.edit', $retry = '') {
 					'type'     => $fData['type'],
 					'default'  => $fData['default'],
 				);
-				$thlist [] = array(
+				$thlist[] = array(
 					'id'    => $fId,
 					'title' => $fData['title'],
 				);
