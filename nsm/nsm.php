@@ -1,28 +1,37 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 LoadPluginLang('nsm', 'main', '', '', '#');
 register_plugin_page('nsm', '', 'plugin_nsm');
 register_plugin_page('nsm', 'add', 'plugin_nsm_add_proxy');
 register_plugin_page('nsm', 'edit', 'plugin_nsm_edit_proxy');
 register_plugin_page('nsm', 'del', 'plugin_nsm_del');
 LoadPluginLibrary('xfields', 'common');
-function plugin_nsm_add_proxy() {
+function plugin_nsm_add_proxy()
+{
 
 	$tpl_name = 'news.add';
 	plugin_nsm_add($tpl_name);
 }
 
-function plugin_nsm_edit_proxy() {
+function plugin_nsm_edit_proxy()
+{
 
 	$tpl_name = 'news.edit';
 	plugin_nsm_edit($tpl_name);
 }
 
 // Show list of user's news
-function plugin_nsm() {
+function plugin_nsm()
+{
+	global $userROW, $mysql, $twig, $lang, $template, $PHP_SELF;
 
-	global $userROW, $mysql, $twig, $lang, $template;
+	// Количество новостей на странице
+	$perPage = 30;
+
+	// Получаем текущую страницу из параметра URL
+	$currentPage = max(1, intval($_REQUEST['page'] ?? 1));
+
 	// Load permissions
 	$perm = checkPermission(array('plugin' => '#admin', 'item' => 'news'), null, array(
 		'personal.view',
@@ -32,6 +41,7 @@ function plugin_nsm() {
 		'personal.delete.published',
 		'add',
 	));
+
 	$permPlugin = checkPermission(array('plugin' => 'nsm', 'item' => ''), null, array(
 		'view',
 		'view.draft',
@@ -46,36 +56,49 @@ function plugin_nsm() {
 		'list',
 		'add',
 	));
+
 	if (!is_array($userROW) || !$permPlugin['view']) {
 		msg(array("type" => "error", "text" => $lang['perm.denied']));
-
 		return;
 	}
-	$tVars = array(
-		'token'  => genUToken('nsm.edit'),
-		'addURL' => generatePluginLink('nsm', 'add', array(), array()),
-	);
+
+	// Общее количество новостей пользователя
+	$totalQuery = "SELECT COUNT(*) as total FROM " . prefix . "_news WHERE author_id = " . intval($userROW['id']);
+	$totalResult = $mysql->record($totalQuery);
+	$totalNews = $totalResult['total'];
+
+	// Вычисляем общее количество страниц
+	$totalPages = ceil($totalNews / $perPage);
+
+	// Вычисляем смещение для SQL запроса
+	$offset = ($currentPage - 1) * $perPage;
+
+	// Получаем новости для текущей страницы
+	$query = "SELECT * FROM " . prefix . "_news WHERE author_id = " . intval($userROW['id']) . " ORDER BY id DESC LIMIT " . $offset . ", " . $perPage;
+
 	$tEntries = array();
-	$query = "select * from " . prefix . "_news where author_id = " . intval($userROW['id']) . " order by id desc";
+	
 	foreach ($mysql->select($query, 1) as $row) {
-		// Check if we can show this entry
+		// Проверка прав доступа (остается без изменений)
 		if (((($row['approve'] == -1) && (!$permPlugin['view.draft'])) ||
-				(($row['approve'] == 0) && (!$permPlugin['view.unpublished'])) ||
-				(($row['approve'] == 1) && (!$permPlugin['view.published']))) && (!$permPlugin['list'])
-		) {
+			(($row['approve'] == 0) && (!$permPlugin['view.unpublished'])) ||
+			(($row['approve'] == 1) && (!$permPlugin['view.published']))) && (!$permPlugin['list'])) {
 			continue;
 		}
+
+		// Остальной код обработки новости остается без изменений
 		$cats = (strlen($row['catid']) > 0) ? explode(",", $row['catid']) : array();
 		$canView = ((($row['approve'] == -1) && ($permPlugin['view.draft'])) ||
-				(($row['approve'] == 0) && ($permPlugin['view.unpublished'])) ||
-				(($row['approve'] == 1) && ($permPlugin['view.published']))) && $perm['personal.view'];
+			(($row['approve'] == 0) && ($permPlugin['view.unpublished'])) ||
+			(($row['approve'] == 1) && ($permPlugin['view.published']))) && $perm['personal.view'];
 		$canEdit = (($row['approve'] == -1) && ($permPlugin['modify.draft'])) ||
 			(($row['approve'] == 0) && ($permPlugin['modify.unpublished']) && ($perm['personal.modify'])) ||
 			(($row['approve'] == 1) && ($permPlugin['modify.published']) && ($perm['personal.modify.published']));
 		$canDelete = (($row['approve'] == -1) && ($permPlugin['delete.draft'])) ||
 			(($row['approve'] == 0) && ($permPlugin['delete.unpublished']) && ($perm['personal.delete'])) ||
 			(($row['approve'] == 1) && ($permPlugin['delete.published']) && ($perm['personal.delete.published']));
-		$tEntries [] = array(
+
+		$tEntries[] = array(
 			'php_self'     => $PHP_SELF,
 			'home'         => home,
 			'newsid'       => $row['id'],
@@ -104,16 +127,71 @@ function plugin_nsm() {
 			)
 		);
 	}
-	$tVars['entries'] = $tEntries;
-	// Link for adding news
-	$tVars['flags']['canAdd'] = (($permPlugin['add']) && ($perm['add'])) ? 1 : 0;
-	// Determine paths for all template files
+
+	// Генерация постраничной навигации с правильными ссылками
+	$pagination = '';
+	if ($totalPages > 1) {
+		$pagination = '<div class="pagination"><ul>';
+
+		// Предыдущая страница
+		if ($currentPage > 1) {
+			$prevPage = $currentPage - 1;
+			$pagination .= '<li><a href="' . generateLink('core', 'plugin', array('plugin' => 'nsm'), array('page' => $prevPage)) . '">&laquo;</a></li>';
+		}
+
+		// Страницы
+		$startPage = max(1, $currentPage - 3);
+		$endPage = min($totalPages, $currentPage + 3);
+
+		if ($startPage > 1) {
+			$pagination .= '<li><a href="' . generateLink('core', 'plugin', array('plugin' => 'nsm'), array('page' => 1)) . '">1</a></li>';
+			if ($startPage > 2) {
+				$pagination .= '<li class="disabled"><span>...</span></li>';
+			}
+		}
+
+		for ($i = $startPage; $i <= $endPage; $i++) {
+			if ($i == $currentPage) {
+				$pagination .= '<li class="active"><span>' . $i . '</span></li>';
+			} else {
+				$pagination .= '<li><a href="' . generateLink('core', 'plugin', array('plugin' => 'nsm'), array('page' => $i)) . '">' . $i . '</a></li>';
+			}
+		}
+
+		if ($endPage < $totalPages) {
+			if ($endPage < $totalPages - 1) {
+				$pagination .= '<li class="disabled"><span>...</span></li>';
+			}
+			$pagination .= '<li><a href="' . generateLink('core', 'plugin', array('plugin' => 'nsm'), array('page' => $totalPages)) . '">' . $totalPages . '</a></li>';
+		}
+
+		// Следующая страница
+		if ($currentPage < $totalPages) {
+			$nextPage = $currentPage + 1;
+			$pagination .= '<li><a href="' . generateLink('core', 'plugin', array('plugin' => 'nsm'), array('page' => $nextPage)) . '">&raquo;</a></li>';
+		}
+
+		$pagination .= '</ul></div>';
+	}
+
+	$tVars = array(
+		'token' => genUToken('nsm.edit'),
+		'addURL' => generatePluginLink('nsm', 'add', array(), array()),
+		'entries' => $tEntries,
+		'pagination' => $pagination,
+		'flags' => array(
+			'canAdd' => (($permPlugin['add']) && ($perm['add'])) ? 1 : 0,
+		),
+	);
+
+	// Определяем пути к шаблонам
 	$tpath = locatePluginTemplates(array('news.list'), 'nsm', pluginGetVariable('nsm', 'localsource'));
 	$xt = $twig->loadTemplate($tpath['news.list'] . 'news.list.tpl');
 	$template['vars']['mainblock'] .= $xt->render($tVars);
 }
 
-function plugin_nsm_add($tpl_name) {
+function plugin_nsm_add($tpl_name)
+{
 
 	global $lang, $SUPRESS_TEMPLATE_SHOW;
 	LoadLang('addnews', 'admin', 'addnews');
@@ -161,7 +239,8 @@ function plugin_nsm_add($tpl_name) {
 	}
 }
 
-function plugin_nsm_edit($tpl_name) {
+function plugin_nsm_edit($tpl_name)
+{
 
 	global $lang, $mysql, $userROW, $SUPRESS_TEMPLATE_SHOW;
 	LoadLang('editnews', 'admin', 'editnews');
@@ -238,7 +317,8 @@ function plugin_nsm_edit($tpl_name) {
 }
 
 // Form for adding news
-function plugin_nsm_addForm($tpl_name = 'news.add', $retry = '') {
+function plugin_nsm_addForm($tpl_name = 'news.add', $retry = '')
+{
 
 	global $userROW, $twig, $lang, $template, $config, $PHP_SELF, $catz;
 	// Load permissions
@@ -295,11 +375,11 @@ function plugin_nsm_addForm($tpl_name = 'news.add', $retry = '') {
 					),
 				);
 				switch ($data['type']) {
-					case 'checkbox'  :
+					case 'checkbox':
 						$val = '<input type="checkbox" id="form_xfields_' . $id . '" name="xfields[' . $id . ']" title="' . $data['title'] . '" value="1" ' . ($data['default'] ? 'checked="checked"' : '') . '"/>';
 						$xfEntry['input'] = $val;
 						break;
-					case 'text'  :
+					case 'text':
 						$val = '<input type="text" id="form_xfields_' . $id . '" name="xfields[' . $id . ']" title="' . $data['title'] . '" value="' . secure_html($data['default']) . '"/>';
 						$xfEntry['input'] = $val;
 						break;
@@ -312,11 +392,11 @@ function plugin_nsm_addForm($tpl_name = 'news.add', $retry = '') {
 						$val .= '</select>';
 						$xfEntry['input'] = $val;
 						break;
-					case 'textarea'  :
+					case 'textarea':
 						$val = '<textarea cols="30" rows="5" name="xfields[' . $id . ']" id="form_xfields_' . $id . '" >' . $data['default'] . '</textarea>';
 						$xfEntry['input'] = $val;
 						break;
-					case 'images'   :
+					case 'images':
 						$iCount = 0;
 						$input = '';
 						$tfVars = array('images' => array());
@@ -337,7 +417,7 @@ function plugin_nsm_addForm($tpl_name = 'news.add', $retry = '') {
 						$xfEntry['input'] = $val;
 						break;
 					default:
-						continue(2);
+						continue (2);
 				}
 				$xfEntries[intval($data['area'])][] = $xfEntry;
 				$xfList[$id] = $xfEntry;
@@ -455,7 +535,8 @@ function plugin_nsm_addForm($tpl_name = 'news.add', $retry = '') {
 	$template['vars']['mainblock'] .= $xt->render($tVars);
 }
 
-function plugin_nsm_editForm($tpl_name = 'news.edit', $retry = '') {
+function plugin_nsm_editForm($tpl_name = 'news.edit', $retry = '')
+{
 
 	global $lang, $parse, $mysql, $config, $PFILTERS, $tvars, $userROW, $twig, $template, $catz;
 	// Load permissions
@@ -536,13 +617,13 @@ function plugin_nsm_editForm($tpl_name = 'news.edit', $retry = '') {
 				),
 			);
 			switch ($data['type']) {
-				case 'checkbox'  :
+				case 'checkbox':
 					$val = '<input type="checkbox" id="form_xfields_' . $id . '" name="xfields[' . $id . ']" title="' . $data['title'] . '" value="1" ' . ($xdata[$id] ? 'checked="checked"' : '') . '"/>';
 					$xfEntry['input'] = $val;
 					$xfEntry['value'] = $xdata[$id];
 					$xfEntries[intval($data['area'])][] = $xfEntry;
 					break;
-				case 'text'  :
+				case 'text':
 					$val = '<input type="text" name="xfields[' . $id . ']"  id="form_xfields_' . $id . '" title="' . $data['title'] . '" value="' . secure_html($xdata[$id]) . '" />';
 					$xfEntry['input'] = $val;
 					$xfEntry['value'] = $xdata[$id];
@@ -560,13 +641,13 @@ function plugin_nsm_editForm($tpl_name = 'news.edit', $retry = '') {
 					$xfEntry['value'] = $xdata[$id];
 					$xfEntries[intval($data['area'])][] = $xfEntry;
 					break;
-				case 'textarea' :
+				case 'textarea':
 					$val = '<textarea cols="30" rows="4" name="xfields[' . $id . ']" id="form_xfields_' . $id . '">' . $xdata[$id] . '</textarea>';
 					$xfEntry['input'] = $val;
 					$xfEntry['value'] = $xdata[$id];
 					$xfEntries[intval($data['area'])][] = $xfEntry;
 					break;
-				case 'images'   :
+				case 'images':
 					// First - show already attached images
 					$iCount = 0;
 					$input = '';
@@ -736,7 +817,7 @@ function plugin_nsm_editForm($tpl_name = 'news.edit', $retry = '') {
 			generateLink('core', 'plugin', array('plugin' => 'uprofile', 'handler' => 'show'), array('name' => $row['author'], 'id' => $row['author_id'])),
 		'smilies'     => $config['use_smilies'] ? InsertSmilies('', 20, 'currentInputAreaID') : '',
 		'quicktags'   => $config['use_bbcodes'] ? BBCodes('ng_news_content') : '',
-		'approve'     => $row['approve'], 
+		'approve'     => $row['approve'],
 		'flags'       => array(
 			'edit_split'          => $config['news.edit.split'] ? true : false,
 			'meta'                => $config['meta'] ? true : false,
@@ -803,7 +884,8 @@ function plugin_nsm_editForm($tpl_name = 'news.edit', $retry = '') {
 	$template['vars']['mainblock'] .= $xt->render($tVars);
 }
 
-function plugin_nsm_del() {
+function plugin_nsm_del()
+{
 
 	global $lang, $mysql, $userROW;
 	// Load permissions
@@ -841,4 +923,3 @@ function plugin_nsm_del() {
 	// Show again list of news
 	plugin_nsm();
 }
-
