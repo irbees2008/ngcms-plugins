@@ -39,7 +39,7 @@ function bbMediaProcess($content) {
                 }
             }
             
-            $keys['file'] = (!empty($keys['file']) ? $keys['file'] : $alt;
+            $keys['file'] = (!empty($keys['file']) ? $keys['file'] : $alt);
             
             // Обработка YouTube
             if (preg_match('~(?:youtube\.com|youtu\.be)/(?:watch\?v=)?([^&]+)~i', $keys['file'], $matches)) {
