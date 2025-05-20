@@ -21,7 +21,6 @@ function plugin_nsm_edit_proxy()
 	plugin_nsm_edit($tpl_name);
 }
 
-// Show list of user's news
 function plugin_nsm()
 {
 	global $userROW, $mysql, $twig, $lang, $template, $PHP_SELF;
@@ -77,7 +76,7 @@ function plugin_nsm()
 	$query = "SELECT * FROM " . prefix . "_news WHERE author_id = " . intval($userROW['id']) . " ORDER BY id DESC LIMIT " . $offset . ", " . $perPage;
 
 	$tEntries = array();
-	
+
 	foreach ($mysql->select($query, 1) as $row) {
 		// Проверка прав доступа (остается без изменений)
 		if (((($row['approve'] == -1) && (!$permPlugin['view.draft'])) ||
@@ -86,7 +85,7 @@ function plugin_nsm()
 			continue;
 		}
 
-		// Остальной код обработки новости остается без изменений
+		// Остальной код обработки новости
 		$cats = (strlen($row['catid']) > 0) ? explode(",", $row['catid']) : array();
 		$canView = ((($row['approve'] == -1) && ($permPlugin['view.draft'])) ||
 			(($row['approve'] == 0) && ($permPlugin['view.unpublished'])) ||
@@ -128,64 +127,55 @@ function plugin_nsm()
 		);
 	}
 
-	// Генерация постраничной навигации с правильными ссылками
+	// Определяем пути к шаблонам (добавляем все используемые шаблоны)
+	$tpath = locatePluginTemplates(array('news.list', 'pagination'), 'nsm', pluginGetVariable('nsm', 'localsource'));
+
+	// Генерация постраничной навигации через TWIG
 	$pagination = '';
 	if ($totalPages > 1) {
-		$pagination = '<div class="pagination"><ul>';
-
-		// Предыдущая страница
-		if ($currentPage > 1) {
-			$prevPage = $currentPage - 1;
-			$pagination .= '<li><a href="' . generateLink('core', 'plugin', array('plugin' => 'nsm'), array('page' => $prevPage)) . '">&laquo;</a></li>';
-		}
-
-		// Страницы
+		// Подготовка данных для пагинации
 		$startPage = max(1, $currentPage - 3);
 		$endPage = min($totalPages, $currentPage + 3);
 
-		if ($startPage > 1) {
-			$pagination .= '<li><a href="' . generateLink('core', 'plugin', array('plugin' => 'nsm'), array('page' => 1)) . '">1</a></li>';
-			if ($startPage > 2) {
-				$pagination .= '<li class="disabled"><span>...</span></li>';
-			}
-		}
-
+		// Собираем массив страниц
+		$pages = [];
 		for ($i = $startPage; $i <= $endPage; $i++) {
-			if ($i == $currentPage) {
-				$pagination .= '<li class="active"><span>' . $i . '</span></li>';
-			} else {
-				$pagination .= '<li><a href="' . generateLink('core', 'plugin', array('plugin' => 'nsm'), array('page' => $i)) . '">' . $i . '</a></li>';
-			}
+			$pages[] = [
+				'num' => $i,
+				'current' => ($i == $currentPage),
+				'link' => generateLink('core', 'plugin', ['plugin' => 'nsm'], ['page' => $i])
+			];
 		}
 
-		if ($endPage < $totalPages) {
-			if ($endPage < $totalPages - 1) {
-				$pagination .= '<li class="disabled"><span>...</span></li>';
-			}
-			$pagination .= '<li><a href="' . generateLink('core', 'plugin', array('plugin' => 'nsm'), array('page' => $totalPages)) . '">' . $totalPages . '</a></li>';
-		}
+		// Подготавливаем данные для шаблона
+		$paginationData = [
+			'totalPages' => $totalPages,
+			'currentPage' => $currentPage,
+			'startPage' => $startPage,
+			'endPage' => $endPage,
+			'pages' => $pages,
+			'prevLink' => ($currentPage > 1) ? generateLink('core', 'plugin', ['plugin' => 'nsm'], ['page' => $currentPage - 1]) : null,
+			'nextLink' => ($currentPage < $totalPages) ? generateLink('core', 'plugin', ['plugin' => 'nsm'], ['page' => $currentPage + 1]) : null,
+			'firstPageLink' => generateLink('core', 'plugin', ['plugin' => 'nsm'], ['page' => 1]),
+			'lastPageLink' => generateLink('core', 'plugin', ['plugin' => 'nsm'], ['page' => $totalPages]),
+		];
 
-		// Следующая страница
-		if ($currentPage < $totalPages) {
-			$nextPage = $currentPage + 1;
-			$pagination .= '<li><a href="' . generateLink('core', 'plugin', array('plugin' => 'nsm'), array('page' => $nextPage)) . '">&raquo;</a></li>';
-		}
-
-		$pagination .= '</ul></div>';
+		// Загружаем и рендерим шаблон пагинации
+		$xtPagination = $twig->loadTemplate($tpath['pagination'] . 'pagination.tpl');
+		$pagination = $xtPagination->render($paginationData);
 	}
 
-	$tVars = array(
+	$tVars = [
 		'token' => genUToken('nsm.edit'),
-		'addURL' => generatePluginLink('nsm', 'add', array(), array()),
+		'addURL' => generatePluginLink('nsm', 'add', [], []),
 		'entries' => $tEntries,
 		'pagination' => $pagination,
-		'flags' => array(
+		'flags' => [
 			'canAdd' => (($permPlugin['add']) && ($perm['add'])) ? 1 : 0,
-		),
-	);
+		],
+	];
 
-	// Определяем пути к шаблонам
-	$tpath = locatePluginTemplates(array('news.list'), 'nsm', pluginGetVariable('nsm', 'localsource'));
+	// Загружаем и рендерим основной шаблон
 	$xt = $twig->loadTemplate($tpath['news.list'] . 'news.list.tpl');
 	$template['vars']['mainblock'] .= $xt->render($tVars);
 }
