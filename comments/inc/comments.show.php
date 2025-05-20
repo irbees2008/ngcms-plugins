@@ -247,7 +247,7 @@ function comments_showform($newsID, $callingParams = array()) {
 		$tvars['regx']["'\[captcha\](.*?)\[/captcha\]'si"] = '';
 	}
 	$tvars['vars']['captcha_url'] = admin_url . "/captcha.php";
-	$tvars['vars']['bbcodes'] = BBCodes();
+	$tvars['vars']['bbcodes'] = BBCodes("'content'");
 	$tvars['vars']['skins_url'] = skins_url;
 	$tvars['vars']['newsid'] = $newsID . '#' . genUToken('comment.add.' . $newsID);
 	$tvars['vars']['request_uri'] = secure_html($_SERVER['REQUEST_URI']);
