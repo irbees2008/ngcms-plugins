@@ -249,7 +249,7 @@ function pm_write() {
 	$tVars = array(
 		'php_self'  => $PHP_SELF,
 		'username'  => trim($_REQUEST['name']),
-		'quicktags' => BBCodes('pm_content')
+		'quicktags' => BBCodes("'pm_content'")
 	);
 	$tVars['smilies'] = ($config['use_smilies'] == "1") ? InsertSmilies('', 10, 'pm_content') : '';
 	$xt = $twig->loadTemplate($tpath['write'] . 'write.tpl');
