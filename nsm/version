@@ -4,8 +4,8 @@
 
 ID: nsm
 Name: News OnSite Manager
-Version: 0.05
-Acts: ppages
+Version: 0.06
+Acts: usermenu, ppages
 File: nsm.php
 Config: config.php
 Install: install.php

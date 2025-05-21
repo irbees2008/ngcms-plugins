@@ -1,22 +1,22 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
 LoadPluginLang('nsm', 'main', '', '', '#');
 register_plugin_page('nsm', '', 'plugin_nsm');
 register_plugin_page('nsm', 'add', 'plugin_nsm_add_proxy');
 register_plugin_page('nsm', 'edit', 'plugin_nsm_edit_proxy');
 register_plugin_page('nsm', 'del', 'plugin_nsm_del');
 LoadPluginLibrary('xfields', 'common');
+LoadLang('nsm', 'site');
 function plugin_nsm_add_proxy()
 {
-
 	$tpl_name = 'news.add';
 	plugin_nsm_add($tpl_name);
 }
 
 function plugin_nsm_edit_proxy()
 {
-
 	$tpl_name = 'news.edit';
 	plugin_nsm_edit($tpl_name);
 }
@@ -497,7 +497,7 @@ function plugin_nsm_addForm($tpl_name = 'news.add', $retry = '')
 		'listURL'    => generateLink('core', 'plugin', array('plugin' => 'nsm'), array()),
 		'JEV'        => $retry ? $retry : '{}',
 		'smilies'    => ($config['use_smilies']) ? InsertSmilies('', 20, 'currentInputAreaID') : '',
-		'quicktags'  => ($config['use_bbcodes']) ? BBCodes('ng_news_content') : '',
+		'quicktags'  => ($config['use_bbcodes']) ? BBCodes("'ng_news_content'") : '',
 		'flags'      => array(
 			'mainpage'            => $perm['add.mainpage'] && $perm['personal.mainpage'],
 			'favorite'            => $perm['add.favorite'] && $perm['personal.favorite'],
@@ -805,8 +805,8 @@ function plugin_nsm_editForm($tpl_name = 'news.edit', $retry = '')
 		'author_page' => checkLinkAvailable('uprofile', 'show') ?
 			generateLink('uprofile', 'show', array('name' => $row['author'], 'id' => $row['author_id'])) :
 			generateLink('core', 'plugin', array('plugin' => 'uprofile', 'handler' => 'show'), array('name' => $row['author'], 'id' => $row['author_id'])),
-		'smilies'     => $config['use_smilies'] ? InsertSmilies('', 20, 'currentInputAreaID') : '',
-		'quicktags'   => $config['use_bbcodes'] ? BBCodes('ng_news_content') : '',
+		'smilies'     => $config['use_smilies'] ? InsertSmilies('', 20, 'ng_news_content') : '',
+		'quicktags'   => $config['use_bbcodes'] ? BBCodes("'ng_news_content'") : '',
 		'approve'     => $row['approve'],
 		'flags'       => array(
 			'edit_split'          => $config['news.edit.split'] ? true : false,
@@ -913,3 +913,23 @@ function plugin_nsm_del()
 	// Show again list of news
 	plugin_nsm();
 }
+add_act('usermenu', 'new_nsm');
+
+class NSMCoreFilter extends CoreFilter
+{
+	function showUserMenu(&$tVars)
+	{
+		global $userROW;
+
+		if (!is_array($userROW)) return 0;
+
+		// Проверяем права доступа
+		$permPlugin = checkPermission(array('plugin' => 'nsm', 'item' => ''), null, array('view'));
+
+		if ($permPlugin['view']) {
+			$tVars['p']['nsm']['link'] = generatePluginLink('nsm', null);
+		}
+	}
+}
+
+register_filter('core.userMenu', 'nsm', new NSMCoreFilter);
