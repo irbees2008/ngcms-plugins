@@ -1,0 +1,9 @@
+video {
+    max-width: 100%;
+    height: auto;
+    background: #000;
+}
+
+.media-container {
+    margin: 15px 0;
+}

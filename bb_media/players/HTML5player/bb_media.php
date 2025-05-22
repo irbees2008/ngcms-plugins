@@ -6,16 +6,8 @@ add_act('index', 'bbMediaInclude');
 function bbMediaInclude() {
     // Удалены все зависимости VideoJS
     // Добавляем базовые стили для HTML5 плеера (опционально)
-    register_htmlvar('css', '
-        video {
-            max-width: 100%;
-            height: auto;
-            background: #000;
-        }
-        .media-container {
-            margin: 15px 0;
-        }
-    ');
+    register_htmlvar('css', admin_url . '/plugins/bb_media/players/HTML5player/styles.css');
+    
 }
 
 function bbMediaProcess($content) {
