@@ -23,7 +23,7 @@ function plugin_nsm_edit_proxy()
 
 function plugin_nsm()
 {
-	global $userROW, $mysql, $twig, $lang, $template, $PHP_SELF;
+	global $userROW, $mysql, $twig, $lang, $template, $PHP_SELF, $tpl, $TemplateCache;
 
 	// Количество новостей на странице
 	$perPage = 30;
@@ -131,38 +131,24 @@ function plugin_nsm()
 	$tpath = locatePluginTemplates(array('news.list', 'pagination'), 'nsm', pluginGetVariable('nsm', 'localsource'));
 
 	// Генерация постраничной навигации через TWIG
-	$pagination = '';
+	// Подсчет общего количества страниц
+	$totalPages = ceil($totalNews / $perPage);
+
+	// Параметры пагинации
+	$paginationParams = array(
+		'pluginName' => 'nsm',
+		'params' => array(),
+		'xparams' => array(),
+		'paginator' => array('page', 0, false)
+	);
+
+	// Генерация пагинации, если страниц больше одной
 	if ($totalPages > 1) {
-		// Подготовка данных для пагинации
-		$startPage = max(1, $currentPage - 3);
-		$endPage = min($totalPages, $currentPage + 3);
-
-		// Собираем массив страниц
-		$pages = [];
-		for ($i = $startPage; $i <= $endPage; $i++) {
-			$pages[] = [
-				'num' => $i,
-				'current' => ($i == $currentPage),
-				'link' => generateLink('core', 'plugin', ['plugin' => 'nsm'], ['page' => $i])
-			];
-		}
-
-		// Подготавливаем данные для шаблона
-		$paginationData = [
-			'totalPages' => $totalPages,
-			'currentPage' => $currentPage,
-			'startPage' => $startPage,
-			'endPage' => $endPage,
-			'pages' => $pages,
-			'prevLink' => ($currentPage > 1) ? generateLink('core', 'plugin', ['plugin' => 'nsm'], ['page' => $currentPage - 1]) : null,
-			'nextLink' => ($currentPage < $totalPages) ? generateLink('core', 'plugin', ['plugin' => 'nsm'], ['page' => $currentPage + 1]) : null,
-			'firstPageLink' => generateLink('core', 'plugin', ['plugin' => 'nsm'], ['page' => 1]),
-			'lastPageLink' => generateLink('core', 'plugin', ['plugin' => 'nsm'], ['page' => $totalPages]),
-		];
-
-		// Загружаем и рендерим шаблон пагинации
-		$xtPagination = $twig->loadTemplate($tpath['pagination'] . 'pagination.tpl');
-		$pagination = $xtPagination->render($paginationData);
+		templateLoadVariables(true);
+		$navigations = $TemplateCache['site']['#variables']['navigation'];
+		$pagination = generatePagination($currentPage, 1, $totalPages, 9, $paginationParams, $navigations);
+	} else {
+		$pagination = '';
 	}
 
 	$tVars = [
