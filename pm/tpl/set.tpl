@@ -1,41 +1,24 @@
-<br/>
-
-<div id="pm">
-	<form method="POST" action="{{ php_self }}?action=set">
-		<table class="content" border="0" cellspacing="0" cellpadding="0" align="center">
-			<tr>
-				<td width=100% colspan="2" class="contentHead">
-					<img src="{{ admin_url }}/plugins/pm/img/nav.gif" hspace="8" align="left"/>{{ lang['pm:set'] }}</td>
-			</tr>
-
-			<tr>
-				<td width=100% colspan="2">&nbsp;</td>
-			</tr>
-
-			<tr align="center">
-				<td width="50%" class="contentHead"><a href="/plugin/pm/">{{ lang['pm:inbox'] }}</a></td>
-				<td width="50%" class="contentHead"><a href="/plugin/pm/?action=outbox">{{ lang['pm:outbox'] }}</a></td>
-			</tr>
-
-			<tr>
-				<td width=100% colspan="2">&nbsp;</td>
-			</tr>
-
-			<tr>
-				<td width=100% colspan="2">
-					<input class="check" type="checkbox" name="email" id="email" {{ checked }} /> {{ lang['pm:email_set'] }}
-				</td>
-			</tr>
-			<input type="hidden" name="check">
-			<tr>
-				<td width=100% colspan="2">&nbsp;</td>
-			</tr>
-
-			<tr align="center">
-				<td width="100%" colspan="2" class="contentEdit">
-					<input type="submit" class="button">
-				</td>
-			</tr>
-	</form>
+<form method="POST" action="{{ pm_set_link }}">
+	<div class="block-title">{{ lang['pm:set'] }}</div>
+	<table class="table table-striped table-bordered">
+		<tr>
+			<th>
+				<a href="{{ pm_inbox_link }}">{{ lang['pm:inbox'] }}</a>
+				|
+				<a href="{{ pm_outbox_link }}">{{ lang['pm:outbox'] }}</a>
+				|
+				<a href="{{ pm_set_link }}" align="right">{{ lang['pm:set'] }}</a>
+			</th>
+		</tr>
+		<tr align="center">
+			<td><input type="checkbox" name="email" id="email" {{ checked }}/>
+				{{ lang['pm:email_set'] }}</td>
+		</tr>
 	</table>
-</div>
+	<div class="clearfix"></div>
+	<div class="label pull-right">
+		<label class="default">&nbsp;</label>
+		<input type="hidden" name="check" value="1"/>
+		<input type="submit" class="button" value="{{ lang['pm:send'] }}"/>
+	</div>
+</form>

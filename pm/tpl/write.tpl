@@ -1,71 +1,111 @@
 <script type="text/javascript" src="{{ scriptLibrary }}/libsuggest.js"></script>
-<br/>
+<style>
+	.suggestWindow {
+		background: #f9f9f9;
+		border: 1px solid #efefef;
+		width: 316px;
+		position: absolute;
+		display: block;
+		visibility: hidden;
+		padding: 0px;
+		font: normal 12px tahoma, sans-serif;
+		top: 0px;
+		margin: 0;
+		left: 80px;
+	}
 
-<div id="pm">
-	<form method=post name=form action="{{ php_self }}?action=send">
+	#suggestBlock {
+		padding-top: 2px;
+		padding-bottom: 2px;
+		width: 100%;
+		border: 0px;
+	}
 
-		<table border="0" width="553px" cellspacing="0" cellpadding="0">
+	#suggestBlock td {
+		padding-left: 2px;
+	}
 
-			<tr align="center">
-				<td width="50%" colspan="1" class="contentHead"><a href="/plugin/pm/">{{ lang['pm:inbox'] }}</a></td>
-				<td width="50%" colspan="1" class="contentHead">
-					<a href="/plugin/pm/?action=outbox">{{ lang['pm:outbox'] }}</a></td>
-			</tr>
+	#suggestBlock tr {
+		padding: 3px;
+		padding-left: 8px;
+		background: white;
+	}
 
-			<tr>
-				<td width=100% colspan="2">&nbsp;</td>
-			</tr>
+	#suggestBlock .suggestRowHighlight {
+		background: #59a6ec;
+		color: white;
+		cursor: default;
+	}
 
-			<tr>
-				<td width=100% colspan="2" class="contentHead">
-					<img src="{{ admin_url }}/plugins/pm/img/nav.gif" hspace="8" align="absmiddle">{{ lang['pm:new'] }}
-				</td>
-			</tr>
+	#suggestBlock .cleft {
+		padding-left: 5px;
+	}
 
-			<tr>
-				<td width=50% class="contentEntry1">{{ lang['pm:subject'] }}</td>
-				<td width=50% class="contentEntry2">
-					<input type="text" class="pm" size="40" name="title" tabindex="2" maxlength="50"/></td>
-			</tr>
+	#suggestBlock .cright {
+		text-align: right;
+		padding-right: 5px;
+	}
 
-			<tr>
-				<td width="50%" class="contentEntry1">{{ lang['pm:too'] }}<br/>
-					<small>{{ lang['pm:to'] }}</small>
-				</td>
-				<td width="50%" class="contentEntry2">
-					<input type="text" class="pm" name="to_username" id="to_username" size="40" tabindex="3" autocomplete="off" maxlength="70" value="{{ username }}"/><span id="suggestLoader" style="width: 20px; visibility: hidden;"><img src="{{ skins_url }}/images/loading.gif"/></span>
-				</td>
-			</tr>
-		</table>
-
-		<br/>
-
-		<table border="0" cellspacing="0" cellpadding="0" class="content" align="center">
-			<tr>
-				<td width="100%" class="contentHead">
-					<img src="{{ admin_url }}/plugins/pm/img/nav.gif" hspace="8" alt=""/>{{ lang['pm:textmessage'] }}
-				</td>
-			</tr>
-
-			<tr>
-				<td width="100%"><br/>{{ quicktags }}<br/><br/>{{ smilies }}
-					<br/><textarea name="content" id="pm_content" rows="10" cols="60" tabindex="1" maxlength="3000"/></textarea>
-					<br/><br/><input name="saveoutbox" class="check" type="checkbox"/> {{ lang['pm:saveoutbox'] }}
-					<br/><br/></td>
-			</tr>
-
-			<tr align="center">
-				<td width="100%" colspan="2" class="contentEdit" valign="top">
-					<input class="button" type="submit" value="{{ lang['pm:send'] }}" accesskey="s"/>
-				</td>
-			</tr>
-		</table>
-
-	</form>
-</div>
+	.suggestClose {
+		display: block;
+		text-align: right;
+		font: normal 10px verdana, tahoma, sans-serif;
+		background: #efefef;
+		padding: 5px;
+		cursor: pointer;
+	}
+</style>
+<form method="post" name="form" action="{{ pm_send_link }}">
+	<div class="block-title">{{ lang['pm:new'] }}</div>
+	<table class="table table-striped table-bordered">
+		<tr>
+			<th colspan="2">
+				<a href="{{ pm_inbox_link }}">{{ lang['pm:inbox'] }}</a>
+				|
+				<a href="{{ pm_outbox_link }}">{{ lang['pm:outbox'] }}</a>
+				|
+				<a href="{{ pm_set_link }}" align="right">{{ lang['pm:set'] }}</a>
+			</th>
+		</tr>
+		<tr>
+			<td width="30%">{{ lang['pm:subject'] }}</td>
+			<td width="70%"><input class="input" type="text" name="title" tabindex="2"/></td>
+		</tr>
+		<tr>
+			<td width="30%">{{ lang['pm:too'] }}<br/>
+				<small>{{ lang['pm:to'] }}</small>
+			</td>
+			<td width="70%">
+				<input class="input" type="text" name="to_username" id="to_username" tabindex="3" autocomplete="off" value="{{ username }}"/>
+				<span id="suggestLoader" style="width: 20px; visibility: hidden;">
+					<img src="{{ skins_url }}/images/loading.gif"/>
+				</span>
+			</td>
+		</tr>
+		<tr>
+			<td width="100%" colspan="2">
+				<div class="clearfix"></div>
+				{{ quicktags }}
+				{{ smilies }}
+				<div class="clearfix"></div>
+				<div class="label">
+					<label></label>
+					<textarea name="content" id="pm_content" style="width: 100%; height: 120px;"></textarea>
+					<br/><br/>
+					<input name="saveoutbox" type="checkbox"/>
+					{{ lang['pm:saveoutbox'] }}
+				</div>
+			</td>
+		</tr>
+	</table>
+	<div class="clearfix"></div>
+	<div class="label pull-right">
+		<label class="default">&nbsp;</label>
+		<input class="button" type="submit" value="{{ lang['pm:send'] }}" accesskey="s"/>
+	</div>
+</form>
 
 <script language="javascript" type="text/javascript">
-
 	function systemInit() {
 		new ngSuggest('to_username',
 			{
@@ -79,7 +119,6 @@
 			}
 		);
 	}
-
 	if (document.body.attachEvent) {
 		document.body.onload = systemInit;
 	} else {

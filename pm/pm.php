@@ -65,7 +65,7 @@ class PMCoreFilter extends CoreFilter {
 		if ($notViewed != 0) $notViewed = '<span id="newpm">' . $notViewed . '</span>';
 		$tVars['p']['pm']['pm_unread'] = $notViewed;
 		$tVars['p']['pm']['pm_all'] = $viewed;
-		$tVars['p']['pm']['link'] = generatePluginLink('pm', null);
+		$tVars['p']['pm']['link'] = generatePluginLink('pm', generatePluginLink);
 	}
 }
 
@@ -105,8 +105,15 @@ function pm_inbox() {
 	}
 	$tVars = array(
 		'php_self' => $PHP_SELF,
-		'entries'  => $tEntries,
-		'tpl_url'  => tpl_url,
+		'entries' => $tEntries,
+		'tpl_url' => tpl_url,
+		'pm_inbox_link' => generatePluginLink('pm', null),
+		'pm_outbox_link' => generatePluginLink('pm', null, array('action' => 'outbox')),
+		'pm_set_link' => generatePluginLink('pm', null, array('action' => 'set')),
+		'pm_read_link' => generatePluginLink('pm', null, array('action' => 'read')),
+		'pm_del_link' => generatePluginLink('pm', null, array('action' => 'delete')),
+		'pm_write_link' => generatePluginLink('pm', null, array('action' => 'write')),
+		
 	);
 	$pages_count = ceil($countMsg / $msg_per_page);
 	$paginationParams = array('pluginName' => 'pm', 'params' => array(), 'xparams' => array(), 'paginator' => array('page', 0, false));
@@ -157,6 +164,12 @@ function pm_outbox() {
 		'php_self' => $PHP_SELF,
 		'entries'  => $tEntries,
 		'tpl_url'  => tpl_url,
+		'pm_inbox_link' => generatePluginLink('pm', null),
+		'pm_outbox_link' => generatePluginLink('pm', null, array('action' => 'outbox')),
+		'pm_set_link' => generatePluginLink('pm', null, array('action' => 'set')),
+		'pm_read_link' => generatePluginLink('pm', null, array('action' => 'read')),
+		'pm_del_link' => generatePluginLink('pm', null, array('action' => 'delete')),
+		'pm_write_link' => generatePluginLink('pm', null, array('action' => 'write')),
 	);
 	$pages_count = ceil($countMsg / $msg_per_page);
 	$paginationParams = array('pluginName' => 'pm', 'params' => array(), 'xparams' => array('action' => 'outbox'), 'paginator' => array('page', 0, false));
@@ -179,11 +192,18 @@ function pm_read() {
 	if ($row = $mysql->record("SELECT * FROM " . prefix . "_pm WHERE id = " . db_squote($pmid) . " AND ((`from_id`=" . db_squote($userROW['id']) . " AND `folder`='outbox') OR (`to_id`=" . db_squote($userROW['id']) . ") AND `folder`='inbox')")) {
 		$tVars = array(
 			'php_self' => $PHP_SELF,
-			'pmid'     => $row['id'],
-			'subject'  => $row['subject'],
+			'pmid' => $row['id'],
+			'subject' => $row['subject'],
 			'location' => $row['folder'],
-			'pmdate'   => $row['date'],
-			'content'  => $parse->htmlformatter($parse->smilies($parse->bbcodes($row['message'])))
+			'pmdate' => $row['date'],
+			'content' => $parse->htmlformatter($parse->smilies($parse->bbcodes($row['message']))),
+			'author' => $author,
+			'ifinbox' => ($row['folder'] == 'inbox') ? 1 : 0,
+			'pm_inbox_link' => generatePluginLink('pm', null),
+			'pm_outbox_link' => generatePluginLink('pm', null, array('action' => 'outbox')),
+			'pm_set_link' => generatePluginLink('pm', null, array('action' => 'set')),
+			'pm_del_link' => generatePluginLink('pm', null, array('action' => 'delete')),
+			'pm_reply_link' => generatePluginLink('pm', null, array('action' => 'reply')),
 		);
 		$author = '';
 		$authorID = $row['folder'] == 'inbox' ? $row['from_id'] : $row['to_id'];
@@ -249,9 +269,19 @@ function pm_write() {
 	$tVars = array(
 		'php_self'  => $PHP_SELF,
 		'username'  => trim($_REQUEST['name']),
-		'quicktags' => BBCodes("'pm_content'")
+		'quicktags' => BBCodes("'pm_content'"),
+		'php_self' => $PHP_SELF,
+		'title' => isset($_REQUEST['title']) ? $_REQUEST['title'] : '',
+		'to_username' => $row['from_id'],
+		'quicktags' => BBCodes("'pm_content'"),
+		'smilies' => ($config['use_smilies'] == "1") ? InsertSmilies('', 10, "'pm_content'") : '',
+		'pm_inbox_link' => generatePluginLink('pm', null),
+		'pm_outbox_link' => generatePluginLink('pm', null, array('action' => 'outbox')),
+		'pm_set_link' => generatePluginLink('pm', null, array('action' => 'set')),
+		'pm_send_link' => generatePluginLink('pm', null, array('action' => 'send')),
+		'skins_url' => skins_url,
 	);
-	$tVars['smilies'] = ($config['use_smilies'] == "1") ? InsertSmilies('', 10, 'pm_content') : '';
+	$tVars['smilies'] = ($config['use_smilies'] == "1") ? InsertSmilies('', 10, "'pm_content'") : '';
 	$xt = $twig->loadTemplate($tpath['write'] . 'write.tpl');
 	$template['vars']['mainblock'] = $xt->render($tVars);
 }
@@ -336,9 +366,14 @@ function pm_reply() {
 			'pmid'        => $row['id'],
 			'title'       => 'Re:' . $row['subject'],
 			'to_username' => $row['from_id'],
-			'quicktags'   => BBCodes('pm_content')
+			'quicktags'   => BBCodes("'pm_content'"),
+			'smilies' => ($config['use_smilies'] == "1") ? InsertSmilies('', 10, "'pm_content'") : '',
+			'pm_inbox_link' => generatePluginLink('pm', null),
+			'pm_outbox_link' => generatePluginLink('pm', null, array('action' => 'outbox')),
+			'pm_set_link' => generatePluginLink('pm', null, array('action' => 'set')),
+			'pm_send_link' => generatePluginLink('pm', null, array('action' => 'send')),
 		);
-		$tVars['smilies'] = ($config['use_smilies'] == "1") ? InsertSmilies('', 10, 'pm_content') : '';
+		$tVars['smilies'] = ($config['use_smilies'] == "1") ? InsertSmilies('', 10, "'pm_content'") : '';
 		$xt = $twig->loadTemplate($tpath['reply'] . 'reply.tpl');
 		$template['vars']['mainblock'] = $xt->render($tVars);
 	} else {
@@ -363,7 +398,10 @@ function pm_set() {
 	$tpath = locatePluginTemplates(array('set'), 'pm', intval(pluginGetVariable('pm', 'localsource')));
 	$tVars = array(
 		'php_self' => $PHP_SELF,
-		'checked'  => $checked ? 'checked="checked"' : ''
+		'checked'  => $checked ? 'checked="checked"' : '',
+		'pm_inbox_link' => generatePluginLink('pm', null),
+		'pm_outbox_link' => generatePluginLink('pm', null, array('action' => 'outbox')),
+		'pm_set_link' => generatePluginLink('pm', null, array('action' => 'set')),
 	);
 	$xt = $twig->loadTemplate($tpath['set'] . 'set.tpl');
 	$template['vars']['mainblock'] = $xt->render($tVars);
