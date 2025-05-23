@@ -69,8 +69,15 @@ function uprofile_showProfile($params) {
 				'hasIcq'       => is_numeric($urow['icq']) ? 1 : 0,
 				'isOwnProfile' => (isset($userROW) && is_array($userROW) && ($userROW['id'] == $urow['id'])) ? 1 : 0,
 			),
+			'write_pm_link' => generatePluginLink('pm', null, array(
+				'action' => 'write',
+				'name' => $urow['name']
+			)),
 		),
 		'token'   => genUToken('uprofile.editForm'),
+		'edit_profile' => (isset($userROW) && is_array($userROW) && ($userROW['id'] == $urow['id'])) ?
+			 generateLink('uprofile', 'edit')  : '',
+	
 	);
 	$conversionConfig = array(
 		'{user}'       => '{{ user.name }}',
