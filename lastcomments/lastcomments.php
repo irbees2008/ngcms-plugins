@@ -2,6 +2,7 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die ('HAL');
 define('lastcomments_version', '0.10');
+loadPluginLang('lastcomments', 'main', '', '', ':');
 // ==============================================
 // Side bar widget
 // ==============================================
@@ -22,11 +23,11 @@ registerActionHandler('index', 'lastcomments_block');
 // Plugin page
 // ==============================================
 function lastcomments_page() {
-
-	global $SYSTEM_FLAGS, $template, $CurrentHandler;
+	loadPluginLang('lastcomments', 'main', '', '', ':');
+	global $SYSTEM_FLAGS, $template, $lang, $CurrentHandler;
 	// Action if ppage is enabled
 	if (pluginGetVariable('lastcomments', 'ppage') && ($CurrentHandler['handlerParams']['value']['pluginName'] == 'core')) {
-		$SYSTEM_FLAGS['info']['title']['group'] = "lastcomments";
+				$SYSTEM_FLAGS['info']['title']['group'] = $lang['lastcomments:lastcomments'];
 		$template['vars']['mainblock'] = lastcomments(1);
 	} else {
 		error404();
@@ -77,12 +78,11 @@ function lastcomments($mode = 0) {
 			$tpl_prefix = "";        // sidepanel widget
 			break;
 	}
-	// Generate cache file name [ we should take into account SWITCHER plugin & calling parameters ]
-	$cacheFileName = md5('lastcomments' . $config['theme'] . $config['default_lang'] . $tpl_prefix) . '.txt';
+	// Generate cache file name
+	$cacheFileName = md5('lastcomments' . $config['theme'] . $config['default_lang'] . $tpl_prefix . (isset($_REQUEST['page']) ? intval($_REQUEST['page']) : 0)) . '.txt';
 	if (pluginGetVariable('lastcomments', 'cache')) {
 		$cacheData = cacheRetrieveFile($cacheFileName, pluginGetVariable('lastcomments', 'cacheExpire'), 'lastcomments');
 		if ($cacheData != false) {
-			// We got data from cache. Return it and stop
 			return $cacheData;
 		}
 	}
@@ -230,6 +230,8 @@ function lastcomments($mode = 0) {
 		'description' => $config['description'],
 		'generator' => 'Plugin Lastcomments (' . lastcomments_version . ') // Next Generation CMS (' . engineName . ' ' . engineVersion . ')',
 	);
+	$tVars['lastcomments_url'] = generatePluginLink('lastcomments', null);
+	$tVars['lastcomments_url_rss'] = generatePluginLink('lastcomments', 'rss');
 	$output = $xt->render($tVars);
 	if ($mode == 2) setlocale(LC_TIME, $old_locale);
 	if (pluginGetVariable('lastcomments', 'cache')) {

@@ -4,7 +4,7 @@
 
 ID: lastcomments
 Name: Последние комментарии
-Version: 0.10
+Version: 0.12
 Acts: index, ppages 
 File: lastcomments.php
 Config: config.php
@@ -12,7 +12,7 @@ install: install.php
 deinstall: uninstall.php
 Type: plugin
 Description: Вывод последних комментариев
-Author:  SwiZZeR, EsCaPeR, Vitaly, Megaket4up
+Author:  SwiZZeR, EsCaPeR, Vitaly, Megaket4up,irbees2008
 Title: Последние комментарии
 Information: Отображение последних комментариев, оставленных на страницах сайта
 Preinstall: default_no
