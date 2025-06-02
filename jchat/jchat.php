@@ -78,7 +78,7 @@ function jchat_show($lastEventID, $maxLoadedID, $commands = array()) {
 		$row['id'] = intval($row['id']);
 		$data [] = $row;
 	}
-	$mysql->query("set names utf-8");
+	$mysql->query("set names utf8mb4");
 	// Attach messages to bundle
 	$bundle[1] = $data;
 	// 1. Check if we need to reconfigure refresh rate
@@ -225,7 +225,7 @@ function plugin_jchat_add() {
 	// Add new message to chat
 	$mysql->query("set names utf8");
 	$mysql->query("insert into " . prefix . "_jchat (" . implode(",", $vnames) . ") values (" . implode(",", $vparams) . ")");
-	$mysql->query("set names utf-8");
+	$mysql->query("set names utf8");
 	// Update LastEventNotification
 	$mysql->query("insert into " . prefix . "_jchat_events (chatid, postdate, type) values (" . $SQL['chatid'] . ", " . db_squote($SQL['postdate']) . ", 1)");
 	$lid = $mysql->result("select LAST_INSERT_ID()");
@@ -275,7 +275,7 @@ function plugin_jchat_win() {
 	if (pluginGetVariable('jchat', 'win_mode'))
 		$SUPRESS_TEMPLATE_SHOW = 1;
 	// Check permissions [ guests receive an error ]
-	if (!pluginGetVariable('jchat', access) && !is_array($userROW)) {
+	if (!pluginGetVariable('jchat', 'access') && !is_array($userROW)) {
 		if (pluginGetVariable('jchat', 'win_mode')) {
 			$template['vars']['mainblock'] = $lang['jchat:win.regonly'];
 		} else {

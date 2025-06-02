@@ -150,7 +150,7 @@ function jChat(maxRows, refresh, tableID, msgOrder) {
 				// 3. Author's name [ BOLD ]
 				'<span class="jchat_userName">' + rec['author'] + '</span>' +
 				// 4. DELETE button (for admins)
-				'[is.admin] <img src="{skins_url}/images/delete.gif" alt="x" style="cursor: pointer;" onclick="CHATTER.deleteMessage(' + rec['id'] + ');"/>[/is.admin]' +
+				'[is.admin] <a  alt="x" style="cursor: pointer;" onclick="CHATTER.deleteMessage(' + rec['id'] + ');">DEL</a>[/is.admin]' +
 				// 5. New line delimiter
 				'<br/> ' +
 				// 6. Chat message test
@@ -267,7 +267,6 @@ function jChat(maxRows, refresh, tableID, msgOrder) {
 		if (!this.timerActive)
 			this.timerStart();
 	}
-
 
 	this.init(maxRows, refresh, tableID, msgOrder);
 }

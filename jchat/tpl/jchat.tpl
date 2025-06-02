@@ -33,6 +33,7 @@
 <!-- STYLE DEFINITION END ((( YOU CAN CHANGE IT ))) -->
 <!-- SCRIPTS INTERNALS BEGIN ((( DO NOT CHANGE ))) -->
 [:include jchat.script.header.js]
+
 <!-- SCRIPTS INTERNALS END -->
 
 <!-- Display data definition (( YOU CAN CHANGE IT )) -->
@@ -41,12 +42,12 @@
 		<td>
 			<table border="0" width="100%" cellspacing="0" cellpadding="0">
 				<tr>
-					<td><img border="0" src="{tpl_url}/images/2z_35.gif" width="7" height="36"/></td>
-					<td style="background-image:url('{tpl_url}/images/2z_36.gif');" width="100%">
-						&nbsp;<b><font color="#FFFFFF">×àò-áîêñ</font></b>[selfwin]
-						<a target="_blank" href="{link_selfwin}"><img src="{skins_url}/images/open_new.png" width="15" height="11" border="0" alt="New window"/></a>[/selfwin]
+					
+					<td >
+						&nbsp;<b><font color="#FFFFFF">Чатик</font></b>[selfwin]
+						<a target="_blank" href="{link_selfwin}">Открыть чат на странице</a>[/selfwin]
 					</td>
-					<td><img border="0" src="{tpl_url}/images/2z_38.gif" width="7" height="36"/></td>
+					
 				</tr>
 			</table>
 		</td>
@@ -55,12 +56,11 @@
 		<td>
 			<table border="0" width="100%" cellspacing="0" cellpadding="0">
 				<tr>
-					<td style="background-image:url('{tpl_url}/images/2z_56.gif');" width="7">&nbsp;</td>
-					<td bgcolor="#FFFFFF">
+				
 						<div class="block_cal" align="left">
 
 							<!-- THIS IS REQUIRED BLOCK. PLEASE SAVE IT -->
-							<div style="overflow: auto; height: 300px;" onclick="jchatProcessAreaClick(event);">
+							<div style="overflow: auto; " onclick="jchatProcessAreaClick(event);">
 								<table id="jChatTable" cellspacing="0" cellpadding="0" width="100%">
 									<tr>
 										<td>Loading chat...</td>
@@ -93,24 +93,14 @@
 
 						</div>
 					</td>
-					<td style="background-image:url('{tpl_url}/images/2z_58.gif');" width="7">&nbsp;</td>
+				
 				</tr>
 			</table>
 		</td>
 	</tr>
-	<tr>
-		<td>
-			<table border="0" width="100%" cellspacing="0" cellpadding="0">
-				<tr>
-					<td><img border="0" src="{tpl_url}/images/2z_60.gif" width="7" height="11"/></td>
-					<td style="background-image:url('{tpl_url}/images/2z_61.gif');" width="100%"></td>
-					<td><img border="0" src="{tpl_url}/images/2z_62.gif" width="7" height="11"/></td>
-				</tr>
-			</table>
-		</td>
-	</tr>
-</table>
+	</table>
 
 <!-- SCRIPTS INTERNALS BEGIN ((( DO NOT CHANGE ))) -->
 [:include jchat.script.footer.js]
+
 <!-- SCRIPTS INTERNALS END -->
