@@ -5,6 +5,9 @@
 		{% if not (ifinbox) %}для
 		{% endif %}
 		{{ author }}
+		{% if flags.hasAvatar %}
+			<img src="{{ avatar }}" alt="" style="max-width: 50px; max-height: 50px;"/>
+		{% endif %}
 		{{ pmdate|date('Y-m-d H:i') }}</div>
 	<table class="table table-striped table-bordered">
 		<tr>

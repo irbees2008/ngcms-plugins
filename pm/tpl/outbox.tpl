@@ -14,6 +14,7 @@
 			<td width="25%">{{ lang['pm:date'] }}</td>
 			<td width="40%">{{ lang['pm:subject'] }}</td>
 			<td width="30%">{{ lang['pm:too'] }}</td>
+			<td width="15%" class="contentHead">{{ lang['pm:ava'] }}</td>
 			<td width="5%">
 				<input type="checkbox" name="master_box" title="{{ lang['pm:checkall'] }}" onclick="javascript:check_uncheck_all(form)">
 			</td>
@@ -25,6 +26,11 @@
 					<a href="{{ pm_read_link }}&pmid={{ entry.pmid }}&location=outbox">{{ entry.subject }}</a>
 				</td>
 				<td>{{ entry.link }}</td>
+				<td class="contentEntry1">
+					{% if entry.flags.hasAvatar %}
+						<img src="{{ entry.avatar }}" alt="" style="max-width: 50px; max-height: 50px;"/>
+					{% endif %}
+				</td>
 				<td><input name="selected_pm[]" value="{{ entry.pmid }}" type="checkbox"/></td>
 			</tr>
 		{% endfor %}

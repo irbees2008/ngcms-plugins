@@ -4,7 +4,7 @@
 
 ID: pm
 Name: Личные сообщения
-Version: 0.7
+Version: 0.8
 Acts: usermenu, ppages 
 Actions: rpc; pm_ajax.php
 File: pm.php
@@ -13,7 +13,7 @@ Deinstall: uninstall.php
 Config: config.php
 Type: plugin
 Description: Обмен приватными сообщениями между пользователями
-Author:  Alexey N. Zhukov (Wolverine)
+Author:  Alexey N. Zhukov (Wolverine). irbees2008
 Author_URI: http://digitalplace.ru/
 Title: Личные сообщения
 Information: Плагин организует возможность обмена приватными сообщениями между зарегистрированными пользователями сайта

@@ -36,6 +36,12 @@ array_push($cfg, array(
 ));
 $cfgX = array();
 array_push($cfgX, array(
+	'name'  => 'max_messages',
+	'title' => "Максимальное количество сообщений на пользователя<br /><small>По умолчанию: <b>100</b> (0 - без ограничений)</small>",
+	'type'  => 'input',
+	'value' => intval(pluginGetVariable($plugin, 'max_messages') ? intval(pluginGetVariable($plugin, 'max_messages')) : 100)
+));
+array_push($cfgX, array(
 	'name'  => 'msg_per_page',
 	'title' => "Количество сообщений на странице<br /><small>По умолчанию: <b>10</b></small>",
 	'type'  => 'input',

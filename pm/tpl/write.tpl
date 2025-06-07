@@ -7,45 +7,37 @@
 		position: absolute;
 		display: block;
 		visibility: hidden;
-		padding: 0px;
+		padding: 0;
 		font: normal 12px tahoma, sans-serif;
-		top: 0px;
+		top: 0;
 		margin: 0;
 		left: 80px;
 	}
-
 	#suggestBlock {
 		padding-top: 2px;
 		padding-bottom: 2px;
 		width: 100%;
-		border: 0px;
+		border: 0;
 	}
-
 	#suggestBlock td {
 		padding-left: 2px;
 	}
-
 	#suggestBlock tr {
-		padding: 3px;
-		padding-left: 8px;
+		padding: 3px 3px 3px 8px;
 		background: white;
 	}
-
 	#suggestBlock .suggestRowHighlight {
 		background: #59a6ec;
 		color: white;
 		cursor: default;
 	}
-
 	#suggestBlock .cleft {
 		padding-left: 5px;
 	}
-
 	#suggestBlock .cright {
 		text-align: right;
 		padding-right: 5px;
 	}
-
 	.suggestClose {
 		display: block;
 		text-align: right;
@@ -104,24 +96,21 @@
 		<input class="button" type="submit" value="{{ lang['pm:send'] }}" accesskey="s"/>
 	</div>
 </form>
-
 <script language="javascript" type="text/javascript">
 	function systemInit() {
-		new ngSuggest('to_username',
-			{
-				'iMinLen': 1,
-				'stCols': 1,
-				'stColsClass': ['cleft'],
-				'lId': 'suggestLoader',
-				'hlr': 'true',
-				'stColsHLR': [true],
-				'reqMethodName': 'pm_get_username',
-			}
-		);
-	}
-	if (document.body.attachEvent) {
-		document.body.onload = systemInit;
-	} else {
-		systemInit();
-	}
+new ngSuggest('to_username', {
+'iMinLen': 1,
+'stCols': 1,
+'stColsClass': ['cleft'],
+'lId': 'suggestLoader',
+'hlr': 'true',
+'stColsHLR': [true],
+'reqMethodName': 'pm_get_username'
+});
+}
+if (document.body.attachEvent) {
+document.body.onload = systemInit;
+} else {
+systemInit();
+}
 </script>

@@ -9,13 +9,13 @@ function plugin_pm_ajax_get_username($params) {
 		// ACCESS DENIED
 		return array('status' => 0, 'errorCode' => 3, 'errorText' => 'Access denied');
 	}
-	$searchName =  $params;
+	$searchName = $params;
 	// Return a list of users
 	$SQL = 'SELECT name FROM ' . uprefix . '_users WHERE name LIKE ' . db_squote('%' . $searchName . '%') . ' ORDER BY name DESC LIMIT 20';
 	// Scan incoming params
 	$output = array();
 	foreach ($mysql->select($SQL) as $row) {
-		$output[] = array( $row['name']);
+		$output[] = array($row['name']);
 	}
 
 	return array('status' => 1, 'errorCode' => 0, 'data' => array($params, $output));
