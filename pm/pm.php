@@ -72,7 +72,7 @@ class PMCoreFilter extends CoreFilter
 		if (!$userROW['id']) return 0;
 		# if 'sync' then fill varaiables without SQL query from user's table
 		if ($userROW['pm_sync']) {
-			$tVars['p']['pm']['pm_unread'] = !$userROW['pm_unread'] ? $userROW['pm_unread'] : '<span id="newpm">' . $userROW['pm_unread'] . '</span>';
+			$tVars['p']['pm']['pm_unread'] = !$userROW['pm_unread'] ? $userROW['pm_unread'] :  $userROW['pm_unread'] ;
 			$tVars['p']['pm']['pm_all'] = $userROW['pm_all'];
 			$tVars['p']['pm']['link'] = generatePluginLink('pm', null);
 			return;
@@ -91,7 +91,7 @@ class PMCoreFilter extends CoreFilter
 		$viewed += $notViewed;
 		# update pm counters
 		$mysql->query('UPDATE ' . uprefix . '_users SET `pm_sync` = 1, `pm_all` = ' . $viewed . ', `pm_unread` = ' . $notViewed . ' WHERE `id` = ' . db_squote($userROW['id']));
-		if ($notViewed != 0) $notViewed = '<span id="newpm">' . $notViewed . '</span>';
+		if ($notViewed != 0) $notViewed =  $notViewed ;
 		$tVars['p']['pm']['pm_unread'] = $notViewed;
 		$tVars['p']['pm']['pm_all'] = $viewed;
 		$tVars['p']['pm']['link'] = generatePluginLink('pm', generatePluginLink);
@@ -347,7 +347,7 @@ function pm_write()
 		'pm_send_link' => generatePluginLink('pm', null, array('action' => 'send')),
 		'skins_url' => skins_url,
 	);
-	$tVars['smilies'] = ($config['use_smilies'] == "1") ? InsertSmilies('', 10, 'pm_content') : '';
+	
 	$xt = $twig->loadTemplate($tpath['write'] . 'write.tpl');
 	$template['vars']['mainblock'] = $xt->render($tVars);
 }
@@ -469,7 +469,7 @@ function pm_reply()
 			'pm_set_link' => generatePluginLink('pm', null, array('action' => 'set')),
 			'pm_send_link' => generatePluginLink('pm', null, array('action' => 'send')),
 		);
-		$tVars['smilies'] = ($config['use_smilies'] == "1") ? InsertSmilies('', 10, 'pm_content') : '';
+		
 		$xt = $twig->loadTemplate($tpath['reply'] . 'reply.tpl');
 		$template['vars']['mainblock'] = $xt->render($tVars);
 	} else {
