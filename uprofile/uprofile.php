@@ -56,28 +56,15 @@ function uprofile_showProfile($params) {
 			'status'      => $status,
 			'last'        => ($urow['last'] > 0) ? LangDate("l, j Q Y - H:i", $urow['last']) : $lang['no_last'],
 			'reg'         => langdate("j Q Y", $urow['reg']),
-			'site'        => secure_html($urow['site']),
-			'icq'         => secure_html($urow['icq']),
 			'from'        => secure_html($urow['where_from']),
 			'info'        => secure_html($urow['info']),
-			'photo_thumb' => $userPhoto[1],
-			'photo'       => $userPhoto[2],
 			'avatar'      => $userAvatar[1],
 			'flags'       => array(
-				'hasPhoto'     => $config['use_photos'] && $userPhoto[0],
 				'hasAvatar'    => $config['use_avatars'] && $userAvatar[0],
-				'hasIcq'       => is_numeric($urow['icq']) ? 1 : 0,
 				'isOwnProfile' => (isset($userROW) && is_array($userROW) && ($userROW['id'] == $urow['id'])) ? 1 : 0,
 			),
-			'write_pm_link' => generatePluginLink('pm', null, array(
-				'action' => 'write',
-				'name' => $urow['name']
-			)),
 		),
 		'token'   => genUToken('uprofile.editForm'),
-		'edit_profile' => (isset($userROW) && is_array($userROW) && ($userROW['id'] == $urow['id'])) ?
-			 generateLink('uprofile', 'edit')  : '',
-	
 	);
 	$conversionConfig = array(
 		'{user}'       => '{{ user.name }}',
@@ -86,12 +73,8 @@ function uprofile_showProfile($params) {
 		'{status}'     => '{{ user.status }}',
 		'{last}'       => '{{ user.last }}',
 		'{reg}'        => '{{ user.reg }}',
-		'{site}'       => '{{ user.site }}',
-		'{icq}'        => '{{ user.icq }}',
 		'{from}'       => '{{ user.from }}',
 		'{info}'       => '{{ user.info }}',
-		'{photo}'      => '{{ user.photo_thumb }}',
-		'{photo_link}' => '{{ user.photo }}',
 		'{avatar}'     => '{{ user.avatar }}',
 		'{tpl_url}'    => '{{ tpl_url }}',
 	);
@@ -181,22 +164,15 @@ function uprofile_editForm($ajaxMode = false) {
 			'last'        => ($urow['last'] > 0) ? LangDate("l, j Q Y - H:i", $urow['last']) : $lang['no_last'],
 			'reg'         => langdate("j Q Y", $urow['reg']),
 			'email'       => secure_html($urow['mail']),
-			'site'        => secure_html($urow['site']),
-			'icq'         => secure_html($urow['icq']),
 			'from'        => secure_html($urow['where_from']),
 			'info'        => secure_html($urow['info']),
-			'photo_thumb' => $userPhoto[1],
-			'photo'       => $userPhoto[2],
 			'avatar'      => $userAvatar[1],
 			'php_self'    => $PHP_SELF,
 			'flags'       => array(
-				'hasPhoto'  => $config['use_photos'] && $userPhoto[0],
 				'hasAvatar' => $config['use_avatars'] && $userAvatar[0],
-				'hasIcq'    => is_numeric($urow['icq']) ? 1 : 0,
-			),
+							),
 		),
 		'flags'               => array(
-			'photoAllowed'  => $config['use_photos'] ? 1 : 0,
 			'avatarAllowed' => $config['use_avatars'] ? 1 : 0,
 		),
 		'form_action'         => generateLink('core', 'plugin', array('plugin' => 'uprofile', 'handler' => 'apply')),
@@ -214,12 +190,9 @@ function uprofile_editForm($ajaxMode = false) {
 		'{comments}'             => '{{ user.com }}',
 		'{email}'                => '{{ user.email }}',
 		'{from}'                 => '{{ user.from }}',
-		'{site}'                 => '{{ user.site }}',
-		'{icq}'                  => '{{ user.icq }}',
 		'{about}'                => '{{ user.info }}',
 		'{about_sizelimit_text}' => '{{ info_sizelimit_text }}',
 		'{about_sizelimit}'      => '{{ info_sizelimit }}',
-		'{photo}'                => '{% if (flags.photoAllowed) %}<input type="file" name="newphoto" size="40" /><br />{% if (user.flags.hasPhoto) %}<a href="{{ user.photo }}" target="_blank"><img src="{{ user.photo_thumb }}" style="margin: 5px; border: 0px; alt=""/></a><br/><input type="checkbox" name="delphoto" id="delphoto" class="check" />&nbsp;<label for="delphoto">{{ lang.uprofile[\'delete\'] }}</label>{% endif %}{% else %}{{ lang.uprofile[\'photos_denied\'] }}{% endif %}',
 		'{avatar}'               => '{% if (flags.avatarAllowed) %}<input type="file" name="newavatar" size="40" /><br />{% if (user.flags.hasAvatar) %}<img src="{{ user.avatar }}" style="margin: 5px; border: 0px; alt=""/><br/><input type="checkbox" name="delavatar" id="delavatar" class="check" />&nbsp;<label for="delavatar">{{ lang.uprofile[\'delete\'] }}</label>{% endif %}{% else %}{{ lang.uprofile[\'avatars_denied\'] }}{% endif %}',
 		'{form_action}'          => '{{ form_action }}',
 		'{token}'                => '{{ token }}',
@@ -280,12 +253,6 @@ function uprofile_editApply() {
 	} else {
 		$avatar = $currentUser['avatar'];
 	}
-	// Delete photo if requested
-	if ($_REQUEST['delphoto']) {
-		uprofile_manageDelete('photo', $currentUser['id']);
-	} else {
-		$photo = $currentUser['photo'];
-	}
 	// UPLOAD AVATAR
 	if ($_FILES['newavatar']['name']) {
 		// Delete an avatar if user already has it
@@ -314,44 +281,10 @@ function uprofile_editApply() {
 			}
 		}
 	}
-	// UPLOAD PHOTO
-	if ($_FILES['newphoto']['name']) {
-		// Delete a photo if user already has it
-		uprofile_manageDelete('photo', $currentUser['id']);
-		$fmanage = new file_managment();
-		$imanage = new image_managment();
-		$up = $fmanage->file_upload(array('type' => 'photo', 'http_var' => 'newphoto', 'replace' => 1, 'manualfile' => $currentUser['id'] . '.' . strtolower($_FILES['newphoto']['name'])));
-		if (is_array($up)) {
-			// Now write info about image into DB
-			if (is_array($sz = $imanage->get_size($config['photos_dir'] . $subdirectory . '/' . $up[1]))) {
-				$fmanage->get_limits('photo');
-				// Create preview for photo
-				$tsx = intval($config['photos_thumb_size_x']) ? intval($config['photos_thumb_size_x']) : intval($config['photos_thumb_size']);
-				$tsy = intval($config['photos_thumb_size_y']) ? intval($config['photos_thumb_size_y']) : intval($config['photos_thumb_size']);
-				if (($tsx < 10) || ($tsx > 1000)) $tsx = 150;
-				if (($tsy < 10) || ($tsy > 1000)) $tsy = 150;
-				$thumb = $imanage->create_thumb($config['photos_dir'] . $subdirectory, $up[1], $tsx, $tsy);
-				// If we were unable to create thumb - delete photo, it's damaged!
-				if (!$thumb) {
-					msg(array("type" => "error", "text" => $lang['uprofile']['msge_damaged']));
-					$fmanage->file_delete(array('type' => 'avatar', 'id' => $up[0]));
-				} else {
-					$mysql->query("update " . prefix . "_" . $fmanage->tname . " set width=" . db_squote($sz[1]) . ", height=" . db_squote($sz[2]) . ", preview=1 where id = " . db_squote($up[0]));
-					$photo = $up[1];
-				}
-			} else {
-				// We were unable to fetch image size. Damaged file, delete it!
-				msg(array("type" => "error", "text" => $lang['uprofile']['msge_damaged']));
-				$fmanage->file_delete(array('type' => 'avatar', 'id' => $up[0]));
-			}
-		}
-	}
+	
 	$sqlFields = array(
 		'avatar'     => $avatar,
-		'photo'      => $photo,
 		'mail'       => $_REQUEST['editmail'],
-		'site'       => $_REQUEST['editsite'],
-		'icq'        => is_numeric($_REQUEST['editicq']) ? $_REQUEST['editicq'] : '',
 		'where_from' => $_REQUEST['editfrom'],
 		'info'       => (intval($config['user_aboutsize']) ? substr($_REQUEST['editabout'], 0, $config['user_aboutsize']) : $_REQUEST['editabout'])
 	);
@@ -407,7 +340,7 @@ function uprofile_manageDelete($type, $userID) {
 		// Try to delete all avatars of this user
 		@unlink($avatar_dir . $uRow['id'] . '.*');
 	}
-	$mysql->query("update " . uprefix . "_users set " . ($type == 'photo' ? 'photo' : 'avatar') . " = '' where id = " . $userID);
+	$mysql->query("update " . uprefix . "_users set avatar = '' where id = " . $userID);
 	if ($localUpdate) $userROW[$type] = '';
 }
 
