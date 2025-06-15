@@ -63,6 +63,7 @@ function uprofile_showProfile($params) {
 				'hasAvatar'    => $config['use_avatars'] && $userAvatar[0],
 				'isOwnProfile' => (isset($userROW) && is_array($userROW) && ($userROW['id'] == $urow['id'])) ? 1 : 0,
 			),
+			'write_pm_link' => generatePluginLink('pm', null, array('action' => 'write', 'name' => $urow['name'])),
 		),
 		'token'   => genUToken('uprofile.editForm'),
 	);
