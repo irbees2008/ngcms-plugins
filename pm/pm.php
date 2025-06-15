@@ -94,7 +94,7 @@ class PMCoreFilter extends CoreFilter
 		if ($notViewed != 0) $notViewed =  $notViewed ;
 		$tVars['p']['pm']['pm_unread'] = $notViewed;
 		$tVars['p']['pm']['pm_all'] = $viewed;
-		$tVars['p']['pm']['link'] = generatePluginLink('pm', generatePluginLink);
+		$tVars['p']['pm']['link'] = generatePluginLink('pm', null);
 	}
 }
 # show inbox messages list
@@ -335,12 +335,10 @@ function pm_write()
 	$tVars = array(
 		'php_self'  => $PHP_SELF,
 		'username'  => trim($_REQUEST['name']),
-		'quicktags' => BBCodes("'pm_content'"),
-		'php_self' => $PHP_SELF,
 		'title' => isset($_REQUEST['title']) ? $_REQUEST['title'] : '',
 		'to_username' => $row['from_id'],
 		'quicktags' => BBCodes("'pm_content'"),
-		'smilies' => ($config['use_smilies'] == "1") ? InsertSmilies('', 10, "'pm_content'") : '',
+		'smilies' => ($config['use_smilies'] == "1") ? InsertSmilies('', 10, 'pm_content') : '',
 		'pm_inbox_link' => generatePluginLink('pm', null),
 		'pm_outbox_link' => generatePluginLink('pm', null, array('action' => 'outbox')),
 		'pm_set_link' => generatePluginLink('pm', null, array('action' => 'set')),
@@ -463,7 +461,7 @@ function pm_reply()
 			'title'       => 'Re:' . $row['subject'],
 			'to_username' => $row['from_id'],
 			'quicktags'   => BBCodes("'pm_content'"),
-			'smilies' => ($config['use_smilies'] == "1") ? InsertSmilies('', 10, "'pm_content'") : '',
+			'smilies' => ($config['use_smilies'] == "1") ? InsertSmilies('', 10, 'pm_content') : '',
 			'pm_inbox_link' => generatePluginLink('pm', null),
 			'pm_outbox_link' => generatePluginLink('pm', null, array('action' => 'outbox')),
 			'pm_set_link' => generatePluginLink('pm', null, array('action' => 'set')),

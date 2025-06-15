@@ -19,6 +19,20 @@
 				<input type="checkbox" name="master_box" title="{{ lang['pm:checkall'] }}" onclick="javascript:check_uncheck_all(form)">
 			</td>
 		</tr>
+		<tr>
+			<td colspan="6" style="background: #f0f0f0; padding: 5px; text-align: center;">
+				Лимит:
+				{% if max_messages > 0 %}
+					{{ max_messages }}
+				{% else %}
+					{{ lang['pm:not'] }}
+				{% endif %}
+				|
+				{{ lang['pm:notiout'] }}:
+				{{ current_messages }}
+			</td>
+		</tr>
+
 		{% for entry in entries %}
 			<tr align="center">
 				<td>{{ entry.pmdate|date('Y-m-d H:i') }}</td>
