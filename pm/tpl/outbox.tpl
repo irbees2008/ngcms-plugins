@@ -10,15 +10,6 @@
 				<a href="{{ pm_set_link }}" align="right">{{ lang['pm:set'] }}</a>
 			</th>
 		</tr>
-		<tr align="center">
-			<td width="25%">{{ lang['pm:date'] }}</td>
-			<td width="40%">{{ lang['pm:subject'] }}</td>
-			<td width="30%">{{ lang['pm:too'] }}</td>
-			<td width="15%" class="contentHead">{{ lang['pm:ava'] }}</td>
-			<td width="5%">
-				<input type="checkbox" name="master_box" title="{{ lang['pm:checkall'] }}" onclick="javascript:check_uncheck_all(form)">
-			</td>
-		</tr>
 		<tr>
 			<td colspan="6" style="background: #f0f0f0; padding: 5px; text-align: center;">
 				Лимит:
@@ -32,7 +23,15 @@
 				{{ current_messages }}
 			</td>
 		</tr>
-
+		<tr align="center">
+			<td width="25%">{{ lang['pm:date'] }}</td>
+			<td width="40%">{{ lang['pm:subject'] }}</td>
+			<td width="30%">{{ lang['pm:too'] }}</td>
+			<td width="15%" class="contentHead">{{ lang['pm:ava'] }}</td>
+			<td width="5%">
+				<input type="checkbox" name="master_box" title="{{ lang['pm:checkall'] }}" onclick="javascript:check_uncheck_all(form)">
+			</td>
+		</tr>
 		{% for entry in entries %}
 			<tr align="center">
 				<td>{{ entry.pmdate|date('Y-m-d H:i') }}</td>
