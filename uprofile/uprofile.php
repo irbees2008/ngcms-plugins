@@ -64,7 +64,9 @@ function uprofile_showProfile($params) {
 				'isOwnProfile' => (isset($userROW) && is_array($userROW) && ($userROW['id'] == $urow['id'])) ? 1 : 0,
 			),
 			'write_pm_link' => generatePluginLink('pm', null, array('action' => 'write', 'name' => $urow['name'])),
+			//'edit_profile' => generateLink('uprofile', 'edit', array(), array(), false, true),
 		),
+		'edit_profile' => generateLink('uprofile', 'edit', array(), array(), false, true),
 		'token'   => genUToken('uprofile.editForm'),
 	);
 	$conversionConfig = array(
