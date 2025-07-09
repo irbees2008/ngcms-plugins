@@ -1,5 +1,4 @@
 <?php
-
 // Protect against hack attempts
 if (!defined('NGCMS')) {
     die('HAL');
@@ -15,7 +14,6 @@ function plugin_feedback_screen()
 {
     plugin_feedback_showScreen();
 }
-
 //
 // Show feedback form screen
 // Mode:
@@ -40,7 +38,6 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '')
             'entries'  => $lang['feedback:form.no.description'],
         ];
         $template['vars']['mainblock'] = $xt->render($tVars);
-
         return 1;
     }
     $SYSTEM_FLAGS['info']['title']['item'] = $frow['title'];
@@ -73,7 +70,6 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '')
                     'entries'  => $lang['feedback:form.nolink.description'],
                 ];
                 $template['vars']['mainblock'] = $xt->render($tVars);
-
                 return 1;
             }
         } else {
@@ -114,10 +110,10 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '')
             'link_news' => $link_news,
         ],
     ];
-    if ($link_news) {
+    if ($link_news && is_array($nrow)) {
         $tVars['news'] = [
-            'id'    => $nrow['id'],
-            'title' => $nrow['title'],
+            'id'    => $nrow['id'] ?? null, // Используем null, если ключа нет
+            'title' => $nrow['title'] ?? 'Нет заголовка',
             'url'   => newsGenerateLink($nrow),
         ];
     }
@@ -247,7 +243,6 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '')
     }
     $template['vars']['mainblock'] = $xt->render($tVars);
 }
-
 //
 // Post feedback message
 function plugin_feedback_post()
@@ -267,7 +262,6 @@ function plugin_feedback_post()
             'entries'  => $lang['feedback:form.no.description'],
         ];
         $template['vars']['mainblock'] = $xt->render($tVars);
-
         return 1;
     }
     $SYSTEM_FLAGS['info']['title']['item'] = str_replace('{title}', $frow['title'], $lang['feedback:header.send']);
@@ -291,7 +285,6 @@ function plugin_feedback_post()
                     'entries'  => $lang['feedback:form.nolink.description'],
                 ];
                 $template['vars']['mainblock'] = $xt->render($tVars);
-
                 return 1;
             }
         } else {
@@ -307,7 +300,6 @@ function plugin_feedback_post()
         if ((!$vcode) || ($vcode != $_SESSION['captcha.feedback'])) {
             // Wrong CAPTCHA code (!!!)
             plugin_feedback_showScreen(1, $lang['feedback:sform.captcha.badcode']);
-
             return;
         }
     }
@@ -364,7 +356,6 @@ function plugin_feedback_post()
         if ($fInfo['required'] && (strlen($fieldValue) < 1)) {
             // Don't allow to post request
             plugin_feedback_showScreen(1, str_replace(['{name}', '{title}'], [$fName, $fInfo['title']], $lang['feedback:sform.reqfld']));
-
             return;
         }
         $fieldValues[$fName] = str_replace("\n", "<br/>\n", secure_html($fieldValue));
@@ -394,7 +385,6 @@ function plugin_feedback_post()
                     $msg = str_replace(['{plugin}', '{error}', '{field}'], [$k, $tResult['msg'], $tResult['field']], $lang['feedback:sform.plugin'.($tResult['field'] ? '.field' : '')]);
                 }
                 plugin_feedback_showScreen(1, $msg);
-
                 return;
             }
         }
@@ -475,18 +465,15 @@ function plugin_feedback_post()
             $SUPRESS_TEMPLATE_SHOW = true;
             $SUPRESS_MAINBLOCK_SHOW = true;
             header('Location: '.$tResult['redirect']);
-
             return;
         }
         if ($tResult['notify.raw']) {
             $SUPRESS_TEMPLATE_SHOW = true;
             $template['mainblock'] = $tResult['notify.raw'];
-
             return;
         }
         if ($tResult['notify.template']) {
             $template['mainblock'] = $tResult['notify.template'];
-
             return;
         }
     }
