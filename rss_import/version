@@ -1,16 +1,15 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: rss_import
 Name: RSS news importer
-Version: 0.01
-Acts: index, ppages 
+Version: 0.02
+Acts: index, ppages
 File: rss_import.php
 Config: config.php
 Type: plugin
 Description: Импорт новостей через RSS
-Author:  Dzmitry Khadorkin
+Author:  Dzmitry Khadorkin,irbees2008
 Title: RSS news importer
 Information: Импорт новостей через RSS
 Preinstall: default_no
