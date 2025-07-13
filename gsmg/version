@@ -1,10 +1,9 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: gsmg
 Name: Google SiteMap Generator
-Version: 0.12
+Version: 0.13
 Acts: ppages
 File: gsmg.php
 Config: config.php
