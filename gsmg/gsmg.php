@@ -1,13 +1,12 @@
 <?php
-if (!defined('NGCMS')) die ('HAL');
-
+// Protect against hack attempts
+if (!defined('NGCMS')) die('HAL');
 register_plugin_page('gsmg', '', 'plugin_gsmg_screen', 0);
-
+// Load library
 include_once(root . "/plugins/gsmg/lib/common.php");
-
-function plugin_gsmg_screen() {
+function plugin_gsmg_screen()
+{
     global $config, $mysql, $catz, $catmap, $SUPRESS_TEMPLATE_SHOW, $SYSTEM_FLAGS, $PFILTERS;
-
     $SUPRESS_TEMPLATE_SHOW = 1;
     $SUPRESS_MAINBLOCK_SHOW = 1;
     @header('Content-type: text/xml; charset=utf-8');
@@ -15,7 +14,6 @@ function plugin_gsmg_screen() {
         'content-type' => 'application/xml; charset=utf-8',
         'cache-control' => 'private',
     );
-
     // Проверяем кэш (если включён)
     if (extra_get_param('gsmg', 'cache')) {
         $cacheData = cacheRetrieveFile('sitemap_index.xml', extra_get_param('gsmg', 'cacheExpire'), 'gsmg');
@@ -24,17 +22,14 @@ function plugin_gsmg_screen() {
             return;
         }
     }
-
-    // Максимальное количество URL в одном файле
+    // Максимальное количество URL в одном файле (50 000 по стандарту Google)
     $maxUrlsPerFile = 50000;
-    $sitemapParts = array();
-    $currentPart = 0;
-    $urlCount = 0;
-
+    $sitemapParts = array(); // Массив для хранения частей sitemap
+    $currentPart = 0;        // Текущая часть sitemap
+    $urlCount = 0;           // Счётчик URL в текущей части
     // Инициализация первой части
     $sitemapParts[$currentPart] = '<?xml version="1.0" encoding="UTF-8"?>';
     $sitemapParts[$currentPart] .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
-
     // ===== 1. Главная страница и пагинация =====
     if (extra_get_param('gsmg', 'main')) {
         $sitemapParts[$currentPart] .= "<url>";
@@ -45,7 +40,6 @@ function plugin_gsmg_screen() {
         $sitemapParts[$currentPart] .= "<changefreq>daily</changefreq>";
         $sitemapParts[$currentPart] .= "</url>";
         $urlCount++;
-
         if (extra_get_param('gsmg', 'mainp')) {
             $cnt = $mysql->record("select count(*) as cnt from " . prefix . "_news");
             $pages = ceil($cnt['cnt'] / $config['number']);
@@ -67,7 +61,6 @@ function plugin_gsmg_screen() {
             }
         }
     }
-
     // ===== 2. Категории =====
     if (extra_get_param('gsmg', 'cat')) {
         foreach ($catmap as $id => $altname) {
@@ -85,7 +78,6 @@ function plugin_gsmg_screen() {
             $sitemapParts[$currentPart] .= "<changefreq>daily</changefreq>";
             $sitemapParts[$currentPart] .= "</url>";
             $urlCount++;
-
             if (extra_get_param('gsmg', 'catp')) {
                 $cn = ($catz[$altname]['number'] > 0) ? $catz[$altname]['number'] : $config['number'];
                 $pages = ceil($catz[$altname]['posts'] / $cn);
@@ -108,7 +100,6 @@ function plugin_gsmg_screen() {
             }
         }
     }
-
     // ===== 3. Новости =====
     if (extra_get_param('gsmg', 'news')) {
         $query = "select id, postdate, author, author_id, alt_name, editdate, catid from " . prefix . "_news where approve = 1 order by id desc";
@@ -130,7 +121,6 @@ function plugin_gsmg_screen() {
             $urlCount++;
         }
     }
-
     // ===== 4. Статические страницы =====
     if (extra_get_param('gsmg', 'static')) {
         $query = "select id, alt_name from " . prefix . "_static where approve = 1";
@@ -152,35 +142,30 @@ function plugin_gsmg_screen() {
             $urlCount++;
         }
     }
-
     // ===== Фильтры плагинов =====
     if (is_array($PFILTERS['gsmg'])) {
         foreach ($PFILTERS['gsmg'] as $k => $v) {
             $v->onShow($sitemapParts[$currentPart]);
         }
     }
-
     // Закрываем последний файл
     $sitemapParts[$currentPart] .= "</urlset>";
-
     // ===== Генерация индекса sitemap =====
     $sitemapIndex = '<?xml version="1.0" encoding="UTF-8"?>';
     $sitemapIndex .= '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
-
     foreach ($sitemapParts as $part => $content) {
         $fileName = "sitemap_part{$part}.xml";
-        file_put_contents(root . "/" . $fileName, $content);
+        // Сохраняем в корень сайта (используем dirname(root) или $_SERVER['DOCUMENT_ROOT'])
+        $filePath = dirname(root) . "/" . $fileName;
+        file_put_contents($filePath, $content);
         $sitemapIndex .= "<sitemap>";
         $sitemapIndex .= "<loc>" . $config['home_url'] . "/{$fileName}</loc>";
         $sitemapIndex .= "<lastmod>" . date("Y-m-d") . "</lastmod>";
         $sitemapIndex .= "</sitemap>";
     }
-
     $sitemapIndex .= "</sitemapindex>";
-
     // Выводим индексный файл
     print $sitemapIndex;
-
     // Сохраняем в кэш (если включён)
     if (extra_get_param('gsmg', 'cache')) {
         cacheStoreFile('sitemap_index.xml', $sitemapIndex, 'gsmg');
