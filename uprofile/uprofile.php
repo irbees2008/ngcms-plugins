@@ -1,20 +1,16 @@
 <?php
-
 // Protect against hack attempts
 if (!defined('NGCMS')) die ('HAL');
-
 //LoadPluginLang('uprofile', 'main', '', '', ':');
 LoadPluginLang('uprofile', 'main', '', 'uprofile', '#');
 register_plugin_page('uprofile', 'edit', 'uprofile_editProfile', 0);
 register_plugin_page('uprofile', 'apply', 'uprofile_applyProfile', 0);
 register_plugin_page('uprofile', 'show', 'uprofile_showProfile', 0);
 LoadPluginLibrary('uprofile', 'lib');
-
 // =============================================================
 // External functions of plugin
 // =============================================================
 function uprofile_showProfile($params) {
-
 	global $mysql, $userROW, $config, $lang, $twig, $twigLoader, $template, $SYSTEM_FLAGS, $PFILTERS;
 	//LoadPluginLang('uprofile', 'users', '', '', ':');
 	// Check if valid user identity is specified
@@ -30,7 +26,6 @@ function uprofile_showProfile($params) {
 	}
 	if (!is_array($urow)) {
 		error404();
-
 		return;
 	}
 	if (is_array($PFILTERS['plugin.uprofile']))
@@ -43,8 +38,7 @@ function uprofile_showProfile($params) {
 	$SYSTEM_FLAGS['info']['title']['group'] = $lang['uprofile']['header.view'];
 	$SYSTEM_FLAGS['info']['title']['item'] = $urow['name'];
 	$status = (($urow['status'] >= 1) && ($urow['status'] <= 4)) ? $lang['uprofile']['st_' . $urow['status']] : $lang['uprofile:st_unknown'];
-	// Get user's photo and avatar
-	$userPhoto = userGetPhoto($urow);
+	// Get user's  and avatar
 	$userAvatar = userGetAvatar($urow);
 	$tVars = array(
 		'userRec' => $urow,
@@ -92,20 +86,15 @@ function uprofile_showProfile($params) {
 	$xt = $twig->loadTemplate($tpath['users'] . 'users.tpl');
 	$template['vars']['mainblock'] .= $xt->render($tVars);
 }
-
 function uprofile_editProfile() {
-
 	// Call editForm routine
 	uprofile_editForm();
 }
-
 function uprofile_applyProfile() {
-
 	global $template, $userROW, $lang;
 	// Check if user is logged in
 	if (!is_array($userROW)) {
 		msg(array("type" => "error", "text" => $lang['uprofile']['msge_notlogged']));
-
 		return;
 	}
 	// Call Apply changes routine
@@ -119,19 +108,16 @@ function uprofile_applyProfile() {
 		uprofile_editForm();
 	}
 }
-
 // =============================================================
 // Internal functions of plugin
 // =============================================================
 // Show EDIT FORM for current user's profile
 function uprofile_editForm($ajaxMode = false) {
-
 	global $mysql, $userROW, $lang, $config, $tpl, $template, $twig, $twigLoader, $SYSTEM_FLAGS, $PFILTERS, $DSlist;
 	$SYSTEM_FLAGS['info']['title']['group'] = $lang['uprofile']['header.edit'];
 	// Check if user is logged in
 	if (!is_array($userROW)) {
 		msg(array("type" => "error", "text" => $lang['uprofile']['msge_notlogged']));
-
 		return;
 	}
 	// Notify about `EDIT COMPLETE` if editComplete parameter is passed
@@ -153,8 +139,7 @@ function uprofile_editForm($ajaxMode = false) {
 	// Determine paths for all template files
 	$tpath = locatePluginTemplates(array('profile'), 'uprofile', pluginGetVariable('uprofile', 'localsource'));
 	$status = ((($urow['status'] >= 1) && ($urow['status'] <= 4)) ? $lang['uprofile']['st_' . $urow['status']] : $lang['uprofile']['st_unknown']);
-	// Get user's photo and avatar
-	$userPhoto = userGetPhoto($urow);
+	// Get user's avatar
 	$userAvatar = userGetAvatar($urow);
 	$tVars = array(
 		'userRec'             => $urow,
@@ -216,16 +201,13 @@ function uprofile_editForm($ajaxMode = false) {
 		return $render;
 	$template['vars']['mainblock'] .= $render;
 }
-
 function uprofile_editApply() {
-
 	global $mysql, $tpl, $lang, $template, $userROW, $auth_db, $config, $PFILTERS, $DSlist;
 	// Load required library
 	@include_once root . 'includes/classes/upload.class.php';
 	// Check if user is logged in
 	if (!is_array($userROW)) {
 		msg(array("type" => "error", "text" => $lang['uprofile']['msge_notlogged']));
-
 		return;
 	}
 	$currentUser = $userROW;
@@ -237,7 +219,6 @@ function uprofile_editApply() {
 		// Correct OLD password must be presented
 		if (!isset($_POST['oldpass']) || (EncodePassword($_POST['oldpass']) != $currentUser['pass'])) {
 			msg(array("type" => "error", "text" => $lang['uprofile']['msge_needoldpass']));
-
 			return;
 		}
 	} else {
@@ -246,7 +227,6 @@ function uprofile_editApply() {
 			(!isset($_POST['oldpass']) || (EncodePassword($_POST['oldpass']) != $currentUser['pass']))
 		) {
 			msg(array("type" => "error", "text" => $lang['uprofile']['msge_needoldpass']));
-
 			return;
 		}
 	}
@@ -284,7 +264,6 @@ function uprofile_editApply() {
 			}
 		}
 	}
-	
 	$sqlFields = array(
 		'avatar'     => $avatar,
 		'mail'       => $_REQUEST['editmail'],
@@ -315,12 +294,9 @@ function uprofile_editApply() {
 		foreach ($PFILTERS['plugin.uprofile'] as $k => $v) {
 			$v->editProfileNotify($currentUser['id'], $currentUser, $sqlFields);
 		}
-
 	return true;
 }
-
 function uprofile_manageDelete($type, $userID) {
-
 	global $mysql, $userROW;
 	// Load required library
 	@include_once root . 'includes/classes/upload.class.php';
@@ -346,13 +322,8 @@ function uprofile_manageDelete($type, $userID) {
 	$mysql->query("update " . uprefix . "_users set avatar = '' where id = " . $userID);
 	if ($localUpdate) $userROW[$type] = '';
 }
-
 function uprofile_rpc_manage($params) {
-
 	$uprofileOutput = uprofile_editForm(true);
-
 	return array('status' => 1, 'errorCode' => 0, 'data' => arrayCharsetConvert(0, $uprofileOutput));
 }
-
 rpcRegisterFunction('plugin.uprofile.editForm', 'uprofile_rpc_manage');
-
