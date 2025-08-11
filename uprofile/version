@@ -1,10 +1,9 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: uprofile
 Name: Users profile
-Version: 0.14
+Version: 0.15
 Acts: ppages,rpc
 File: uprofile.php
 Config: config.php
@@ -12,8 +11,8 @@ Type: plugin
 Title: Профиль пользователя
 Description: Управление/отображение профиля пользователя
 Information: Позволяет пользователя просматривать чужие профили и редактировать свой.
-Author: Vitaly A. Ponomarev
-Author_URI: http://ngcms.ru/
+Author: Vitaly A. Ponomarev,irbees2008
+Author_URI: http://ngcms.org/
 preinstall: yes
 Library: lib; lib/uprofile.lib.php
 MinEngineBuild: 3740369

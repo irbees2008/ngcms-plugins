@@ -40,6 +40,7 @@ function uprofile_showProfile($params) {
 	$status = (($urow['status'] >= 1) && ($urow['status'] <= 4)) ? $lang['uprofile']['st_' . $urow['status']] : $lang['uprofile:st_unknown'];
 	// Get user's  and avatar
 	$userAvatar = userGetAvatar($urow);
+	$bookmarksCount = $mysql->result("SELECT COUNT(*) FROM " . prefix . "_bookmarks WHERE user_id = " . intval($urow['id']));
 	$tVars = array(
 		'userRec' => $urow,
 		'user'    => array(
@@ -58,6 +59,8 @@ function uprofile_showProfile($params) {
 				'isOwnProfile' => (isset($userROW) && is_array($userROW) && ($userROW['id'] == $urow['id'])) ? 1 : 0,
 			),
 			'write_pm_link' => generatePluginLink('pm', null, array('action' => 'write', 'name' => $urow['name'])),
+			'bookmarks_count' => $bookmarksCount,
+			'bookmarks_link' => generatePluginLink('bookmarks', null),
 			//'edit_profile' => generateLink('uprofile', 'edit', array(), array(), false, true),
 		),
 		'edit_profile' => generateLink('uprofile', 'edit', array(), array(), false, true),

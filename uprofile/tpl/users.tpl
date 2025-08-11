@@ -42,4 +42,10 @@
 <p>
 	{{ lang.uprofile['all_news'] }}: {{ user.news }}<br>
 	{{ lang.uprofile['all_comments'] }}: {{ user.com }}
+	{% if (user.bookmarks_count) %}
+		{{ lang.uprofile['bookmarks'] }}:
+		<a href="{{ user.bookmarks_link }}">{{ user.bookmarks_count }}</a>
+	{% else %}
+		{{ lang.uprofile['bookmarks'] }}: 0
+	{% endif %}
 </p>
