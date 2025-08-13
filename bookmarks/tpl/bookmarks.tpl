@@ -20,6 +20,7 @@
 						<ul>
 							{% for entry in entries %}
 								<li>
+<img src="{{ entry.image ? entry.image : tpl_url ~ '/img/img-none.png' }}" width="50" height="50" alt="{{ entry.title }}"/>
 									<a href="{{ entry.link }}">{{ entry.title }}</a>
 								</li>
 							{% endfor %}
