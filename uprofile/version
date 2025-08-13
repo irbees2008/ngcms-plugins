@@ -3,7 +3,7 @@
 ;
 ID: uprofile
 Name: Users profile
-Version: 0.15
+Version: 0.16
 Acts: ppages,rpc
 File: uprofile.php
 Config: config.php

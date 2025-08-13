@@ -66,6 +66,70 @@ function uprofile_showProfile($params) {
 		'edit_profile' => generateLink('uprofile', 'edit', array(), array(), false, true),
 		'token'   => genUToken('uprofile.editForm'),
 	);
+	// --- НАЧАЛО: Генерация содержимого для $template['vars']['plugin_bookmarks'] ---
+	global $bookmarksLoaded, $bookmarksList; // Объявляем нужные глобальные переменные из bookmarks
+	// 1. Получаем ID пользователя, чей профиль просматривается.
+	$targetUserID = $urow['id'];
+	// 2. Проверяем, включено ли отображение bookmarks в sidebar (используем настройки bookmarks)
+	// Если bookmarks отключены в sidebar, выводим пусто
+	if (!pluginGetVariable('bookmarks', 'sidebar')) {
+		$template['vars']['plugin_bookmarks'] = '';
+	} else {
+		// 3. Загружаем закладки целевого пользователя
+		$targetUserBookmarksList = $mysql->select("SELECT n.id, n.title, n.alt_name, n.catid, n.postdate, n.content FROM " . prefix . "_bookmarks AS b LEFT JOIN " . prefix . "_news n ON n.id = b.news_id WHERE b.user_id = " . db_squote($targetUserID));
+		// 4. Проверяем настройки отображения
+		$hideEmpty = pluginGetVariable('bookmarks', 'hide_empty');
+		$count = count($targetUserBookmarksList);
+		if ((!$count) && $hideEmpty) {
+			$template['vars']['plugin_bookmarks'] = '';
+		} else {
+			// 5. Ограничиваем количество записей
+			$maxEntries = intval(pluginGetVariable('bookmarks', 'max_sidebar'));
+			$displayEntries = array_slice($targetUserBookmarksList, 0, $maxEntries > 0 ? $maxEntries : null);
+			$result = array();
+			$maxlength = intval(pluginGetVariable('bookmarks', 'maxlength')) ?: 100;
+			// 6. Обрабатываем каждую запись
+			foreach ($displayEntries as $row) {
+				// Извлекаем изображения из BBCode [img]
+				$image = '';
+				if (preg_match('/\[img\=["\']?([^\]"\']+)["\']?[^\]]*\](?:[^\[]+)?\[\/img\]/i', $row['content'], $matches)) {
+					$image = $matches[1];
+					if (strpos($image, 'http') !== 0) {
+						$image = $config['home_url'] . $image;
+					}
+				}
+				$title = (strlen($row['title']) > $maxlength) ?
+					substr(secure_html($row['title']), 0, $maxlength) . "..." :
+					secure_html($row['title']);
+				$result[] = array(
+					'link' => newsGenerateLink($row), // Предполагается, что эта функция доступна
+					'title' => $title,
+					'image' => $image ?: (tpl_url . '/img/img-none.png')
+				);
+			}
+			// 7. Определяем пути к шаблонам (используем стандартные bookmarks)
+			// Используем те же настройки localsource, что и uprofile, или можно взять из bookmarks
+			$tpathBookmarks = locatePluginTemplates(array('bookmarks', 'entries'), 'bookmarks', pluginGetVariable('bookmarks', 'localsource'));
+			// 8. Подготавливаем переменные для шаблона bookmarks
+			$tVarsBookmarks = array(
+				'tpl_url' => tpl_url,
+				'entries' => $result,
+				'bookmarks_page' => generatePluginLink('bookmarks', null),
+				'count' => $count
+			);
+			// 9. Рендерим шаблон bookmarks
+			try {
+				// Загружаем Twig для bookmarks, если он еще не загружен в этом контексте
+				// Но так как мы используем общий $twig, этого должно быть достаточно
+				$xtBookmarks = $twig->loadTemplate($tpathBookmarks['bookmarks'] . 'bookmarks.tpl');
+				$template['vars']['plugin_bookmarks'] = $xtBookmarks->render($tVarsBookmarks);
+			} catch (Exception $e) {
+				// В случае ошибки отображаем пустую строку или сообщение об ошибке
+				$template['vars']['plugin_bookmarks'] = '<!-- Bookmarks Error: ' . $e->getMessage() . ' -->';
+			}
+		}
+	}
+	// --- КОНЕЦ: Генерация содержимого для $template['vars']['plugin_bookmarks'] ---
 	$conversionConfig = array(
 		'{user}'       => '{{ user.name }}',
 		'{news}'       => '{{ user.news }}',

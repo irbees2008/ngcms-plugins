@@ -117,3 +117,4 @@ function ng_uprofile_editCall() {
 	{% else %}
 		{{ lang.uprofile['bookmarks'] }}: 0
 	{% endif %}
+добавленна поддержка закладок в users.tpl {plugin_bookmarks}
