@@ -85,19 +85,6 @@ function ng_uprofile_editCall() {
 * oldpass	- для указания старого пароля (требуется только при попытке смены пароля)
 * newavatar	- тип "file", для заливки новой аватарки
 * delavatar	- тип "checkbox", для отметки "удалить аватарку"
-Для вывода фотографии пользователя можно использовать следующую конструкцию:
-{% if (flags.photoAllowed) %}
- <input type="file" name="newphoto" size="40" /><br />
- {% if (user.flags.hasPhoto) %}
-  <a href="{{ user.photo }}" target="_blank">
-   <img src="{{ user.photo_thumb }}" style="margin: 5px; border: 0px; alt=""/>
-  </a><br/>
-  <input type="checkbox" name="delphoto" id="delphoto" class="check" />&nbsp;
-  <label for="delphoto">{{ lang.uprofile['delete'] }}</label>
- {% endif %}
-{% else %}
-  {{ lang.uprofile['photos_denied'] }}
-{% endif %}
 Для вывода аватара можно использовать конструкцию:
 {% if (flags.avatarAllowed) %}
  <input type="file" name="newavatar" size="40" /><br />

@@ -5,11 +5,8 @@ if (!defined('NGCMS')) die ('HAL');
 loadPluginLibrary('uprofile', 'lib');
 loadPluginLang('ublog', 'main', '', '', ':');
 include_once root . 'includes/news.php';
-
 class UblogFilter extends p_uprofileFilter {
-
 	function showProfile($userID, $SQLrow, &$tvars) {
-
 		$link = generatePluginLink('ublog', null, array('uid' => $userID, 'uname' => $SQLrow['name']));
 		if (pluginGetVariable('ublog', 'replaceCount') && ($SQLrow['news'] > 0)) {
 			$tvars['user']['news'] = '<a href="' . $link . '">' . $SQLrow['news'] . '</a>';
@@ -18,16 +15,13 @@ class UblogFilter extends p_uprofileFilter {
 		} else {
 			$tvars['vars']['p']['ublog']['flags']['haveBlog'] = false;
 		}
-
 		return 1;
 	}
 }
-
 // Register plugin handler
 register_filter('plugin.uprofile', 'ublog', new UblogFilter);
 register_plugin_page('ublog', '', 'plugin_ublog');
 function plugin_ublog() {
-
 	global $catz, $catmap, $mysql, $config, $userROW, $tpl, $twig, $twigLoader, $parse, $template, $lang, $PFILTERS, $SYSTEM_FLAGS, $CurrentHandler;
 	// PREPARE FILTER RULES FOR NEWS SHOWER
 	$filter = array();
@@ -51,7 +45,6 @@ function plugin_ublog() {
 	} else {
 		// No user is specified - return an error
 		error404();
-
 		return;
 	}
 	// Check if user exists
@@ -62,11 +55,9 @@ function plugin_ublog() {
 	} else {
 		// User not found - return an error
 		error404();
-
 		return;
 	}
 	// Get user's photo and avatar
-	$userPhoto = userGetPhoto($urow);
 	$userAvatar = userGetAvatar($urow);
 	// Prepare variables
 	$tVars = array(
@@ -79,17 +70,11 @@ function plugin_ublog() {
 			'status'      => $status,
 			'last'        => ($urow['last'] > 0) ? LangDate("l, j Q Y - H:i", $urow['last']) : $lang['no_last'],
 			'reg'         => langdate("j Q Y", $urow['reg']),
-			'site'        => secure_html($urow['site']),
-			'icq'         => secure_html($urow['icq']),
 			'from'        => secure_html($urow['where_from']),
 			'info'        => secure_html($urow['info']),
-			'photo_thumb' => $userPhoto[1],
-			'photo'       => $userPhoto[2],
 			'avatar'      => $userAvatar[1],
 			'flags'       => array(
-				'hasPhoto'  => $config['use_photos'] && $userPhoto[0],
 				'hasAvatar' => $config['use_avatars'] && $userAvatar[0],
-				'hasIcq'    => is_numeric($urow['icq']) ? 1 : 0,
 			),
 		),
 	);
