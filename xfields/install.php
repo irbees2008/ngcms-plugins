@@ -1,5 +1,5 @@
 <?php
-
+// Protect against hack attempts
 // Protect against hack attempts
 if (!defined('NGCMS')) {
     die('HAL');
@@ -14,7 +14,7 @@ $db_update = [
         'table'  => 'news',
         'action' => 'modify',
         'fields' => [
-            ['action' => 'cmodify', 'name' => 'xfields', 'type' => 'text', 'params' => 'default null'],
+            ['action' => 'cmodify', 'name' => 'xfields', 'type' => 'mediumtext', 'params' => 'default null'],
         ],
     ],
     [
@@ -28,7 +28,7 @@ $db_update = [
         'table'  => 'users',
         'action' => 'modify',
         'fields' => [
-            ['action' => 'cmodify', 'name' => 'xfields', 'type' => 'text', 'params' => 'default null'],
+            ['action' => 'cmodify', 'name' => 'xfields', 'type' => 'mediumtext', 'params' => 'default null'],
         ],
     ],
     [
@@ -39,7 +39,7 @@ $db_update = [
             ['action' => 'cmodify', 'name' => 'id', 'type' => 'int', 'params' => 'not null auto_increment'],
             ['action' => 'cmodify', 'name' => 'linked_ds', 'type' => 'int', 'params' => 'default 0'],
             ['action' => 'cmodify', 'name' => 'linked_id', 'type' => 'int', 'params' => 'default 0'],
-            ['action' => 'cmodify', 'name' => 'xfields', 'type' => 'text', 'params' => 'default null'],
+            ['action' => 'cmodify', 'name' => 'xfields', 'type' => 'mediumtext', 'params' => 'default null'],
         ],
     ],
 ];

@@ -1,5 +1,4 @@
 <?php
-
 // #==========================================================#
 // # Plugin name: xfields [ Additional fields managment ]     #
 // # Author: Vitaly A Ponomarev, vp7@mail.ru                  #
@@ -35,10 +34,10 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
     // Scan if user want to change description
     foreach ($attachList as $iRec) {
         //print "[A:".$iRec['id']."]";
-        if (isset($_REQUEST['xfields_'.$iRec['pidentity'].'_dscr']) && is_array($_REQUEST['xfields_'.$iRec['pidentity'].'_dscr']) && isset($_REQUEST['xfields_'.$iRec['pidentity'].'_dscr'][$iRec['id']])) {
+        if (isset($_REQUEST['xfields_' . $iRec['pidentity'] . '_dscr']) && is_array($_REQUEST['xfields_' . $iRec['pidentity'] . '_dscr']) && isset($_REQUEST['xfields_' . $iRec['pidentity'] . '_dscr'][$iRec['id']])) {
             // We have this field in EDIT mode
-            if ($_REQUEST['xfields_'.$iRec['pidentity'].'_dscr'][$iRec['id']] != $iRec['decsription']) {
-                $mysql->query('update '.prefix.'_images set description = '.db_squote($_REQUEST['xfields_'.$iRec['pidentity'].'_dscr'][$iRec['id']]).' where id = '.intval($iRec['id']));
+            if ($_REQUEST['xfields_' . $iRec['pidentity'] . '_dscr'][$iRec['id']] != $iRec['decsription']) {
+                $mysql->query('update ' . prefix . '_images set description = ' . db_squote($_REQUEST['xfields_' . $iRec['pidentity'] . '_dscr'][$iRec['id']]) . ' where id = ' . intval($iRec['id']));
             }
         }
     }
@@ -47,8 +46,8 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
         // Attached images are processed in special way
         if ($data['type'] == 'images') {
             // Check if we should delete some images
-            if (isset($_POST['xfields_'.$id.'_del']) && is_array($_POST['xfields_'.$id.'_del'])) {
-                foreach ($_POST['xfields_'.$id.'_del'] as $key => $value) {
+            if (isset($_POST['xfields_' . $id . '_del']) && is_array($_POST['xfields_' . $id . '_del'])) {
+                foreach ($_POST['xfields_' . $id . '_del'] as $key => $value) {
                     // Allow to delete only images, that are attached to current news
                     if ($value) {
                         $xf = false;
@@ -67,18 +66,18 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                 }
             }
             // Check for new attached files
-            if (isset($_FILES['xfields_'.$id]) && isset($_FILES['xfields_'.$id]['name']) && is_array($_FILES['xfields_'.$id]['name'])) {
-                foreach ($_FILES['xfields_'.$id]['name'] as $iId => $iName) {
-                    if ($_FILES['xfields_'.$id]['error'][$iId] > 0) {
+            if (isset($_FILES['xfields_' . $id]) && isset($_FILES['xfields_' . $id]['name']) && is_array($_FILES['xfields_' . $id]['name'])) {
+                foreach ($_FILES['xfields_' . $id]['name'] as $iId => $iName) {
+                    if ($_FILES['xfields_' . $id]['error'][$iId] > 0) {
                         //print $iId." >>ERROR: ".$_FILES['xfields_'.$id]['error'][$iId]."<br/>\n";
                         continue;
                     }
-                    if ($_FILES['xfields_'.$id]['size'][$iId] == 0) {
+                    if ($_FILES['xfields_' . $id]['size'][$iId] == 0) {
                         //print $iId." >>EMPTY IMAGE<br/>\n";
                         continue;
                     }
                     // Check if we try to overcome limits
-                    $currCount = $mysql->record('select count(*) as cnt from '.prefix.'_images where (linked_ds = '.intval($dsID).') and (linked_id = '.intval($newsID).") and (plugin = 'xfields') and (pidentity=".db_squote($id).')');
+                    $currCount = $mysql->record('select count(*) as cnt from ' . prefix . '_images where (linked_ds = ' . intval($dsID) . ') and (linked_id = ' . intval($newsID) . ") and (plugin = 'xfields') and (pidentity=" . db_squote($id) . ')');
                     if ($currCount['cnt'] >= $data['maxCount']) {
                         continue;
                     }
@@ -89,11 +88,11 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                             'linked_ds'   => $dsID,
                             'linked_id'   => $newsID,
                             'type'        => 'image',
-                            'http_var'    => 'xfields_'.$id,
+                            'http_var'    => 'xfields_' . $id,
                             'http_varnum' => $iId,
                             'plugin'      => 'xfields',
                             'pidentity'   => $id,
-                            'description' => (isset($_REQUEST['xfields_'.$id.'_adscr']) && is_array($_REQUEST['xfields_'.$id.'_adscr']) && isset($_REQUEST['xfields_'.$id.'_adscr'][$iId])) ? ($_REQUEST['xfields_'.$id.'_adscr'][$iId]) : '',
+                            'description' => (isset($_REQUEST['xfields_' . $id . '_adscr']) && is_array($_REQUEST['xfields_' . $id . '_adscr']) && isset($_REQUEST['xfields_' . $id . '_adscr'][$iId])) ? ($_REQUEST['xfields_' . $id . '_adscr'][$iId]) : '',
                         ]
                     );
                     // Process upload error
@@ -106,10 +105,10 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                     $mkStamp = $data['imgStamp'];
                     $mkShadow = $data['imgShadow'];
                     $stampFileName = '';
-                    if (file_exists(root.'trash/'.$config['wm_image'].'.gif')) {
-                        $stampFileName = root.'trash/'.$config['wm_image'].'.gif';
-                    } elseif (file_exists(root.'trash/'.$config['wm_image'])) {
-                        $stampFileName = root.'trash/'.$config['wm_image'];
+                    if (file_exists(root . 'trash/' . $config['wm_image'] . '.gif')) {
+                        $stampFileName = root . 'trash/' . $config['wm_image'] . '.gif';
+                    } elseif (file_exists(root . 'trash/' . $config['wm_image'])) {
+                        $stampFileName = root . 'trash/' . $config['wm_image'];
                     }
                     if ($mkThumb) {
                         // Calculate sizes
@@ -121,7 +120,7 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                         if ($tsy < 10) {
                             $tsy = 150;
                         }
-                        $thumb = $imanager->create_thumb($config['attach_dir'].$up[2], $up[1], $tsx, $tsy, $config['thumb_quality']);
+                        $thumb = $imanager->create_thumb($config['attach_dir'] . $up[2], $up[1], $tsx, $tsy, $config['thumb_quality']);
                         //print "<pre>THUMB: ".var_export($thumb, true)."</pre>";
                         if ($thumb) {
                             //print "THUMB_OK<br/>";
@@ -131,7 +130,7 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                             if ($shadowThumb || $stampThumb) {
                                 $stamp = $imanager->image_transform(
                                     [
-                                        'image'              => $config['attach_dir'].$up[2].'/thumb/'.$up[1],
+                                        'image'              => $config['attach_dir'] . $up[2] . '/thumb/' . $up[1],
                                         'stamp'              => $stampThumb,
                                         'stamp_transparency' => $config['wm_image_transition'],
                                         'stamp_noerror'      => true,
@@ -146,7 +145,7 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                     if ($mkStamp || $mkShadow) {
                         $stamp = $imanager->image_transform(
                             [
-                                'image'              => $config['attach_dir'].$up[2].'/'.$up[1],
+                                'image'              => $config['attach_dir'] . $up[2] . '/' . $up[1],
                                 'stamp'              => $mkStamp,
                                 'stamp_transparency' => $config['wm_image_transition'],
                                 'stamp_noerror'      => true,
@@ -157,23 +156,22 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                         //print "IMG [STAMP/SHADOW = (".var_export($stamp, true).")]<br/>";
                     }
                     // Now write info about image into DB
-                    if (is_array($sz = $imanager->get_size($config['attach_dir'].$up[2].'/'.$up[1]))) {
+                    if (is_array($sz = $imanager->get_size($config['attach_dir'] . $up[2] . '/' . $up[1]))) {
                         $fmanager->get_limits($type);
                         // Gather filesize for thumbinals
                         $thumb_size_x = 0;
                         $thumb_size_y = 0;
-                        if (is_array($thumb) && is_readable($config['attach_dir'].$up[2].'/thumb/'.$up[1]) && is_array($szt = $imanager->get_size($config['attach_dir'].$up[2].'/thumb/'.$up[1]))) {
+                        if (is_array($thumb) && is_readable($config['attach_dir'] . $up[2] . '/thumb/' . $up[1]) && is_array($szt = $imanager->get_size($config['attach_dir'] . $up[2] . '/thumb/' . $up[1]))) {
                             $thumb_size_x = $szt[1];
                             $thumb_size_y = $szt[2];
                         }
-                        $mysql->query('update '.prefix.'_'.$fmanager->tname.' set width='.db_squote($sz[1]).', height='.db_squote($sz[2]).', preview='.db_squote(is_array($thumb) ? 1 : 0).', p_width='.db_squote($thumb_size_x).', p_height='.db_squote($thumb_size_y).', stamp='.db_squote(is_array($stamp) ? 1 : 0).' where id = '.db_squote($up[0]));
+                        $mysql->query('update ' . prefix . '_' . $fmanager->tname . ' set width=' . db_squote($sz[1]) . ', height=' . db_squote($sz[2]) . ', preview=' . db_squote(is_array($thumb) ? 1 : 0) . ', p_width=' . db_squote($thumb_size_x) . ', p_height=' . db_squote($thumb_size_y) . ', stamp=' . db_squote(is_array($stamp) ? 1 : 0) . ' where id = ' . db_squote($up[0]));
                     }
                 }
             }
         }
     }
 }
-
 // Perform replacements while showing news
 class XFieldsNewsFilter extends NewsFilter
 {
@@ -199,48 +197,48 @@ class XFieldsNewsFilter extends NewsFilter
                     'value'        => $xdata[$id],
                     'secure_value' => secure_html($xdata[$id]),
                     'data'         => $data,
-                    'required'     => $lang['xfields_fld_'.($data['required'] ? 'required' : 'optional')],
+                    'required'     => $lang['xfields_fld_' . ($data['required'] ? 'required' : 'optional')],
                     'flags'        => [
                         'required' => $data['required'] ? true : false,
                     ],
                 ];
                 switch ($data['type']) {
                     case 'checkbox':
-                        $val = '<input type="checkbox" id="form_xfields_'.$id.'" name="xfields['.$id.']" title="'.$data['title'].'" value="1" '.($data['default'] ? 'checked="checked"' : '').'"/>';
+                        $val = '<input type="checkbox" id="form_xfields_' . $id . '" name="xfields[' . $id . ']" title="' . $data['title'] . '" value="1" ' . ($data['default'] ? 'checked="checked"' : '') . '"/>';
                         $xfEntry['input'] = $val;
                         break;
                     case 'text':
-                        $val = '<input type="text" id="form_xfields_'.$id.'" name="xfields['.$id.']" title="'.$data['title'].'" value="'.secure_html($data['default']).'"/>';
+                        $val = '<input type="text" id="form_xfields_' . $id . '" name="xfields[' . $id . ']" title="' . $data['title'] . '" value="' . secure_html($data['default']) . '"/>';
                         $xfEntry['input'] = $val;
                         break;
                     case 'select':
-                        $val = '<select name="xfields['.$id.']" id="form_xfields_'.$id.'" >';
+                        $val = '<select name="xfields[' . $id . ']" id="form_xfields_' . $id . '" >';
                         if (!$data['required']) {
                             $val .= '<option value=""></option>';
                         }
                         if (is_array($data['options'])) {
                             foreach ($data['options'] as $k => $v) {
-                                $val .= '<option value="'.secure_html(($data['storekeys']) ? $k : $v).'"'.((($data['storekeys'] && $data['default'] == $k) || (!$data['storekeys'] && $data['default'] == $v)) ? ' selected' : '').'>'.$v.'</option>';
+                                $val .= '<option value="' . secure_html(($data['storekeys']) ? $k : $v) . '"' . ((($data['storekeys'] && $data['default'] == $k) || (!$data['storekeys'] && $data['default'] == $v)) ? ' selected' : '') . '>' . $v . '</option>';
                             }
                         }
                         $val .= '</select>';
                         $xfEntry['input'] = $val;
                         break;
                     case 'multiselect':
-                        $val = '<select name="xfields['.$id.'][]" id="form_xfields_'.$id.'" multiple="multiple">';
+                        $val = '<select name="xfields[' . $id . '][]" id="form_xfields_' . $id . '" multiple="multiple">';
                         if (!$data['required']) {
                             $val .= '<option value=""></option>';
                         }
                         if (is_array($data['options'])) {
                             foreach ($data['options'] as $k => $v) {
-                                $val .= '<option value="'.secure_html(($data['storekeys']) ? $k : $v).'"'.((($data['storekeys'] && $data['default'] == $k) || (!$data['storekeys'] && $data['default'] == $v)) ? ' selected' : '').'>'.$v.'</option>';
+                                $val .= '<option value="' . secure_html(($data['storekeys']) ? $k : $v) . '"' . ((($data['storekeys'] && $data['default'] == $k) || (!$data['storekeys'] && $data['default'] == $v)) ? ' selected' : '') . '>' . $v . '</option>';
                             }
                         }
                         $val .= '</select>';
                         $xfEntry['input'] = $val;
                         break;
                     case 'textarea':
-                        $val = '<textarea cols="30" rows="5" name="xfields['.$id.']" id="form_xfields_'.$id.'" >'.$data['default'].'</textarea>';
+                        $val = '<textarea cols="30" rows="5" name="xfields[' . $id . ']" id="form_xfields_' . $id . '" >' . $data['default'] . '</textarea>';
                         $xfEntry['input'] = $val;
                         break;
                     case 'images':
@@ -264,7 +262,7 @@ class XFieldsNewsFilter extends NewsFilter
                         $xfEntry['input'] = $val;
                         break;
                     default:
-                        continue(2);
+                        continue;
                 }
                 $xfEntries[intval($data['area'])][] = $xfEntry;
                 $xfList[$id] = $xfEntry;
@@ -276,12 +274,12 @@ class XFieldsNewsFilter extends NewsFilter
         }
         // Prepare table data [if needed]
         $flagTData = false;
-        // Data are not provisioned
-        $tlist = [];
-        // Prepare config
-        $tclist = [];
-        $thlist = [];
         if (isset($xf['tdata']) && is_array($xf['tdata'])) {
+            // Data are not provisioned
+            $tlist = [];
+            // Prepare config
+            $tclist = [];
+            $thlist = [];
             foreach ($xf['tdata'] as $fId => $fData) {
                 if ($fData['disabled']) {
                     continue;
@@ -303,12 +301,11 @@ class XFieldsNewsFilter extends NewsFilter
                 }
             }
         }
-        $xfNews = $xf['news'] ?: [];
         $tVars = [
             //	'entries'	=>	$xfEntries,
             'xfGC'       => json_encode($xf['grp.news']),
             'xfCat'      => json_encode($xfCategories),
-            'xfList'     => json_encode(array_keys($xfNews)),
+            'xfList'     => json_encode(array_keys($xf['news'])),
             'xtableConf' => json_encode($tclist),
             'xtableVal'  => isset($_POST['xftable']) ? $_POST['xftable'] : json_encode($tlist),
             'xtableHdr'  => $thlist,
@@ -322,7 +319,7 @@ class XFieldsNewsFilter extends NewsFilter
         }
         foreach ($xfEntries as $k => $v) {
             // Check if we have template for specific area, elsewhere - use basic [0] template
-            $templateName = 'plugins/xfields/tpl/news.add.'.(file_exists(root.'plugins/xfields/tpl/news.add.'.$k.'.tpl') ? $k : '0').'.tpl';
+            $templateName = 'plugins/xfields/tpl/news.add.' . (file_exists(root . 'plugins/xfields/tpl/news.add.' . $k . '.tpl') ? $k : '0') . '.tpl';
             $xt = $twig->loadTemplate($templateName);
             $tVars['entries'] = $v;
             $tVars['entryCount'] = count($v);
@@ -338,10 +335,8 @@ class XFieldsNewsFilter extends NewsFilter
         $xt = $twig->loadTemplate('plugins/xfields/tpl/news.general.tpl');
         $tvars['plugin']['xfields']['general'] = $xt->render($tVars);
         $tvars['plugin']['xfields']['fields'] = $xfList;
-
         return 1;
     }
-
     public function addNews(&$tvars, &$SQL)
     {
         global $lang, $twig, $twigLoader;
@@ -367,20 +362,17 @@ class XFieldsNewsFilter extends NewsFilter
                 $xdata[$id] = $rcall[$id];
             } elseif ($data['required']) {
                 msg(['type' => 'error', 'text' => str_replace('{field}', $id, $lang['xfields_msge_emptyrequired'])]);
-
                 return 0;
             }
             // Check if we should save data into separate SQL field
             if ($data['storage'] && ($rcall[$id] != '')) {
-                $SQL['xfields_'.$id] = $rcall[$id];
+                $SQL['xfields_' . $id] = $rcall[$id];
             }
         }
         //var_dump($xdata);
         $SQL['xfields'] = xf_encode($xdata);
-
         return 1;
     }
-
     public function addNewsNotify(&$tvars, $SQL, $newsID)
     {
         global $mysql;
@@ -401,7 +393,7 @@ class XFieldsNewsFilter extends NewsFilter
         if ($haveImages) {
             // Get real ID's of attached images and print here
             $idlist = [];
-            foreach ($mysql->select('select id, plugin, pidentity from '.prefix.'_images where (linked_ds = 1) and (linked_id = '.db_squote($newsID).')') as $irec) {
+            foreach ($mysql->select('select id, plugin, pidentity from ' . prefix . '_images where (linked_ds = 1) and (linked_id = ' . db_squote($newsID) . ')') as $irec) {
                 if ($irec['plugin'] == 'xfields') {
                     $idlist[$irec['pidentity']][] = $irec['id'];
                 }
@@ -415,11 +407,10 @@ class XFieldsNewsFilter extends NewsFilter
                     $xdata[$fid] = implode(',', $idlist[$fid]);
                 }
             }
-            $mysql->query('update '.prefix.'_news set xfields = '.db_squote(xf_encode($xdata)).' where id = '.db_squote($newsID));
+            $mysql->query('update ' . prefix . '_news set xfields = ' . db_squote(xf_encode($xdata)) . ' where id = ' . db_squote($newsID));
         }
         // Prepare table data [if needed]
         if (isset($xf['tdata']) && is_array($xf['tdata']) && isset($_POST['xftable']) && is_array($xft = json_decode($_POST['xftable'], true))) {
-
             //print "<pre>[".(is_array($xft)?'ARR':'NOARR')."]INCOMING ARRAY: ".var_export($xft, true)."</pre>";
             $recList = [];
             $queryList = [];
@@ -430,13 +421,13 @@ class XFieldsNewsFilter extends NewsFilter
                     $tRec = ['xfields' => []];
                     foreach ($xf['tdata'] as $fId => $fData) {
                         if ($fData['storage']) {
-                            $tRec['xfields_'.$fId] = db_squote($v[$fId]);
+                            $tRec['xfields_' . $fId] = db_squote($v[$fId]);
                         }
                         $tRec['xfields'][$fId] = $v[$fId];
                     }
                     $tRec['xfields'] = db_squote(serialize($tRec['xfields']));
                     // Now update record info
-                    $query = 'insert into '.prefix.'_xfields ('.implode(', ', array_keys($tRec)).', linked_ds, linked_id) values ('.implode(', ', array_values($tRec)).', 1, '.(intval($newsID)).')';
+                    $query = 'insert into ' . prefix . '_xfields (' . implode(', ', array_keys($tRec)) . ', linked_ds, linked_id) values (' . implode(', ', array_values($tRec)) . ', 1, ' . (intval($newsID)) . ')';
                     //print "SQL: $query <br/>\n";
                     $queryList[] = $query;
                     //$mysql->query($query);
@@ -448,10 +439,8 @@ class XFieldsNewsFilter extends NewsFilter
                 $mysql->query($query);
             }
         }
-
         return 1;
     }
-
     public function editNewsForm($newsID, $SQLold, &$tvars)
     {
         global $lang, $catz, $mysql, $config, $twig, $twigLoader;
@@ -475,30 +464,30 @@ class XFieldsNewsFilter extends NewsFilter
             $xfEntry = [
                 'title'    => $data['title'],
                 'id'       => $id,
-                'required' => $lang['xfields_fld_'.($data['required'] ? 'required' : 'optional')],
+                'required' => $lang['xfields_fld_' . ($data['required'] ? 'required' : 'optional')],
                 'flags'    => [
                     'required' => $data['required'] ? true : false,
                 ],
             ];
             switch ($data['type']) {
                 case 'checkbox':
-                    $val = '<input type="checkbox" id="form_xfields_'.$id.'" name="xfields['.$id.']" title="'.$data['title'].'" value="1" '.($xdata[$id] ? 'checked="checked"' : '').'"/>';
+                    $val = '<input type="checkbox" id="form_xfields_' . $id . '" name="xfields[' . $id . ']" title="' . $data['title'] . '" value="1" ' . ($xdata[$id] ? 'checked="checked"' : '') . '"/>';
                     $xfEntry['input'] = $val;
                     $xfEntries[intval($data['area'])][] = $xfEntry;
                     break;
                 case 'text':
-                    $val = '<input type="text" name="xfields['.$id.']"  id="form_xfields_'.$id.'" title="'.$data['title'].'" value="'.secure_html($xdata[$id]).'" />';
+                    $val = '<input type="text" name="xfields[' . $id . ']"  id="form_xfields_' . $id . '" title="' . $data['title'] . '" value="' . secure_html($xdata[$id]) . '" />';
                     $xfEntry['input'] = $val;
                     $xfEntries[intval($data['area'])][] = $xfEntry;
                     break;
                 case 'select':
-                    $val = '<select name="xfields['.$id.']" id="form_xfields_'.$id.'" >';
+                    $val = '<select name="xfields[' . $id . ']" id="form_xfields_' . $id . '" >';
                     if (!$data['required']) {
                         $val .= '<option value="">&nbsp;</option>';
                     }
                     if (is_array($data['options'])) {
                         foreach ($data['options'] as $k => $v) {
-                            $val .= '<option value="'.secure_html(($data['storekeys']) ? $k : $v).'"'.((($data['storekeys'] && ($xdata[$id] == $k)) || (!$data['storekeys'] && ($xdata[$id] == $v))) ? ' selected' : '').'>'.$v.'</option>';
+                            $val .= '<option value="' . secure_html(($data['storekeys']) ? $k : $v) . '"' . ((($data['storekeys'] && ($xdata[$id] == $k)) || (!$data['storekeys'] && ($xdata[$id] == $v))) ? ' selected' : '') . '>' . $v . '</option>';
                         }
                     }
                     $val .= '</select>';
@@ -506,14 +495,14 @@ class XFieldsNewsFilter extends NewsFilter
                     $xfEntries[intval($data['area'])][] = $xfEntry;
                     break;
                 case 'multiselect':
-                    $val = '<select name="xfields['.$id.'][]" id="form_xfields_'.$id.'" multiple="multiple">';
+                    $val = '<select name="xfields[' . $id . '][]" id="form_xfields_' . $id . '" multiple="multiple">';
                     if (!$data['required']) {
                         $val .= '<option value="">&nbsp;</option>';
                     }
                     if (is_array($data['options'])) {
                         foreach ($data['options'] as $k => $v) {
                             var_dump();
-                            $val .= '<option value="'.secure_html(($data['storekeys']) ? $k : $v).'"'.((($data['storekeys'] && (in_array($k, $xdata[$id]))) || (!$data['storekeys'] && (in_array($v, $xdata[$id])))) ? ' selected' : '').'>'.$v.'</option>';
+                            $val .= '<option value="' . secure_html(($data['storekeys']) ? $k : $v) . '"' . ((($data['storekeys'] && (in_array($k, $xdata[$id]))) || (!$data['storekeys'] && (in_array($v, $xdata[$id])))) ? ' selected' : '') . '>' . $v . '</option>';
                         }
                     }
                     $val .= '</select>';
@@ -521,7 +510,7 @@ class XFieldsNewsFilter extends NewsFilter
                     $xfEntries[intval($data['area'])][] = $xfEntry;
                     break;
                 case 'textarea':
-                    $val = '<textarea cols="30" rows="4" name="xfields['.$id.']" id="form_xfields_'.$id.'">'.$xdata[$id].'</textarea>';
+                    $val = '<textarea cols="30" rows="4" name="xfields[' . $id . ']" id="form_xfields_' . $id . '">' . $xdata[$id] . '</textarea>';
                     $xfEntry['input'] = $val;
                     $xfEntries[intval($data['area'])][] = $xfEntry;
                     break;
@@ -545,12 +534,12 @@ class XFieldsNewsFilter extends NewsFilter
                                 'preview'     => [
                                     'width'  => $irow['p_width'],
                                     'height' => $irow['p_height'],
-                                    'url'    => $config['attach_url'].'/'.$irow['folder'].'/thumb/'.$irow['name'],
+                                    'url'    => $config['attach_url'] . '/' . $irow['folder'] . '/thumb/' . $irow['name'],
                                 ],
                                 'image'       => [
                                     'id'     => $irow['id'],
                                     'number' => $iCount,
-                                    'url'    => $config['attach_url'].'/'.$irow['folder'].'/'.$irow['name'],
+                                    'url'    => $config['attach_url'] . '/' . $irow['folder'] . '/' . $irow['name'],
                                     'width'  => $irow['width'],
                                     'height' => $irow['height'],
                                 ],
@@ -588,12 +577,12 @@ class XFieldsNewsFilter extends NewsFilter
         }
         // Prepare table data [if needed]
         $flagTData = false;
-        $tclist = [];
-        $thlist = [];
+        $tlist = []; // Инициализируем как пустой массив
+        $tclist = []; // Инициализируем как пустой массив
+        $thlist = []; // Инициализируем как пустой массив
         if (isset($xf['tdata']) && is_array($xf['tdata'])) {
             // Load table data for specific news
-            $tlist = [];
-            foreach ($mysql->select('select * from '.prefix.'_xfields where (linked_ds = 1) and (linked_id = '.db_squote($newsID).')') as $trow) {
+            foreach ($mysql->select('select * from ' . prefix . '_xfields where (linked_ds = 1) and (linked_id = ' . db_squote($newsID) . ')') as $trow) {
                 $ts = unserialize($trow['xfields']);
                 $tEntry = ['#id' => $trow['id']];
                 // Scan every field for value
@@ -601,8 +590,8 @@ class XFieldsNewsFilter extends NewsFilter
                     $fValue = '';
                     if (is_array($ts) && isset($ts[$fId])) {
                         $fValue = $ts[$fId];
-                    } elseif (isset($trow['xfields_'.$fId])) {
-                        $fValue = $trow['xfields_'.$fId];
+                    } elseif (isset($trow['xfields_' . $fId])) {
+                        $fValue = $trow['xfields_' . $fId];
                     }
                     $tEntry[$fId] = $fValue;
                 }
@@ -631,12 +620,11 @@ class XFieldsNewsFilter extends NewsFilter
             }
         }
         // Prepare personal [group] variables
-        $xfNews = $xf['news'] ?: [];
         $tVars = [
             //	'entries'		=>	$xfEntries[0],
             'xfGC'       => json_encode($xf['grp.news']),
             'xfCat'      => json_encode($xfCategories),
-            'xfList'     => json_encode(array_keys($xfNews)),
+            'xfList'     => json_encode(array_keys($xf['news'])),
             'xtableConf' => json_encode($tclist),
             'xtableVal'  => json_encode($tlist),
             'xtableHdr'  => $thlist,
@@ -650,7 +638,7 @@ class XFieldsNewsFilter extends NewsFilter
         }
         foreach ($xfEntries as $k => $v) {
             // Check if we have template for specific area, elsewhere - use basic [0] template
-            $templateName = 'plugins/xfields/tpl/news.edit.'.(file_exists(root.'plugins/xfields/tpl/news.edit.'.$k.'.tpl') ? $k : '0').'.tpl';
+            $templateName = 'plugins/xfields/tpl/news.edit.' . (file_exists(root . 'plugins/xfields/tpl/news.edit.' . $k . '.tpl') ? $k : '0') . '.tpl';
             $xt = $twig->loadTemplate($templateName);
             $tVars['entries'] = $v;
             $tVars['entryCount'] = count($v);
@@ -665,10 +653,8 @@ class XFieldsNewsFilter extends NewsFilter
         // Render general part [with JavaScript]
         $xt = $twig->loadTemplate('plugins/xfields/tpl/news.general.tpl');
         $tvars['plugin']['xfields']['general'] = $xt->render($tVars);
-
         return 1;
     }
-
     public function editNews($newsID, $SQLold, &$SQLnew, &$tvars)
     {
         global $lang, $config, $mysql;
@@ -698,7 +684,7 @@ class XFieldsNewsFilter extends NewsFilter
         if ($haveImages) {
             // Get real ID's of attached images and print here
             $idlist = [];
-            foreach ($mysql->select('select id, plugin, pidentity from '.prefix.'_images where (linked_ds = 1) and (linked_id = '.db_squote($newsID).')') as $irec) {
+            foreach ($mysql->select('select id, plugin, pidentity from ' . prefix . '_images where (linked_ds = 1) and (linked_id = ' . db_squote($newsID) . ')') as $irec) {
                 if ($irec['plugin'] == 'xfields') {
                     $idlist[$irec['pidentity']][] = $irec['id'];
                 }
@@ -724,18 +710,16 @@ class XFieldsNewsFilter extends NewsFilter
                 $xdata[$id] = $rcall[$id];
             } elseif ($data['required']) {
                 msg(['type' => 'error', 'text' => str_replace('{field}', $id, $lang['xfields_msge_emptyrequired'])]);
-
                 return 0;
             }
             // Check if we should save data into separate SQL field
             if ($data['storage']) {
-                $SQLnew['xfields_'.$id] = $rcall[$id];
+                $SQLnew['xfields_' . $id] = $rcall[$id];
             }
         }
         // Prepare table data [if needed]
         $haveTable = false;
         if (isset($xf['tdata']) && is_array($xf['tdata']) && isset($_POST['xftable']) && is_array($xft = json_decode($_POST['xftable'], true))) {
-
             //print "<pre>[".(is_array($xft)?'ARR':'NOARR')."]INCOMING ARRAY: ".var_export($xft, true)."</pre>";
             $recList = [];
             $queryList = [];
@@ -748,7 +732,7 @@ class XFieldsNewsFilter extends NewsFilter
                     if (intval($v['#id'])) {
                         $recList[] = intval($v['#id']);
                         $editMode = 1;
-                        $tOldRec = $mysql->record('select * from '.prefix.'_xfields where (id = '.intval($v['#id']).') and (linked_ds = 1) and (linked_id = '.intval($newsID).')');
+                        $tOldRec = $mysql->record('select * from ' . prefix . '_xfields where (id = ' . intval($v['#id']) . ') and (linked_ds = 1) and (linked_id = ' . intval($newsID) . ')');
                         $tOldRecX = unserialize($tOldRec['xfields']);
                     }
                     $tRec = ['xfields' => []];
@@ -759,7 +743,7 @@ class XFieldsNewsFilter extends NewsFilter
                             continue;
                         }
                         if ($fData['storage']) {
-                            $tRec['xfields_'.$fId] = db_squote($v[$fId]);
+                            $tRec['xfields_' . $fId] = db_squote($v[$fId]);
                         }
                         $tRec['xfields'][$fId] = $v[$fId];
                     }
@@ -769,14 +753,14 @@ class XFieldsNewsFilter extends NewsFilter
                     if ($editMode) {
                         $vt = [];
                         foreach ($tRec as $kx => $vx) {
-                            $vt[] = $kx.' = '.$vx;
+                            $vt[] = $kx . ' = ' . $vx;
                         }
-                        $query = 'update '.prefix.'_xfields set '.implode(', ', $vt).' where (id = '.intval($v['#id']).') and (linked_ds = 1) and (linked_id = '.intval($newsID).')';
+                        $query = 'update ' . prefix . '_xfields set ' . implode(', ', $vt) . ' where (id = ' . intval($v['#id']) . ') and (linked_ds = 1) and (linked_id = ' . intval($newsID) . ')';
                         //print "SQL: $query <br/>\n";
                         $queryList[] = $query;
-                    //$mysql->query($query);
+                        //$mysql->query($query);
                     } else {
-                        $query = 'insert into '.prefix.'_xfields ('.implode(', ', array_keys($tRec)).', linked_ds, linked_id) values ('.implode(', ', array_values($tRec)).', 1, '.(intval($newsID)).')';
+                        $query = 'insert into ' . prefix . '_xfields (' . implode(', ', array_keys($tRec)) . ', linked_ds, linked_id) values (' . implode(', ', array_values($tRec)) . ', 1, ' . (intval($newsID)) . ')';
                         //print "SQL: $query <br/>\n";
                         $queryList[] = $query;
                         //$mysql->query($query);
@@ -786,9 +770,9 @@ class XFieldsNewsFilter extends NewsFilter
             }
             // Now delete old lines
             if (count($recList)) {
-                $query = 'delete from '.prefix.'_xfields where (linked_ds = 1) and (linked_id = '.intval($newsID).') and id not in ('.implode(', ', $recList).')';
+                $query = 'delete from ' . prefix . '_xfields where (linked_ds = 1) and (linked_id = ' . intval($newsID) . ') and id not in (' . implode(', ', $recList) . ')';
             } else {
-                $query = 'delete from '.prefix.'_xfields where (linked_ds = 1) and (linked_id = '.intval($newsID).')';
+                $query = 'delete from ' . prefix . '_xfields where (linked_ds = 1) and (linked_id = ' . intval($newsID) . ')';
             }
             $mysql->query($query);
             // Execute queries
@@ -801,20 +785,16 @@ class XFieldsNewsFilter extends NewsFilter
             $xdata['#table'] = 1;
         }
         $SQLnew['xfields'] = xf_encode($xdata);
-
         return 1;
     }
-
     // Delete news notifier [ after news is deleted ]
     public function deleteNewsNotify($newsID, $SQLnews)
     {
         global $mysql;
-        $query = 'delete from '.prefix.'_xfields where (linked_ds = 1) and (linked_id = '.intval($newsID).')';
+        $query = 'delete from ' . prefix . '_xfields where (linked_ds = 1) and (linked_id = ' . intval($newsID) . ')';
         $mysql->query($query);
-
         return 1;
     }
-
     // Called before showing list of news
     public function onBeforeShowlist($callingParams)
     {
@@ -823,7 +803,6 @@ class XFieldsNewsFilter extends NewsFilter
             // ...
         }
     }
-
     // Show news call :: processor (call after all processing is finished and before show)
     public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
     {
@@ -870,7 +849,7 @@ class XFieldsNewsFilter extends NewsFilter
                             }
                         }
                         // Check if we have some not loaded news
-                        if (count($ilk) && count($timglist = $mysql->select('select * from '.prefix.'_images where id in ('.$xfk.')'))) {
+                        if (count($ilk) && count($timglist = $mysql->select('select * from ' . prefix . '_images where id in (' . $xfk . ')'))) {
                             $imglist = array_merge($imglist, $timglist);
                             unset($timglist);
                         }
@@ -878,8 +857,8 @@ class XFieldsNewsFilter extends NewsFilter
                     //					if ($xfk && count($ilist = explode(",", $xfk)) && count($imglist = $mysql->select("select * from ".prefix."_images where id in (".$xfk.")"))) {
                     if (count($imglist)) {
                         // Yes, show field block
-                        $tvars['regx']["#\[xfield_".$kp."\](.*?)\[/xfield_".$kp."\]#is"] = '$1';
-                        $tvars['regx']["#\[nxfield_".$kp."\](.*?)\[/nxfield_".$kp."\]#is"] = '';
+                        $tvars['regx']["#\[xfield_" . $kp . "\](.*?)\[/xfield_" . $kp . "\]#is"] = '$1';
+                        $tvars['regx']["#\[nxfield_" . $kp . "\](.*?)\[/nxfield_" . $kp . "\]#is"] = '';
                         // Scan for images and prepare data for template show
                         $tiVars = [
                             'fieldName'    => $k,
@@ -892,7 +871,7 @@ class XFieldsNewsFilter extends NewsFilter
                         ];
                         foreach ($imglist as $imgInfo) {
                             $tiEntry = [
-                                'url'         => ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']).'/'.$imgInfo['folder'].'/'.$imgInfo['name'],
+                                'url'         => ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'],
                                 'width'       => $imgInfo['width'],
                                 'height'      => $imgInfo['height'],
                                 'pwidth'      => $imgInfo['p_width'],
@@ -905,7 +884,7 @@ class XFieldsNewsFilter extends NewsFilter
                                 ],
                             ];
                             if ($imgInfo['preview']) {
-                                $tiEntry['purl'] = ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']).'/'.$imgInfo['folder'].'/thumb/'.$imgInfo['name'];
+                                $tiEntry['purl'] = ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']) . '/' . $imgInfo['folder'] . '/thumb/' . $imgInfo['name'];
                             }
                             $tiVars['entries'][] = $tiEntry;
                         }
@@ -914,20 +893,20 @@ class XFieldsNewsFilter extends NewsFilter
                         $tvars['vars']['p']['xfields'][$k]['count'] = count($tiVars['entries']);
                         $xv = $xtImages->render($tiVars);
                         $tvars['vars']['p']['xfields'][$k]['value'] = $xv;
-                        $tvars['vars']['[xvalue_'.$k.']'] = $xv;
+                        $tvars['vars']['[xvalue_' . $k . ']'] = $xv;
                     } else {
                         // TWIG based variables
                         $tvars['vars']['p']['xfields'][$k]['value'] = '';
                         $tvars['vars']['p']['xfields'][$k]['count'] = 0;
                         $tvars['vars']['p']['xfields'][$k]['entries'] = [];
                         // General variables
-                        $tvars['regx']["#\[xfield_".$kp."\](.*?)\[/xfield_".$kp."\]#is"] = '';
-                        $tvars['regx']["#\[nxfield_".$kp."\](.*?)\[/nxfield_".$kp."\]#is"] = '$1';
-                        $tvars['vars']['[xvalue_'.$k.']'] = '';
+                        $tvars['regx']["#\[xfield_" . $kp . "\](.*?)\[/xfield_" . $kp . "\]#is"] = '';
+                        $tvars['regx']["#\[nxfield_" . $kp . "\](.*?)\[/nxfield_" . $kp . "\]#is"] = '$1';
+                        $tvars['vars']['[xvalue_' . $k . ']'] = '';
                     }
                 } else {
-                    $tvars['regx']["#\[xfield_".$kp."\](.*?)\[/xfield_".$kp."\]#is"] = ($xfk == '') ? '' : '$1';
-                    $tvars['regx']["#\[nxfield_".$kp."\](.*?)\[/nxfield_".$kp."\]#is"] = ($xfk == '') ? '$1' : '';
+                    $tvars['regx']["#\[xfield_" . $kp . "\](.*?)\[/xfield_" . $kp . "\]#is"] = ($xfk == '') ? '' : '$1';
+                    $tvars['regx']["#\[nxfield_" . $kp . "\](.*?)\[/nxfield_" . $kp . "\]#is"] = ($xfk == '') ? '$1' : '';
                     // Process `HTML` support feature
                     if ((!$v['html_support']) && (($v['type'] == 'textarea') || ($v['type'] == 'text'))) {
                         $xfk = str_replace('<', '&lt;', $xfk);
@@ -938,10 +917,10 @@ class XFieldsNewsFilter extends NewsFilter
                     }
                     // Process formatting
                     if (($v['type'] == 'textarea') && (!$v['noformat'])) {
-                        $xfk = (str_replace("\n", "<br/>\n", $xfk).(strlen($xfk) ? '<br/>' : ''));
+                        $xfk = (str_replace("\n", "<br/>\n", $xfk) . (strlen($xfk) ? '<br/>' : ''));
                     }
                     $tvars['vars']['p']['xfields'][$k]['value'] = $xfk;
-                    $tvars['vars']['[xvalue_'.$k.']'] = $xfk;
+                    $tvars['vars']['[xvalue_' . $k . ']'] = $xfk;
                 }
             }
         }
@@ -955,7 +934,7 @@ class XFieldsNewsFilter extends NewsFilter
             ];
             $xrecs = [];
             $npp = 1;
-            foreach ($mysql->select('select * from '.prefix.'_xfields where (linked_ds = 1) and (linked_id = '.db_squote($newsID).') order by id', 1) as $trec) {
+            foreach ($mysql->select('select * from ' . prefix . '_xfields where (linked_ds = 1) and (linked_id = ' . db_squote($newsID) . ') order by id', 1) as $trec) {
                 $xrec = [
                     'num'   => ($npp++),
                     'id'    => $trec['id'],
@@ -968,9 +947,9 @@ class XFieldsNewsFilter extends NewsFilter
                     }
                     //  Populate field data
                     $drec = unserialize($trec['xfields']);
-                    $xrec['field_'.$tid] = $drec[$tid];
-                    $xrec['flags']['field_'.$tid] = ($drec[$tid] != '') ? 1 : 0;
-                    $conversionConfig['{entry_field_'.$tid.'}'] = '{{ entry.field_'.$tid.' }}';
+                    $xrec['field_' . $tid] = $drec[$tid];
+                    $xrec['flags']['field_' . $tid] = ($drec[$tid] != '') ? 1 : 0;
+                    $conversionConfig['{entry_field_' . $tid . '}'] = '{{ entry.field_' . $tid . ' }}';
                 }
                 // Process filters (if any)
                 if (isset($PFILTERS['xfields']) && is_array($PFILTERS['xfields'])) {
@@ -983,7 +962,7 @@ class XFieldsNewsFilter extends NewsFilter
             // Search for news.table.tpl template file
             $tpath = locatePluginTemplates(['news.table'], 'xfields');
             // Show table
-            $templateName = $tpath['news.table'].'news.table.tpl';
+            $templateName = $tpath['news.table'] . 'news.table.tpl';
             $twigLoader->setConversion($templateName, $conversionConfig);
             $xt = $twig->loadTemplate($templateName);
             $tvars['vars']['plugin_xfields_table'] = $xt->render(['entries' => $xrecs]);
@@ -996,11 +975,9 @@ class XFieldsNewsFilter extends NewsFilter
         $SQLnews['content'] = $content;
     }
 }
-
 // Manage uprofile modifications
 if (getPluginStatusActive('uprofile')) {
     loadPluginLibrary('uprofile', 'lib');
-
     class XFieldsUPrifileFilter extends p_uprofileFilter
     {
         public function editProfileForm($userID, $SQLrow, &$tvars)
@@ -1031,35 +1008,35 @@ if (getPluginStatusActive('uprofile')) {
                     'value'        => $xdata[$id],
                     'secure_value' => secure_html($xdata[$id]),
                     'data'         => $data,
-                    'required'     => $lang['xfields_fld_'.($data['required'] ? 'required' : 'optional')],
+                    'required'     => $lang['xfields_fld_' . ($data['required'] ? 'required' : 'optional')],
                     'flags'        => [
                         'required' => $data['required'] ? true : false,
                     ],
                 ];
                 switch ($data['type']) {
                     case 'checkbox':
-                        $val = '<input type="checkbox" id="form_xfields_'.$id.'" name="xfields['.$id.']" title="'.$data['title'].'" value="1" '.($data['default'] ? 'checked="checked"' : '').'"/>';
+                        $val = '<input type="checkbox" id="form_xfields_' . $id . '" name="xfields[' . $id . ']" title="' . $data['title'] . '" value="1" ' . ($data['default'] ? 'checked="checked"' : '') . '"/>';
                         $xfEntry['input'] = $val;
                         break;
                     case 'text':
-                        $val = '<input type="text" name="xfields['.$id.']"  id="form_xfields_'.$id.'" title="'.$data['title'].'" value="'.secure_html($xdata[$id]).'" />';
+                        $val = '<input type="text" name="xfields[' . $id . ']"  id="form_xfields_' . $id . '" title="' . $data['title'] . '" value="' . secure_html($xdata[$id]) . '" />';
                         $xfEntry['input'] = $val;
                         break;
                     case 'select':
-                        $val = '<select name="xfields['.$id.']" id="form_xfields_'.$id.'" >';
+                        $val = '<select name="xfields[' . $id . ']" id="form_xfields_' . $id . '" >';
                         if (!$data['required']) {
                             $val .= '<option value="">&nbsp;</option>';
                         }
                         if (is_array($data['options'])) {
                             foreach ($data['options'] as $k => $v) {
-                                $val .= '<option value="'.secure_html(($data['storekeys']) ? $k : $v).'"'.((($data['storekeys'] && ($xdata[$id] == $k)) || (!$data['storekeys'] && ($xdata[$id] == $v))) ? ' selected' : '').'>'.$v.'</option>';
+                                $val .= '<option value="' . secure_html(($data['storekeys']) ? $k : $v) . '"' . ((($data['storekeys'] && ($xdata[$id] == $k)) || (!$data['storekeys'] && ($xdata[$id] == $v))) ? ' selected' : '') . '>' . $v . '</option>';
                             }
                         }
                         $val .= '</select>';
                         $xfEntry['input'] = $val;
                         break;
                     case 'textarea':
-                        $val = '<textarea cols="30" rows="4" name="xfields['.$id.']" id="form_xfields_'.$id.'">'.$xdata[$id].'</textarea>';
+                        $val = '<textarea cols="30" rows="4" name="xfields[' . $id . ']" id="form_xfields_' . $id . '">' . $xdata[$id] . '</textarea>';
                         $xfEntry['input'] = $val;
                         break;
                     case 'images':
@@ -1081,12 +1058,12 @@ if (getPluginStatusActive('uprofile')) {
                                     'preview' => [
                                         'width'  => $irow['p_width'],
                                         'height' => $irow['p_height'],
-                                        'url'    => $config['attach_url'].'/'.$irow['folder'].'/thumb/'.$irow['name'],
+                                        'url'    => $config['attach_url'] . '/' . $irow['folder'] . '/thumb/' . $irow['name'],
                                     ],
                                     'image'   => [
                                         'id'     => $irow['id'],
                                         'number' => $iCount,
-                                        'url'    => $config['attach_url'].'/'.$irow['folder'].'/'.$irow['name'],
+                                        'url'    => $config['attach_url'] . '/' . $irow['folder'] . '/' . $irow['name'],
                                         'width'  => $irow['width'],
                                         'height' => $irow['height'],
                                     ],
@@ -1115,7 +1092,7 @@ if (getPluginStatusActive('uprofile')) {
                         $xfEntry['input'] = $val;
                         break;
                     default:
-                        continue(2);
+                        continue;
                 }
                 $xfEntries[intval($data['area'])][] = $xfEntry;
                 $xfList[$id] = $xfEntry;
@@ -1131,34 +1108,28 @@ if (getPluginStatusActive('uprofile')) {
             $tvars['plugin_xfields_1'] = '';
             foreach ($xfEntries as $k => $v) {
                 // Check if we have template for specific area, elsewhere - use basic [0] template
-                $templateName = 'plugins/xfields/tpl/uprofile.edit.'.(file_exists(root.'plugins/xfields/tpl/uprofile.edit.'.$k.'.tpl') ? $k : '0').'.tpl';
+                $templateName = 'plugins/xfields/tpl/uprofile.edit.' . (file_exists(root . 'plugins/xfields/tpl/uprofile.edit.' . $k . '.tpl') ? $k : '0') . '.tpl';
                 $xt = $twig->loadTemplate($templateName);
                 $tVars['entries'] = $v;
                 $tVars['entryCount'] = count($v);
                 $tVars['area'] = $k;
                 // Render block
                 $render = $xt->render($tVars);
-                $tvars['plugin_xfields_'.$k] .= $render;
+                $tvars['plugin_xfields_' . $k] .= $render;
                 $tvars['p']['xfields'][$k] .= $render;
             }
             $tvars['p']['xfields']['fields'] = $xfList;
-
             /*
                         unset($tVars['entries']);
                         unset($tVars['area']);
-
                         // Render general part [with JavaScript]
                         $xt = $twig->loadTemplate('plugins/xfields/tpl/news.general.tpl');
                         $tvars['p']['xfields']['general'] = $xt->render($tVars);
-
-
                         $xt = $twig->loadTemplate('plugins/xfields/tpl/ed_uprofile.tpl');
                         $tvars['vars']['plugin_xfields'] .= $xt->render($tVars);
             */
-
             return 1;
         }
-
         public function editProfile($userID, $SQLrow, &$SQLnew)
         {
             global $lang, $config, $mysql, $DSlist;
@@ -1189,7 +1160,7 @@ if (getPluginStatusActive('uprofile')) {
             if ($haveImages) {
                 // Get real ID's of attached images and print here
                 $idlist = [];
-                foreach ($mysql->select('select id, plugin, pidentity from '.prefix.'_images where (linked_ds = '.$DSlist['users'].') and (linked_id = '.db_squote($userID).')') as $irec) {
+                foreach ($mysql->select('select id, plugin, pidentity from ' . prefix . '_images where (linked_ds = ' . $DSlist['users'] . ') and (linked_id = ' . db_squote($userID) . ')') as $irec) {
                     if ($irec['plugin'] == 'xfields') {
                         $idlist[$irec['pidentity']][] = $irec['id'];
                     }
@@ -1215,19 +1186,16 @@ if (getPluginStatusActive('uprofile')) {
                     $xdata[$id] = $rcall[$id];
                 } elseif ($data['required']) {
                     msg(['type' => 'error', 'text' => str_replace('{field}', $id, $lang['xfields_msge_emptyrequired'])]);
-
                     return 0;
                 }
                 // Check if we should save data into separate SQL field
                 if ($data['storage']) {
-                    $SQLnew['xfields_'.$id] = $rcall[$id];
+                    $SQLnew['xfields_' . $id] = $rcall[$id];
                 }
             }
             $SQLnew['xfields'] = xf_encode($xdata);
-
             return 1;
         }
-
         public function showProfile($userID, $SQLrow, &$tvars)
         {
             global $mysql, $config, $twig, $twigLoader, $parse;
@@ -1257,14 +1225,14 @@ if (getPluginStatusActive('uprofile')) {
                     // Our behaviour depends on field type
                     if ($v['type'] == 'images') {
                         // Check if there're attached images
-                        if ($xfk && count($ilist = explode(',', $xfk)) && count($imglist = $mysql->select('select * from '.prefix.'_images where id in ('.$xfk.')'))) {
+                        if ($xfk && count($ilist = explode(',', $xfk)) && count($imglist = $mysql->select('select * from ' . prefix . '_images where id in (' . $xfk . ')'))) {
                             //print "-xGotIMG[$k]";
                             // Yes, get list of images
                             $imgInfo = $imglist[0];
-                            $tvars['regx']["#\[xfield_".$kp."\](.*?)\[/xfield_".$kp."\]#is"] = '$1';
-                            $tvars['regx']["#\[nxfield_".$kp."\](.*?)\[/nxfield_".$kp."\]#is"] = '';
-                            $iname = ($imgInfo['storage'] ? $config['attach_url'] : $config['files_url']).'/'.$imgInfo['folder'].'/'.$imgInfo['name'];
-                            $tvars['vars']['[xvalue_'.$k.']'] = $iname;
+                            $tvars['regx']["#\[xfield_" . $kp . "\](.*?)\[/xfield_" . $kp . "\]#is"] = '$1';
+                            $tvars['regx']["#\[nxfield_" . $kp . "\](.*?)\[/nxfield_" . $kp . "\]#is"] = '';
+                            $iname = ($imgInfo['storage'] ? $config['attach_url'] : $config['files_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'];
+                            $tvars['vars']['[xvalue_' . $k . ']'] = $iname;
                             // Scan for images and prepare data for template show
                             $tiVars = [
                                 'fieldName'    => $k,
@@ -1277,7 +1245,7 @@ if (getPluginStatusActive('uprofile')) {
                             ];
                             foreach ($imglist as $imgInfo) {
                                 $tiEntry = [
-                                    'url'         => ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']).'/'.$imgInfo['folder'].'/'.$imgInfo['name'],
+                                    'url'         => ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'],
                                     'width'       => $imgInfo['width'],
                                     'height'      => $imgInfo['height'],
                                     'pwidth'      => $imgInfo['p_width'],
@@ -1290,7 +1258,7 @@ if (getPluginStatusActive('uprofile')) {
                                     ],
                                 ];
                                 if ($imgInfo['preview']) {
-                                    $tiEntry['purl'] = ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']).'/'.$imgInfo['folder'].'/thumb/'.$imgInfo['name'];
+                                    $tiEntry['purl'] = ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']) . '/' . $imgInfo['folder'] . '/thumb/' . $imgInfo['name'];
                                 }
                                 $tiVars['entries'][] = $tiEntry;
                             }
@@ -1299,15 +1267,15 @@ if (getPluginStatusActive('uprofile')) {
                             $tvars['p']['xfields'][$k]['count'] = count($tiVars['entries']);
                             $xv = $xtImages->render($tiVars);
                             $tvars['p']['xfields'][$k]['value'] = $xv;
-                        //$tvars['vars']['[xvalue_'.$k.']'] = $xv;
+                            //$tvars['vars']['[xvalue_'.$k.']'] = $xv;
                         } else {
-                            $tvars['regx']["#\[xfield_".$kp."\](.*?)\[/xfield_".$kp."\]#is"] = '';
-                            $tvars['regx']["#\[nxfield_".$kp."\](.*?)\[/nxfield_".$kp."\]#is"] = '$1';
+                            $tvars['regx']["#\[xfield_" . $kp . "\](.*?)\[/xfield_" . $kp . "\]#is"] = '';
+                            $tvars['regx']["#\[nxfield_" . $kp . "\](.*?)\[/nxfield_" . $kp . "\]#is"] = '$1';
                         }
                     } else {
-                        $tvars['regx']["#\[xfield_".$kp."\](.*?)\[/xfield_".$kp."\]#is"] = ($xfk == '') ? '' : '$1';
-                        $tvars['regx']["#\[nxfield_".$kp."\](.*?)\[/nxfield_".$kp."\]#is"] = ($xfk == '') ? '$1' : '';
-                        $tvars['vars']['[xvalue_'.$k.']'] = ($v['type'] == 'textarea') ? '<br/>'.(str_replace("\n", "<br/>\n", $xfk).(strlen($xfk) ? '<br/>' : '')) : $xfk;
+                        $tvars['regx']["#\[xfield_" . $kp . "\](.*?)\[/xfield_" . $kp . "\]#is"] = ($xfk == '') ? '' : '$1';
+                        $tvars['regx']["#\[nxfield_" . $kp . "\](.*?)\[/nxfield_" . $kp . "\]#is"] = ($xfk == '') ? '$1' : '';
+                        $tvars['vars']['[xvalue_' . $k . ']'] = ($v['type'] == 'textarea') ? '<br/>' . (str_replace("\n", "<br/>\n", $xfk) . (strlen($xfk) ? '<br/>' : '')) : $xfk;
                         // 12345
                         // Process `HTML` support feature
                         if ((!$v['html_support']) && (($v['type'] == 'textarea') || ($v['type'] == 'text'))) {
@@ -1319,7 +1287,7 @@ if (getPluginStatusActive('uprofile')) {
                         }
                         // Process formatting
                         if (($v['type'] == 'textarea') && (!$v['noformat'])) {
-                            $xfk = (str_replace("\n", "<br/>\n", $xfk).(strlen($xfk) ? '<br/>' : ''));
+                            $xfk = (str_replace("\n", "<br/>\n", $xfk) . (strlen($xfk) ? '<br/>' : ''));
                         }
                         // TWIG based variables
                         $tvars['p']['xfields'][$k]['value'] = $xfk;
@@ -1328,19 +1296,15 @@ if (getPluginStatusActive('uprofile')) {
             }
         }
     }
-
     register_filter('plugin.uprofile', 'xfields', new XFieldsUPrifileFilter());
 }
-
 class XFieldsFilterAdminCategories extends FilterAdminCategories
 {
     public function addCategory(&$tvars, &$SQL)
     {
         $SQL['xf_group'] = $_REQUEST['xf_group'];
-
         return 1;
     }
-
     public function addCategoryForm(&$tvars)
     {
         global $lang;
@@ -1351,14 +1315,12 @@ class XFieldsFilterAdminCategories extends FilterAdminCategories
         $ms = '<select name="xf_group"><option value="">** все поля **</option>';
         if (isset($xf['grp.news'])) {
             foreach ($xf['grp.news'] as $k => $v) {
-                $ms .= '<option value="'.$k.'">'.$k.' ('.$v['title'].')</option>';
+                $ms .= '<option value="' . $k . '">' . $k . ' (' . $v['title'] . ')</option>';
             }
         }
-        $tvars['extend'] .= '<tr><td width="70%" class="contentEntry1">'.$lang['xfields:categories.group'].'<br/><small>'.$lang['xfields:categories.group#desc'].'</small></td><td width="30%" class="contentEntry2">'.$ms.'</td></tr>';
-
+        $tvars['extend'] .= '<tr><td width="70%" class="contentEntry1">' . $lang['xfields:categories.group'] . '<br/><small>' . $lang['xfields:categories.group#desc'] . '</small></td><td width="30%" class="contentEntry2">' . $ms . '</td></tr>';
         return 1;
     }
-
     public function editCategoryForm($categoryID, $SQL, &$tvars)
     {
         global $lang;
@@ -1368,26 +1330,21 @@ class XFieldsFilterAdminCategories extends FilterAdminCategories
         // Prepare select
         $ms = '<select name="xf_group"><option value="">** все поля **</option>';
         foreach ($xf['grp.news'] as $k => $v) {
-            $ms .= '<option value="'.$k.'"'.(($SQL['xf_group'] == $k) ? ' selected="selected"' : '').'>'.$k.' ('.$v['title'].')</option>';
+            $ms .= '<option value="' . $k . '"' . (($SQL['xf_group'] == $k) ? ' selected="selected"' : '') . '>' . $k . ' (' . $v['title'] . ')</option>';
         }
-        $tvars['extend'] .= '<tr><td width="70%" class="contentEntry1">'.$lang['xfields:categories.group'].'<br/><small>'.$lang['xfields:categories.group#desc'].'</small></td><td width="30%" class="contentEntry2">'.$ms.'</td></tr>';
-
+        $tvars['extend'] .= '<tr><td width="70%" class="contentEntry1">' . $lang['xfields:categories.group'] . '<br/><small>' . $lang['xfields:categories.group#desc'] . '</small></td><td width="30%" class="contentEntry2">' . $ms . '</td></tr>';
         return 1;
     }
-
     public function editCategory($categoryID, $SQL, &$SQLnew, &$tvars)
     {
         $SQLnew['xf_group'] = $_REQUEST['xf_group'];
-
         return 1;
     }
 }
-
 class XFieldsCoreFilter extends CoreFilter
 {
     public function registerUserForm(&$tvars)
     {
-
         // Load config
         $xf = xf_configLoad();
         if (!is_array($xf) || !isset($xf['users']) || !is_array($xf['users'])) {
@@ -1397,7 +1354,7 @@ class XFieldsCoreFilter extends CoreFilter
             if ($v['regpage'] && !$v['disabled']) {
                 //print "$k: <pre>".var_export($v, true)."</pre>";
                 $tEntry = [
-                    'name'  => 'xfield_'.$k,
+                    'name'  => 'xfield_' . $k,
                     'title' => $v['title'],
                 ];
                 switch ($v['type']) {
@@ -1422,10 +1379,8 @@ class XFieldsCoreFilter extends CoreFilter
                 $tvars['entries'][] = $tEntry;
             }
         }
-
         return 1;
     }
-
     public function registerUserNotify($userID, $userRec)
     {
         global $mysql;
@@ -1442,9 +1397,9 @@ class XFieldsCoreFilter extends CoreFilter
                     case 'text':
                     case 'textarea':
                     case 'select':
-                        $xdata[$k] = $_POST['xfield_'.$k];
+                        $xdata[$k] = $_POST['xfield_' . $k];
                         if ($v['storage']) {
-                            $SQL['xfields_'.$k] = $xdata[$k];
+                            $SQL['xfields_' . $k] = $xdata[$k];
                         }
                         break;
                 }
@@ -1453,14 +1408,12 @@ class XFieldsCoreFilter extends CoreFilter
         $SQL['xfields'] = xf_encode($xdata);
         $SQ = [];
         foreach ($SQL as $sk => $sv) {
-            $SQ[] = $sk.'='.db_squote($sv);
+            $SQ[] = $sk . '=' . db_squote($sv);
         }
-        $mysql->query('update '.uprefix.'_users set '.implode(',', $SQ).' where id = '.intval($userID));
-
+        $mysql->query('update ' . uprefix . '_users set ' . implode(',', $SQ) . ' where id = ' . intval($userID));
         return 1;
     }
 }
-
 register_filter('news', 'xfields', new XFieldsNewsFilter());
 register_filter('core.registerUser', 'xfields', new XFieldsCoreFilter());
 register_admin_filter('categories', 'xfields', new XFieldsFilterAdminCategories());

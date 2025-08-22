@@ -1,5 +1,4 @@
 <?php
-
 // Protect against hack attempts
 if (!defined('NGCMS')) {
     die('HAL');
@@ -48,7 +47,6 @@ function showList()
         showFieldList();
     }
 }
-
 //
 //
 function showSectionList()
@@ -70,11 +68,9 @@ function showSectionList()
             'entries' => $v['entries'],
         ];
     }
-
     $xt = $twig->loadTemplate('plugins/xfields/tpl/groups.tpl');
     echo $xt->render($tVars);
 }
-
 //
 // Показать список доп. полей
 function showFieldList()
@@ -82,6 +78,10 @@ function showFieldList()
     global $xf, $lang, $twig, $sectionID;
     $xEntries = [];
     $output = '';
+    // Ensure that $xf[$sectionID] is always an array
+    if (!isset($xf[$sectionID]) || !is_array($xf[$sectionID])) {
+        $xf[$sectionID] = [];
+    }
     foreach ($xf[$sectionID] as $id => $data) {
         $storage = '';
         if ($data['storage']) {
@@ -113,7 +113,7 @@ function showFieldList()
         $xEntry['options'] = $options;
         $xEntries[] = $xEntry;
     }
-    if (!is_array($xf[$sectionID])) {
+    if (!count((array)$xf[$sectionID])) {
         $output = $lang['xfconfig']['nof'];
     }
     $tVars = [
@@ -121,11 +121,9 @@ function showFieldList()
         'section_name' => $lang['xfconfig']['section.' . $sectionID],
         'sectionID'    => $sectionID,
     ];
-
     $xt = $twig->loadTemplate('plugins/xfields/tpl/config.tpl');
     echo $xt->render($tVars);
 }
-
 //
 //
 function showAddEditForm($xdata = '', $eMode = null, $efield = null)
@@ -133,7 +131,7 @@ function showAddEditForm($xdata = '', $eMode = null, $efield = null)
     global $xf, $lang, $sectionID, $twig;
     $field = ($efield == null) ? $_REQUEST['field'] : $efield;
     if ($eMode == null) {
-        $editMode = (is_array($xf[$sectionID][$field])) ? 1 : 0;
+        $editMode = (isset($xf[$sectionID][$field]) && is_array($xf[$sectionID][$field])) ? 1 : 0;
     } else {
         $editMode = $eMode;
     }
@@ -165,26 +163,26 @@ function showAddEditForm($xdata = '', $eMode = null, $efield = null)
         if ($data['type'] == 'select') {
             if (is_array($data['options'])) {
                 foreach ($data['options'] as $k => $v) {
-                    array_push($sOpts, '<tr><td><input size="12" name="so_data[' . ($fNum) . '][0]" type="text" value="' . ($data['storekeys'] ? secure_html($k) : '') . '"/></td><td><input type="text" size="55" name="so_data[' . ($fNum) . '][1]" value="' . secure_html($v) . '"/></td><td><a href="#" onclick="return false;" class="btn btn-danger" aria-label="Delete"><i class="fa fa-trash-o" aria-hidden="true"></i></a></td></tr>');
+                    array_push($sOpts, '<tr><td><input size="12" name="so_data[' . ($fNum) . '][0]" type="text" value="' . ($data['storekeys'] ? secure_html($k) : '') . '"/></td><td><input type="text" size="55" name="so_data[' . ($fNum) . '][1]" value="' . secure_html($v) . '"/></td><td><a href="#" onclick="return false;"><img src="' . skins_url . '/images/delete.gif" alt="DEL" width="12" height="12" /></a></td></tr>');
                     $fNum++;
                 }
             }
         }
         if (!count($sOpts)) {
-            array_push($sOpts, '<tr><td><input size="12" name="so_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="so_data[1][1]" value=""/></td><td><a href="#" onclick="return false;" class="btn btn-danger" aria-label="Delete"><i class="fa fa-trash-o" aria-hidden="true"></i></a></td></tr>');
+            array_push($sOpts, '<tr><td><input size="12" name="so_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="so_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"><img src="' . skins_url . '/images/delete.gif" alt="DEL" width="12" height="12" /></a></td></tr>');
         }
         $m_sOpts = [];
         $fNum = 1;
         if ($data['type'] == 'multiselect') {
             if (is_array($data['options'])) {
                 foreach ($data['options'] as $k => $v) {
-                    array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[' . ($fNum) . '][0]" type="text" value="' . ($data['storekeys'] ? secure_html($k) : '') . '"/></td><td><input type="text" size="55" name="mso_data[' . ($fNum) . '][1]" value="' . secure_html($v) . '"/></td><td><a href="#" onclick="return false;" class="btn btn-danger" aria-label="Delete" ><i class="fa fa-trash-o" aria-hidden="true"></i></a></td></tr>');
+                    array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[' . ($fNum) . '][0]" type="text" value="' . ($data['storekeys'] ? secure_html($k) : '') . '"/></td><td><input type="text" size="55" name="mso_data[' . ($fNum) . '][1]" value="' . secure_html($v) . '"/></td><td><a href="#" onclick="return false;"><img src="' . skins_url . '/images/delete.gif" alt="DEL" width="12" height="12" /></a></td></tr>');
                     $fNum++;
                 }
             }
         }
         if (!count($m_sOpts)) {
-            array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="mso_data[1][1]" value=""/></td><td><a href="#" onclick="return false;" class="btn btn-danger" aria-label="Delete"><i class="fa fa-trash-o" aria-hidden="true"></i></a></td></tr>');
+            array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="mso_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"><img src="' . skins_url . '/images/delete.gif" alt="DEL" width="12" height="12" /></a></td></tr>');
         }
         $tVars = $tVars + [
             'sOpts'          => implode("\n", $sOpts),
@@ -204,9 +202,9 @@ function showAddEditForm($xdata = '', $eMode = null, $efield = null)
         //print "<pre>".var_export($tVars, true)."</pre>";
     } else {
         $sOpts = [];
-        array_push($sOpts, '<tr><td><input size="12" name="so_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="so_data[1][1]" value=""/></td><td><a href="#" onclick="return false;" class="btn btn-danger" aria-label="Delete"><i class="fa fa-trash-o" aria-hidden="true"></i></a></td></tr>');
+        array_push($sOpts, '<tr><td><input size="12" name="so_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="so_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"><img src="' . skins_url . '/images/delete.gif" alt="DEL" width="12" height="12" /></a></td></tr>');
         $m_sOpts = [];
-        array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="mso_data[1][1]" value=""/></td><td><a href="#" onclick="return false;" class="btn btn-danger" aria-label="Delete"><i class="fa fa-trash-o" aria-hidden="true"></i></a></td></tr>');
+        array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="mso_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"><img src="' . skins_url . '/images/delete.gif" alt="DEL" width="12" height="12" /></a></td></tr>');
         $tVars['flags']['editmode'] = 0;
         $tVars['flags']['disabled'] = false;
         $tVars = $tVars + [
@@ -243,7 +241,6 @@ function showAddEditForm($xdata = '', $eMode = null, $efield = null)
     $xt = $twig->loadTemplate('plugins/xfields/tpl/config_edit.tpl');
     echo $xt->render($tVars);
 }
-
 //
 //
 function doAddEdit()
@@ -254,10 +251,10 @@ function doAddEdit()
     $field = $_REQUEST['id'];
     $editMode = $_REQUEST['edit'] ? 1 : 0;
     // Check if field exists or not [depends on mode]
-    if ($editMode && (!is_array($xf[$sectionID][$field]))) {
+    if ($editMode && (!isset($xf[$sectionID][$field]) || !is_array($xf[$sectionID][$field]))) {
         msg(['type' => 'error', 'text' => $lang['xfields_msge_noexists']]);
         $error = 1;
-    } elseif (!$editMode && (is_array($xf[$sectionID][$field]))) {
+    } elseif (!$editMode && (isset($xf[$sectionID][$field]) && is_array($xf[$sectionID][$field]))) {
         msg(['type' => 'error', 'text' => $lang['xfields_msge_exists']]);
         $error = 1;
     }
@@ -428,7 +425,6 @@ function doAddEdit()
     }
     if ($error) {
         showAddEditForm($data, $editMode, $field, $sectionID);
-
         return;
     }
     $DB = [];
@@ -440,13 +436,11 @@ function doAddEdit()
     if (!xf_configSave()) {
         msg(['type' => 'error', 'text' => $lang['xfields_msge_errcsave']]);
         showAddEditForm($data, $editMode, $field);
-
         return;
     }
     // Now we should update table `_news` structure and content
     if (!($tableName = xf_getTableBySectionID($sectionID))) {
         echo 'Ошибка: неизвестная секция/блок (' . $sectionID . ')';
-
         return;
     }
     $found = 0;
@@ -488,7 +482,7 @@ function doAddEdit()
                     break;
                 }
             case 'text':
-                $ftype = 'text';
+                $ftype = 'mediumtext';
                 break;
         }
         if ($ftype) {
@@ -531,7 +525,6 @@ function doAddEdit()
     $xt = $twig->loadTemplate('plugins/xfields/tpl/config_done.tpl');
     echo $xt->render($tVars);
 }
-
 //
 //
 function doUpdate()
@@ -540,7 +533,7 @@ function doUpdate()
     $error = 0;
     $field = $_REQUEST['field'];
     // Check if field exists or not [depends on mode]
-    if (!is_array($xf[$sectionID][$field])) {
+    if (!isset($xf[$sectionID][$field]) || !is_array($xf[$sectionID][$field])) {
         msg(['type' => 'error', 'text' => $lang['xfields_msge_noexists'] . '(' . $sectionID . ': ' . $field . ')']);
         $error = 1;
     }
@@ -576,12 +569,10 @@ function doUpdate()
     }
     if (!xf_configSave()) {
         msg(['type' => 'error', 'text' => $lang['xfields_msge_errcsave']]);
-
         return;
     }
     $xf = $XF;
 }
-
 function array_key_move(&$arr, $key, $offset)
 {
     $keys = array_keys($arr);

@@ -1,5 +1,4 @@
 <?php
-
 // Protect against hack attempts
 if (!defined('NGCMS')) {
     die('HAL');
@@ -14,21 +13,21 @@ $db_update = [
         'table'  => 'news',
         'action' => 'modify',
         'fields' => [
-            ['action' => 'drop', 'name' => 'xfields', 'type' => 'text'],
+            ['action' => 'drop', 'name' => 'xfields', 'type' => 'mediumtext'],
         ],
     ],
     [
         'table'  => 'category',
         'action' => 'modify',
         'fields' => [
-            ['action' => 'drop', 'name' => 'xf_group', 'type' => 'text'],
+            ['action' => 'drop', 'name' => 'xf_group', 'type' => 'mediumtext'],
         ],
     ],
     [
         'table'  => 'users',
         'action' => 'modify',
         'fields' => [
-            ['action' => 'drop', 'name' => 'xfields', 'type' => 'text'],
+            ['action' => 'drop', 'name' => 'xfields', 'type' => 'mediumtext'],
         ],
     ],
 ];
