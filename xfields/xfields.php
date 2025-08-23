@@ -262,7 +262,7 @@ class XFieldsNewsFilter extends NewsFilter
                         $xfEntry['input'] = $val;
                         break;
                     default:
-                        continue;
+                        break;
                 }
                 $xfEntries[intval($data['area'])][] = $xfEntry;
                 $xfList[$id] = $xfEntry;
@@ -274,12 +274,12 @@ class XFieldsNewsFilter extends NewsFilter
         }
         // Prepare table data [if needed]
         $flagTData = false;
+        $tlist = []; // Инициализируем как пустой массив
+        $tclist = []; // Инициализируем как пустой массив
+        $thlist = []; // Инициализируем как пустой массив
         if (isset($xf['tdata']) && is_array($xf['tdata'])) {
             // Data are not provisioned
-            $tlist = [];
             // Prepare config
-            $tclist = [];
-            $thlist = [];
             foreach ($xf['tdata'] as $fId => $fData) {
                 if ($fData['disabled']) {
                     continue;
@@ -1092,7 +1092,7 @@ if (getPluginStatusActive('uprofile')) {
                         $xfEntry['input'] = $val;
                         break;
                     default:
-                        continue;
+                        break;
                 }
                 $xfEntries[intval($data['area'])][] = $xfEntry;
                 $xfList[$id] = $xfEntry;
