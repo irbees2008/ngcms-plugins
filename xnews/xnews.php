@@ -26,7 +26,6 @@ include_once root . 'includes/inc/libnews.php';
 // * extractEmbeddedItems - flag if news engine should extract embedded (via <img src=".."/>) images into array news.embed.images
 // * cacheAge - age of cache [in seconds]
 function xNewsShowBlock($params) {
-
 	global $CurrentHandler, $twig, $config;
 	if (isset($params['id']) && $params['id']) {
 		// Scan blocks
@@ -146,7 +145,6 @@ function xNewsShowBlock($params) {
 			$cacheDisabled = true;
 		}
 	}
-
 	$showCount = ($params['count'] > 0) ? intval($params['count']) : 10;
 	$showSkip = ($params['skip'] > 0) ? intval($params['skip']) : 0;
 	$showAge = ($params['maxAge'] > 0) ? intval($params['maxAge']) : 0;
@@ -167,7 +165,7 @@ function xNewsShowBlock($params) {
 		}
 		$filterList [] = '(' . join(' OR ', $catFilter) . ')';
 	}
-	$orderAllowed = array('viewed' => 'views desc', 'commented' => 'com desc', 'last' => 'postdate desc', 'random' => 'rand()');
+	$orderAllowed = array('rating' => 'rating desc', 'editdate' => 'editdate desc', 'viewed' => 'views desc', 'commented' => 'com desc', 'last' => 'postdate desc', 'first' => 'postdate asc', 'random' => 'rand()');
 	if ($params['order'] && isset($orderAllowed[$params['order']])) {
 		$orderBy = $orderAllowed[$params['order']];
 	} else {
@@ -237,9 +235,6 @@ function xNewsShowBlock($params) {
 	if (!$cacheDisabled && ($params['cacheAge'] > 0)) {
 		cacheStoreFile($cacheFileName, $xOut, 'xnews');
 	}
-
 	return $xOut;
 }
-
 twigRegisterFunction('xnews', 'show', 'xNewsShowBlock');
-
