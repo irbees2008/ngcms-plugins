@@ -7,7 +7,6 @@ loadPluginLang('lastcomments', 'main', '', '', ':');
 // Side bar widget
 // ==============================================
 function lastcomments_block() {
-
 	global $template;
 	// Action if sidepanel is enabled
 	if (pluginGetVariable('lastcomments', 'sidepanel')) {
@@ -16,7 +15,6 @@ function lastcomments_block() {
 		$template['vars']['plugin_lastcomments'] = "";
 	}
 }
-
 registerActionHandler('index', 'lastcomments_block');
 // ==============================================
 // ==============================================
@@ -33,14 +31,12 @@ function lastcomments_page() {
 		error404();
 	}
 }
-
 register_plugin_page('lastcomments', '', 'lastcomments_page', 0);
 // ==============================================
 // ==============================================
 // Rss feed
 // ==============================================
 function lastcomments_rssfeed() {
-
 	global $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $CurrentHandler;
 	// Action if rssfeed is enabled
 	if (pluginGetVariable('lastcomments', 'rssfeed') && !(checkLinkAvailable('lastcomments', 'rss') && $CurrentHandler['handlerParams']['value']['pluginName'] == 'core')) {
@@ -57,14 +53,12 @@ function lastcomments_rssfeed() {
 		error404();
 	}
 }
-
 register_plugin_page('lastcomments', 'rss', 'lastcomments_rssfeed', 0);
 // ==============================================
 // ==============================================
 // Some magic
 // ==============================================
 function lastcomments($mode = 0) {
-
 	global $config, $mysql, $twig, $twigLoader, $parse, $TemplateCache;
 	switch ($mode) {
 		case 1:
@@ -173,7 +167,7 @@ function lastcomments($mode = 0) {
 		}
 		$data[] = array(
 			'link'          => newsGenerateLink(array('id' => $row['nid'], 'alt_name' => $row['alt_name'], 'catid' => $row['catid'], 'postdate' => $row['npostdate'])),
-			'date'          => langdate('d.m.Y', $row['postdate']),
+			'date'          => langdate('d.m.Y H:i', $row['postdate']),
 			'author'        => str_replace('<', '&lt;', $row['author']),
 			'author_id'     => $row['author_id'],
 			'title'         => str_replace('<', '&lt;', $row['title']),
@@ -237,6 +231,5 @@ function lastcomments($mode = 0) {
 	if (pluginGetVariable('lastcomments', 'cache')) {
 		cacheStoreFile($cacheFileName, $output, 'lastcomments');
 	}
-
 	return $output;
 }

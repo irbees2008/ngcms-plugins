@@ -1,11 +1,10 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: lastcomments
 Name: Последние комментарии
-Version: 0.12
-Acts: index, ppages 
+Version: 0.13
+Acts: index, ppages
 File: lastcomments.php
 Config: config.php
 install: install.php
