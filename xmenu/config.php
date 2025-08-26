@@ -92,30 +92,42 @@ if (isset($_REQUEST['action']) && $_REQUEST['action'] == 'commit') {
     foreach ($params as $key => $value) {
         extra_set_param('xmenu', $key, $value);
     }
-    // Сохраняем привязку категорий
-    if (isset($_REQUEST['cmenu']) && is_array($_REQUEST['cmenu'])) {
-        foreach ($_REQUEST['cmenu'] as $cat_id => $menus) {
-            if (!is_array($menus)) continue;
-            $xline = str_repeat('_', $params['menu_count']);
-            foreach ($menus as $menu_id => $val) {
-                if ($menu_id >= 1 && $menu_id <= $params['menu_count']) {
-                    $xline[$menu_id - 1] = ($val == '1') ? '#' : '_';
+    $menu_count = $params['menu_count'];
+    // Получаем текущие данные для сравнения
+    $current_catz = $mysql->select("SELECT id, xmenu FROM " . prefix . "_category");
+    $current_static = $mysql->select("SELECT id, xmenu FROM " . prefix . "_static");
+    // ОБРАБОТКА КАТЕГОРИЙ
+    foreach ($current_catz as $cat) {
+        $new_xline = str_repeat('_', $menu_count);
+        // Устанавливаем флаги из формы
+        if (isset($_REQUEST['cmenu'][$cat['id']]) && is_array($_REQUEST['cmenu'][$cat['id']])) {
+            foreach ($_REQUEST['cmenu'][$cat['id']] as $menu_id => $val) {
+                if ($menu_id >= 1 && $menu_id <= $menu_count && $val == '1') {
+                    $new_xline[$menu_id - 1] = '#';
                 }
             }
-            $mysql->query("UPDATE " . prefix . "_category SET xmenu = " . db_squote($xline) . " WHERE id = " . db_squote($cat_id));
+        }
+        // Обновляем только если изменилось
+        $current_xmenu = isset($cat['xmenu']) ? str_pad(substr($cat['xmenu'], 0, $menu_count), $menu_count, '_') : str_repeat('_', $menu_count);
+        if ($current_xmenu !== $new_xline) {
+            $mysql->query("UPDATE " . prefix . "_category SET xmenu = " . db_squote($new_xline) . " WHERE id = " . db_squote($cat['id']));
         }
     }
-    // Сохраняем привязку статических страниц
-    if (isset($_REQUEST['smenu']) && is_array($_REQUEST['smenu'])) {
-        foreach ($_REQUEST['smenu'] as $page_id => $menus) {
-            if (!is_array($menus)) continue;
-            $xline = str_repeat('_', $params['menu_count']);
-            foreach ($menus as $menu_id => $val) {
-                if ($menu_id >= 1 && $menu_id <= $params['menu_count']) {
-                    $xline[$menu_id - 1] = ($val == '1') ? '#' : '_';
+    // ОБРАБОТКА СТАТИЧЕСКИХ СТРАНИЦ
+    foreach ($current_static as $page) {
+        $new_xline = str_repeat('_', $menu_count);
+        // Устанавливаем флаги из формы
+        if (isset($_REQUEST['smenu'][$page['id']]) && is_array($_REQUEST['smenu'][$page['id']])) {
+            foreach ($_REQUEST['smenu'][$page['id']] as $menu_id => $val) {
+                if ($menu_id >= 1 && $menu_id <= $menu_count && $val == '1') {
+                    $new_xline[$menu_id - 1] = '#';
                 }
             }
-            $mysql->query("UPDATE " . prefix . "_static SET xmenu = " . db_squote($xline) . " WHERE id = " . db_squote($page_id));
+        }
+        // Обновляем только если изменилось
+        $current_xmenu = isset($page['xmenu']) ? str_pad(substr($page['xmenu'], 0, $menu_count), $menu_count, '_') : str_repeat('_', $menu_count);
+        if ($current_xmenu !== $new_xline) {
+            $mysql->query("UPDATE " . prefix . "_static SET xmenu = " . db_squote($new_xline) . " WHERE id = " . db_squote($page['id']));
         }
     }
     pluginsSaveConfig();
