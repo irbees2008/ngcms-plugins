@@ -406,8 +406,9 @@ function plugin_comments_delete() {
 	$SUPRESS_TEMPLATE_SHOW = 1;
 	// Check if we run AJAX request
 	if ($_REQUEST['ajax']) {
-		$output['data'] = $output['data'];
-		$template['vars']['mainblock'] = json_encode($output);
+		header('Content-Type: application/json; charset=utf-8');
+		echo json_encode($output);
+		exit;
 	} else {
 		// NON-AJAX mode
 		// Fetch news record
@@ -438,9 +439,170 @@ function plugin_comments_delete() {
 	}
 }
 
+// Edit comment
+function plugin_comments_edit() {
+	global $mysql, $config, $userROW, $lang, $parse, $SUPRESS_TEMPLATE_SHOW;
+	$SUPRESS_TEMPLATE_SHOW = 1;
+	
+	$output = array();
+	$comment_id = intval($_REQUEST['id']);
+	
+	// Проверка прав
+	if (!is_array($userROW) || ($userROW['status'] > 2)) {
+		$output['status'] = 0;
+		$output['data'] = 'Недостаточно прав';
+		header('Content-Type: application/json; charset=utf-8');
+		echo json_encode($output);
+		exit;
+	}
+	
+	if ($_REQUEST['action'] == 'get') {
+		// Получение текста комментария
+		if ($row = $mysql->record("select * from " . prefix . "_comments where id=" . db_squote($comment_id))) {
+			$output['status'] = 1;
+			$output['text'] = str_replace('<br />', "\n", $row['text']);
+		} else {
+			$output['status'] = 0;
+			$output['data'] = 'Комментарий не найден';
+		}
+	} elseif ($_REQUEST['action'] == 'save') {
+		// Сохранение отредактированного комментария
+		if ($row = $mysql->record("select * from " . prefix . "_comments where id=" . db_squote($comment_id))) {
+			$new_text = secure_html(trim($_POST['text']));
+			$new_text = str_replace("\r\n", "<br />", $new_text);
+			$edit_date = time() + ($config['date_adjust'] * 60);
+			
+			$mysql->query("update " . prefix . "_comments set text=" . db_squote($new_text) . ", edit_date=" . db_squote($edit_date) . " where id=" . db_squote($comment_id));
+			
+			// Формируем HTML для отображения
+			$display_text = $new_text;
+			if ($config['blocks_for_reg']) {
+				$display_text = $parse->userblocks($display_text);
+			}
+			if ($config['use_bbcodes']) {
+				$display_text = $parse->bbcodes($display_text);
+			}
+			if ($config['use_htmlformatter']) {
+				$display_text = $parse->htmlformatter($display_text);
+			}
+			if ($config['use_smilies']) {
+				$display_text = $parse->smilies($display_text);
+			}
+			
+			$timestamp = pluginGetVariable('comments', 'timestamp');
+			if (!$timestamp) $timestamp = 'j.m.Y - H:i';
+			
+			$edit_info = '<br/><small><i>Изменено: ' . LangDate($timestamp, $edit_date) . '</i></small>';
+			
+			$output['status'] = 1;
+			$output['html'] = $display_text . $edit_info;
+		} else {
+			$output['status'] = 0;
+			$output['data'] = 'Комментарий не найден';
+		}
+	}
+	
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($output);
+	exit;
+}
+
+// Comments moderation
+function plugin_comments_moderation() {
+	global $mysql, $userROW, $lang, $twig, $SUPRESS_TEMPLATE_SHOW, $main_admin;
+	$SUPRESS_TEMPLATE_SHOW = 1;
+	
+	// Check permissions
+	if (!is_array($userROW) || ($userROW['status'] > 2)) {
+		msg(array("type" => "error", "text" => $lang['perm.denied']));
+		return;
+	}
+	
+	// Check if moderation is enabled
+	if (!pluginGetVariable('comments', 'moderation')) {
+		msg(array("type" => "info", "text" => "Модерация комментариев отключена"));
+		return;
+	}
+	
+	// Handle actions
+	if ($_POST['action']) {
+		switch ($_POST['action']) {
+			case 'approve':
+				if ($_POST['comments'] && is_array($_POST['comments'])) {
+					foreach ($_POST['comments'] as $comment_id) {
+						$comment_id = intval($comment_id);
+						$mysql->query("UPDATE " . prefix . "_comments SET moderated=1 WHERE id=" . db_squote($comment_id));
+						// Update comment counter in news
+						if ($comment = $mysql->record("SELECT post FROM " . prefix . "_comments WHERE id=" . db_squote($comment_id))) {
+							$mysql->query("UPDATE " . prefix . "_news SET com=com+1 WHERE id=" . db_squote($comment['post']));
+						}
+					}
+					msg(array("type" => "info", "text" => "Выбранные комментарии одобрены"));
+				}
+				break;
+			case 'delete':
+				if ($_POST['comments'] && is_array($_POST['comments'])) {
+					foreach ($_POST['comments'] as $comment_id) {
+						$comment_id = intval($comment_id);
+						$mysql->query("DELETE FROM " . prefix . "_comments WHERE id=" . db_squote($comment_id));
+					}
+					msg(array("type" => "info", "text" => "Выбранные комментарии удалены"));
+				}
+				break;
+		}
+	}
+	
+	// Get pending comments
+	$comments = array();
+	foreach ($mysql->select("SELECT c.*, n.title as news_title, n.alt_name, n.catid FROM " . prefix . "_comments c LEFT JOIN " . prefix . "_news n ON c.post = n.id WHERE c.moderated=0 ORDER BY c.postdate DESC") as $row) {
+		$row['text_preview'] = strip_tags(str_replace('<br />', ' ', $row['text']));
+		if (strlen($row['text_preview']) > 100) {
+			$row['text_preview'] = substr($row['text_preview'], 0, 100) . '...';
+		}
+		$row['date_formatted'] = LangDate('j.m.Y H:i', $row['postdate']);
+		// Generate proper news link
+		$row['news_link'] = newsGenerateLink($row);
+		$comments[] = $row;
+	}
+	
+	// Generate comments list
+	$comments_html = '';
+	if (count($comments) > 0) {
+		foreach ($comments as $comment) {
+			$comments_html .= '<tr>';
+			$comments_html .= '<td>' . secure_html($comment['author']) . '</td>';
+			$comments_html .= '<td>' . secure_html($comment['text_preview']) . '</td>';
+			$comments_html .= '<td><a href="' . $comment['news_link'] . '" target="_blank">' . secure_html($comment['news_title']) . '</a></td>';
+			$comments_html .= '<td>' . $comment['date_formatted'] . '</td>';
+			$comments_html .= '<td><input type="checkbox" name="comments[]" value="' . $comment['id'] . '"/></td>';
+			$comments_html .= '</tr>';
+		}
+	}
+	
+	// Use template from plugin
+	global $tpl;
+	$tpl->template('comments_moderation', root . '/plugins/comments/admin/tpl/');
+	$tvars['vars'] = array(
+		'comments' => $comments_html,
+		'php_self' => 'admin.php'
+	);
+	$tvars['regx'] = array();
+	if (count($comments) > 0) {
+		$tvars['regx']['#\[has_comments\](.*?)\[\/has_comments\]#is'] = '$1';
+		$tvars['regx']['#\[no_comments\](.*?)\[\/no_comments\]#is'] = '';
+	} else {
+		$tvars['regx']['#\[has_comments\](.*?)\[\/has_comments\]#is'] = '';
+		$tvars['regx']['#\[no_comments\](.*?)\[\/no_comments\]#is'] = '$1';
+	}
+	$tpl->vars('comments_moderation', $tvars);
+	$main_admin = $tpl->show('comments_moderation');
+}
+
 loadPluginLang('comments', 'main', '', '', ':');
 register_filter('news', 'comments', new CommentsNewsFilter);
 register_admin_filter('categories', 'comments', new CommentsFilterAdminCategories);
 register_plugin_page('comments', 'add', 'plugin_comments_add', 0);
 register_plugin_page('comments', 'show', 'plugin_comments_show', 0);
 register_plugin_page('comments', 'delete', 'plugin_comments_delete', 0);
+register_plugin_page('comments', 'edit', 'plugin_comments_edit', 0);
+register_plugin_page('comments', 'moderation', 'plugin_comments_moderation', 0);

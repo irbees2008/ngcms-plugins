@@ -60,9 +60,9 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 		$sql = "select c.*, " .
 			join(", ", array_map('_cs_am', $joinFilter['users']['fields'])) .
 			' from ' . prefix . '_comments c' .
-			' left join ' . uprefix . '_users u on c.author_id = u.id where c.post=' . db_squote($newsID) . ($commID ? (" and c.id=" . db_squote($commID)) : '');
+			' left join ' . uprefix . '_users u on c.author_id = u.id where c.post=' . db_squote($newsID) . ' and c.moderated=1' . ($commID ? (" and c.id=" . db_squote($commID)) : '');
 	} else {
-		$sql = "select c.* from " . prefix . "_comments c WHERE c.post=" . db_squote($newsID) . ($commID ? (" and c.id=" . db_squote($commID)) : '');
+		$sql = "select c.* from " . prefix . "_comments c WHERE c.post=" . db_squote($newsID) . ' and c.moderated=1' . ($commID ? (" and c.id=" . db_squote($commID)) : '');
 	}
 	$sql .= " order by c.id" . (pluginGetVariable('comments', 'backorder') ? ' desc' : '');
 	// Comments counter
@@ -81,8 +81,15 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 	foreach ($mysql->select($sql) as $row) {
 		$comnum++;
 		$tvars['vars']['id'] = $row['id'];
+		$tvars['vars']['delete_token'] = genUToken($row['id']);
 		$tvars['vars']['author'] = $row['author'];
 		$tvars['vars']['mail'] = $row['mail'];
+		// Информация о редактировании
+		if ($row['edit_date'] && $row['edit_date'] > 0) {
+			$tvars['vars']['edit_info'] = '<br/><small><i>Изменено: ' . LangDate($timestamp, $row['edit_date']) . '</i></small>';
+		} else {
+			$tvars['vars']['edit_info'] = '';
+		}
 		$tvars['vars']['date'] = LangDate($timestamp, $row['postdate']);
 		if ($row['reg'] && getPluginStatusActive('uprofile')) {
 			$tvars['vars']['profile_link'] = checkLinkAvailable('uprofile', 'show') ?
@@ -254,6 +261,14 @@ function comments_showform($newsID, $callingParams = array()) {
 	// Generate request URL
 	$link = generateLink('core', 'plugin', array('plugin' => 'comments', 'handler' => 'add'));
 	$tvars['vars']['post_url'] = $link;
+	// Generate delete URL
+	$delete_link = generateLink('core', 'plugin', array('plugin' => 'comments', 'handler' => 'delete'));
+	$tvars['vars']['delete_url'] = $delete_link;
+	// Generate edit URL
+	$edit_link = generateLink('core', 'plugin', array('plugin' => 'comments', 'handler' => 'edit'));
+	$tvars['vars']['edit_url'] = $edit_link;
+	// Generate delete token (will be concatenated with comment ID in JavaScript)
+	$tvars['vars']['delete_token'] = substr(genUToken(''), 0, 8);
 	// RUN interceptors
 	if (is_array($PFILTERS['comments']))
 		foreach ($PFILTERS['comments'] as $k => $v)

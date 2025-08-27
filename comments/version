@@ -1,10 +1,9 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: comments
 Name: User comments
-Version: 0.12
+Version: 0.14
 Acts: news_short, news_full, ppages, editnews, editnews_form, news, admin:mod:news, admin:mod:categories
 File: comments.php
 Config: config.php

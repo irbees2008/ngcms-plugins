@@ -87,7 +87,8 @@ function plugin_comments_install($action) {
 				'inform_admin'       => 0,
 				'global_default'     => 1,
 				'default_news'       => 2,
-				'default_categories' => 2
+				'default_categories' => 2,
+				'moderation'         => 0
 			);
 			foreach ($params as $k => $v) {
 				extra_set_param('comments', $k, $v);
