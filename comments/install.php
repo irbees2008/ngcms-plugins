@@ -49,6 +49,8 @@ function plugin_comments_install($action) {
 				array('action' => 'cmodify', 'name' => 'answer', 'type' => 'text'),
 				array('action' => 'cmodify', 'name' => 'ip', 'type' => 'char(15)', 'params' => "default ''"),
 				array('action' => 'cmodify', 'name' => 'reg', 'type' => 'tinyint(1)', 'params' => "default '0'"),
+				array('action' => 'cmodify', 'name' => 'moderated', 'type' => 'tinyint(1)', 'params' => "default '1'"),
+				array('action' => 'cmodify', 'name' => 'edit_date', 'type' => 'int', 'params' => "default '0'"),
 			)
 		),
 		array(
@@ -88,7 +90,8 @@ function plugin_comments_install($action) {
 				'global_default'     => 1,
 				'default_news'       => 2,
 				'default_categories' => 2,
-				'moderation'         => 0
+				'moderation'         => 0,
+				'moderation_groups'  => '0'
 			);
 			foreach ($params as $k => $v) {
 				extra_set_param('comments', $k, $v);
