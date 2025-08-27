@@ -30,14 +30,18 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 	$tplVars = $TemplateCache['site']['#variables'];
 	$noAvatarURL = (isset($tplVars['configuration']) && is_array($tplVars['configuration']) && isset($tplVars['configuration']['noAvatarImage']) && $tplVars['configuration']['noAvatarImage']) ? (tpl_url . "/" . $tplVars['configuration']['noAvatarImage']) : (avatars_url . "/noavatar.gif");
 	// -> desired template path
-	$templatePath = ($callingParams['overrideTemplatePath']) ? $callingParams['overrideTemplatePath'] : (tpl_site . 'plugins/comments');
+	$templatePath = ($callingParams['overrideTemplatePath']) ? $callingParams['overrideTemplatePath'] : (root . '/plugins/comments/tpl/');
 	// -> desired template
 	if ($callingParams['overrideTemplateName']) {
 		$templateName = $callingParams['overrideTemplateName'];
 	} else {
 		$templateName = 'comments.show';
 	}
-	$tpl->template($templateName, $templatePath);
+	$usePluginTemplate = file_exists($templatePath . $templateName . '.tpl');
+	if (!$usePluginTemplate) {
+		$templatePath = tpl_site . 'plugins/comments';
+		$tpl->template($templateName, $templatePath);
+	}
 	$joinFilter = array();
 	if ($config['use_avatars']) {
 		$joinFilter = array('users' => array('fields' => array('avatar')));
@@ -173,6 +177,31 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 		} else {
 			$tvars['regx']["'\[answer\](.*?)\[/answer\]'si"] = '';
 		}
+		// Check permissions for edit/delete/reply
+		$canEdit = false;
+		$canDelete = false;
+		$canAdminReply = false;
+		if (is_array($userROW)) {
+			// Admin or editor can edit/delete any comment and give admin replies
+			if (($userROW['status'] == 1) || ($userROW['status'] == 2)) {
+				$canEdit = true;
+				$canDelete = true;
+				$canAdminReply = true;
+			}
+			// User can edit/delete own comment
+			elseif ($row['author_id'] == $userROW['id']) {
+				$canEdit = true;
+				$canDelete = true;
+			}
+		}
+		
+		$tvars['vars']['can_edit'] = $canEdit;
+		$tvars['vars']['can_delete'] = $canDelete;
+		$tvars['vars']['can_admin_reply'] = $canAdminReply;
+		$tvars['vars']['text'] = $tvars['vars']['comment-short'];
+		$tvars['vars']['newsid'] = $newsID;
+		$tvars['vars']['admin_url'] = admin_url;
+		
 		if (is_array($userROW) && (($userROW['status'] == 1) || ($userROW['status'] == 2))) {
 			$edit_link = admin_url . "/admin.php?mod=editcomments&amp;newsid=" . $newsID . "&amp;comid=" . $row['id'];
 			$delete_link = generateLink('core', 'plugin', array('plugin' => 'comments', 'handler' => 'delete'), array('id' => $row['id'], 'uT' => genUToken($row['id'])), true);
@@ -198,8 +227,20 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 		// run OLD-STYLE interceptors
 		exec_acts('comments', $row);
 		// Show template
-		$tpl->vars($templateName, $tvars);
-		$output .= $tpl->show($templateName);
+		if ($usePluginTemplate) {
+			// Use Twig template from plugin
+			global $twig, $lang;
+			loadPluginLang('comments', 'site', '', '', ':');
+			$tvars['vars']['is_logged'] = is_array($userROW);
+			$tvars['vars']['config'] = ['use_bbcodes' => $config['use_bbcodes']];
+			$tvars['vars']['lang'] = $lang;
+			$xt = $twig->loadTemplate('plugins/comments/comments.show.tpl');
+			$output .= $xt->render($tvars['vars']);
+		} else {
+			// Use old template system
+			$tpl->vars($templateName, $tvars);
+			$output .= $tpl->show($templateName);
+		}
 	}
 	if ($callingParams['outprint']) {
 		return $output;
@@ -217,14 +258,18 @@ function comments_showform($newsID, $callingParams = array()) {
 
 	global $mysql, $config, $template, $tpl, $userROW, $PFILTERS;
 	// -> desired template path
-	$templatePath = ($callingParams['overrideTemplatePath']) ? $callingParams['overrideTemplatePath'] : (tpl_site . 'plugins/comments');
+	$templatePath = ($callingParams['overrideTemplatePath']) ? $callingParams['overrideTemplatePath'] : (root . '/plugins/comments/tpl/');
 	// -> desired template
 	if ($callingParams['overrideTemplateName']) {
 		$templateName = $callingParams['overrideTemplateName'];
 	} else {
 		$templateName = 'comments.form';
 	}
-	$tpl->template($templateName, $templatePath);
+	$usePluginTemplate = file_exists($templatePath . $templateName . '.tpl');
+	if (!$usePluginTemplate) {
+		$templatePath = tpl_site . 'plugins/comments';
+		$tpl->template($templateName, $templatePath);
+	}
 	if ($config['use_smilies']) {
 		$tvars['vars']['smilies'] = InsertSmilies('comments', 10);
 	} else {
@@ -242,16 +287,20 @@ function comments_showform($newsID, $callingParams = array()) {
 	if (!is_array($userROW)) {
 		$tvars['vars']['[not-logged]'] = "";
 		$tvars['vars']['[/not-logged]'] = "";
+		$tvars['vars']['not_logged'] = true;
 	} else {
 		$tvars['regx']["'\[not-logged\].*?\[/not-logged\]'si"] = "";
+		$tvars['vars']['not_logged'] = false;
 	}
 	$tvars['vars']['admin_url'] = admin_url;
 	$tvars['vars']['rand'] = rand(00000, 99999);
 	if ($config['use_captcha'] && (!is_array($userROW))) {
 		$_SESSION['captcha'] = rand(00000, 99999);
 		$tvars['regx']["'\[captcha\](.*?)\[/captcha\]'si"] = '$1';
+		$tvars['vars']['use_captcha'] = true;
 	} else {
 		$tvars['regx']["'\[captcha\](.*?)\[/captcha\]'si"] = '';
+		$tvars['vars']['use_captcha'] = false;
 	}
 	$tvars['vars']['captcha_url'] = admin_url . "/captcha.php";
 	$tvars['vars']['bbcodes'] = BBCodes("'content'");
@@ -275,8 +324,20 @@ function comments_showform($newsID, $callingParams = array()) {
 			$v->addCommentsForm($newsID, $tvars);
 	// RUN interceptors ( OLD-style )
 	exec_acts('comments_form', $row);
-	$tpl->vars($templateName, $tvars);
-	$output = $tpl->show($templateName);
+	if ($usePluginTemplate) {
+		// Use Twig template from plugin
+		global $twig, $lang;
+		loadPluginLang('comments', 'site', '', '', ':');
+		$tvars['vars']['noajax'] = $callingParams['noajax'] ? true : false;
+		$tvars['vars']['use_moderation'] = pluginGetVariable('comments', 'moderation') ? true : false;
+		$tvars['vars']['lang'] = $lang;
+		$xt = $twig->loadTemplate('plugins/comments/comments.form.tpl');
+		$output = $xt->render($tvars['vars']);
+	} else {
+		// Use old template system
+		$tpl->vars($templateName, $tvars);
+		$output = $tpl->show($templateName);
+	}
 	if ($callingParams['outprint']) {
 		return $output;
 	}

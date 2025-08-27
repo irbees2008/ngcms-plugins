@@ -191,12 +191,20 @@ function comments_add() {
 	$SQL['text'] = str_replace("\r\n", "<br />", $SQL['text']);
 	$SQL['ip'] = $ip;
 	$SQL['reg'] = ($is_member) ? '1' : '0';
-	// Модерация: админы и редакторы могут публиковать сразу
-	if (pluginGetVariable('comments', 'moderation') && (!is_array($userROW) || ($userROW['status'] > 2))) {
-		$SQL['moderated'] = 0; // На модерации
-	} else {
-		$SQL['moderated'] = 1; // Опубликован
+	// Модерация: проверяем группы пользователей
+	$needModeration = false;
+	if (pluginGetVariable('comments', 'moderation')) {
+		$moderationGroups = pluginGetVariable('comments', 'moderation_groups');
+		if ($moderationGroups) {
+			$groups = array_map('trim', explode(',', $moderationGroups));
+			$userStatus = is_array($userROW) ? $userROW['status'] : 0;
+			$needModeration = in_array($userStatus, $groups);
+		} else {
+			// Старая логика: незарегистрированные и пользователи со статусом > 2
+			$needModeration = (!is_array($userROW) || ($userROW['status'] > 2));
+		}
 	}
+	$SQL['moderated'] = $needModeration ? 0 : 1;
 	// RUN interceptors
 	load_extras('comments:add');
 	if (is_array($PFILTERS['comments']))

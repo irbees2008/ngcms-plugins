@@ -1,16 +1,226 @@
 # =========================================================================== #
 # NG CMS // Плагины // Комментарии                                            #
 # =========================================================================== #
-
- Плагин comments обеспечивает работу функционала работы с комментариями.
-На текущий момент поддерживаются только комментарии к новостям.
-В процессе работы над версией 0.9.1 функционал работы над комментариями был
-перенесён из ядра в этот плагин.
-
- В своей работе плагин comments выводит свои информационные блоки в:
- * шаблоне news.short.tpl
- * шаблоне news.full.tpl
- * собственной странице плагина (используется для постраничного отображения комментариев)
-
-
-
+Современный плагин комментариев с поддержкой Twig шаблонизатора и системой модерации.
+## Возможности
+- **Twig шаблоны** - современный синтаксис шаблонов
+- **Модерация комментариев** - настраиваемая по группам пользователей
+- **AJAX функциональность** - добавление, редактирование, удаление без перезагрузки
+- **Система прав** - гибкая настройка доступа
+- **Уведомления** - email оповещения для авторов и администраторов
+## Переменные для вставки в шаблоны новостей
+### Основная переменная
+```twig
+{{ comments }}
+или
+{{ plugin_comments }}
+```
+Автоматически выводит все комментарии и форму добавления для новости.
+### Дополнительные переменные
+```twig
+{{ comments-num }}     <!-- Количество опубликованных комментариев -->
+{{ comnum }}          <!-- Количество опубликованных комментариев (альтернативное имя) -->
+{{ comments-pending }} <!-- Количество комментариев на модерации -->
+{{ comments-total }}   <!-- Общее количество комментариев -->
+```
+### Условные блоки
+```twig
+{% if comments-num > 0 %}
+    <h3>Комментарии ({{ comments-num }})</h3>
+    {{ comments }}
+{% else %}
+    <p>Комментариев пока нет</p>
+{% endif %}
+<!-- Подробный счетчик -->
+<div class="comment-stats">
+    Комментариев: {{ comments-num }} опубликовано
+    {% if comments-pending > 0 %}
+        , {{ comments-pending }} на модерации
+    {% endif %}
+</div>
+```
+## Структура шаблонов
+### 1. comments.show.tpl - Отображение одного комментария
+**Переменные:**
+- `{{ id }}` - ID комментария
+- `{{ author }}` - Имя автора
+- `{{ date }}` - Дата комментария
+- `{{ text }}` - Текст комментария
+- `{{ avatar }}` - HTML аватара
+- `{{ profile_link }}` - Ссылка на профиль (если есть)
+- `{{ answer }}` - Ответ администратора
+- `{{ name }}` - Имя администратора (для ответа)
+- `{{ edit_info }}` - Информация о редактировании
+- `{{ comnum }}` - Номер комментария
+- `{{ alternating }}` - CSS класс для чередования
+- `{{ can_edit }}` - Может ли редактировать
+- `{{ can_delete }}` - Может ли удалить
+- `{{ can_admin_reply }}` - Может ли дать админский ответ
+- `{{ delete_token }}` - Токен безопасности для удаления
+- `{{ admin_url }}` - URL админки
+- `{{ newsid }}` - ID новости
+- `{{ ip }}` - IP адрес (для админов)
+**Пример:**
+```twig
+<li id="comment{{ id }}">
+    <div class="comment clearfix">
+        <div class="comment-avatar">
+            <div class="avatar">{{ avatar|raw }}</div>
+        </div>
+        <div class="comment-content">
+            <div class="comment-name">
+                {% if profile_link %}
+                    <a href="{{ profile_link }}">{{ author }}</a>
+                {% else %}
+                    {{ author }}
+                {% endif %}
+            </div>
+            <div class="meta">
+                {{ date }} |
+                <a onclick="quote('{{ author }}');">Ответить</a>
+                {% if can_edit %}
+                    | <a onclick="edit_comment({{ id }});">Изменить</a>
+                {% endif %}
+                {% if can_delete %}
+                    | <a onclick="delete_comment({{ id }}, '{{ delete_token }}');">Удалить</a>
+                {% endif %}
+            </div>
+            <div class="comment-text" id="comment_text_{{ id }}">
+                {{ text|raw }}
+                {% if answer %}
+                    <div class="admin-answer">
+                        <strong>Ответ {{ name }}:</strong><br/>
+                        {{ answer|raw }}
+                    </div>
+                {% endif %}
+                {{ edit_info|raw }}
+            </div>
+        </div>
+    </div>
+</li>
+```
+### 2. comments.form.tpl - Форма добавления комментария
+**Переменные:**
+- `{{ post_url }}` - URL для отправки
+- `{{ newsid }}` - ID новости с токеном
+- `{{ request_uri }}` - Текущий URI
+- `{{ savedname }}` - Сохраненное имя
+- `{{ savedmail }}` - Сохраненный email
+- `{{ bbcodes }}` - HTML кнопок BBCode
+- `{{ smilies }}` - HTML смайликов
+- `{{ captcha_url }}` - URL капчи
+- `{{ rand }}` - Случайное число для капчи
+- `{{ not_logged }}` - Не авторизован ли пользователь
+- `{{ use_captcha }}` - Использовать ли капчу
+- `{{ use_moderation }}` - Включена ли модерация
+- `{{ noajax }}` - Отключен ли AJAX
+- `{{ delete_url }}` - URL для удаления
+- `{{ edit_url }}` - URL для редактирования
+**Пример:**
+```twig
+<div class="comments-form">
+    <h3>Добавить комментарий</h3>
+    <form id="comment" method="post" action="{{ post_url }}"
+          {% if not noajax %}onsubmit="return add_comment();"{% endif %}>
+        <input type="hidden" name="newsid" value="{{ newsid }}"/>
+        {% if not_logged %}
+            <div class="form-group">
+                <label>Имя:</label>
+                <input type="text" name="name" value="{{ savedname }}" required>
+            </div>
+            <div class="form-group">
+                <label>Email:</label>
+                <input type="email" name="mail" value="{{ savedmail }}" required>
+            </div>
+        {% endif %}
+        <div class="form-group">
+            <label>Комментарий:</label>
+            <textarea name="content" id="content" required></textarea>
+            {{ bbcodes|raw }}
+            {{ smilies|raw }}
+        </div>
+        {% if use_captcha %}
+            <div class="form-group">
+                <label>Код с картинки:</label>
+                <img src="{{ captcha_url }}?rand={{ rand }}" alt="CAPTCHA">
+                <input type="text" name="vcode" required>
+            </div>
+        {% endif %}
+        <button type="submit">Отправить</button>
+    </form>
+    <div id="new_comments"></div>
+    <div id="new_comments_rev"></div>
+</div>
+```
+### 3. comments.container.tpl - Контейнер комментариев
+**Переменные:**
+- `{{ is_external }}` - Внешняя страница комментариев
+- `{{ link }}` - Ссылка на новость
+- `{{ title }}` - Заголовок новости
+- `{{ entries }}` - HTML всех комментариев
+- `{{ more_comments }}` - HTML пагинации
+- `{{ form }}` - HTML формы
+- `{{ regonly }}` - Только для зарегистрированных
+- `{{ commforbidden }}` - Комментарии запрещены
+**Пример:**
+```twig
+{% if is_external %}
+    <article class="full-post">
+        <h1><a href="{{ link }}">{{ title }}</a></h1>
+        <p>Все комментарии к данной новости</p>
+    </article>
+{% endif %}
+<div class="comments">
+    <ul>
+        <div id="new_comments_rev"></div>
+        {{ entries|raw }}
+        <div id="new_comments"></div>
+    </ul>
+</div>
+{% if more_comments %}
+    <div class="pagination">{{ more_comments|raw }}</div>
+{% endif %}
+{{ form|raw }}
+{% if regonly %}
+    <div class="alert">
+        Для комментирования необходимо
+        <a href="/register/">зарегистрироваться</a>
+    </div>
+{% endif %}
+```
+## JavaScript функции
+### Основные функции
+- `add_comment()` - Добавление комментария через AJAX
+- `delete_comment(id, token)` - Удаление комментария
+- `edit_comment(id)` - Редактирование комментария
+- `quote(author)` - Цитирование автора
+- `reload_captcha()` - Перезагрузка капчи
+### Пример использования
+```javascript
+// Цитирование
+<a onclick="quote('{{ author }}');">Ответить</a>
+// Удаление
+<a onclick="delete_comment({{ id }}, '{{ delete_token }}');">Удалить</a>
+// Редактирование
+<a onclick="edit_comment({{ id }});">Изменить</a>
+```
+## Настройки плагина
+### Основные настройки
+- **Модерация** - включение/отключение модерации
+- **Группы для модерации** - статусы пользователей для модерации (0,3,4,5)
+- **Только для зарегистрированных** - ограничение комментирования
+- **Максимальная длина** - ограничение размера комментария
+- **Уведомления** - email оповещения
+### Права доступа
+- **Администраторы (1)** - полный доступ
+- **Редакторы (2)** - модерация и редактирование
+- **Журналисты (3)** - могут модерироваться
+- **Пользователи (4)** - могут модерироваться
+- **Заблокированные (5)** - могут модерироваться
+## Модерация
+Доступна через админку: **Контент → Модерация комментариев**
+Возможности:
+- Просмотр неодобренных комментариев
+- Массовое одобрение
+- Массовое удаление
+- Просмотр контекста (ссылка на новость)

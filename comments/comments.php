@@ -91,13 +91,25 @@ class CommentsNewsFilter extends NewsFilter {
 				$allowCom = pluginGetVariable('comments', 'global_default');
 			}
 		}
+		// Get comment counts
+		global $mysql;
+		$published_count = intval($mysql->result("SELECT COUNT(*) FROM " . prefix . "_comments WHERE post=" . db_squote($newsID) . " AND moderated=1"));
+		$pending_count = intval($mysql->result("SELECT COUNT(*) FROM " . prefix . "_comments WHERE post=" . db_squote($newsID) . " AND moderated=0"));
+		$total_count = $published_count + $pending_count;
+		
 		// Fill variables within news template
-		$tvars['vars']['comments-num'] = $SQLnews['com'];
-		$tvars['vars']['comnum'] = $SQLnews['com'];
-		$tvars['regx']['[\[comheader\](.*)\[/comheader\]]'] = ($SQLnews['com']) ? '$1' : '';
+		$tvars['vars']['comments-num'] = $published_count;
+		$tvars['vars']['comnum'] = $published_count;
+		$tvars['vars']['comments-pending'] = $pending_count;
+		$tvars['vars']['comments-total'] = $total_count;
+		// Also add to template variables with correct names
+		$tvars['vars']['comments_num'] = $published_count;
+		$tvars['vars']['comments_pending'] = $pending_count;
+		$tvars['vars']['comments_total'] = $total_count;
+		$tvars['regx']['[\[comheader\](.*)\[/comheader\]]'] = ($published_count) ? '$1' : '';
 		// Blocks [comments] .. [/comments] and [nocomments] .. [/nocomments]
-		$tvars['regx']['[\[comments\](.*)\[/comments\]]'] = ($SQLnews['com']) ? '$1' : '';
-		$tvars['regx']['[\[nocomments\](.*)\[/nocomments\]]'] = ($SQLnews['com']) ? '' : '$1';
+		$tvars['regx']['[\[comments\](.*)\[/comments\]]'] = ($published_count) ? '$1' : '';
+		$tvars['regx']['[\[nocomments\](.*)\[/nocomments\]]'] = ($published_count) ? '' : '$1';
 		// Check if we need to add comments block:
 		//	* style == full
 		//  * emulate == false
@@ -162,10 +174,26 @@ class CommentsNewsFilter extends NewsFilter {
 			$tcvars['regx']['#\[regonly\](.*?)\[\/regonly\]#is'] = $allowCom ? '$1' : '';
 			$tcvars['regx']['#\[commforbidden\](.*?)\[\/commforbidden\]#is'] = $allowCom ? '' : '$1';
 		}
-		$tcvars['regx']['#\[comheader\](.*)\[/comheader\]#is'] = ($SQLnews['com']) ? '$1' : '';
-		$tpl->template('comments.internal', $templatePath);
-		$tpl->vars('comments.internal', $tcvars);
-		$tvars['vars']['plugin_comments'] = $tpl->show('comments.internal');
+		// Use Twig template from plugin
+		global $twig;
+		$templateFile = root . '/plugins/comments/tpl/comments.container.tpl';
+		if (file_exists($templateFile)) {
+			$templateContent = file_get_contents($templateFile);
+			$twigTemplate = $twig->createTemplate($templateContent);
+			$tcvars['vars']['is_external'] = false;
+			$tcvars['vars']['regonly'] = $allowCom && !$tcvars['vars']['form'];
+			$tcvars['vars']['commforbidden'] = !$allowCom;
+			loadPluginLang('comments', 'site', '', '', ':');
+			$tcvars['vars']['lang'] = $lang;
+			$tvars['vars']['plugin_comments'] = $twigTemplate->render($tcvars['vars']);
+			$tvars['vars']['comments'] = $tvars['vars']['plugin_comments'];
+		} else {
+			// Fallback to old template
+			$tcvars['regx']['#\[comheader\](.*)\[/comheader\]#is'] = ($SQLnews['com']) ? '$1' : '';
+			$tpl->template('comments.internal', $templatePath);
+			$tpl->vars('comments.internal', $tcvars);
+			$tvars['vars']['plugin_comments'] = $tpl->show('comments.internal');
+		}
 	}
 }
 
@@ -266,14 +294,10 @@ function plugin_comments_add() {
 	} else {
 		// Some errors.
 		if ($_REQUEST['ajax']) {
-			// AJAX MODE
-			// Set default template path [from site template / comments plugin subdirectory]
-			$templatePath = tpl_site . 'plugins/comments';
-			$tpl->template('comments.error', $templatePath);
-			$tpl->vars('comments.error', array('vars' => array('content' => $template['vars']['mainblock'])));
+			// AJAX MODE - return error in JSON
 			$output = array(
 				'status' => 0,
-				'data' => $tpl->show('comments.error'),
+				'data' => $template['vars']['mainblock'],
 			);
 			print json_encode($output);
 			$template['vars']['mainblock'] = '';
@@ -368,13 +392,29 @@ function plugin_comments_show() {
 		$tcvars['regx']['#\[regonly\](.*?)\[\/regonly\]#is'] = $allowCom ? '$1' : '';
 		$tcvars['regx']['#\[commforbidden\](.*?)\[\/commforbidden\]#is'] = $allowCom ? '' : '$1';
 	}
-	// Show header file
-	$tcvars['vars']['link'] = newsGenerateLink($newsRow);
-	$tcvars['vars']['title'] = secure_html($newsRow['title']);
-	$tcvars['regx']['[\[comheader\](.*)\[/comheader\]]'] = ($newsRow['com']) ? '$1' : '';
-	$tpl->template('comments.external', $templatePath);
-	$tpl->vars('comments.external', $tcvars);
-	$template['vars']['mainblock'] .= $tpl->show('comments.external');
+	// Use Twig template from plugin
+	global $twig;
+	$templateFile = root . '/plugins/comments/tpl/comments.container.tpl';
+	if (file_exists($templateFile)) {
+		$templateContent = file_get_contents($templateFile);
+		$twigTemplate = $twig->createTemplate($templateContent);
+		$tcvars['vars']['is_external'] = true;
+		$tcvars['vars']['link'] = newsGenerateLink($newsRow);
+		$tcvars['vars']['title'] = secure_html($newsRow['title']);
+		$tcvars['vars']['regonly'] = $allowCom && !$tcvars['vars']['form'];
+		$tcvars['vars']['commforbidden'] = !$allowCom;
+		loadPluginLang('comments', 'site', '', '', ':');
+		$tcvars['vars']['lang'] = $lang;
+		$template['vars']['mainblock'] .= $twigTemplate->render($tcvars['vars']);
+	} else {
+		// Fallback to old template
+		$tcvars['vars']['link'] = newsGenerateLink($newsRow);
+		$tcvars['vars']['title'] = secure_html($newsRow['title']);
+		$tcvars['regx']['[\[comheader\](.*)\[/comheader\]]'] = ($newsRow['com']) ? '$1' : '';
+		$tpl->template('comments.external', $templatePath);
+		$tpl->vars('comments.external', $tcvars);
+		$template['vars']['mainblock'] .= $tpl->show('comments.external');
+	}
 }
 
 // Delete comment
@@ -520,7 +560,7 @@ function plugin_comments_moderation() {
 	
 	// Check if moderation is enabled
 	if (!pluginGetVariable('comments', 'moderation')) {
-		msg(array("type" => "info", "text" => "Модерация комментариев отключена"));
+		msg(array("type" => "info", "text" => $lang['comments:moderation.disabled']));
 		return;
 	}
 	
@@ -537,7 +577,7 @@ function plugin_comments_moderation() {
 							$mysql->query("UPDATE " . prefix . "_news SET com=com+1 WHERE id=" . db_squote($comment['post']));
 						}
 					}
-					msg(array("type" => "info", "text" => "Выбранные комментарии одобрены"));
+					msg(array("type" => "info", "text" => $lang['comments:moderation.approved']));
 				}
 				break;
 			case 'delete':
@@ -546,7 +586,7 @@ function plugin_comments_moderation() {
 						$comment_id = intval($comment_id);
 						$mysql->query("DELETE FROM " . prefix . "_comments WHERE id=" . db_squote($comment_id));
 					}
-					msg(array("type" => "info", "text" => "Выбранные комментарии удалены"));
+					msg(array("type" => "info", "text" => $lang['comments:moderation.deleted']));
 				}
 				break;
 		}
@@ -565,38 +605,47 @@ function plugin_comments_moderation() {
 		$comments[] = $row;
 	}
 	
-	// Generate comments list
-	$comments_html = '';
-	if (count($comments) > 0) {
-		foreach ($comments as $comment) {
-			$comments_html .= '<tr>';
-			$comments_html .= '<td>' . secure_html($comment['author']) . '</td>';
-			$comments_html .= '<td>' . secure_html($comment['text_preview']) . '</td>';
-			$comments_html .= '<td><a href="' . $comment['news_link'] . '" target="_blank">' . secure_html($comment['news_title']) . '</a></td>';
-			$comments_html .= '<td>' . $comment['date_formatted'] . '</td>';
-			$comments_html .= '<td><input type="checkbox" name="comments[]" value="' . $comment['id'] . '"/></td>';
-			$comments_html .= '</tr>';
+	// Load language
+	loadPluginLang('comments', 'admin', '', '', ':');
+	
+	// Use Twig template from plugin
+	$templatePath = root . '/plugins/comments/admin/tpl/comments_moderation.tpl';
+	if (file_exists($templatePath)) {
+		$templateContent = file_get_contents($templatePath);
+		$template = $twig->createTemplate($templateContent);
+		$main_admin = $template->render(array(
+			'comments' => $comments,
+			'count' => count($comments),
+			'php_self' => 'admin.php',
+			'lang' => $lang
+		));
+	} else {
+		$main_admin = '<div class="alert alert-error">Template not found</div>';
+	}
+}
+
+// Add comments variable to news template
+function comments_add_to_news($newsID, &$tvars) {
+	if (pluginGetVariable('comments', 'enabled')) {
+		ob_start();
+		comments_show($newsID);
+		comments_showform($newsID);
+		$comments_output = ob_get_clean();
+		$tvars['vars']['comments'] = $comments_output;
+	}
+}
+
+// Register filter for news display
+if (!class_exists('CommentsNewsFilter')) {
+	class CommentsNewsFilter {
+		function showNews($newsID, $row, &$tvars) {
+			comments_add_to_news($newsID, $tvars);
 		}
 	}
-	
-	// Use template from plugin
-	global $tpl;
-	$tpl->template('comments_moderation', root . '/plugins/comments/admin/tpl/');
-	$tvars['vars'] = array(
-		'comments' => $comments_html,
-		'php_self' => 'admin.php'
-	);
-	$tvars['regx'] = array();
-	if (count($comments) > 0) {
-		$tvars['regx']['#\[has_comments\](.*?)\[\/has_comments\]#is'] = '$1';
-		$tvars['regx']['#\[no_comments\](.*?)\[\/no_comments\]#is'] = '';
-	} else {
-		$tvars['regx']['#\[has_comments\](.*?)\[\/has_comments\]#is'] = '';
-		$tvars['regx']['#\[no_comments\](.*?)\[\/no_comments\]#is'] = '$1';
-	}
-	$tpl->vars('comments_moderation', $tvars);
-	$main_admin = $tpl->show('comments_moderation');
 }
+
+if (!isset($PFILTERS['news'])) $PFILTERS['news'] = array();
+$PFILTERS['news'][] = new CommentsNewsFilter();
 
 loadPluginLang('comments', 'main', '', '', ':');
 register_filter('news', 'comments', new CommentsNewsFilter);
