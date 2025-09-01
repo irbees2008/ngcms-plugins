@@ -2,6 +2,10 @@
 if (!defined('NGCMS')) exit('HAL');
 pluginsLoadConfig();
 LoadPluginLang('ads_pro', 'config', '', '', ':');
+// Загружаем основной файл плагина для доступа к функции синхронизации
+if (!function_exists('ads_pro_sync_with_database')) {
+	include_once dirname(__FILE__) . '/ads_pro.php';
+}
 //pluginSetVariable('ads_pro', 'data', array());
 //pluginsSaveConfig();
 switch ($_REQUEST['action']) {
@@ -96,6 +100,10 @@ function showlist() {
 	global $tpl, $lang;
 	$tpath = locatePluginTemplates(array('conf.main', 'conf.list', 'conf.list.row'), 'ads_pro', 1);
 	$var = pluginGetVariable('ads_pro', 'data');
+	// Синхронизация с базой данных
+	if (function_exists('ads_pro_sync_with_database')) {
+		$var = ads_pro_sync_with_database($var);
+	}
 	$output = '';
 	$t_time = time();
 	$t_state = array(0 => $lang['ads_pro:label_off'], 1 => $lang['ads_pro:label_on'], 2 => $lang['ads_pro:label_sched']);
@@ -134,6 +142,10 @@ function add() {
 	$PluginsList = getPluginsActiveList();
 	// Load config
 	$pConfig = pluginGetVariable('ads_pro', 'data');
+	// Синхронизация с базой данных
+	if (function_exists('ads_pro_sync_with_database')) {
+		$pConfig = ads_pro_sync_with_database($pConfig);
+	}
 	//print "<pre>".var_export($pConfig, true)."</pre>";
 	$id = isset($_REQUEST['id']) ? intval($_REQUEST['id']) : 0;
 	$var = '';

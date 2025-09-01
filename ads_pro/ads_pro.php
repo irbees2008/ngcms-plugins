@@ -55,6 +55,9 @@ function plugin_ads_pro() {
 	global $template, $config, $CurrentHandler, $catmap, $mysql, $adsPRO_cache;
 	$dataConfig = pluginGetVariable('ads_pro', 'data');
 	if (!is_array($dataConfig)) return;
+	
+	// Синхронизация с базой данных при переносе сайта
+	$dataConfig = ads_pro_sync_with_database($dataConfig);
 	if ($CurrentHandler['params'][0] == '/') $adsPRO_cache['flag.main'] = true;
 	if (isset($CurrentHandler['params']['catid'])) {
 		$adsPRO_cache['flag.category'] = true;
@@ -242,4 +245,86 @@ function plugin_ads_pro() {
 			}
 		}
 	}
+}
+
+// Функция синхронизации данных плагина с базой данных
+function ads_pro_sync_with_database($dataConfig) {
+	global $mysql;
+	
+	// Получаем все ID из базы данных
+	$dbIds = array();
+	foreach ($mysql->select('SELECT id FROM ' . prefix . '_ads_pro') as $row) {
+		$dbIds[] = intval($row['id']);
+	}
+	
+	// Получаем все ID из конфигурации
+	$configIds = array();
+	foreach ($dataConfig as $blockName => $blocks) {
+		foreach ($blocks as $blockId => $blockData) {
+			$configIds[] = intval($blockId);
+		}
+	}
+	
+	// Проверяем, есть ли расхождения
+	$missingInDb = array_diff($configIds, $dbIds);
+	$missingInConfig = array_diff($dbIds, $configIds);
+	
+	// Если есть ID в конфиге, которых нет в БД - удаляем их из конфига
+	if (!empty($missingInDb)) {
+		foreach ($dataConfig as $blockName => &$blocks) {
+			foreach ($blocks as $blockId => $blockData) {
+				if (in_array(intval($blockId), $missingInDb)) {
+					unset($blocks[$blockId]);
+				}
+			}
+			// Удаляем пустые блоки
+			if (empty($blocks)) {
+				unset($dataConfig[$blockName]);
+			}
+		}
+	}
+	
+	// Если есть ID в БД, которых нет в конфиге - пытаемся найти их в исходных данных
+	if (!empty($missingInConfig)) {
+		// Сначала ищем в исходной конфигурации
+		$originalConfig = pluginGetVariable('ads_pro', 'data');
+		$foundInOriginal = array();
+		
+		foreach ($missingInConfig as $dbId) {
+			// Ищем этот ID в исходной конфигурации
+			foreach ($originalConfig as $blockName => $blocks) {
+				foreach ($blocks as $blockId => $blockData) {
+					if (intval($blockId) == $dbId) {
+						// Найден в исходной конфигурации - восстанавливаем
+						$dataConfig[$blockName][$dbId] = $blockData;
+						$foundInOriginal[] = $dbId;
+						break 2;
+					}
+				}
+			}
+		}
+		
+		// Для ID, которых нет в исходной конфигурации, создаем базовую структуру
+		$notFoundInOriginal = array_diff($missingInConfig, $foundInOriginal);
+		foreach ($notFoundInOriginal as $dbId) {
+			$row = $mysql->record('SELECT * FROM ' . prefix . '_ads_pro WHERE id = ' . intval($dbId));
+			if ($row) {
+				$blockName = 'fase';
+				$dataConfig[$blockName][$dbId] = array(
+					'description' => $row['description'] ? $row['description'] : 'Восстановленный блок',
+					'type' => intval($row['type']),
+					'state' => intval($row['state']),
+					'start_view' => $row['start_view'] ? intval($row['start_view']) : null,
+					'end_view' => $row['end_view'] ? intval($row['end_view']) : null,
+					'location' => $row['location'] ? unserialize($row['location']) : array(1 => array('mode' => 0, 'view' => 0))
+				);
+			}
+		}
+		
+		// Сохраняем обновленную конфигурацию
+		pluginSetVariable('ads_pro', 'data', $dataConfig);
+		pluginsSaveConfig();
+	}
+	
+	return $dataConfig;
 }
