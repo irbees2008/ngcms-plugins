@@ -53,7 +53,7 @@ function xf_configSave($xf = null)
  * @param  string|null  $text
  * @return array
  */
-function xf_decode(string $text = null): array
+function xf_decode(?string $text = null): array
 {
     // Если строка пустая, то и массив возвращаем пустым.
     if (empty($text)) {
