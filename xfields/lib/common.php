@@ -1,5 +1,4 @@
 <?php
-
 // Global XF variables
 global $XF;
 global $XF_loaded;
@@ -17,16 +16,13 @@ function xf_configLoad()
     }
     if (!file_exists($confdir.'/config.php')) {
         $XF_loaded = 1;
-
         return ['news' => []];
     }
     include $confdir.'/config.php';
     $XF_loaded = 1;
     $XF = is_array($xarray) ? $xarray : ['news' => []];
-
     return $XF;
 }
-
 // Save fields definition
 function xf_configSave($xf = null)
 {
@@ -44,10 +40,8 @@ function xf_configSave($xf = null)
     // Write config
     fwrite($fn, "<?php\n\$xarray = ".var_export(is_array($xf) ? $xf : $XF, true).";\n");
     fclose($fn);
-
     return true;
 }
-
 /**
  * Декодирование поля из текстовой строки.
  * @param  string|null  $text
@@ -59,61 +53,61 @@ function xf_decode(?string $text = null): array
     if (empty($text)) {
         return [];
     }
-
     // Если предоставленая строка является псевдо-серилизованной строкой.
     if (mb_substr($text, 0, 4) == "SER|") {
         // Обрезаем маркер серилизованной строки.
         $serialized = mb_substr($text, 4);
-
         // Пытаемся десериализовать строку.
         $xfields = unserialize($serialized);
-
         // Если успешно десериализовали, то возвращаем.
         if (is_array($xfields)) {
             return $xfields;
         }
-
         // Если не получилось конвертировать, то пытаемся изменить кодировку.
-        $converted = mb_convert_encoding($serialized, 'utf-8');
-
+        // ВАЖНО: используем CP1251 как в старом рабочем коде
+        $converted = mb_convert_encoding($serialized, 'UTF-8', 'CP1251');
         // Пытаемся десериализовать строку.
         $xfields = unserialize($converted);
-
         // Если успешно десериализовали, то проблема была в кодировке.
         if (is_array($xfields)) {
+            return $xfields;
+        }
+        // Дополнительная попытка: пробуем обратную конвертацию
+        $converted2 = mb_convert_encoding($serialized, 'CP1251', 'UTF-8');
+        $xfields = unserialize($converted2);
+        if (is_array($xfields)) {
             return array_map(function ($xfield) {
-                // Обратно конвертируем и возвращаем каждое поле.
-                return $xfield;
+                // Конвертируем обратно в UTF-8
+                return mb_convert_encoding($xfield, 'UTF-8', 'CP1251');
             }, $xfields);
         }
-
         // Если ничего не помогло, возвращаем пустой массив.
         return [];
     }
     // OLD METHOD. OBSOLETE but supported for reading
+    $data = [];
     $xfieldsdata = explode('||', $text);
     foreach ($xfieldsdata as $xfielddata) {
-        list($xfielddataname, $xfielddatavalue) = explode('|', $xfielddata);
+        if (strpos($xfielddata, '|') === false) {
+            continue;
+        }
+        list($xfielddataname, $xfielddatavalue) = explode('|', $xfielddata, 2);
         $xfielddataname = str_replace('&#124;', '|', $xfielddataname);
         $xfielddataname = str_replace('__NEWL__', "\r\n", $xfielddataname);
         $xfielddatavalue = str_replace('&#124;', '|', $xfielddatavalue);
         $xfielddatavalue = str_replace('__NEWL__', "\r\n", $xfielddatavalue);
         $data[$xfielddataname] = $xfielddatavalue;
     }
-
     return $data;
 }
-
 // Encode fields into text
 function xf_encode($fields)
 {
     if (!is_array($fields)) {
         return '';
     }
-
-    return 'SER|'.serialize($fields);
+    return 'SER|' . serialize($fields);
 }
-
 function xf_getTableBySectionID($sectionID)
 {
     switch ($sectionID) {
@@ -124,10 +118,8 @@ function xf_getTableBySectionID($sectionID)
         case 'tdata':
             return prefix.'_xfields';
     }
-
     return false;
 }
-
 //
 // Class for managing xfields data processing
 class XFieldsFilter
