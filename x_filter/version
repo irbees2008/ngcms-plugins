@@ -19,5 +19,5 @@ Description: Фильтр новостей по категориям и допо
 Information: Фильтр новостей по категориям и дополнительным полям.
 Author: rusiq
 Author_URI: https://github.com/russsiq
-MinEngineBuild: 3740369
+MinEngineBuild: 23b3116
 Icons: <i class="fa fa-filter fa-3x" aria-hidden="true"></i>

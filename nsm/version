@@ -16,5 +16,5 @@ Description: Позволяет добавлять/редактировать н
 Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru/
 preinstall: no
-MinEngineBuild: 3740369
+MinEngineBuild: 23b3116
 Icons: <i class="fa fa-object-group fa-3x" aria-hidden="true"></i>

@@ -18,5 +18,5 @@ URI: http://no_url.com/
 Title: BitTorrent трекер
 Information: Позволяет превратить ваш сайт в BitTorrent трекер
 Preinstall: no
-MinEngineBuild: 3740369
+MinEngineBuild: 23b3116
 Icons: <i class="fa fa-magnet fa-3x" aria-hidden="true"></i>

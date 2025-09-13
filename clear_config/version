@@ -8,5 +8,5 @@ Description: Удаляет настройки плагинов из файло�
 Author: Ivan Litvinenko (Amarelius)
 Author_URI: http://arnit.com.ua/
 preinstall: no
-MinEngineBuild: 3740369
+MinEngineBuild: 23b3116
 Icons: <i class="fa fa-trash-o fa-3x" aria-hidden="true"></i>

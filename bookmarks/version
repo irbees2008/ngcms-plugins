@@ -1,3 +1,6 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
 ID: bookmarks
 Name: Users Bookmarks
 Version: 2.6
@@ -10,5 +13,5 @@ Config: config.php
 Description: Закладки пользователей
 Author: Wolverine, kt2k
 Author_URI: http://digitalplace.ru/
-MinEngineBuild: 3740369
+MinEngineBuild: 23b3116
 Icons: <i class="fa fa-bookmark-o fa-3x" aria-hidden="true"></i>

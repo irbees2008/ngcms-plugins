@@ -14,5 +14,5 @@ Author_URI:
 Title: Редактор Robots.txt
 Information: Позволяет управлять файлом robots.txt через админ-панель
 Preinstall: default_no
-MinEngineBuild: 2020731
+MinEngineBuild: 23b3116
 Icons: <i class="fa fa-android fa-3x" aria-hidden="true"></i>

@@ -17,5 +17,5 @@ Author_URI: http://ngcms.ru
 Title: Новости пользователя
 Information: Позволяет отобразить все новости конкретного пользователя
 Preinstall: no
-MinEngineBuild: 3740369
+MinEngineBuild: 23b3116
 Icons: <i class="fa fa-newspaper-o fa-3x" aria-hidden="true"></i>

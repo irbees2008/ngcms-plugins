@@ -2,8 +2,8 @@
 	<div class="row mb-2">
 		<div class="col-sm-6">
 			<h1 class="m-0 text-dark" style="padding: 20px 0 0 0;">
-				<a href="?mod=extra-config&plugin=ads_pro">ads_pro</a>
-				&#8594; {action}</h1>
+				ads_pro
+			</h1>
 		</div>
 		<!-- /.col -->
 		<div class="col-sm-6">

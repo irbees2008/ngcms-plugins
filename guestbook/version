@@ -17,5 +17,5 @@ Author_URI: https://github.com/web-padawan
 Title: Гостевая книга
 Information: Плагин позволяет организовать на сайте гостевую книгу.
 Preinstall: default_no
-MinEngineBuild: 3740369
+MinEngineBuild: 23b3116
 Icons: <i class="fa fa-users fa-3x" aria-hidden="true"></i>

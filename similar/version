@@ -16,5 +16,5 @@ Author: Vitaly A. Ponomarev
 Author_URI: http://2lib.ru
 Title: Похожие новости
 Information: Позволяет проводить перелинковку новостей на базе плагина <b>tags</b> (Облако тегов)
-MinEngineBuild: 3740369
+MinEngineBuild: 23b3116
 Icons: <i class="fa fa-clone fa-3x" aria-hidden="true"></i>

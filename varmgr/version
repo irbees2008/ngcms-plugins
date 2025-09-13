@@ -14,5 +14,5 @@ Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru/
 Title: Менеджер переменных в новостях
 Information: Добавляет новые переменные управления датой новости, а также позволяет заменить формат отображения даты. Идеален для графического отображения даты.
-MinEngineBuild: 3740369
+MinEngineBuild: 23b3116
 Icons: <i class="fa fa-calendar-plus-o fa-3x" aria-hidden="true"></i>
