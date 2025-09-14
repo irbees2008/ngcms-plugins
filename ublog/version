@@ -1,9 +1,8 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: ublog
-Name: User's blog
+Name: Users blog
 Version: 0.03
 Acts: ppages, action.ppages.uprofile
 File: ublog.php

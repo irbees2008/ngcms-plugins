@@ -9,10 +9,10 @@ File: robots_editor.php
 Config: config.php
 Type: plugin
 Description: Плагин для редактирования файла robots.txt
-Author: Your Name
+Author: irbees2008
 Author_URI:
 Title: Редактор Robots.txt
 Information: Позволяет управлять файлом robots.txt через админ-панель
-Preinstall: default_no
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-android fa-3x" aria-hidden="true"></i>

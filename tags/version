@@ -1,7 +1,6 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: tags
 Name: Теги
 Version: 0.25
@@ -18,5 +17,6 @@ Author_URI: http://ngcms.ru/
 URI: http://no_url.com/
 Title: Облако тегов
 Information: Показывает массив ключевых слов, созданных в новости. Чем чаще ключевое слово встречается в новостях, тем сильнее выделяется данное слово в &quot;облаке&quot;.
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-tags fa-3x" aria-hidden="true"></i>

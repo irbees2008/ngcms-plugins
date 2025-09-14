@@ -1,3 +1,6 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
 ID: top_active_users
 Name: Top active users
 Version: 0.4
@@ -8,6 +11,6 @@ Type: plugin
 Description: Топ активных пользователей
 Author: Rostunov Sergey
 Author_URI: http://rostunov.com
-preinstall: no
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-users fa-3x" aria-hidden="true"></i>

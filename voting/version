@@ -1,7 +1,6 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: voting
 Name: Voting manager
 Version: 0.16
@@ -16,5 +15,6 @@ Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru/
 Title: Голосование на сайте
 Information: Добавляет блок голосований на сайте, позволяет одновременно проводить несколько голосований и видеть результаты голосований на отдельной страничке.
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-check-square-o fa-3x" aria-hidden="true"></i>

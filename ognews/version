@@ -1,3 +1,6 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
 ID: ognews
 Name: Open Graph Tags
 Version: 0.04
@@ -8,6 +11,6 @@ Description: ognews example
 Information: ognews example
 Author: Rostunov Sergey,irbees2008
 Author_URI: http://rostunov.com/  https://ngcmshak.ru
-preinstall: no
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa Example of terminal fa-terminal fa-3x" aria-hidden="true"></i>

@@ -1,3 +1,6 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
 ID: sitemap
 Name: Site Map
 Version: 1.2
@@ -8,4 +11,6 @@ Type: plugin
 Description: Карта сайта
 Author: Wolverine, kt2k
 Author_URI: http://digitalplace.ru/
+Preinstall: no
+MinEngineBuild: 23b3116
 Icons: <i class="fa fa-sitemap fa-3x" aria-hidden="true"></i>

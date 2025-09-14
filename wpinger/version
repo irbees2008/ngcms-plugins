@@ -1,7 +1,6 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: wpinger
 Name: Weblog pinger
 Version: 0.03
@@ -15,5 +14,6 @@ Description: Weblog pinged extension
 Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru/
 Information: Плагин для информирования внешних систем об обновлениях на вашем сайте
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-rss fa-3x" aria-hidden="true"></i>

@@ -15,6 +15,6 @@ Author: Vitaly A. Ponomarev
 Author_URI: http://2lib.ru/
 Actions: admin:mod:categories; xmenu_adm.php
 Actions: index; xmenu.php
-Preinstall: default_no
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-bars fa-3x" aria-hidden="true"></i>

@@ -1,3 +1,6 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
 ID: check_pda
 Name: check_pda
 Version: 0.2
@@ -7,6 +10,8 @@ Type: plugin
 Description: check_pda
 Author: Rostunov S. U.
 Author_URI: http://rostunov.com/
-preinstall: no
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-tablet fa-3x" aria-hidden="true"></i>
+Title: check_pda
+Information: check_pda

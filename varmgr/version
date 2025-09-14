@@ -1,7 +1,6 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: varmgr
 Name: Variable manager
 Version: 0.04
@@ -14,5 +13,6 @@ Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru/
 Title: Менеджер переменных в новостях
 Information: Добавляет новые переменные управления датой новости, а также позволяет заменить формат отображения даты. Идеален для графического отображения даты.
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-calendar-plus-o fa-3x" aria-hidden="true"></i>

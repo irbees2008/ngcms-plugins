@@ -1,7 +1,6 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: complain
 Name: Сообщить о проблеме в новости
 Version: 0.06
@@ -14,5 +13,6 @@ Type: plugin
 Title: Сообщить о проблеме в новости
 Description: Позволяет сообщить автору новости/администратору о проблеме
 Author: Vitaly A. Ponomarev
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-exclamation-triangle fa-3x" aria-hidden="true"></i>

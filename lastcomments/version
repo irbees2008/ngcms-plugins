@@ -14,7 +14,7 @@ Description: Вывод последних комментариев
 Author:  SwiZZeR, EsCaPeR, Vitaly, Megaket4up,irbees2008
 Title: Последние комментарии
 Information: Отображение последних комментариев, оставленных на страницах сайта
-Preinstall: default_no
+Preinstall: no
 Preinstall_vars: cache="1"; cacheExpire="3600";
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-commenting fa-3x" aria-hidden="true"></i>

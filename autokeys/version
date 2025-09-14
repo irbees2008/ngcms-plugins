@@ -1,3 +1,6 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
 ID: autokeys
 Name: Auto Keywords
 Version: 0.4
@@ -8,5 +11,6 @@ Config:config.php
 Type: plugin
 Description: Автоматическое добавление поля keywords
 Author: Maxym A. Dogadaylo
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-key fa-3x" aria-hidden="true"></i>

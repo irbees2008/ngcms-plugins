@@ -12,7 +12,7 @@ Description: Импорт новостей через RSS
 Author:  Dzmitry Khadorkin,irbees2008
 Title: RSS news importer
 Information: Импорт новостей через RSS
-Preinstall: default_no
+Preinstall:no
 Preinstall_vars: cache="1"; cacheExpire="3600";
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-rss fa-3x" aria-hidden="true"></i>

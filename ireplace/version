@@ -1,7 +1,6 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: ireplace
 Name: Search and Replace
 Version: 0.01
@@ -10,5 +9,6 @@ Type: maintanance
 Description: Замена подстрок в БД
 Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru/
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-exchange fa-3x" aria-hidden="true"></i>

@@ -1,3 +1,6 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
 ID: xsyslog
 Name: Журнал действий пользователей
 Version: 0.3
@@ -7,6 +10,6 @@ Title: Журнал действий пользователей
 Description: Просмотр журнала действий пользователей
 Author: Rostunov Sergey
 Author_URI: http://rostunov.com
-preinstall: no
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-bar-chart fa-3x" aria-hidden="true"></i>

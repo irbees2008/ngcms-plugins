@@ -1,7 +1,6 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: suser
 Name: Sorting Users
 Version: 0.5
@@ -13,5 +12,6 @@ Description: поиск и сортировка пользователей
 Author: Rostunov Sergey, Zemlemer
 Title: поиск и сортировка пользователей
 Information: плагин позволяет осуществлять поиск по пользователям и просматривать их список
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-users fa-3x" aria-hidden="true"></i>

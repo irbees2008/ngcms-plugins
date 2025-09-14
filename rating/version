@@ -1,7 +1,6 @@
 ;
 ; Version description file for plugin @@ Next Geration CMS
 ;
-
 ID: rating
 Name: Рейтинг новостей
 Name_EN: News rating
@@ -14,7 +13,7 @@ Description: Ведение рейтинга новостей
 Description_EN: Manage news rating
 Author: SwiZZeR &amp; Vitaly A. Ponomarev
 Title: Рейтинг новостей
-Preinstall: default_no
+Preinstall:no
 Information: Ведение и отображение пользовательского рейтинга новостей (выставляется рейтинг от 1 до 5)
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-line-chart fa-3x" aria-hidden="true"></i>

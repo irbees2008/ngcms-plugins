@@ -1,3 +1,6 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
 ID: re_stat
 Name: Перенаправление статики
 Version: 0.02
@@ -8,6 +11,7 @@ Title: Перенаправление статических страниц
 Description: Управление перенаправлением статических страниц
 Author: Ivan Litvinenko (Amarelius)
 Author_URI: http://arnit.com.ua/
-preinstall: no
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-exchange fa-3x" aria-hidden="true"></i>
+Information: Позволяет настроить перенаправление статических страниц на другие URL.

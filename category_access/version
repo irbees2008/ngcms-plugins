@@ -1,3 +1,6 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
 ID: category_access
 Name: Доступ к категориям
 Version: 0.01
@@ -9,6 +12,6 @@ Description: Плагин позволяет Вам управлять дост�
 Information: Плагин позволяет Вам управлять доступом пользователей в категории
 Author: Ivan Litvinenko (Amarelius)
 Author_URI: http://arnit.com.ua/
-preinstall: no
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-minus-circle fa-3x" aria-hidden="true"></i>

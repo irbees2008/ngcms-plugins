@@ -1,7 +1,6 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: guestbook
 Name: Гостевая книга
 Version: 2.2
@@ -16,6 +15,6 @@ Author: Sergey Kulikov
 Author_URI: https://github.com/web-padawan
 Title: Гостевая книга
 Information: Плагин позволяет организовать на сайте гостевую книгу.
-Preinstall: default_no
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-users fa-3x" aria-hidden="true"></i>

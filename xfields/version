@@ -1,7 +1,6 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: xfields
 Name: Custom fields
 Version: 0.32
@@ -11,6 +10,7 @@ Actions: rpc;lib/librpc.php
 Config: config.php
 Install: install.php
 Deinstall: uninstall.php
+Library: common; lib/common.php
 Type: plugin
 Description: Дополнительные поля
 Author: Vitaly A. Ponomarev
@@ -18,6 +18,5 @@ Author_URI: http://ngcms.ru
 Title: Дополнительные поля
 Information: Позволяет создавать пользовательские дополнительные поля в новостях.
 Preinstall: no
-Library: common; lib/common.php
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-list-alt fa-3x" aria-hidden="true"></i>

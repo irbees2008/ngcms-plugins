@@ -1,7 +1,6 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: feedback
 Name: Feedback forms
 Version: 0.30
@@ -17,5 +16,6 @@ Author_URI: http://ngcms.ru
 Title: Формы обратной связи
 Information: Позволяет создавать различные формы обратной связи.
 Library: common; lib/common.php
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-comment-o fa-3x" aria-hidden="true"></i>

@@ -1,3 +1,6 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
 ID: text_replace
 Name: Подмена слов на ссылки
 Version: 0.01
@@ -5,10 +8,10 @@ Actions: news; text_replace.php
 Config: config.php
 Type: plugin
 Title: Подмена слов на ссылки
-Description: -
-Information: -
-Author: Nail' R. Davydov (ROZARD)
+Description: Подмена слов на ссылки
+Information: Подмена слов на ссылки
+Author: Nail R. Davydov (ROZARD)
 Author_URI: http://rozard.ngdemo.ru
-preinstall: no
-MinEngineBuild: 
+Preinstall: no
+MinEngineBuild:
 Icons: <i class="fa fa-link fa-3x" aria-hidden="true"></i>

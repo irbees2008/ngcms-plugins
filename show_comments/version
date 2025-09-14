@@ -1,7 +1,6 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: show_comments
 Name: Show Comments
 Version: 0.5
@@ -10,5 +9,6 @@ Type: maintanance
 Description: Плагин выводит список всех комментариев на сайте
 Author: Rostunov Sergey
 Author_URI: http://rostunov.com/
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-comment-o fa-3x" aria-hidden="true"></i>

@@ -11,7 +11,7 @@ Type: widget
 Title: Архив новостей
 Description: Показать архив новостей сайта
 Information: Отображает список месяцев, в которые были размещены новости. При клике на конкретный месяц будут отображаться новости за этот месяц.
-Preinstall: default_no
+Preinstall: no
 Preinstall_vars: maxnum="12"; counter="1"; cache="1"; cacheExpire="3600";
 Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru/

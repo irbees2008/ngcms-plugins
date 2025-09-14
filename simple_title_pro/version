@@ -1,3 +1,6 @@
+;
+; Version description file for plugin @@ Next Geration CMS
+;
 ID: simple_title_pro
 Name: Simple Title
 Version: 0.2
@@ -8,8 +11,9 @@ Install: install.php
 Deinstall: uninstall.php
 Type: plugin
 Description: Управление заголовками страниц
-Author: Nail' R. Davydov (ROZARD)
+Information: Позволяет гибко управлять заголовками страниц сайта, включая поддержку Open Graph и Twitter Cards.
+Author: Nail R. Davydov (ROZARD)
 Author_URI: http://rozard.ngdemo.ru/
-preinstall: no
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-pencil-square-o fa-3x" aria-hidden="true"></i>

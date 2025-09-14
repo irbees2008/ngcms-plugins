@@ -1,7 +1,6 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: rss_yandex
 Name: Экспорт RSS потока для Яndex
 Name_EN: RSS export for Yandex
@@ -16,7 +15,7 @@ Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru/
 Preinstall_vars: feed_title_format="site_title"; news_title="1"; news_count="30"; use_hide="1"
 Title: Экспорт RSS потока для Яndex
-Preinstall: default_no
+Preinstall: no
 Information: Генерирует специальный RSS поток для поисковика Яndex
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-rss fa-3x" aria-hidden="true"></i>

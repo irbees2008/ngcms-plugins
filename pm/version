@@ -1,7 +1,6 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: pm
 Name: Личные сообщения
 Version: 0.8
@@ -11,13 +10,13 @@ File: pm.php
 Install: install.php
 Deinstall: uninstall.php
 Config: config.php
+Library: lib; lib/pm.lib.php
 Type: plugin
 Description: Обмен приватными сообщениями между пользователями
 Author:  Alexey N. Zhukov (Wolverine). irbees2008
 Author_URI: http://digitalplace.ru/
 Title: Личные сообщения
 Information: Плагин организует возможность обмена приватными сообщениями между зарегистрированными пользователями сайта
-Preinstall: default_no
-Library: lib; lib/pm.lib.php
+Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-envelope-o fa-3x" aria-hidden="true"></i>
