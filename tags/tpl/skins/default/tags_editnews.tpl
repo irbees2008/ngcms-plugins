@@ -1,6 +1,6 @@
 <tbody>
-	<tr class="thead-dark">
-		<th scope="col">
+	<tr>
+		<th colspan="2">
 			Теги новости
 		</th>
 	</tr>
@@ -13,7 +13,6 @@
 				<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i>
 				<span class="sr-only">Loading...</span>
 			</span>
-
 		</td>
 	</tr>
 </tbody>
