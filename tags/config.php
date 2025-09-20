@@ -1,6 +1,6 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 //
 // Configuration file for plugin
 //
@@ -45,6 +45,8 @@ array_push($cfgX, array('name' => 'localsource', 'title' => $lang['tags:localsou
 array_push($cfgX, array('name' => 'skin', 'title' => $lang['tags:skin'], 'descr' => $lang['tags:skin#desc'], 'type' => 'select', 'values' => $skList, 'value' => pluginGetVariable('tags', 'skin')));
 array_push($cfgX, array('name' => 'cloud3d', 'title' => $lang['tags:cloud3d'], 'descr' => $lang['tags:cloud3d#desc'], 'type' => 'select', 'values' => array('0' => $lang['noa'], '1' => $lang['yesa']), 'value' => pluginGetVariable('tags', 'cloud3d')));
 array_push($cfgX, array('name' => 'show_always', 'title' => $lang['tags:show_always'], 'descr' => $lang['tags:show_always#desc'], 'type' => 'select', 'values' => array('0' => $lang['noa'], '1' => $lang['yesa']), 'value' => pluginGetVariable('tags', 'show_always')));
+array_push($cfgX, array('name' => 'suggestHelper', 'title' => 'Включить автоподбор тегов', 'descr' => 'Включает функцию автоподбора тегов при добавлении/редактировании новостей', 'type' => 'select', 'values' => array('0' => $lang['noa'], '1' => $lang['yesa']), 'value' => pluginGetVariable('tags', 'suggestHelper')));
+array_push($cfgX, array('name' => 'auto_category_tags', 'title' => 'Автоматически добавлять категории в теги', 'descr' => 'При сохранении новости автоматически добавляет название категории в список тегов', 'type' => 'select', 'values' => array('0' => $lang['noa'], '1' => $lang['yesa']), 'value' => pluginGetVariable('tags', 'auto_category_tags')));
 array_push($cfg, array('mode' => 'group', 'title' => '<b>' . $lang['tags:block.display'] . '</b>', 'entries' => $cfgX));
 $cfgX = array();
 array_push($cfgX, array('name' => 'cache', 'title' => $lang['tags:cache.use'], 'descr' => $lang['tags:cache.use#desc'], 'type' => 'select', 'values' => array('1' => $lang['yesa'], '0' => $lang['noa']), 'value' => intval(pluginGetVariable($plugin, 'cache'))));
@@ -54,6 +56,38 @@ if (!$_REQUEST['action']) {
 	generate_config_page($plugin, $cfg);
 } elseif ($_REQUEST['action'] == 'commit') {
 	if ($_REQUEST['rebuild']) {
+		// Step 0: Check and upgrade database structure for PHP 8.3 compatibility
+		$needsUpgrade = false;
+		foreach ($mysql->select("DESCRIBE " . prefix . "_tags_index") as $row) {
+			if ($row['Field'] == 'tagID' && strpos($row['Type'], 'varchar') !== false) {
+				$needsUpgrade = true;
+				break;
+			}
+		}
+		if ($needsUpgrade) {
+			print $lang['tags:cmd.rebuild'] . ": Обновление структуры БД для PHP 8.3...<br/>";
+			// Create temporary mapping table
+			$mysql->query("CREATE TEMPORARY TABLE temp_tag_mapping AS
+						   SELECT DISTINCT tag, id FROM " . prefix . "_tags");
+			// Update tags_index to use integer IDs
+			$mysql->query("UPDATE " . prefix . "_tags_index ti
+						   JOIN " . prefix . "_tags t ON ti.tagID = t.tag
+						   SET ti.tagID = t.id");
+			// Alter column types
+			$mysql->query("ALTER TABLE " . prefix . "_tags_index
+						   MODIFY COLUMN tagID INT NOT NULL,
+						   MODIFY COLUMN newsID INT NOT NULL");
+			// Improve tags table structure
+			$mysql->query("ALTER TABLE " . prefix . "_tags
+						   MODIFY COLUMN tag VARCHAR(100) NOT NULL,
+						   MODIFY COLUMN posts INT NOT NULL DEFAULT 0");
+			// Improve news.tags field
+			$mysql->query("ALTER TABLE " . prefix . "_news
+						   MODIFY COLUMN tags TEXT");
+			// Clean up
+			$mysql->query("DROP TEMPORARY TABLE temp_tag_mapping");
+			print "Структура БД обновлена для PHP 8.3.<br/>";
+		}
 		// Rebuild index table
 		// * Truncate index
 		$mysql->query("truncate table " . prefix . "_tags_index");

@@ -8,7 +8,7 @@
 		<td>Список тегов:<br/>
 			<small>указывается через запятую</small>
 		</td>
-		<td><input id="pTags" name="tags" value="{tags}" autocomplete="off"/>
+		<td><input id="pTags" name="tags" value="{{ tags }}" autocomplete="off"/>
 			<span id="suggestLoader" style="width: 20px; visibility: hidden;">
 				<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i>
 				<span class="sr-only">Loading...</span>

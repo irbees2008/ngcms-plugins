@@ -1,0 +1,55 @@
+/* CSS стили для отображения тегов в новостях */
+.post-full-tags {
+    margin: 15px 0;
+    padding: 10px;
+    background: #f8f9fa;
+    border-left: 4px solid #007bff;
+    border-radius: 4px;
+}
+
+.post-full-tags strong,
+.post-full-tags>span:first-child {
+    color: #495057;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.tag-link {
+    display: inline-block;
+    background: #e3f2fd;
+    color: #1976d2 !important;
+    padding: 3px 8px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-size: 0.9em;
+    margin: 2px 3px 2px 0;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.tag-link:hover {
+    background: #1976d2;
+    color: white !important;
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(25, 118, 210, 0.3);
+}
+
+.tag-link:focus {
+    outline: 2px solid #1976d2;
+    outline-offset: 2px;
+}
+
+/* Стили для мобильных устройств */
+@media (max-width: 768px) {
+    .post-full-tags {
+        margin: 10px 0;
+        padding: 8px;
+    }
+
+    .tag-link {
+        font-size: 0.85em;
+        padding: 2px 6px;
+        margin: 1px 2px 1px 0;
+    }
+}

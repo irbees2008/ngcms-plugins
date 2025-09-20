@@ -12,17 +12,16 @@ rpcRegisterFunction('plugin.tags.suggest', function (string $params): array {
             'status' => 0,
             'errorCode' => 1,
             'errorText' => 'Permission denied',
-
         ];
     }
 
     // Check if suggest module is enabled
-    if (pluginGetVariable('tags', 'suggestHelper')) {
+    $suggestEnabled = intval(pluginGetVariable('tags', 'suggestHelper'));
+    if (!$suggestEnabled) {
         return [
             'status' => 0,
             'errorCode' => 2,
             'errorText' => 'Suggest helper is not enabled',
-
         ];
     }
 
@@ -30,14 +29,14 @@ rpcRegisterFunction('plugin.tags.suggest', function (string $params): array {
 
     // Check if tag is specified
     if ($params) {
-        $searchTag = db_squote($params.'%');
+        $searchTag = db_squote($params . '%');
 
-        $sql = "select * from ".prefix."_tags where tag like ".$searchTag." order by posts desc limit 20";
+        $sql = "select * from " . prefix . "_tags where tag like " . $searchTag . " order by posts desc limit 20";
 
         foreach ($mysql->select($sql) as $row) {
             $output[] = [
                 $row['tag'],
-                $row['posts'].' постов'
+                $row['posts'] . ' постов'
             ];
         }
     }
@@ -48,8 +47,6 @@ rpcRegisterFunction('plugin.tags.suggest', function (string $params): array {
         'data' => [
             $params,
             $output,
-
         ],
-
     ];
 });
