@@ -3,7 +3,7 @@
 ;
 ID: pm
 Name: Личные сообщения
-Version: 0.8
+Version: 0.8.1
 Acts: usermenu, ppages
 Actions: rpc; pm_ajax.php
 File: pm.php
