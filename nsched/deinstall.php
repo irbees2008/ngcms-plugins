@@ -30,9 +30,9 @@ $db_update = [
 
 if ($_REQUEST['action'] == 'commit') {
     // If submit requested, do config save
-    if (fixdb_plugin_install('nsched', $db_update, 'deinstall')) {
+    if (fixdb_plugin_install('nsched', $db_update, 'deinstall', '')) {
         plugin_mark_deinstalled('nsched');
     }
 } else {
-    generate_install_page('nsched', $lang[$plugin.':description'], 'deinstall');
+    generate_install_page('nsched', $lang['nsched:description'] ?? 'Деинсталляция плагина nsched', 'deinstall');
 }
