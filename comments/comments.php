@@ -1,28 +1,24 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 $lang = LoadLang("comments", "site");
-
-class CommentsNewsFilter extends NewsFilter {
-
-	function addNewsForm(&$tvars) {
-
+class CommentsNewsFilter extends NewsFilter
+{
+	function addNewsForm(&$tvars)
+	{
 		global $lang;
 		loadPluginLang('comments', 'config', '', '', ':');
 		for ($ix = 0; $ix <= 2; $ix++) {
 			$tvars['plugin']['comments']['acom:' . $ix] = (pluginGetVariable('comments', 'default_news') == $ix) ? 'selected="selected"' : '';
 		}
 	}
-
-	function addNews(&$tvars, &$SQL) {
-
+	function addNews(&$tvars, &$SQL)
+	{
 		$SQL['allow_com'] = intval($_REQUEST['allow_com']);
-
 		return 1;
 	}
-
-	function editNewsForm($newsID, $SQLnews, &$tvars) {
-
+	function editNewsForm($newsID, $SQLnews, &$tvars)
+	{
 		global $lang, $mysql, $config, $parse, $tpl, $PHP_SELF;
 		loadPluginLang('comments', 'config', '', '', ':');
 		// List comments
@@ -67,16 +63,13 @@ class CommentsNewsFilter extends NewsFilter {
 			$tvars['plugin']['comments']['acom:' . $ix] = ($SQLnews['allow_com'] == $ix) ? 'selected="selected"' : '';
 		}
 	}
-
-	function editNews($newsID, $SQLold, &$SQLnew, &$tvars) {
-
+	function editNews($newsID, $SQLold, &$SQLnew, &$tvars)
+	{
 		$SQLnew['allow_com'] = intval($_REQUEST['allow_com']);
-
 		return 1;
 	}
-
-    public function showNews($newsID, $SQLnews, &$tvars, $mode = []) {
-
+	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
+	{
 		global $catmap, $catz, $config, $userROW, $template, $lang, $tpl;
 		// Determine if comments are allowed in  this specific news
 		$allowCom = $SQLnews['allow_com'];
@@ -96,7 +89,6 @@ class CommentsNewsFilter extends NewsFilter {
 		$published_count = intval($mysql->result("SELECT COUNT(*) FROM " . prefix . "_comments WHERE post=" . db_squote($newsID) . " AND moderated=1"));
 		$pending_count = intval($mysql->result("SELECT COUNT(*) FROM " . prefix . "_comments WHERE post=" . db_squote($newsID) . " AND moderated=0"));
 		$total_count = $published_count + $pending_count;
-		
 		// Fill variables within news template
 		$tvars['vars']['comments-num'] = $published_count;
 		$tvars['vars']['comnum'] = $published_count;
@@ -117,7 +109,6 @@ class CommentsNewsFilter extends NewsFilter {
 		if (!(($mode['style'] == 'full') && (!$mode['emulate']) && (!isset($mode['plugin'])))) {
 			// No, we don't need to show comments
 			$tvars['vars']['plugin_comments'] = '';
-
 			return 1;
 		}
 		// ******************************************** //
@@ -196,18 +187,15 @@ class CommentsNewsFilter extends NewsFilter {
 		}
 	}
 }
-
-class CommentsFilterAdminCategories extends FilterAdminCategories {
-
-	function addCategory(&$tvars, &$SQL) {
-
+class CommentsFilterAdminCategories extends FilterAdminCategories
+{
+	function addCategory(&$tvars, &$SQL)
+	{
 		$SQL['allow_com'] = intval($_REQUEST['allow_com']);
-
 		return 1;
 	}
-
-	function addCategoryForm(&$tvars) {
-
+	function addCategoryForm(&$tvars)
+	{
 		global $lang;
 		loadPluginLang('comments', 'config', '', '', ':');
 		$allowCom = pluginGetVariable('comments', 'default_categories');
@@ -217,12 +205,10 @@ class CommentsFilterAdminCategories extends FilterAdminCategories {
 			$ms .= '<option value="' . $i . '"' . (($allowCom == $i) ? ' selected="selected"' : '') . '>' . $cv[$i] . '</option>';
 		}
 		$tvars['extend'] .= '<tr><td width="70%" class="contentEntry1">' . $lang['comments:categories.comments'] . '<br/><small>' . $lang['comments:categories.comments#desc'] . '</small></td><td width="30%" class="contentEntry2">' . $ms . '</td></tr>';
-
 		return 1;
 	}
-
-	function editCategoryForm($categoryID, $SQL, &$tvars) {
-
+	function editCategoryForm($categoryID, $SQL, &$tvars)
+	{
 		global $lang;
 		loadPluginLang('comments', 'config', '', '', ':');
 		if (!isset($SQL['allow_com'])) {
@@ -234,20 +220,16 @@ class CommentsFilterAdminCategories extends FilterAdminCategories {
 			$ms .= '<option value="' . $i . '"' . (($SQL['allow_com'] == $i) ? ' selected="selected"' : '') . '>' . $cv[$i] . '</option>';
 		}
 		$tvars['extend'] .= '<tr><td width="70%" class="contentEntry1">' . $lang['comments:categories.comments'] . '<br/><small>' . $lang['comments:categories.comments#desc'] . '</small></td><td width="30%" class="contentEntry2">' . $ms . '</td></tr>';
-
 		return 1;
 	}
-
-	function editCategory($categoryID, $SQL, &$SQLnew, &$tvars) {
-
+	function editCategory($categoryID, $SQL, &$SQLnew, &$tvars)
+	{
 		$SQLnew['allow_com'] = intval($_REQUEST['allow_com']);
-
 		return 1;
 	}
 }
-
-function plugin_comments_add() {
-
+function plugin_comments_add()
+{
 	global $config, $catz, $catmap, $tpl, $template, $lang, $SUPRESS_TEMPLATE_SHOW;
 	$SUPRESS_TEMPLATE_SHOW = 1;
 	// Connect library
@@ -263,7 +245,6 @@ function plugin_comments_add() {
 			$nlink = newsGenerateLink($addResult[0]);
 			// Make redirect to full news
 			@header("Location: " . $nlink);
-
 			return 1;
 		}
 		// AJAX MODE.
@@ -289,7 +270,6 @@ function plugin_comments_add() {
 		);
 		print json_encode($output);
 		$template['vars']['mainblock'] = '';
-
 		return 1;
 	} else {
 		// Some errors.
@@ -302,25 +282,19 @@ function plugin_comments_add() {
 			print json_encode($output);
 			$template['vars']['mainblock'] = '';
 		} else {
-			// NON-AJAX MODE
-			$tavars = array(
-				'vars' => array(
-					'title'    => $lang['comments:err.redir.title'],
-					'message'  => $template['vars']['mainblock'],
-					'link'     => secure_html(($_REQUEST['referer']) ? $_REQUEST['referer'] : '/'),
-					'linktext' => $lang['comments:err.redir.url'],
-				)
-			);
-			$tpl->template('redirect', tpl_site);
-			$tpl->vars('redirect', $tavars);
-			$template['vars']['mainblock'] = $tpl->show('redirect');
+			// NON-AJAX MODE: show notification and auto-redirect back
+			$url = secure_html(($_REQUEST['referer']) ? $_REQUEST['referer'] : '/');
+			// Сообщения уже собраны в $template['vars']['mainblock'] вызовами msg() выше.
+			// Добавим ссылку для возврата и авто-редирект.
+			$linkText = isset($lang['comments:err.redir.url']) ? $lang['comments:err.redir.url'] : 'Вернуться назад';
+			$template['vars']['mainblock'] .= "\n<div style=\"margin-top:10px\"><a href=\"{$url}\">{$linkText}</a></div>\n" .
+				"<script>setTimeout(function(){ window.location.href='" . str_replace("'", "\\'", $url) . "'; }, 3000);</script>";
 		}
 	}
 }
-
 // Show dedicated page for comments
-function plugin_comments_show() {
-
+function plugin_comments_show()
+{
 	global $config, $catz, $mysql, $catmap, $tpl, $template, $lang, $SUPRESS_TEMPLATE_SHOW, $userROW, $TemplateCache, $SYSTEM_FLAGS;
 	// Load lang file, that is required for [hide]..[/hide] block
 	$lang = LoadLang('news', 'site');
@@ -330,7 +304,6 @@ function plugin_comments_show() {
 	$newsID = intval($_REQUEST['news_id']);
 	if (!$newsID || !is_array($newsRow = $mysql->record("select * from " . prefix . "_news where id = " . $newsID))) {
 		error404();
-
 		return;
 	}
 	$SYSTEM_FLAGS['info']['title']['item'] = $newsRow['title'];
@@ -416,10 +389,9 @@ function plugin_comments_show() {
 		$template['vars']['mainblock'] .= $tpl->show('comments.external');
 	}
 }
-
 // Delete comment
-function plugin_comments_delete() {
-
+function plugin_comments_delete()
+{
 	global $mysql, $config, $userROW, $lang, $tpl, $template, $SUPRESS_MAINBLOCK_SHOW, $SUPRESS_TEMPLATE_SHOW;
 	$output = array();
 	$params = array();
@@ -457,36 +429,21 @@ function plugin_comments_delete() {
 		} else {
 			$url = $config['home_url'];
 		}
-		$tavars = array(
-			'vars' => array(
-				'message' => $output['data'],
-				'link'    => $url,
-			)
-		);
-		// If ok - redirect to news
-		if ($output['status']) {
-			$tavars['vars']['title'] = $lang['comments:deleted.title'];
-			$tavars['vars']['linktext'] = $lang['comments:deleted.url'];
-		} else {
-			// Print error messag
-			// NON-AJAX MODE
-			$tavars['vars']['title'] = $lang['comments:err.redir.title'];
-			$tavars['vars']['linktext'] = $lang['comments:err.redir.url'];
-		}
-		$tpl->template('redirect', tpl_site);
-		$tpl->vars('redirect', $tavars);
-		$template['vars']['mainblock'] = $tpl->show('redirect');
+		// Показать уведомление и авто-редирект
+		$msgType = $output['status'] ? 'info' : 'error';
+		msg(array('type' => $msgType, 'text' => $output['data']));
+		$linkText = $output['status'] ? (isset($lang['comments:deleted.url']) ? $lang['comments:deleted.url'] : 'Вернуться к новости') : (isset($lang['comments:err.redir.url']) ? $lang['comments:err.redir.url'] : 'Вернуться назад');
+		$template['vars']['mainblock'] .= "\n<div style=\"margin-top:10px\"><a href=\"{$url}\">{$linkText}</a></div>\n" .
+			"<script>setTimeout(function(){ window.location.href='" . str_replace("'", "\\'", $url) . "'; }, 2000);</script>";
 	}
 }
-
 // Edit comment
-function plugin_comments_edit() {
+function plugin_comments_edit()
+{
 	global $mysql, $config, $userROW, $lang, $parse, $SUPRESS_TEMPLATE_SHOW;
 	$SUPRESS_TEMPLATE_SHOW = 1;
-	
 	$output = array();
 	$comment_id = intval($_REQUEST['id']);
-	
 	// Проверка прав
 	if (!is_array($userROW) || ($userROW['status'] > 2)) {
 		$output['status'] = 0;
@@ -495,7 +452,6 @@ function plugin_comments_edit() {
 		echo json_encode($output);
 		exit;
 	}
-	
 	if ($_REQUEST['action'] == 'get') {
 		// Получение текста комментария
 		if ($row = $mysql->record("select * from " . prefix . "_comments where id=" . db_squote($comment_id))) {
@@ -511,9 +467,7 @@ function plugin_comments_edit() {
 			$new_text = secure_html(trim($_POST['text']));
 			$new_text = str_replace("\r\n", "<br />", $new_text);
 			$edit_date = time() + ($config['date_adjust'] * 60);
-			
 			$mysql->query("update " . prefix . "_comments set text=" . db_squote($new_text) . ", edit_date=" . db_squote($edit_date) . " where id=" . db_squote($comment_id));
-			
 			// Формируем HTML для отображения
 			$display_text = $new_text;
 			if ($config['blocks_for_reg']) {
@@ -528,12 +482,9 @@ function plugin_comments_edit() {
 			if ($config['use_smilies']) {
 				$display_text = $parse->smilies($display_text);
 			}
-			
 			$timestamp = pluginGetVariable('comments', 'timestamp');
 			if (!$timestamp) $timestamp = 'j.m.Y - H:i';
-			
 			$edit_info = '<br/><small><i>Изменено: ' . LangDate($timestamp, $edit_date) . '</i></small>';
-			
 			$output['status'] = 1;
 			$output['html'] = $display_text . $edit_info;
 		} else {
@@ -541,29 +492,25 @@ function plugin_comments_edit() {
 			$output['data'] = 'Комментарий не найден';
 		}
 	}
-	
 	header('Content-Type: application/json; charset=utf-8');
 	echo json_encode($output);
 	exit;
 }
-
 // Comments moderation
-function plugin_comments_moderation() {
+function plugin_comments_moderation()
+{
 	global $mysql, $userROW, $lang, $twig, $SUPRESS_TEMPLATE_SHOW, $main_admin;
 	$SUPRESS_TEMPLATE_SHOW = 1;
-	
 	// Check permissions
 	if (!is_array($userROW) || ($userROW['status'] > 2)) {
 		msg(array("type" => "error", "text" => $lang['perm.denied']));
 		return;
 	}
-	
 	// Check if moderation is enabled
 	if (!pluginGetVariable('comments', 'moderation')) {
 		msg(array("type" => "info", "text" => $lang['comments:moderation.disabled']));
 		return;
 	}
-	
 	// Handle actions
 	if ($_POST['action']) {
 		switch ($_POST['action']) {
@@ -591,7 +538,6 @@ function plugin_comments_moderation() {
 				break;
 		}
 	}
-	
 	// Get pending comments
 	$comments = array();
 	foreach ($mysql->select("SELECT c.*, n.title as news_title, n.alt_name, n.catid FROM " . prefix . "_comments c LEFT JOIN " . prefix . "_news n ON c.post = n.id WHERE c.moderated=0 ORDER BY c.postdate DESC") as $row) {
@@ -604,10 +550,8 @@ function plugin_comments_moderation() {
 		$row['news_link'] = newsGenerateLink($row);
 		$comments[] = $row;
 	}
-	
 	// Load language
 	loadPluginLang('comments', 'admin', '', '', ':');
-	
 	// Use Twig template from plugin
 	$templatePath = root . '/plugins/comments/admin/tpl/comments_moderation.tpl';
 	if (file_exists($templatePath)) {
@@ -623,9 +567,9 @@ function plugin_comments_moderation() {
 		$main_admin = '<div class="alert alert-error">Template not found</div>';
 	}
 }
-
 // Add comments variable to news template
-function comments_add_to_news($newsID, &$tvars) {
+function comments_add_to_news($newsID, &$tvars)
+{
 	if (pluginGetVariable('comments', 'enabled')) {
 		ob_start();
 		comments_show($newsID);
@@ -634,19 +578,18 @@ function comments_add_to_news($newsID, &$tvars) {
 		$tvars['vars']['comments'] = $comments_output;
 	}
 }
-
 // Register filter for news display
 if (!class_exists('CommentsNewsFilter')) {
-	class CommentsNewsFilter {
-		function showNews($newsID, $row, &$tvars) {
+	class CommentsNewsFilter
+	{
+		function showNews($newsID, $row, &$tvars)
+		{
 			comments_add_to_news($newsID, $tvars);
 		}
 	}
 }
-
 if (!isset($PFILTERS['news'])) $PFILTERS['news'] = array();
 $PFILTERS['news'][] = new CommentsNewsFilter();
-
 loadPluginLang('comments', 'main', '', '', ':');
 register_filter('news', 'comments', new CommentsNewsFilter);
 register_admin_filter('categories', 'comments', new CommentsFilterAdminCategories);

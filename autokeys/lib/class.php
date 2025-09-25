@@ -11,6 +11,7 @@ require __DIR__ . '/morphos/src/Russian/NounDeclension.php'; // Подключа
 require __DIR__ . '/morphos/src/S.php'; // Подключаем S
 // Теперь можно использовать класс Morphos\Russian\NounDeclension
 use Morphos\Russian\NounDeclension;
+
 class AutoKeyword
 {
 	public $contents;
@@ -33,6 +34,7 @@ class AutoKeyword
 		$this->encoding = $encoding;
 		$this->wordLengthMin = $params['min_word_length'] ?? 0;
 		$this->wordLengthMax = $params['max_word_length'] ?? 0;
+		$this->wordOccuredMin = $params['min_word_occur'] ?? 0;
 		$this->wordMaxCount = $params['word_count'] ?? 0;
 
 		$this->wordB = !empty($params['good_b']);
@@ -132,7 +134,7 @@ class AutoKeyword
 function akeysGetKeys($params)
 {
 	$cfg = array(
-		'content'         => $params['content'] . ' this is content',
+		'content'         => $params['content'],
 		'title'           => $params['title'],
 		'min_word_length' => (intval(pluginGetVariable('autokeys', 'length'))) ? intval(pluginGetVariable('autokeys', 'length')) : 5,
 		'max_word_length' => (intval(pluginGetVariable('autokeys', 'sub'))) ? intval(pluginGetVariable('autokeys', 'sub')) : 100,

@@ -3,17 +3,17 @@
  * Plugin "Private message" for NextGeneration CMS (http://ngcms.ru/)
  * Copyright (C) 2010-2011 Alexey N. Zhukov (http://digitalplace.ru), Alexey Zinchenko
  * http://digitalplace.ru
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or (at
  * your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
@@ -32,7 +32,7 @@ if ($maxMessages <= 0) {
 	$maxMessages = 0; // 0 означает "без лимита"
 }
 define('INBOX_LINK', generatePluginLink('pm', null, ($_GET['location'] ? array('action' => $_GET['location']) : array())));
-/* 
+/*
   fill variables in usermenu.tpl
   + {{ p.pm.pm_unread }} - кол-во новых входящих сообщений
   + {{ p.pm.pm_all }} - общее кол-во входящих сообщений
@@ -72,7 +72,7 @@ class PMCoreFilter extends CoreFilter
 		if (!$userROW['id']) return 0;
 		# if 'sync' then fill varaiables without SQL query from user's table
 		if ($userROW['pm_sync']) {
-			$tVars['p']['pm']['pm_unread'] = !$userROW['pm_unread'] ? $userROW['pm_unread'] :  $userROW['pm_unread'] ;
+			$tVars['p']['pm']['pm_unread'] = !$userROW['pm_unread'] ? $userROW['pm_unread'] :  $userROW['pm_unread'];
 			$tVars['p']['pm']['pm_all'] = $userROW['pm_all'];
 			$tVars['p']['pm']['link'] = generatePluginLink('pm', null);
 			return;
@@ -91,7 +91,7 @@ class PMCoreFilter extends CoreFilter
 		$viewed += $notViewed;
 		# update pm counters
 		$mysql->query('UPDATE ' . uprefix . '_users SET `pm_sync` = 1, `pm_all` = ' . $viewed . ', `pm_unread` = ' . $notViewed . ' WHERE `id` = ' . db_squote($userROW['id']));
-		if ($notViewed != 0) $notViewed =  $notViewed ;
+		if ($notViewed != 0) $notViewed =  $notViewed;
 		$tVars['p']['pm']['pm_unread'] = $notViewed;
 		$tVars['p']['pm']['pm_all'] = $viewed;
 		$tVars['p']['pm']['link'] = generatePluginLink('pm', null);
@@ -345,7 +345,6 @@ function pm_write()
 		'pm_send_link' => generatePluginLink('pm', null, array('action' => 'send')),
 		'skins_url' => skins_url,
 	);
-	
 	$xt = $twig->loadTemplate($tpath['write'] . 'write.tpl');
 	$template['vars']['mainblock'] = $xt->render($tVars);
 }
@@ -356,8 +355,8 @@ function pm_send()
 	// Получаем актуальное значение лимита
 	$maxMessages = intval(pluginGetVariable('pm', 'max_messages'));
 	// Проверяем лимит исходящих сообщений
-	$currentOutbox = $mysql->result("SELECT COUNT(*) FROM " . prefix . "_pm 
-                                   WHERE from_id = " . db_squote($userROW['id']) . " 
+	$currentOutbox = $mysql->result("SELECT COUNT(*) FROM " . prefix . "_pm
+                                   WHERE from_id = " . db_squote($userROW['id']) . "
                                    AND folder='outbox'");
 	if ($maxMessages > 0 && $currentOutbox >= $maxMessages) {
 		msg(array(
@@ -428,8 +427,8 @@ function pm_reply()
 	global $mysql, $config, $lang, $userROW, $tpl, $parse, $template, $maxMessages, $twig;
 	// Проверка лимита перед ответом
 	$maxMessages = intval(pluginGetVariable('pm', 'max_messages'));
-	$currentOutbox = $mysql->result("SELECT COUNT(*) FROM " . prefix . "_pm 
-									WHERE from_id = " . db_squote($userROW['id']) . " 
+	$currentOutbox = $mysql->result("SELECT COUNT(*) FROM " . prefix . "_pm
+									WHERE from_id = " . db_squote($userROW['id']) . "
 									AND folder='outbox'");
 	if ($maxMessages > 0 && $currentOutbox >= $maxMessages) {
 		msg(array(
@@ -467,7 +466,6 @@ function pm_reply()
 			'pm_set_link' => generatePluginLink('pm', null, array('action' => 'set')),
 			'pm_send_link' => generatePluginLink('pm', null, array('action' => 'send')),
 		);
-		
 		$xt = $twig->loadTemplate($tpath['reply'] . 'reply.tpl');
 		$template['vars']['mainblock'] = $xt->render($tVars);
 	} else {
@@ -541,3 +539,24 @@ function pm()
 	return 0;
 }
 register_filter('core.userMenu', 'pm', new PMCoreFilter);
+// Функция для интеграции с админкой - подсчет новых сообщений
+function new_pm()
+{
+	global $mysql, $userROW, $lang, $template, $config;
+	if (!is_array($userROW) || !$userROW['id']) {
+		return '';
+	}
+	// Получаем количество непрочитанных сообщений
+	$newpm = $mysql->result("SELECT COUNT(*) FROM " . $config['prefix'] . "_pm WHERE to_id = " . intval($userROW['id']) . " AND folder='inbox' AND viewed = '0'");
+	// Формируем текст для отображения
+	$newpmText = ($newpm > 0) ? $newpm . ' новых сообщений' : 'Нет новых сообщений';
+	// Передаем переменные в шаблон
+	$template['vars']['newpm'] = $newpm;
+	$template['vars']['newpmText'] = $newpmText;
+	// Также устанавливаем в глобальные переменные для совместимости
+	if (isset($GLOBALS['twig'])) {
+		$GLOBALS['twig']->addGlobal('newpm', $newpm);
+		$GLOBALS['twig']->addGlobal('newpmText', $newpmText);
+	}
+	return $newpmText;
+}
