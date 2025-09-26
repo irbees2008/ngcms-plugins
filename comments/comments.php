@@ -184,6 +184,8 @@ class CommentsNewsFilter extends NewsFilter
 			$tpl->template('comments.internal', $templatePath);
 			$tpl->vars('comments.internal', $tcvars);
 			$tvars['vars']['plugin_comments'] = $tpl->show('comments.internal');
+			// Ensure `comments` is also populated for templates that render {{ comments }}
+			$tvars['vars']['comments'] = $tvars['vars']['plugin_comments'];
 		}
 	}
 }
@@ -467,7 +469,21 @@ function plugin_comments_edit()
 			$new_text = secure_html(trim($_POST['text']));
 			$new_text = str_replace("\r\n", "<br />", $new_text);
 			$edit_date = time() + ($config['date_adjust'] * 60);
-			$mysql->query("update " . prefix . "_comments set text=" . db_squote($new_text) . ", edit_date=" . db_squote($edit_date) . " where id=" . db_squote($comment_id));
+			// Проверяем наличие колонки edit_date, чтобы избежать SQL-ошибки на старых БД
+			$col = $mysql->record("SHOW COLUMNS FROM " . prefix . "_comments LIKE 'edit_date'");
+			if ($col) {
+				$updOK = $mysql->query("update " . prefix . "_comments set text=" . db_squote($new_text) . ", edit_date=" . db_squote($edit_date) . " where id=" . db_squote($comment_id));
+			} else {
+				// Колонки нет — обновляем только текст
+				$updOK = $mysql->query("update " . prefix . "_comments set text=" . db_squote($new_text) . " where id=" . db_squote($comment_id));
+			}
+			if (!$updOK) {
+				$output['status'] = 0;
+				$output['data'] = 'Не удалось сохранить комментарий (ошибка БД)';
+				header('Content-Type: application/json; charset=utf-8');
+				echo json_encode($output);
+				exit;
+			}
 			// Формируем HTML для отображения
 			$display_text = $new_text;
 			if ($config['blocks_for_reg']) {
