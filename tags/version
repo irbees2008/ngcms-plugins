@@ -3,7 +3,7 @@
 ;
 ID: tags
 Name: Теги
-Version: 0.30
+Version: 0.30.1
 Acts: index,news,ppages,admin:mod:news,admin:mod:preview
 Actions: rpc;lib/librpc.php
 File: tags.php

@@ -13,6 +13,7 @@ if (!defined('NGCMS')) die('HAL');
 //
 function plugin_tags_install($action)
 {
+
 	global $lang;
 	if ($action != 'autoapply')
 		loadPluginLang('tags', 'config', '', '', ':');
@@ -75,5 +76,6 @@ function plugin_tags_install($action)
 			extra_commit_changes();
 			break;
 	}
+
 	return true;
 }

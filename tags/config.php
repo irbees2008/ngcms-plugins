@@ -64,30 +64,39 @@ if (!$_REQUEST['action']) {
 				break;
 			}
 		}
+
 		if ($needsUpgrade) {
 			print $lang['tags:cmd.rebuild'] . ": Обновление структуры БД для PHP 8.3...<br/>";
+
 			// Create temporary mapping table
 			$mysql->query("CREATE TEMPORARY TABLE temp_tag_mapping AS
 						   SELECT DISTINCT tag, id FROM " . prefix . "_tags");
+
 			// Update tags_index to use integer IDs
 			$mysql->query("UPDATE " . prefix . "_tags_index ti
 						   JOIN " . prefix . "_tags t ON ti.tagID = t.tag
 						   SET ti.tagID = t.id");
+
 			// Alter column types
 			$mysql->query("ALTER TABLE " . prefix . "_tags_index
 						   MODIFY COLUMN tagID INT NOT NULL,
 						   MODIFY COLUMN newsID INT NOT NULL");
+
 			// Improve tags table structure
 			$mysql->query("ALTER TABLE " . prefix . "_tags
 						   MODIFY COLUMN tag VARCHAR(100) NOT NULL,
 						   MODIFY COLUMN posts INT NOT NULL DEFAULT 0");
+
 			// Improve news.tags field
 			$mysql->query("ALTER TABLE " . prefix . "_news
 						   MODIFY COLUMN tags TEXT");
+
 			// Clean up
 			$mysql->query("DROP TEMPORARY TABLE temp_tag_mapping");
+
 			print "Структура БД обновлена для PHP 8.3.<br/>";
 		}
+
 		// Rebuild index table
 		// * Truncate index
 		$mysql->query("truncate table " . prefix . "_tags_index");
