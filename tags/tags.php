@@ -1,8 +1,13 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+// Safe stub to avoid undefined function in analysis/dev environments
+if (!function_exists('loadCategoryMap')) {
+	function loadCategoryMap() {}
+}
 class TagsNewsfilter extends NewsFilter
 {
+	private $displayParams = null;
 	function addNewsForm(&$tvars)
 	{
 		global $tpl;
@@ -83,7 +88,9 @@ class TagsNewsfilter extends NewsFilter
 
 		// Load category map if not loaded
 		if (!isset($catmap) || !is_array($catmap)) {
-			loadCategoryMap();
+			if (function_exists('loadCategoryMap')) {
+				loadCategoryMap();
+			}
 		}
 
 		// Get category name
@@ -238,7 +245,10 @@ class TagsNewsfilter extends NewsFilter
 			$link = checkLinkAvailable('tags', 'tag') ?
 				generateLink('tags', 'tag', array('tag' => $tag)) :
 				generateLink('core', 'plugin', array('plugin' => 'tags', 'handler' => 'tag'), array('tag' => $tag));
-			$tagValue = str_replace(array('{url}', '{tag}'), array($link, $tag), $this->displayParams['news.tag']);
+			// Support both legacy {url}/{tag} and new {{ url }}/{{ tag }} placeholders
+			$tplTag = $this->displayParams['news.tag'];
+			$tagValue = str_replace(array('{url}', '{tag}'), array($link, $tag), $tplTag);
+			$tagValue = str_replace(array('{{ url }}', '{{ tag }}'), array($link, $tag), $tagValue);
 			$twigTags[] = array(
 				'name'  => $tag,
 				'link'  => $link,
@@ -561,7 +571,11 @@ function plugin_tags_generatecloud($ppage = 0, $catlist = '', $age = 0)
 		} else {
 			$params = 'style ="font-size: ' . (round(($row['posts'] / $max) * 100 + 100)) . '%;"';
 		}
-		$tags[] = str_replace(array('{url}', '{tag}', '{posts}', '{params}'), array($link, $row['tag'], $row['posts'], $params), $displayParams[($ppage ? 'cloud' : 'sidebar') . '.tag']);
+		// Support both legacy {url} and new {{ url }} placeholders in params.ini
+		$entryTpl = $displayParams[($ppage ? 'cloud' : 'sidebar') . '.tag'];
+		$entry = str_replace(array('{url}', '{tag}', '{posts}', '{params}'), array($link, $row['tag'], $row['posts'], $params), $entryTpl);
+		$entry = str_replace(array('{{ url }}', '{{ tag }}', '{{ posts }}', '{{ params }}'), array($link, $row['tag'], $row['posts'], $params), $entry);
+		$tags[] = $entry;
 	}
 	$tagList = $tagCount ? (join($displayParams[($ppage ? 'cloud' : 'sidebar') . '.tag.delimiter'] . "\n", $tags)) : ($displayParams[($ppage ? 'cloud' : 'sidebar') . '.notags']);
 	// If we have more than 1 page or current page != 1, we should generate paginator
