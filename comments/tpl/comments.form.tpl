@@ -7,8 +7,8 @@ if (captc != null) {
 captc.src = "{{ captcha_url }}?rand=" + (new Date()).getTime();
 }
 }
-// Добавление комментария
-function add_comment() { // Теперь вызываем AJAX для добавления комментария
+// Добавление комментария (AJAX)
+function add_comment() {
 var form = document.getElementById('comment');
 if (! form) 
 return false;
@@ -23,31 +23,68 @@ cajax.method = 'POST';
 cajax.onComplete = function () {
 if (cajax.responseStatus[0] == 200) {
 try {
-var resRX = eval('(' + cajax.response + ')');
-var nc;
-if (resRX['rev'] && document.getElementById('new_comments_rev')) {
-nc = document.getElementById('new_comments_rev');
-} else {
-nc = document.getElementById('new_comments');
+var res = (function parseJSONSafe(text) {
+try {
+return JSON.parse(text);
+} catch (e) {
+try {
+return JSON.parse(String(text).replace(/^\uFEFF/, ''));
+} catch (e2) {
+return null;
 }
-if (resRX['status']) { // Added successfully!
-nc.innerHTML += resRX['data'];
-form.content.value = '';{% if not_logged and use_moderation %}show_info('Комментарий отправлен на модерацию и будет опубликован после проверки администратором.');
+}
+})(cajax.response);
+if (! res) {
+if (typeof show_error === "function") 
+show_error('Ошибка обработки ответа: ' + cajax.response);
+
+return;
+}
+var nc = (res['rev'] && document.getElementById('new_comments_rev')) ? document.getElementById('new_comments_rev') : document.getElementById('new_comments');
+if (res['status']) {
+if (res['data']) {
+nc.innerHTML += res['data'];
+}
+form.content.value = '';{% if not_logged and use_moderation %}if (typeof show_info === "function") 
+show_info('Комментарий отправлен на модерацию и будет опубликован после проверки администратором.');
+
 {% else %}
-show_info('Комментарий добавлен');{% endif %}
-} else { // Ошибка при добавлении
-show_error(resRX['data']);
+if (typeof show_info === "function") 
+show_info('Комментарий добавлен');
+{% endif %}
+} else {
+if (typeof show_error === "function") 
+show_error(res['data'] || 'Ошибка при добавлении комментария');
+
 }
-} catch (err) { // Если не удалось распарсить JSON, показываем как текст
-show_error(cajax.response);
+} catch (err) {
+if (typeof show_error === "function") 
+show_error('Ошибка обработки ответа: ' + cajax.response);
+
 }
 } else {
+if (typeof show_error === "function") 
 show_error('HTTP error. Code: ' + cajax.responseStatus[0]);
+
 }
 {% if use_captcha %}reload_captcha();{% endif %}
-}
+};
 cajax.runAJAX();
-return false;} // Цитирование автора комментарияfunction quote(author) {var textarea = document.getElementById('content');if (textarea) {var quoteText = '[quote]' + author + ', [/quote]\n';textarea.value += quoteText;textarea.focus();// Устанавливаем курсор после цитатыif (textarea.setSelectionRange) {var pos = textarea.value.length;textarea.setSelectionRange(pos, pos);}} // Прокручиваем к форме комментариевvar form = document.getElementById('comment');if (form) {form.scrollIntoView({behavior: 'smooth'});}}
+return false;}// Цитированиеfunction quote(author) {
+var textarea = document.getElementById('content');
+if (textarea) {
+var quoteText = '[quote]' + author + ', [/quote]\n';
+textarea.value += quoteText;
+textarea.focus();
+if (textarea.setSelectionRange) {
+var pos = textarea.value.length;
+textarea.setSelectionRange(pos, pos);
+}
+}
+var form = document.getElementById('comment');
+if (form) {
+form.scrollIntoView({behavior: 'smooth'});
+}}
 </script>
 <div class="title">{{ lang['comments:form.title'] }}</div>
 <div class="respond">
@@ -69,7 +106,7 @@ return false;} // Цитирование автора комментарияfunc
 		<div class="clearfix"></div>
 		<div class="label">
 			<label></label>
-			<textarea onkeypress="if(event.keyCode==10 || (event.ctrlKey && event.keyCode==13)) {add_comment();}" name="content" id="content" class="textarea"></textarea>
+			<textarea onkeypress="if(event.keyCode==10 || (event.ctrlKey && event.keyCode==13)) { return add_comment(); }" name="content" id="content" class="textarea"></textarea>
 		</div>
 		{% if use_captcha %}
 			<div class="label captcha pull-left">
@@ -85,12 +122,11 @@ return false;} // Цитирование автора комментарияfunc
 	</form>
 	<div id="new_comments"></div>
 	<div id="new_comments_rev"></div>
-</div>
-<script>
-	// Глобальная переменная для сохранения оригинального контента
+	<script>
+		// Глобальная переменная для сохранения оригинального контента
 var original_comment_content = {};
 // Удаление комментария
-function delete_comment (comment_id, token) {
+function delete_comment(comment_id, token) {
 if (!confirm('Удалить комментарий?')) 
 return false;
 
@@ -106,7 +142,9 @@ var result = null;
 try {
 result = JSON.parse(dajax.response);
 } catch (e) {
+if (typeof show_error === "function") 
 show_error('Ошибка обработки ответа: ' + dajax.response);
+
 return;
 }
 if (result && result.status) {
@@ -114,25 +152,29 @@ var el = document.getElementById('comment' + comment_id);
 if (el) {
 el.style.display = 'none';
 }
+if (typeof show_info === "function") 
 show_info(result.data || 'Комментарий удалён');
+
 } else {
+if (typeof show_error === "function") 
 show_error((result && result.data) ? result.data : 'Не удалось удалить комментарий');
+
 }
 } else {
+if (typeof show_error === "function") 
 show_error('HTTP error. Code: ' + dajax.responseStatus[0]);
+
 }
 };
 dajax.runAJAX();
 }
 // Редактирование комментария
-function edit_comment (comment_id) {
+function edit_comment(comment_id) {
 var comment_text_div = document.getElementById('comment_text_' + comment_id);
 if (! comment_text_div) 
 return;
 
-// Сохраняем оригинальный контент
 original_comment_content[comment_id] = comment_text_div.innerHTML;
-// Получаем текст комментария
 var eajax = new sack();
 eajax.setVar("id", comment_id);
 eajax.setVar("action", "get");
@@ -154,26 +196,32 @@ return null;
 }
 })(eajax.response);
 if (! result) {
+if (typeof show_error === "function") 
 show_error('Ошибка обработки ответа: ' + eajax.response);
+
 return;
 }
-if (result['status'] == 1) { // Создаем форму редактирования
+if (result['status'] == 1) {
 var edit_form = '<textarea id="edit_textarea_' + comment_id + '" style="width:100%; height:100px;">' + result['text'] + '</textarea><br/>' + '<button onclick="save_comment(' + comment_id + '); return false;">Сохранить</button> ' + '<button onclick="cancel_edit(' + comment_id + '); return false;">Отмена</button>';
 comment_text_div.innerHTML = edit_form;
 } else {
+if (typeof show_error === "function") 
 show_error('Ошибка: ' + (
 result['data'] || 'Неизвестная ошибка'
 ));
+
 }
 } catch (err) {
+if (typeof show_error === "function") 
 show_error('Ошибка обработки ответа: ' + eajax.response);
+
 }
 }
 };
 eajax.runAJAX();
 }
 // Сохранение отредактированного комментария
-function save_comment (comment_id) {
+function save_comment(comment_id) {
 var textarea = document.getElementById('edit_textarea_' + comment_id);
 if (! textarea) 
 return;
@@ -200,32 +248,40 @@ return null;
 }
 })(sajax.response);
 if (! result) {
+if (typeof show_error === "function") 
 show_error('Ошибка обработки ответа: ' + sajax.response);
+
 return;
 }
-if (result['status'] == 1) { // Обновляем содержимое
+if (result['status'] == 1) {
 var comment_text_div = document.getElementById('comment_text_' + comment_id);
 comment_text_div.innerHTML = result['html'];
+if (typeof show_info === "function") 
 show_info('Комментарий обновлён');
+
 } else {
+if (typeof show_error === "function") 
 show_error('Ошибка: ' + (
 result['data'] || 'Неизвестная ошибка'
 ));
+
 }
 } catch (err) {
+if (typeof show_error === "function") 
 show_error('Ошибка обработки ответа: ' + sajax.response);
+
 }
 }
 };
 sajax.runAJAX();
 }
 // Отмена редактирования
-function cancel_edit (comment_id) {
+function cancel_edit(comment_id) {
 var comment_text_div = document.getElementById('comment_text_' + comment_id);
 if (comment_text_div && original_comment_content[comment_id]) {
 comment_text_div.innerHTML = original_comment_content[comment_id];
 delete original_comment_content[comment_id];
 }
 }
-// show_error/show_info доступны глобально из lib/functions.js
-</script>
+	</script>
+</div>
