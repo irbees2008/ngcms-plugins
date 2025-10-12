@@ -10,11 +10,6 @@ function akeysGenerate($params)
 	// Only registered users can use suggest
 	if (!is_array($userROW))
 		return array('status' => 0, 'errorCode' => 1, 'errorText' => 'Permission denied');
-	// Check if suggest module is enabled
-	$suggestEnabled = intval(pluginGetVariable('tags', 'suggestHelper'));
-	if (!$suggestEnabled) {
-		return array('status' => 0, 'errorCode' => 2, 'errorText' => 'Suggest helper is not enabled');
-	}
 	// Check if article is specified
 	if ($params == '')
 		return array('status' => 1, 'errorCode' => 0, 'data' => array($params, array()));
