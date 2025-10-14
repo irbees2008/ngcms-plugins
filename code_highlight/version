@@ -1,0 +1,17 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: code_highlight
+Name: Подсветка кода
+Version:1.2.0
+Acts: news_full, twig
+File: code_highlight.php
+Config: config.php
+Type: plugin
+Title: Подсветка кода
+Description: Позволяет выделять синтаксис кода в новостях
+Author: ИИ + Stanislav
+Preinstall: no
+MinEngineBuild: 23b3116
+Icons: <i class="fa fa-code fa-3x" aria-hidden="true"></i>
+Actions: twig; code_highlight/code_highlight.php
