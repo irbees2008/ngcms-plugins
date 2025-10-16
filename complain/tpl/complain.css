@@ -1,0 +1,123 @@
+/* Complain plugin modal styling: centered, responsive, scrollable */
+#complain-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1600;
+    display: none;
+}
+#complain-modal .modal-box {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, .18), 0 8px 20px rgba(0, 0, 0, .12);
+    width: min(95vw, 1100px);
+    max-height: min(90vh, 860px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+#complain-modal .title {
+    margin: 0;
+    padding: 10px 14px;
+    font-weight: 700;
+    border-bottom: 1px solid #ececec;
+    background: #f8f9fb;
+}
+#complain-modal .modal-content {
+    padding: 10px 14px;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+#complain-modal .modal-clouse {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+}
+#complain-modal .modal-clouse:before,
+#complain-modal .modal-clouse:after {
+    content: "";
+    position: absolute;
+    top: 11px;
+    left: 4px;
+    right: 4px;
+    height: 2px;
+    background: #666;
+}
+#complain-modal .modal-clouse:before {
+    transform: rotate(45deg);
+}
+#complain-modal .modal-clouse:after {
+    transform: rotate(-45deg);
+}
+.shadow-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .5);
+    z-index: 1500;
+    display: none;
+}
+/* Make inner tables horizontally scrollable when too wide */
+#complain-modal .modal-content table {
+    width: 100%;
+    border-collapse: collapse;
+}
+#complain-modal .modal-content .table-wrap {
+    width: 100%;
+    overflow: auto;
+}
+#complain-modal .modal-content th,
+#complain-modal .modal-content td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #eee;
+    white-space: nowrap;
+}
+#complain-modal .modal-content th {
+    background: #323232;
+}
+@media (max-width: 600px) {
+    #complain-modal .modal-content {
+        padding: 8px 10px;
+    }
+}
+.form-control {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #2a2a2a;
+    background: #fff;
+    outline: none;
+    transition: border-color .2s ease;
+    padding: 8px 10px;
+}
+.form-select {
+    display: inline-block;
+    width: 100%;
+    height: calc(1.6em + .75rem + 2px);
+    padding: .375rem 1.75rem .375rem .75rem;
+    font-size: .9rem;
+    font-weight: 400;
+    line-height: 1.6;
+    color: #495057;
+    vertical-align: middle;
+    background: #fff url(data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='5'%3E%3Cpath fill='%23343a40' d='M2 0L0 2h4zm0 5L0 3h4z'/%3E%3C/svg%3E) no-repeat right .75rem center / 8px 10px;
+    border: 1px solid #ced4da;
+    border-radius: .25rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+.col-auto {
+    flex: 0 0 auto;
+    width: auto;
+    max-width: 100%;
+    margin-top: 20px;
+}

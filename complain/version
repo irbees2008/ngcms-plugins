@@ -3,8 +3,8 @@
 ;
 ID: complain
 Name: Сообщить о проблеме в новости
-Version: 0.06
-Acts: news_full, ppages
+Version: 0.07
+Acts: index, news, ppages
 File: complain.php
 Config: config.php
 Install: install.php

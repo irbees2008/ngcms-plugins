@@ -1,6 +1,6 @@
 {# extform info скрыт в модалке для компактности #}
 
-<form method="post" action="{{ form_url }}" class="complain-form" data-ajax="true" data-list="1">
+<form method="post" action="{{ form_url }}" class="complain-form" data-ajax="true" data-list="1" data-refresh-url="{{ refresh_url }}">
 	<div class="table-responsive">
 		<table class="table table-striped table-bordered">
 			<thead>
