@@ -13,7 +13,7 @@ NG CMS — Плагин: Подсветка синтаксиса кода (code_
 - Темы: Default, Django, Eclipse, Emacs, FadeToGrey, MDUltra, Midnight, RDark.
 - Управляемые кисти (языки) — можно включать/отключать.
 - Кнопка «Копировать в буфер» в тулбаре блока подсветки.
-- Twig-хелпер для условного вывода элементов UI в шаблонах: code_highlight.brushEnabled.
+- Twig-хелперы для шаблонов: code_highlight.brushEnabled и code_highlight.hasAnyEnabled (см. раздел «Переменные/хелперы Twig» ниже).
 Требования
 - NG CMS: сборка не ниже MinEngineBuild, указанного в файле version (для этого плагина: 23b3116).
 - PHP 7.4+ (рекомендация ядра).
@@ -66,13 +66,23 @@ NG CMS — Плагин: Подсветка синтаксиса кода (code_
 Примечания
 - Парсер NG CMS конвертирует BBCode [code] и [code=язык] в <pre class="brush: ...">, что совместимо с SyntaxHighlighter.
 - Внутри блоков <pre> автоматически убираются лишние <br />, чтобы не ломать подсветку.
-Использование в шаблонах (Twig)
-- Чтобы показать элемент UI только при включённой кисти:
-	{% if callPlugin('code_highlight.brushEnabled', {'name':'php'}) %}
-		... пункт меню PHP ...
+Переменные/хелперы Twig
+1) Проверка активности плагина
+	{% if pluginIsActive('code_highlight') %}
+		... элементы UI, зависящие от плагина ...
 	{% endif %}
-- Хелпер учитывает алиасы и дефолты (если настройка отсутствует, возвращает true).
-- Плагин регистрирует действие «twig» в файле version, поэтому функция доступна в шаблонах. При редких расхождениях конфигурации движок пытается подгрузить файл плагина автоматически.
+2) Проверка наличия хотя бы одной активной «кисти» (языка)
+	{% if callPlugin('code_highlight.hasAnyEnabled', {}) %}
+		... показывать выпадающий список языков ...
+	{% endif %}
+3) Проверка конкретной «кисти» (учитывает алиасы)
+	{% if callPlugin('code_highlight.brushEnabled', {'name':'php'}) %}
+		<a class="dropdown-item" href="#" onclick="insertCodeBrush('php', {{ area }}); return false;">PHP</a>
+	{% endif %}
+	Алиасы: js/javascript/node → jscript; html/xhtml/xml → xml; mysql/pgsql/postgres → sql; c/c++ → cpp; c#/cs → csharp; text/txt → plain; и т.д.
+Заметки
+ - Если настройка для кисти ещё не сохранена в конфиге плагина — хелперы возвращают true (по умолчанию «включено»).
+ - Плагин регистрирует свои Twig-функции (brushEnabled, hasAnyEnabled) в `code_highlight.php` и объявляет действие `twig` в `version`, поэтому функции доступны в шаблонах.
 Интеграция с редактором новости
 - В шаблоне редактора (`engine/skins/default3/tpl/qt_news.tpl`) добавлена кнопка с выпадающим списком языков.
 - Список динамически фильтруется с помощью callPlugin('code_highlight.brushEnabled', {name: '...'}) — пользователю показываются только активные в плагине языки.
