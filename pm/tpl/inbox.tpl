@@ -37,7 +37,7 @@
 			<tr align="center">
 				<td>{{ entry.pmdate|date('Y-m-d H:i') }}</td>
 				<td>
-					<a href="{{ pm_read_link }}&pmid={{ entry.pmid }}&location=inbox">{{ entry.subject }}</a>
+					<a href="{{ entry.readURL }}">{{ entry.subject }}</a>
 				</td>
 				<td>{{ entry.link }}</td>
 				<td>

@@ -1,4 +1,4 @@
-<form method="POST" action="{{ pm_del_link }}&pmid={{ pmid }}&location={{ location }}">
+<form method="POST" action="{{ delURL }}">
 	<div class="block-title">{{ subject }}
 		{% if (ifinbox) %}от
 		{% endif %}
@@ -31,7 +31,7 @@
 		<input class="button" type="submit" value="{{ lang['pm:delete_one'] }}">
 	</form>
 	{% if (ifinbox == 1) %}
-		<form name="pm" method="POST" action="{{ pm_reply_link }}&pmid={{ pmid }}" style="display: inline;">
+		<form name="pm" method="POST" action="{{ replyURL }}" style="display: inline;">
 			<input class="button" type="submit" value="{{ lang['pm:reply'] }}">
 		</form>
 	{% endif %}

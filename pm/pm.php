@@ -100,7 +100,7 @@ class PMCoreFilter extends CoreFilter
 # show inbox messages list
 function pm_inbox()
 {
-	global $mysql, $config, $lang, $userROW, $tpl, $template, $TemplateCache, $twig, $maxMessages;
+	global $mysql, $config, $lang, $userROW, $tpl, $template, $TemplateCache, $twig, $maxMessages, $PHP_SELF;
 	if ($maxMessages > 0) {
 		$currentInbox = $mysql->result("SELECT COUNT(*) FROM " . prefix . "_pm WHERE to_id = " . db_squote($userROW['id']) . " AND folder='inbox'");
 		if ($currentInbox >= $maxMessages) {
@@ -145,6 +145,7 @@ function pm_inbox()
 			'link'     => $author,
 			'viewed'   => $row['viewed'],
 			'avatar'   => $avatar[1], // URL аватарки
+			'readURL'  => generatePluginLink('pm', null, array('action' => 'read'), array('pmid' => $row['id'], 'location' => 'inbox')),
 			'flags'    => array(
 				'hasAvatar' => $avatar[0], // Флаг наличия аватарки
 			),
@@ -152,6 +153,25 @@ function pm_inbox()
 	}
 	$maxMessages = intval(pluginGetVariable('pm', 'max_messages'));
 	$currentCount = $mysql->result("SELECT COUNT(*) FROM " . prefix . "_pm WHERE to_id = " . db_squote($userROW['id']) . " AND folder='inbox'");
+	// One-time flash flag from session (prefer session over query)
+	$flashSent = 0;
+	if (session_status() == PHP_SESSION_NONE) {
+		@session_start();
+	}
+	if (!empty($_SESSION['flash_pm_sent'])) {
+		$flashSent = 1;
+		unset($_SESSION['flash_pm_sent']);
+	}
+	// read flash for deletion result
+	$flashDel = null;
+	if (session_status() == PHP_SESSION_NONE) {
+		@session_start();
+	}
+	if (isset($_SESSION['flash_pm_del'])) {
+		$flashDel = $_SESSION['flash_pm_del'];
+		unset($_SESSION['flash_pm_del']);
+	}
+
 	$tVars = array(
 		'php_self' => $PHP_SELF,
 		'entries'  => $tEntries,
@@ -164,7 +184,9 @@ function pm_inbox()
 		'pm_write_link' => generatePluginLink('pm', null, array('action' => 'write')),
 		'max_messages' => $maxMessages,
 		'current_messages' => $currentCount,
-		'user' => array('id' => $userROW['id'])
+		'user' => array('id' => $userROW['id']),
+		'sent' => $flashSent ? 1 : (isset($_GET['sent']) ? intval($_GET['sent']) : 0),
+		'delFlash' => $flashDel,
 	);
 	$pages_count = ceil($countMsg / $msg_per_page);
 	$paginationParams = array('pluginName' => 'pm', 'params' => array(), 'xparams' => array(), 'paginator' => array('page', 0, false));
@@ -180,7 +202,7 @@ function pm_inbox()
 # show outbox messages list
 function pm_outbox()
 {
-	global $mysql, $lang, $userROW, $tpl, $template, $TemplateCache, $twig, $maxMessages;
+	global $mysql, $lang, $userROW, $tpl, $template, $TemplateCache, $twig, $maxMessages, $PHP_SELF;
 	$tpath = locatePluginTemplates(array('outbox'), 'pm', intval(pluginGetVariable('pm', 'localsource')));
 	# messages per page
 	$msg_per_page = intval(pluginGetVariable('pm', 'msg_per_page')) <= 0 ? 10 : intval(pluginGetVariable('pm', 'msg_per_page'));
@@ -213,6 +235,7 @@ function pm_outbox()
 			'subject'  => $row['subject'],
 			'link'     => $author,
 			'avatar'   => $avatar[1], // URL аватарки
+			'readURL'  => generatePluginLink('pm', null, array('action' => 'read'), array('pmid' => $row['id'], 'location' => 'outbox')),
 			'flags'    => array(
 				'hasAvatar' => $avatar[0], // Флаг наличия аватарки
 			),
@@ -221,6 +244,16 @@ function pm_outbox()
 	$maxMessages = intval(pluginGetVariable('pm', 'max_messages'));
 	// Для исходящих (outbox) - считаем только отправленные
 	$currentCount = $mysql->result("SELECT COUNT(*) FROM " . prefix . "_pm WHERE from_id = " . db_squote($userROW['id']) . " AND folder='outbox'");
+	// read flash for deletion result
+	$flashDel = null;
+	if (session_status() == PHP_SESSION_NONE) {
+		@session_start();
+	}
+	if (isset($_SESSION['flash_pm_del'])) {
+		$flashDel = $_SESSION['flash_pm_del'];
+		unset($_SESSION['flash_pm_del']);
+	}
+
 	$tVars = array(
 		'php_self' => $PHP_SELF,
 		'entries'  => $tEntries,
@@ -233,7 +266,8 @@ function pm_outbox()
 		'pm_write_link' => generatePluginLink('pm', null, array('action' => 'write')),
 		'max_messages' => $maxMessages, // Добавлено!
 		'current_messages' => $currentCount,
-		'user' => array('id' => $userROW['id']) // Для доступа в шаблоне
+		'user' => array('id' => $userROW['id']), // Для доступа в шаблоне
+		'delFlash' => $flashDel,
 	);
 	$pages_count = ceil($countMsg / $msg_per_page);
 	$paginationParams = array('pluginName' => 'pm', 'params' => array(), 'xparams' => array('action' => 'outbox'), 'paginator' => array('page', 0, false));
@@ -249,7 +283,7 @@ function pm_outbox()
 # show read message form
 function pm_read()
 {
-	global $mysql, $config, $lang, $userROW, $tpl, $mod, $parse, $template, $twig;
+	global $mysql, $config, $lang, $userROW, $tpl, $mod, $parse, $template, $twig, $PHP_SELF;
 	$tpath = locatePluginTemplates(array('read'), 'pm', intval(pluginGetVariable('pm', 'localsource')));
 	$pmid = intval($_REQUEST['pmid']);
 	if ($row = $mysql->record("SELECT * FROM " . prefix . "_pm WHERE id = " . db_squote($pmid) . " AND ((`from_id`=" . db_squote($userROW['id']) . " AND `folder`='outbox') OR (`to_id`=" . db_squote($userROW['id']) . ") AND `folder`='inbox')")) {
@@ -283,8 +317,8 @@ function pm_read()
 			'pm_inbox_link' => generatePluginLink('pm', null),
 			'pm_outbox_link' => generatePluginLink('pm', null, array('action' => 'outbox')),
 			'pm_set_link' => generatePluginLink('pm', null, array('action' => 'set')),
-			'pm_del_link' => generatePluginLink('pm', null, array('action' => 'delete')),
-			'pm_reply_link' => generatePluginLink('pm', null, array('action' => 'reply')),
+			'delURL'   => generatePluginLink('pm', null, array('action' => 'delete'), array('pmid' => $row['id'], 'location' => $row['folder'])),
+			'replyURL' => generatePluginLink('pm', null, array('action' => 'reply'), array('pmid' => $row['id'])),
 		);
 		$xt = $twig->loadTemplate($tpath['read'] . 'read.tpl');
 		$template['vars']['mainblock'] = $xt->render($tVars);
@@ -301,16 +335,49 @@ function pm_read()
 function pm_delete()
 {
 	global $mysql, $config, $lang, $userROW, $tpl;
-	$selected_pm = $_REQUEST['selected_pm'];
+	$selected_pm = isset($_REQUEST['selected_pm']) ? $_REQUEST['selected_pm'] : [];
 	$pmid = intval($_REQUEST['pmid']);
+	$location = isset($_REQUEST['location']) && in_array($_REQUEST['location'], ['inbox', 'outbox']) ? $_REQUEST['location'] : 'inbox';
+
+	// prepare redirect target
+	$redirectUrl = ($location == 'outbox') ? generatePluginLink('pm', null, array('action' => 'outbox')) : generatePluginLink('pm', null);
+
 	if (!$pmid) {
-		if (!$selected_pm) {
-			msg(array("type" => "error", "text" => $lang['pm:msge_select'] . str_replace('{url}', INBOX_LINK, $lang['pm:html_reload'])));
+		if (!$selected_pm || !is_array($selected_pm) || count($selected_pm) == 0) {
+			if (session_status() == PHP_SESSION_NONE) {
+				@session_start();
+			}
+			$_SESSION['flash_pm_del'] = ['ok' => 0, 'message' => $lang['pm:msge_select']];
+			if (!headers_sent()) {
+				header('Location: ' . $redirectUrl);
+				exit;
+			}
+			// Fallback
+			if ($location == 'outbox') {
+				pm_outbox();
+			} else {
+				pm_inbox();
+			}
 			return;
 		}
-		$mysql->query("DELETE FROM " . prefix . "_pm WHERE `id` IN (" . join(',', $selected_pm) . ") AND ((`from_id`=" . db_squote($userROW['id']) . " AND `folder`='outbox') OR (`to_id`=" . db_squote($userROW['id']) . ") AND `folder`='inbox')");
+		$ids = array_map('intval', $selected_pm);
+		$mysql->query("DELETE FROM " . prefix . "_pm WHERE `id` IN (" . join(',', $ids) . ") AND ((`from_id`=" . db_squote($userROW['id']) . " AND `folder`='outbox') OR (`to_id`=" . db_squote($userROW['id']) . ") AND `folder`='inbox')");
 		$mysql->query("UPDATE " . uprefix . "_users SET `pm_sync` = 0 WHERE `id` = " . db_squote($userROW['id']));
-		msg(array("text" => $lang['pm:msgo_deleted'] . str_replace('{url}', INBOX_LINK, $lang['pm:html_reload'])));
+		if (session_status() == PHP_SESSION_NONE) {
+			@session_start();
+		}
+		$_SESSION['flash_pm_del'] = ['ok' => 1, 'count' => count($ids)];
+		if (!headers_sent()) {
+			header('Location: ' . $redirectUrl);
+			exit;
+		}
+		// Fallback
+		if ($location == 'outbox') {
+			pm_outbox();
+		} else {
+			pm_inbox();
+		}
+		return;
 	} else {
 		$row = $mysql->record("SELECT id, viewed, folder FROM " . prefix . "_pm WHERE `id`=" . db_squote($pmid) . " AND ((`from_id`=" . db_squote($userROW['id']) . " AND `folder`='outbox') OR (`to_id`=" . db_squote($userROW['id']) . ") AND `folder`='inbox')");
 		if ($row) {
@@ -322,21 +389,40 @@ function pm_delete()
 				else
 					$mysql->query("UPDATE " . uprefix . "_users SET `pm_all` = `pm_all` - 1, `pm_unread` = `pm_unread` - 1 WHERE `id` = " . db_squote($userROW['id']));
 			}
-			msg(array("text" => $lang['pm:msgo_deleted_one'] . str_replace('{url}', INBOX_LINK, $lang['pm:html_reload'])));
-		} else
-			msg(array("type" => "error", "text" => $lang['pm:msge_bad_del'] . str_replace('{url}', INBOX_LINK, $lang['pm:html_reload'])));
+			if (session_status() == PHP_SESSION_NONE) {
+				@session_start();
+			}
+			$_SESSION['flash_pm_del'] = ['ok' => 1, 'count' => 1];
+		} else {
+			if (session_status() == PHP_SESSION_NONE) {
+				@session_start();
+			}
+			$_SESSION['flash_pm_del'] = ['ok' => 0, 'message' => $lang['pm:msge_bad_del']];
+		}
+		// Redirect back to list based on detected folder
+		$redir = ($row && ($row['folder'] == 'outbox')) ? generatePluginLink('pm', null, array('action' => 'outbox')) : generatePluginLink('pm', null);
+		if (!headers_sent()) {
+			header('Location: ' . $redir);
+			exit;
+		}
+		// Fallback
+		if ($row && $row['folder'] == 'outbox') {
+			pm_outbox();
+		} else {
+			pm_inbox();
+		}
+		return;
 	}
 }
 # show write message form
 function pm_write()
 {
-	global $config, $lang, $tpl, $template, $twig;
+	global $config, $lang, $tpl, $template, $twig, $PHP_SELF;
 	$tpath = locatePluginTemplates(array('write'), 'pm', intval(pluginGetVariable('pm', 'localsource')));
 	$tVars = array(
 		'php_self'  => $PHP_SELF,
 		'username'  => trim($_REQUEST['name']),
 		'title' => isset($_REQUEST['title']) ? $_REQUEST['title'] : '',
-		'to_username' => $row['from_id'],
 		'quicktags' => BBCodes("'pm_content'"),
 		'smilies' => ($config['use_smilies'] == "1") ? InsertSmilies('', 10, 'pm_content') : '',
 		'pm_inbox_link' => generatePluginLink('pm', null),
@@ -374,7 +460,19 @@ function pm_send()
 	$status = $pm->sendMsg($_POST['to_username'], $userROW['id'], $_POST['title'], $_POST['content'], false, $_POST['saveoutbox']);
 	# if all right
 	if (!$status) {
-		msg(array("text" => $lang['pm:msgo_sent'] . str_replace('{url}', INBOX_LINK, $lang['pm:html_reload'])));
+		// Set session-based flash and redirect to clean inbox URL
+		if (session_status() == PHP_SESSION_NONE) {
+			@session_start();
+		}
+		$_SESSION['flash_pm_sent'] = 1;
+		$redirectUrl = generatePluginLink('pm', null);
+		if (!headers_sent()) {
+			header('Location: ' . $redirectUrl);
+			exit;
+		}
+		// Fallback: no redirect possible (headers already sent) -> render inbox with flag
+		$_GET['sent'] = 1;
+		pm_inbox();
 		return 0;
 	}
 	# if some error
@@ -424,7 +522,7 @@ function pm_send()
 # show reply form
 function pm_reply()
 {
-	global $mysql, $config, $lang, $userROW, $tpl, $parse, $template, $maxMessages, $twig;
+	global $mysql, $config, $lang, $userROW, $tpl, $parse, $template, $maxMessages, $twig, $PHP_SELF;
 	// Проверка лимита перед ответом
 	$maxMessages = intval(pluginGetVariable('pm', 'max_messages'));
 	$currentOutbox = $mysql->result("SELECT COUNT(*) FROM " . prefix . "_pm
@@ -475,7 +573,7 @@ function pm_reply()
 # user settings
 function pm_set()
 {
-	global $userROW, $template, $tpl, $mysql, $twig;
+	global $userROW, $template, $tpl, $mysql, $twig, $PHP_SELF;
 	$checked = $userROW['pm_email'];
 	if (isset($_POST['check'])) {
 		if ($_POST['email']) {
@@ -505,6 +603,7 @@ function pm()
 		msg(array("type" => "info", "info" => $lang['pm:err.noAuthorization']));;
 		return 1;
 	}
+	// Toast уведомления реализуются на клиенте через /lib/notify.js
 	$tpath = locatePluginTemplates(array(':pm.css'), 'pm', intval(pluginGetVariable('pm', 'localsource')));
 	register_stylesheet($tpath['url::pm.css'] . '/pm.css');
 	switch ($_REQUEST['action']) {
@@ -553,10 +652,16 @@ function new_pm()
 	// Передаем переменные в шаблон
 	$template['vars']['newpm'] = $newpm;
 	$template['vars']['newpmText'] = $newpmText;
-	// Также устанавливаем в глобальные переменные для совместимости
-	if (isset($GLOBALS['twig'])) {
-		$GLOBALS['twig']->addGlobal('newpm', $newpm);
-		$GLOBALS['twig']->addGlobal('newpmText', $newpmText);
+
+	// Встраиваем клиентский скрипт показа notify-тоста через {{ htmlvars }} в <head>
+	// Делаем это только если есть непрочитанные сообщения
+	if (intval($newpm) > 0) {
+		$inboxURL = generatePluginLink('pm', null);
+		$script = "<script>document.addEventListener('DOMContentLoaded',function(){try{if(!window.showToast){return;}var unread=" . intval($newpm) . ";var KEY='ng_pm_unread';var prev=parseInt(sessionStorage.getItem(KEY)||'0',10);if(!prev||prev!==unread){var link='<a href=\"" . $inboxURL . "\">Открыть входящие</a>';window.showToast('У вас '+unread+' непрочитанных сообщений. '+link,{type:'info',title:'Личные сообщения'});sessionStorage.setItem(KEY,String(unread));}}catch(e){}});</script>";
+		if (!isset($template['vars']['htmlvars'])) {
+			$template['vars']['htmlvars'] = '';
+		}
+		$template['vars']['htmlvars'] .= $script;
 	}
 	return $newpmText;
 }
