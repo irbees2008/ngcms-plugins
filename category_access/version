@@ -3,15 +3,17 @@
 ;
 ID: category_access
 Name: Доступ к категориям
-Version: 0.01
+Version: 0.03
 Actions: news:show; category_access.php
 Config: config.php
 Type: plugin
-Title: Управление доступом пользователей в категории
-Description: Плагин позволяет Вам управлять доступом пользователей в категории
-Information: Плагин позволяет Вам управлять доступом пользователей в категории
+Title: Управление доступом пользователей к категориям
+Description: Управление доступом к категориям по группам и персональным правилам
+Information: Требования PHP: 7.4–8.4; исправлены устаревшие конструкции, стабильность админ-настроек
 Author: Ivan Litvinenko (Amarelius)
 Author_URI: http://arnit.com.ua/
 Preinstall: no
 MinEngineBuild: 23b3116
-Icons: <i class="fa fa-minus-circle fa-3x" aria-hidden="true"></i>
+Icons: <i class="fa fa-lock fa-3x" aria-hidden="true"></i>
+MinPHP: 7.4
+MaxPHP: 8.4

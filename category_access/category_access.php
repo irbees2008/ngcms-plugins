@@ -1,19 +1,25 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
-
-class CategoryAccessNewsFilter extends NewsFilter {
-
-	function CategoryAccessNewsFilter() {
-
+if (!defined('NGCMS')) die('HAL');
+class CategoryAccessNewsFilter extends NewsFilter
+{
+	public $flag;
+	public $flag2;
+	public $templateName;
+	public $templatePath;
+	public $notified;
+	public $hiddenCount;
+	function __construct()
+	{
 		$this->flag = false;
 		$this->flag2 = false;
 		$this->templateName = '';
 		$this->templatePath = '';
+		$this->notified = false;
+		$this->hiddenCount = 0;
 	}
-
-	function GetParentCategory($cat, &$categorys) {
-
+	function GetParentCategory($cat, &$categorys)
+	{
 		global $catz, $catmap;
 		$par_cat = $catz[$catmap[$cat]]['parent'];
 		if ($par_cat && !in_array($par_cat, $categorys)) {
@@ -21,9 +27,8 @@ class CategoryAccessNewsFilter extends NewsFilter {
 			$this->GetParentCategory($par_cat, $categorys);
 		}
 	}
-
-	public function showNews($newsID, $SQLnews, &$tvars, $mode = []) {
-
+	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
+	{
 		global $userROW, $catmap, $catz;
 		if ($this->flag) {
 			$mode['overrideTemplateName'] = $this->templateName;
@@ -65,26 +70,48 @@ class CategoryAccessNewsFilter extends NewsFilter {
 			}
 			$mode['overrideTemplateName'] = '';
 			$mode['overrideTemplatePath'] = extras_dir . '/category_access/tpl/';
+			// Отмечаем, что хотя бы одна новость была скрыта
+			$this->hiddenCount++;
 		} else $this->flag2 = true;
-
 		return 1;
 	}
-
-	function onAfterShow($mode) {
-
+	function onAfterShow($mode)
+	{
 		global $template;
-		if ($this->flag && !$this->flag2) $template['vars']['mainblock'] = pluginGetVariable('category_access', 'message');
-
+		if ($this->flag && !$this->flag2) {
+			$message = pluginGetVariable('category_access', 'message');
+			if (!$message) {
+				$message = 'Доступ к материалам ограничен';
+			}
+			if (!$this->notified) {
+				msg(array('type' => 'error', 'text' => $message));
+				$this->notified = true;
+			}
+			$template['vars']['mainblock'] = $message;
+		} else if ($this->hiddenCount > 0 && !$this->notified) {
+			// Частичный запрет: показываем мягкое уведомление, контент страницы не трогаем
+			$pm = pluginGetVariable('category_access', 'message');
+			$txt = $pm ? $pm : 'Доступ к части материалов ограничен';
+			msg(array('type' => 'info', 'text' => $txt));
+			$this->notified = true;
+		}
 		return 1;
 	}
-
-	function onAfterNewsShow($newsID, $SQLnews, $mode = array()) {
-
+	function onAfterNewsShow($newsID, $SQLnews, $mode = array())
+	{
 		global $template;
-		if ($this->flag && !$this->flag2) $template['vars']['mainblock'] = pluginGetVariable('category_access', 'message');
-
+		if ($this->flag && !$this->flag2) {
+			$message = pluginGetVariable('category_access', 'message');
+			if (!$message) {
+				$message = 'Доступ к материалам ограничен';
+			}
+			if (!$this->notified) {
+				msg(array('type' => 'error', 'text' => $message));
+				$this->notified = true;
+			}
+			$template['vars']['mainblock'] = $message;
+		}
 		return 1;
 	}
 }
-
 register_filter('news', 'category_access', new CategoryAccessNewsFilter);

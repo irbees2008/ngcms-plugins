@@ -16,12 +16,14 @@ switch ($_REQUEST['action']) {
 		add_category();
 		break;
 	case 'move_up':
-		move('up');
-		showlist();
+		// Функционал перемещения отсутствует в текущей версии — безопасная заглушка
+		msg(array('type' => 'info', 'info' => $lang['category_access:info_not_implemented'] ?? 'Not implemented'));
+		main();
 		break;
 	case 'move_down':
-		move('down');
-		showlist();
+		// Функционал перемещения отсутствует в текущей версии — безопасная заглушка
+		msg(array('type' => 'info', 'info' => $lang['category_access:info_not_implemented'] ?? 'Not implemented'));
+		main();
 		break;
 	case 'dell_user':
 		delete_user();
@@ -34,11 +36,14 @@ switch ($_REQUEST['action']) {
 		main();
 		break;
 	case 'clear_cash':
-		clear_cash();
+		// Очистка кеша отсутствует — безопасная заглушка
+		msg(array('type' => 'info', 'info' => $lang['category_access:info_not_implemented'] ?? 'Not implemented'));
+		main();
 	default:
 		main();
 }
-function validate($string) {
+function validate($string)
+{
 
 	$chars = 'abcdefghijklmnopqrstuvwxyz_.0123456789';
 	if ($string == '') return true;
@@ -49,9 +54,11 @@ function validate($string) {
 	return true;
 }
 
-function general_submit() {
+function general_submit()
+{
 
 	global $lang;
+	$if_error = false;
 	$guest = isset($_POST['guest']) ? intval($_POST['guest']) : 0;
 	$coment = isset($_POST['coment']) ? intval($_POST['coment']) : 0;
 	$journ = isset($_POST['journ']) ? intval($_POST['journ']) : 0;
@@ -70,7 +77,8 @@ function general_submit() {
 	}
 }
 
-function main() {
+function main()
+{
 
 	global $tpl, $lang;
 	$tpath = locatePluginTemplates(array('conf.main', 'conf.general.form'), 'category_access', 1);
@@ -96,11 +104,15 @@ function main() {
 	print $tpl->show('conf.main');
 }
 
-function show_list_user() {
+function show_list_user()
+{
 
 	global $tpl, $lang, $catz, $catmap;
 	$tpath = locatePluginTemplates(array('conf.main', 'conf.list.user', 'conf.list.user.row'), 'category_access', 1);
 	$users = pluginGetVariable('category_access', 'users');
+	if (!is_array($users)) {
+		$users = array();
+	}
 	$output = '';
 	foreach ($users as $user => $category) {
 		$pvars['vars']['user'] = $user;
@@ -119,11 +131,15 @@ function show_list_user() {
 	print $tpl->show('conf.main');
 }
 
-function show_list_category() {
+function show_list_category()
+{
 
 	global $tpl, $lang, $catz, $catmap;
 	$tpath = locatePluginTemplates(array('conf.main', 'conf.list', 'conf.list.row'), 'category_access', 1);
 	$categorys = pluginGetVariable('category_access', 'categorys');
+	if (!is_array($categorys)) {
+		$categorys = array();
+	}
 	$output = '';
 	foreach ($categorys as $cat) {
 		$pvars['vars']['category'] = $cat;
@@ -142,10 +158,14 @@ function show_list_category() {
 	print $tpl->show('conf.main');
 }
 
-function add_user() {
+function add_user()
+{
 
 	global $tpl, $lang, $catz, $catmap, $mysql;
 	$users = pluginGetVariable('category_access', 'users');
+	if (!is_array($users)) {
+		$users = array();
+	}
 	$if_add = true;
 	$user = '';
 	$category = 0;
@@ -188,7 +208,6 @@ function add_user() {
 	}
 	$category_list = array();
 	foreach ($catmap as $key => $val) {
-		if (array_key_exists($key, $category) && ($if_add || $key != $cat)) continue;
 		$category_list[$key] = $catz[$val]['name'];
 	}
 	$user_list = array();
@@ -211,10 +230,14 @@ function add_user() {
 	print $tpl->show('conf.main');
 }
 
-function add_category() {
+function add_category()
+{
 
 	global $tpl, $lang, $catz, $catmap;
 	$categorys = pluginGetVariable('category_access', 'categorys');
+	if (!is_array($categorys)) {
+		$categorys = array();
+	}
 	if (isset($_POST['category']) && is_array($_POST['category'])) {
 		foreach ($_POST['category'] as $category) {
 			if (!array_key_exists($category, $catmap)) {
@@ -254,10 +277,14 @@ function add_category() {
 	print $tpl->show('conf.main');
 }
 
-function delete_user() {
+function delete_user()
+{
 
 	global $tpl, $lang;
 	$users = pluginGetVariable('category_access', 'users');
+	if (!is_array($users)) {
+		$users = array();
+	}
 	if (!isset($_REQUEST['user']) || !array_key_exists($_REQUEST['user'], $users)) {
 		msg(array('type' => 'error', 'info' => $lang['category_access:error_not_exists_user'], 'text' => $lang['category_access:error_val_title']));
 		show_list_user();
@@ -288,10 +315,14 @@ function delete_user() {
 	print $tpl->show('conf.main');
 }
 
-function delete_category() {
+function delete_category()
+{
 
 	global $tpl, $lang, $catz, $catmap;
 	$categorys = pluginGetVariable('category_access', 'categorys');
+	if (!is_array($categorys)) {
+		$categorys = array();
+	}
 	if (!isset($_REQUEST['category']) || !in_array($_REQUEST['category'], $categorys)) {
 		msg(array('type' => 'error', 'info' => $lang['category_access:error_not_exists'], 'text' => $lang['category_access:error_val_title']));
 		show_list_category();
