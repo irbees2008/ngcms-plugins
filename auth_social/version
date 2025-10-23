@@ -11,9 +11,11 @@ Install: install.php
 Deinstall: uninstall.php
 Type: plugin
 Description: Аутентификация через ВК, Google, Yandex, Facebook и т.д.
-Author: Rostunov Sergey
+Author: Rostunov Sergey, Stanislav+ИИ
 Author_URI: http://rostunov.com/
 Information: Аутентификация через ВК, Google, Yandex, Facebook и т.д.
 Preinstall: no
 MinEngineBuild: 23b3116
+MinPHP: 7.4
+MaxPHP: 8.4
 Icons: <i class="fa fa-sign-in fa-3x" aria-hidden="true"></i>
