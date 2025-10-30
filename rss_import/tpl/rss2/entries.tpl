@@ -1,10 +1,9 @@
 <div class="olockdiego">
 	<div class="imagesolo">
-		<a href="{link}" target="_blank" rel="nofollow">
-			{image}</a>
+		<a href="{{ entry.link }}" target="_blank" rel="nofollow">{% if entry.pic %}{{ entry.pic|raw }}{% endif %}</a>
 	</div>
 	<h3 class="titleolo">
-		<a href="{link}" target="_blank" rel="nofollow">{title}</a>
+		<a href="{{ entry.link }}" target="_blank" rel="nofollow">{{ entry.title }}</a>
 	</h3>
-	<div class="infordshot">{short_news}</div>
+	<div class="infordshot">{{ entry.short_news }}</div>
 </div>

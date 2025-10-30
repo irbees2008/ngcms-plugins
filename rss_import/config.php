@@ -20,6 +20,8 @@ for ($i = 1; $i <= $count; $i++) {
 	array_push($cfgX, array('name' => 'rss' . $i . '_newslength', 'title' => 'Ограничение длины короткой новости<br /><small>Если название превышает указанные пределы, то оно будет урезано<br />Значение по умолчанию: <b>100</b></small>', 'type' => 'input', 'value' => intval(extra_get_param($plugin, 'rss' . $i . '_newslength')) ? extra_get_param($plugin, 'rss' . $i . '_newslength') : '100'));
 	array_push($cfgX, array('name' => 'rss' . $i . '_content', 'title' => "Генерировать переменную {short_news}", 'type' => 'checkbox', 'value' => extra_get_param($plugin, 'rss' . $i . '_content')));
 	array_push($cfgX, array('name' => 'rss' . $i . '_img', 'title' => "Удалить все картинки из {short_news}", 'type' => 'checkbox', 'value' => extra_get_param($plugin, 'rss' . $i . '_img')));
+	array_push($cfgX, array('name' => 'rss' . $i . '_showImage', 'title' => 'Показывать изображение карточки', 'type' => 'checkbox', 'value' => extra_get_param($plugin, 'rss' . $i . '_showImage')));
+	array_push($cfgX, array('name' => 'rss' . $i . '_imageSource', 'title' => 'Источник изображения для карточки', 'type' => 'select', 'values' => array('desc' => 'Из тела новости (description)', 'enclosure' => 'Из доп. полей (enclosure)'), 'value' => (extra_get_param($plugin, 'rss' . $i . '_imageSource') ? extra_get_param($plugin, 'rss' . $i . '_imageSource') : 'enclosure')));
 	array_push($cfg, array('mode' => 'group', 'title' => '<b>Настройки блока № <b>' . $i . '</b> {rss' . $i . '}', 'entries' => $cfgX));
 }
 $cfgX = array();
@@ -29,7 +31,7 @@ $cfgX = array();
 array_push($cfgX, array('name' => 'cache', 'title' => 'Использовать кеширование данных<br /><small><b>Да</b> - кеширование используется<br /><b>Нет</b> - кеширование не используется</small>', 'type' => 'select', 'values' => array('1' => 'Да', '0' => 'Нет'), 'value' => intval(extra_get_param($plugin, 'cache'))));
 array_push($cfgX, array('name' => 'cacheExpire', 'title' => 'Период обновления кеша<br /><small>(через сколько секунд происходит обновление кеша. Значение по умолчанию: <b>60</b>)</small>', 'type' => 'input', 'value' => intval(extra_get_param($plugin, 'cacheExpire')) ? extra_get_param($plugin, 'cacheExpire') : '60'));
 array_push($cfg, array('mode' => 'group', 'title' => '<b>Настройки кеширования</b>', 'entries' => $cfgX));
-// RUN 
+// RUN
 if ($_REQUEST['action'] == 'commit') {
 	// If submit requested, do config save
 	commit_plugin_config_changes($plugin, $cfg);

@@ -1,7 +1,9 @@
-	<!--Last 5 Bags-->
-	<h2>{author}</h2>
-		{entries}
-	<!--/Last 5 Bags-->
+    <!--Last 5 Bags-->
+    <h2>{{ author }}</h2>
+    {% for entry in entries %}
+        {% include localPath(0) ~ 'entries.tpl' %}
+    {% endfor %}
+    <!--/Last 5 Bags-->
 <style>
 	.shortits img {
 		width: 100%;

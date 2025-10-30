@@ -3,7 +3,7 @@
 ;
 ID: rss_import
 Name: RSS news importer
-Version: 0.02
+Version: 0.03
 Acts: index, ppages
 File: rss_import.php
 Config: config.php
