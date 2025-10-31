@@ -1,42 +1,40 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
-
 // Очищаем все возможные буферы вывода
 while (ob_get_level()) ob_end_clean();
-
 // Устанавливаем заголовок XML ДО любого вывода
-header('Content-Type: application/xml; charset=utf-8');
-
+// Устанавливаем заголовок RSS ДО любого вывода
+header('Content-Type: application/rss+xml; charset=utf-8');
 include_once root . "/includes/news.php";
-
 register_plugin_page('rss_export', '', 'plugin_rss_export', 0);
 register_plugin_page('rss_export', 'category', 'plugin_rss_export_category', 0);
-
-function plugin_rss_export() {
-    plugin_rss_export_generate();
+function plugin_rss_export()
+{
+	plugin_rss_export_generate();
 }
-
-function plugin_rss_export_category($params) {
-    plugin_rss_export_generate($params['category']);
+function plugin_rss_export_category($params)
+{
+	$cat = '';
+	if (isset($params['category']) && $params['category'] !== '') {
+		$cat = $params['category'];
+	} elseif (!empty($_REQUEST['category'])) {
+		$cat = $_REQUEST['category'];
+	}
+	plugin_rss_export_generate($cat);
 }
-
 function plugin_rss_export_generate($catname = '')
 {
-	global $lang, $PFILTERS, $template, $config, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $mysql, $catz, $parse;
-
+	global $lang, $PFILTERS, $template, $config, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $mysql, $catz, $parse, $userROW;
 	actionDisable('index');
 	$SUPRESS_TEMPLATE_SHOW = 1;
 	$SUPRESS_MAINBLOCK_SHOW = 1;
-
 	if (($catname != '') && (!isset($catz[$catname]))) {
 		header('HTTP/1.1 404 Not found');
 		exit;
 	}
-
 	$xcat = (($catname != '') && isset($catz[$catname])) ? $catz[$catname] : '';
 	$cacheFileName = md5('rss_export' . $config['theme'] . $config['home_url'] . $config['default_lang'] . (is_array($xcat) ? $xcat['id'] : '') . pluginGetVariable('rss_export', 'use_hide') . is_array($userROW)) . '.txt';
-
 	if (pluginGetVariable('rss_export', 'cache')) {
 		$cacheData = cacheRetrieveFile($cacheFileName, pluginGetVariable('rss_export', 'cacheExpire'), 'rss_export');
 		if ($cacheData != false) {
@@ -44,15 +42,46 @@ function plugin_rss_export_generate($catname = '')
 			exit;
 		}
 	}
-
-	// Получаем текущий URL ленты
-$current_rss_url = 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-
-// Генерация XML
-echo '<?xml version="1.0" encoding="utf-8"?>' . "\n";
-echo '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:wfw="http://wellformedweb.org/CommentAPI/">' . "\n";
-echo "<channel>\n";
-echo '<atom:link href="' . htmlspecialchars($current_rss_url, ENT_QUOTES, 'UTF-8') . '" rel="self" type="application/rss+xml" />' . "\n";
+	// Буферизация для корректного кеширования
+	ob_start();
+	// Нормализация URL (коллапс двойных слешей в пути)
+	if (!function_exists('rss_export_normalize_url')) {
+		function rss_export_normalize_url($url)
+		{
+			$parts = @parse_url($url);
+			if ($parts === false) {
+				return $url;
+			}
+			$scheme = isset($parts['scheme']) ? $parts['scheme'] . '://' : '';
+			$user = $parts['user'] ?? '';
+			$pass = isset($parts['pass']) ? ':' . $parts['pass'] : '';
+			$auth = $user ? ($user . $pass . '@') : '';
+			$host = $parts['host'] ?? '';
+			$port = isset($parts['port']) ? ':' . $parts['port'] : '';
+			$path = $parts['path'] ?? '';
+			$path = '/' . ltrim(preg_replace('#/+#', '/', $path), '/');
+			$query = isset($parts['query']) ? ('?' . $parts['query']) : '';
+			$fragment = isset($parts['fragment']) ? ('#' . $parts['fragment']) : '';
+			return $scheme . $auth . $host . $port . $path . $query . $fragment;
+		}
+	}
+	// Канонический self URL ленты: используем фактический URL запроса, чтобы совпадал с документом
+	$scheme = 'http';
+	if (
+		(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+		(isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) ||
+		(isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+	) {
+		$scheme = 'https';
+	}
+	$host = isset($_SERVER['HTTP_X_FORWARDED_HOST']) && $_SERVER['HTTP_X_FORWARDED_HOST'] ? $_SERVER['HTTP_X_FORWARDED_HOST'] : (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '');
+	$reqUri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '/';
+	$selfUrl = rss_export_normalize_url($scheme . '://' . $host . $reqUri);
+	// Генерация XML заголовков и канала
+	echo '<?xml version="1.0" encoding="utf-8"?>' . "\n";
+	echo '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:wfw="http://wellformedweb.org/CommentAPI/">' . "\n";
+	echo "<channel>\n";
+	echo '<atom:link href="' . htmlspecialchars($selfUrl, ENT_QUOTES, 'UTF-8') . '" rel="self" type="application/rss+xml" />' . "\n";
 	// Заголовок канала
 	if (pluginGetVariable('rss_export', 'feed_title_format') == 'handy') {
 		echo "<title><![CDATA[" . htmlspecialchars(pluginGetVariable('rss_export', 'feed_title_value'), ENT_QUOTES, 'UTF-8') . "]]></title>\n";
@@ -61,17 +90,53 @@ echo '<atom:link href="' . htmlspecialchars($current_rss_url, ENT_QUOTES, 'UTF-8
 	} else {
 		echo "<title><![CDATA[" . htmlspecialchars($config['home_title'], ENT_QUOTES, 'UTF-8') . "]]></title>\n";
 	}
+	// Определяем язык ленты: приоритет для ручной настройки, иначе авто из системного языка
+	$rssLang = 'ru';
+	$mode = pluginGetVariable('rss_export', 'feed_lang_mode');
+	$manual = trim(strval(pluginGetVariable('rss_export', 'feed_lang_code')));
 
-	echo "<link>" . htmlspecialchars($config['home_url'], ENT_QUOTES, 'UTF-8') . "</link>\n";
-	echo "<language>ru</language>\n";
+	if ($mode === 'manual' && $manual !== '') {
+		$__rawLang = strtolower($manual);
+		$__rawLang = str_replace('_', '-', $__rawLang);
+		$parts = explode('-', $__rawLang);
+		$lang = isset($parts[0]) ? $parts[0] : '';
+		if ($lang === 'ua') {
+			$lang = 'uk';
+		}
+		if (preg_match('/^[a-z]{2,3}$/', $lang)) {
+			$rssLang = $lang;
+			if (isset($parts[1]) && preg_match('/^[a-z]{2}$/', $parts[1])) {
+				$rssLang = $lang . '-' . strtoupper($parts[1]);
+			}
+		}
+	} else {
+		// Авто: из системной настройки default_lang
+		$__rawLang = strtolower(strval($config['default_lang']));
+		$__rawLang = str_replace('_', '-', $__rawLang);
+		$parts = explode('-', $__rawLang);
+		$lang = isset($parts[0]) ? $parts[0] : '';
+		if ($lang === 'ua') {
+			$lang = 'uk';
+		}
+		if (preg_match('/^[a-z]{2,3}$/', $lang)) {
+			$rssLang = $lang;
+			if (isset($parts[1]) && preg_match('/^[a-z]{2}$/', $parts[1])) {
+				$rssLang = $lang . '-' . strtoupper($parts[1]);
+			}
+		}
+	}
+	$rssLang = $lang ?: 'ru';
+	// Регион (опционально): вторая часть из 2 латинских букв -> верхний регистр
+	if ($lang && isset($parts[1]) && preg_match('/^[a-z]{2}$/', $parts[1])) {
+		$rssLang = $lang . '-' . strtoupper($parts[1]);
+	}
+	echo "<language>" . $rssLang . "</language>\n";
 	echo "<description><![CDATA[" . htmlspecialchars($config['description'], ENT_QUOTES, 'UTF-8') . "]]></description>\n";
 	echo "<generator><![CDATA[Plugin RSS_EXPORT (0.07) // Next Generation CMS (" . engineVersion . ")]]></generator>\n";
-
 	// Инициализация xfields
 	$xFList = array();
 	$encImages = array();
 	$enclosureIsImages = false;
-
 	if (pluginGetVariable('rss_export', 'xfEnclosureEnabled') && getPluginStatusActive('xfields')) {
 		$xFList = xf_configLoad();
 		$eFieldName = pluginGetVariable('rss_export', 'xfEnclosure');
@@ -79,24 +144,19 @@ echo '<atom:link href="' . htmlspecialchars($current_rss_url, ENT_QUOTES, 'UTF-8
 			$enclosureIsImages = true;
 		}
 	}
-
 	// Получение новостей
 	$limit = pluginGetVariable('rss_export', 'news_count');
 	$delay = intval(pluginGetVariable('rss_export', 'delay'));
 	if ((!is_numeric($limit)) || ($limit < 0) || ($limit > 500)) $limit = 50;
-
 	$old_locale = setlocale(LC_TIME, 0);
 	setlocale(LC_TIME, 'en_EN');
-
 	if (is_array($xcat)) {
-		$orderBy = ($xcat['orderby'] && in_array($xcat['orderby'], array('id desc', 'id asc', 'postdate desc', 'postdate asc', 'title desc', 'title asc'))) ? $xcat['orderby'] : 'id desc';
-		$query = "select * from " . prefix . "_news where catid regexp '\\\\b(" . $xcat['id'] . ")\\\\b' and approve=1 " . (($delay > 0) ? (" and ((postdate + " . intval($delay * 60) . ") < unix_timestamp(now())) ") : '') . "order by " . $orderBy;
+		$orderBy = (!empty($xcat['orderby']) && in_array($xcat['orderby'], array('id desc', 'id asc', 'postdate desc', 'postdate asc', 'title desc', 'title asc'))) ? $xcat['orderby'] : 'id desc';
+		$query = "select * from " . prefix . "_news where catid regexp '\\b(" . $xcat['id'] . ")\\b' and approve=1 " . (($delay > 0) ? (" and ((postdate + " . intval($delay * 60) . ") < unix_timestamp(now())) ") : '') . "order by " . $orderBy;
 	} else {
 		$query = "select * from " . prefix . "_news where approve=1" . (($delay > 0) ? (" and ((postdate + " . intval($delay * 60) . ") < unix_timestamp(now())) ") : '') . " order by id desc";
 	}
-
 	$sqlData = $mysql->select($query . " limit $limit");
-
 	// Подготовка изображений для enclosure
 	if ($enclosureIsImages) {
 		$nAList = array();
@@ -112,10 +172,8 @@ echo '<atom:link href="' . htmlspecialchars($current_rss_url, ENT_QUOTES, 'UTF-8
 			}
 		}
 	}
-
 	$truncateLen = intval(pluginGetVariable('rss_export', 'truncate'));
 	if ($truncateLen < 0) $truncateLen = 0;
-
 	foreach ($sqlData as $row) {
 		// Обработка контента
 		$export_mode = 'export_body';
@@ -127,22 +185,37 @@ echo '<atom:link href="' . htmlspecialchars($current_rss_url, ENT_QUOTES, 'UTF-8
 				$export_mode = 'export_full';
 				break;
 		}
-
 		$content = news_showone($row['id'], '', array('emulate' => $row, 'style' => $export_mode, 'plugin' => 'rss_export'));
-
 		if ($truncateLen > 0) {
 			$content = $parse->truncateHTML($content, $truncateLen, '...');
 		}
-
 		// Удаляем нежелательные теги
 		$content = preg_replace('/<iframe[^>]*>.*?<\/iframe>/is', '', $content);
 		$content = preg_replace('/<script[^>]*>.*?<\/script>/is', '', $content);
-
-		// Заменяем HTML-сущности на числовые
+		// Удаляем потенциально опасные атрибуты: style и on*
+		$content = preg_replace('/\sstyle=("|\").*?\1/si', '', $content);
+		$content = preg_replace('/\son[a-z]+=("|\").*?\1/si', '', $content);
+		// Превращаем относительные ссылки и источники в абсолютные
+		$base = rtrim($config['home_url'], '/');
+		$content = preg_replace_callback('/\b(?:src|href)=([\"\'])([^\"\']+)\1/i', function ($m) use ($base) {
+			$attr = $m[0];
+			$q = $m[1];
+			$u = $m[2];
+			// Пропускаем абсолютные URL, протокол-агностичные, data:, mailto:, tel:, якоря
+			if (preg_match('#^(?:[a-z]+:)?//#i', $u) || preg_match('#^[a-z]+:#i', $u) || (isset($u[0]) && $u[0] === '#')) {
+				return $attr;
+			}
+			if (isset($u[0]) && $u[0] === '/') {
+				$new = $base . $u;
+			} else {
+				$new = $base . '/' . $u;
+			}
+			return preg_replace('/=([\"\']).*?\1/', '=' . $q . $new . $q, $attr, 1);
+		}, $content);
+		// Заменяем одиночные амперсанды на &amp;
 		$content = preg_replace_callback('/&(?!amp;|lt;|gt;|quot;|apos;)/', function ($m) {
 			return '&amp;';
 		}, $content);
-
 		// Обработка enclosure
 		$enclosure = '';
 		if (pluginGetVariable('rss_export', 'xfEnclosureEnabled') && getPluginStatusActive('xfields')) {
@@ -157,31 +230,30 @@ echo '<atom:link href="' . htmlspecialchars($current_rss_url, ENT_QUOTES, 'UTF-8
 				}
 			}
 		}
-
 		echo "  <item>\n";
 		echo "   <title><![CDATA[" . ((pluginGetVariable('rss_export', 'news_title') == 1) && GetCategories($row['catid'], true) ? htmlspecialchars(GetCategories($row['catid'], true) . ' :: ', ENT_QUOTES, 'UTF-8') : '') . htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8') . "]]></title>\n";
 		echo "   <link>" . htmlspecialchars(newsGenerateLink($row, false, 0, true), ENT_QUOTES, 'UTF-8') . "</link>\n";
 		echo "   <description><![CDATA[" . $content . "]]></description>\n";
-
 		if ($enclosure != '') {
 			echo '   <enclosure url="' . htmlspecialchars($enclosure, ENT_QUOTES, 'UTF-8') . '" length="0" type="' . ($enclosureIsImages ? 'image/jpeg' : 'application/octet-stream') . '" />' . "\n";
 		}
-
-		echo "   <category>" . htmlspecialchars(GetCategories($row['catid'], true), ENT_QUOTES, 'UTF-8') . "</category>\n";
-		echo "   <guid isPermaLink=\"false\">" . htmlspecialchars(home . "?id=" . $row['id'], ENT_QUOTES, 'UTF-8') . "</guid>\n";
-
+		$__catTitle = trim(strval(GetCategories($row['catid'], true)));
+		if ($__catTitle !== '') {
+			echo "   <category>" . htmlspecialchars($__catTitle, ENT_QUOTES, 'UTF-8') . "</category>\n";
+		}
+		echo "   <guid isPermaLink=\"false\">" . htmlspecialchars($config['home_url'] . "?id=" . $row['id'], ENT_QUOTES, 'UTF-8') . "</guid>\n";
 		// Проверка даты на валидность
 		$pubDate = ($row['postdate'] > time()) ? time() : $row['postdate'];
 		echo "   <pubDate>" . gmdate('r', $pubDate) . "</pubDate>\n";
-
 		echo "  </item>\n";
 	}
-
 	setlocale(LC_TIME, $old_locale);
 	echo " </channel>\n</rss>\n";
-
+	// Сохраняем и отдаём буфер
+	$output = ob_get_clean();
 	if (pluginGetVariable('rss_export', 'cache')) {
-		cacheStoreFile($cacheFileName, ob_get_contents(), 'rss_export');
+		cacheStoreFile($cacheFileName, $output, 'rss_export');
 	}
+	echo $output;
 	exit;
 }

@@ -1,12 +1,34 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 //
 // Configuration file for plugin
 //
 // Preload config file
 pluginsLoadConfig();
 $xfEnclosureValues = array('' => '');
+// Нормализация URL: убираем двойные слеши в пути, сохраняя https://
+if (!function_exists('rss_export_normalize_url')) {
+	function rss_export_normalize_url($url)
+	{
+		$parts = @parse_url($url);
+		if ($parts === false) {
+			return $url;
+		}
+		$scheme = isset($parts['scheme']) ? $parts['scheme'] . '://' : '';
+		$user = $parts['user'] ?? '';
+		$pass = isset($parts['pass']) ? ':' . $parts['pass'] : '';
+		$auth = $user ? ($user . $pass . '@') : '';
+		$host = $parts['host'] ?? '';
+		$port = isset($parts['port']) ? ':' . $parts['port'] : '';
+		$path = $parts['path'] ?? '';
+		// Схлопываем повторные слеши и гарантируем один ведущий слеш
+		$path = '/' . ltrim(preg_replace('#/+#', '/', $path), '/');
+		$query = isset($parts['query']) ? ('?' . $parts['query']) : '';
+		$fragment = isset($parts['fragment']) ? ('#' . $parts['fragment']) : '';
+		return $scheme . $auth . $host . $port . $path . $query . $fragment;
+	}
+}
 //
 // IF plugin 'XFIELDS' is enabled - load it to prepare `enclosure` integration
 if (getPluginStatusActive('xfields')) {
@@ -29,7 +51,34 @@ foreach ($catz as $scanCat) {
 // Fill configuration parameters
 $cfg = array();
 $cfgX = array();
-array_push($cfg, array('descr' => '<b>Плагин экспорта новостей в формате RSS</b><br>Полная лента новостей доступна по адресу: <b>' . generatePluginLink('rss_export', '', array(), array(), true, true) . (($demoCategory != '') ? '<br/>Лента новостей для категории <i>' . $catz[$demoCategory]['name'] . '</i>: ' . generatePluginLink('rss_export', 'category', array('category' => $demoCategory), array(), true, true) : '')));
+$__rss_full_url = rss_export_normalize_url(generatePluginLink('rss_export', '', array(), array(), true, true));
+$__rss_cat_url = ($demoCategory != '') ? rss_export_normalize_url(generatePluginLink('rss_export', 'category', array('category' => $demoCategory), array(), true, true)) : '';
+// Построим примеры ссылок для обоих режимов: с ЧПУ и без ЧПУ
+$baseUrl = '';
+if (isset($config['home_url']) && $config['home_url']) {
+	$baseUrl = rtrim($config['home_url'], '/');
+} else {
+	$pr = @parse_url($__rss_full_url);
+	if (is_array($pr) && isset($pr['scheme'], $pr['host'])) {
+		$baseUrl = $pr['scheme'] . '://' . $pr['host'] . (isset($pr['port']) ? (':' . $pr['port']) : '');
+	}
+}
+$__rss_full_url_seo = ($baseUrl !== '') ? rss_export_normalize_url($baseUrl . '/rss.xml') : $__rss_full_url;
+$__rss_full_url_no_seo = ($baseUrl !== '') ? rss_export_normalize_url($baseUrl . '/plugin/rss_export/') : $__rss_full_url;
+$__rss_cat_url_seo = ($demoCategory != '' && $baseUrl !== '') ? rss_export_normalize_url($baseUrl . '/' . $demoCategory . '.xml') : $__rss_cat_url;
+$__rss_cat_url_no_seo = ($demoCategory != '' && $baseUrl !== '') ? rss_export_normalize_url($baseUrl . '/plugin/rss_export/category/?category=' . urlencode($demoCategory)) : $__rss_cat_url;
+array_push($cfg, array(
+	'descr' =>
+	'<b>Плагин экспорта новостей в формате RSS</b>' .
+		'<br>Полная лента новостей:' .
+		'<br/>При включённых ЧПУ: <b>' . $__rss_full_url_seo . '</b>' .
+		'<br/>Без ЧПУ: <b>' . $__rss_full_url_no_seo . '</b>' .
+		(($demoCategory != '')
+			? ('<br/><br/>Лента новостей для категории <i>' . $catz[$demoCategory]['name'] . '</i>:' .
+				'<br/>При включённых ЧПУ: <b>' . $__rss_cat_url_seo . '</b>' .
+				'<br/>Без ЧПУ: <b>' . $__rss_cat_url_no_seo . '</b>')
+			: '')
+));
 array_push($cfgX, array('type' => 'select', 'name' => 'feed_title_format', 'title' => 'Формат заголовка ленты новостей', 'descr' => '<b>Сайт</b> - использовать заголовок сайта<br><b>Сайт+Категория</b> - использовать заголовок сайта+название категории (при выводе новостей из конкретной категории)<br><b>Ручной</b> - заголовок определяется Вами', 'values' => array('site' => 'Сайт', 'site_title' => 'Сайт+Категория', 'handy' => 'Ручной'), 'value' => pluginGetVariable('rss_export', 'feed_title_format')));
 array_push($cfgX, array('type' => 'input', 'name' => 'feed_title_value', 'title' => 'Ваш заголовок ленты новостей', 'descr' => 'Заголовок используется в случае выбора формата <b>"ручной"</b> в качестве заголовка ленты', 'html_flags' => 'style="width: 250px;"', 'value' => pluginGetVariable('rss_export', 'feed_title_value')));
 array_push($cfgX, array('type' => 'select', 'name' => 'news_title', 'title' => 'Формат заголовка новости', 'descr' => '<b>Название</b> - в заголовке указывается только название новости<br><b>Категория :: Название</b> - В заголовке указывается как категория так и название новости', 'values' => array('0' => 'Название', '1' => 'Категория :: Название'), 'value' => pluginGetVariable('rss_export', 'news_title')));
@@ -48,11 +97,10 @@ array_push($cfgX, array('name' => 'cache', 'title' => "Использовать 
 array_push($cfgX, array('name' => 'cacheExpire', 'title' => "Период обновления кеша<br /><small>(через сколько секунд происходит обновление кеша. Значение по умолчанию: <b>60</b>)</small>", 'type' => 'input', 'value' => intval(pluginGetVariable($plugin, 'cacheExpire')) ? pluginGetVariable($plugin, 'cacheExpire') : '60'));
 array_push($cfg, array('mode' => 'group', 'title' => '<b>Настройки кеширования</b>', 'entries' => $cfgX));
 // RUN
-if ($_REQUEST['action'] == 'commit') {
+if (!empty($_REQUEST['action']) && $_REQUEST['action'] == 'commit') {
 	// If submit requested, do config save
 	commit_plugin_config_changes($plugin, $cfg);
 	print_commit_complete($plugin);
 } else {
 	generate_config_page($plugin, $cfg);
 }
-?>
