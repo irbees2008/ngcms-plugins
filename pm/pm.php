@@ -171,7 +171,6 @@ function pm_inbox()
 		$flashDel = $_SESSION['flash_pm_del'];
 		unset($_SESSION['flash_pm_del']);
 	}
-
 	$tVars = array(
 		'php_self' => $PHP_SELF,
 		'entries'  => $tEntries,
@@ -253,7 +252,6 @@ function pm_outbox()
 		$flashDel = $_SESSION['flash_pm_del'];
 		unset($_SESSION['flash_pm_del']);
 	}
-
 	$tVars = array(
 		'php_self' => $PHP_SELF,
 		'entries'  => $tEntries,
@@ -338,10 +336,8 @@ function pm_delete()
 	$selected_pm = isset($_REQUEST['selected_pm']) ? $_REQUEST['selected_pm'] : [];
 	$pmid = intval($_REQUEST['pmid']);
 	$location = isset($_REQUEST['location']) && in_array($_REQUEST['location'], ['inbox', 'outbox']) ? $_REQUEST['location'] : 'inbox';
-
 	// prepare redirect target
 	$redirectUrl = ($location == 'outbox') ? generatePluginLink('pm', null, array('action' => 'outbox')) : generatePluginLink('pm', null);
-
 	if (!$pmid) {
 		if (!$selected_pm || !is_array($selected_pm) || count($selected_pm) == 0) {
 			if (session_status() == PHP_SESSION_NONE) {
@@ -652,7 +648,6 @@ function new_pm()
 	// Передаем переменные в шаблон
 	$template['vars']['newpm'] = $newpm;
 	$template['vars']['newpmText'] = $newpmText;
-
 	// Встраиваем клиентский скрипт показа notify-тоста через {{ htmlvars }} в <head>
 	// Делаем это только если есть непрочитанные сообщения
 	if (intval($newpm) > 0) {
