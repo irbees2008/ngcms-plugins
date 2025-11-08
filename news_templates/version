@@ -1,0 +1,21 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: news_templates
+Name: News Templates
+Version: 0.1.0
+Acts: core
+Actions: rpc; news_templates.php
+File: news_templates.php
+Config: config.php
+Install: install.php
+Deinstall: deinstall.php
+Type: plugin
+Title: Шаблоны новостей
+Description: Предустановленные шаблоны текста для вставки в редактор новости
+Author: NGCMS Community
+Author_URI: http://ngcms.org
+Information: Добавляет выпадающий список с шаблонами в тулбар редактора новости (через JS) и хранит шаблоны в БД
+Preinstall: no
+MinEngineBuild: 111111
+Icons: <i class="fa fa-file-text-o fa-3x" aria-hidden="true"></i>
