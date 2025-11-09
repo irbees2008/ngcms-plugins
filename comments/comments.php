@@ -2,6 +2,77 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 $lang = LoadLang("comments", "site");
+
+// Build structured pagination data for Twig template rendering
+if (!function_exists('comments_buildPaginationStructure')) {
+	function comments_buildPaginationStructure($current, $totalPages, $maxnav, $paginationParams, $navigations, $intlink = false)
+	{
+		// Helper to build block from start..end
+		$buildBlock = function ($c, $start, $end, $paginationParams, $intlink) {
+			$arr = [];
+			for ($j = $start; $j <= $end; $j++) {
+				if ($j == $c) {
+					$arr[] = ['type' => 'current', 'num' => $j];
+				} else {
+					$arr[] = ['type' => 'link', 'num' => $j, 'url' => generatePageLink($paginationParams, $j, $intlink)];
+				}
+			}
+			return $arr;
+		};
+		$pages = [];
+		if ($totalPages <= 0) {
+			$totalPages = 1;
+		}
+		$pagesCount = $totalPages;
+		if ($pagesCount > $maxnav) {
+			$sectionSize = floor($maxnav / 3);
+			if ($sectionSize < 1) {
+				$sectionSize = 1;
+			}
+			if ($current < ($sectionSize * 2)) {
+				$pages = array_merge($pages, $buildBlock($current, 1, $sectionSize * 2, $paginationParams, $intlink));
+				$pages[] = ['type' => 'dots'];
+				$pages = array_merge($pages, $buildBlock($current, $pagesCount - $sectionSize, $pagesCount, $paginationParams, $intlink));
+			} elseif ($current > ($pagesCount - $sectionSize * 2 + 1)) {
+				$pages = array_merge($pages, $buildBlock($current, 1, $sectionSize, $paginationParams, $intlink));
+				$pages[] = ['type' => 'dots'];
+				$pages = array_merge($pages, $buildBlock($current, $pagesCount - $sectionSize * 2 + 1, $pagesCount, $paginationParams, $intlink));
+			} else {
+				$pages = array_merge($pages, $buildBlock($current, 1, $sectionSize, $paginationParams, $intlink));
+				$pages[] = ['type' => 'dots'];
+				$pages = array_merge($pages, $buildBlock($current, $current - 1, $current + 1, $paginationParams, $intlink));
+				$pages[] = ['type' => 'dots'];
+				$pages = array_merge($pages, $buildBlock($current, $pagesCount - $sectionSize, $pagesCount, $paginationParams, $intlink));
+			}
+		} else {
+			$pages = array_merge($pages, $buildBlock($current, 1, $pagesCount, $paginationParams, $intlink));
+		}
+		// Prev/Next
+		$prev = ['exists' => false];
+		if ($current > 1) {
+			$prev = [
+				'exists' => true,
+				'num' => $current - 1,
+				'url' => generatePageLink($paginationParams, $current - 1, $intlink)
+			];
+		}
+		$next = ['exists' => false];
+		if ($current + 1 <= $totalPages) {
+			$next = [
+				'exists' => true,
+				'num' => $current + 1,
+				'url' => generatePageLink($paginationParams, $current + 1, $intlink)
+			];
+		}
+		return [
+			'prev' => $prev,
+			'next' => $next,
+			'pages' => $pages,
+			'current' => $current,
+			'total' => $totalPages
+		];
+	}
+}
 class CommentsNewsFilter extends NewsFilter
 {
 	function addNewsForm(&$tvars)
@@ -70,7 +141,7 @@ class CommentsNewsFilter extends NewsFilter
 	}
 	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
 	{
-		global $catmap, $catz, $config, $userROW, $template, $lang, $tpl;
+		global $catmap, $catz, $config, $userROW, $template, $lang, $tpl, $TemplateCache;
 		// Determine if comments are allowed in  this specific news
 		$allowCom = $SQLnews['allow_com'];
 		if ($allowCom == 2) {
@@ -131,26 +202,34 @@ class CommentsNewsFilter extends NewsFilter
 		// Check if we need pagination
 		$flagMoreComments = false;
 		$skipCommShow = false;
-		if (pluginGetVariable('comments', 'multipage')) {
-			$multi_mcount = intval(pluginGetVariable('comments', 'multi_mcount'));
-			// If we have comments more than for one page - activate pagination
-			if (($multi_mcount >= 0) && ($SQLnews['com'] > $multi_mcount)) {
-				$callingCommentsParams['limitCount'] = $multi_mcount;
-				$flagMoreComments = true;
-				if (!$multi_mcount)
-					$skipCommShow = true;
+		// Включаем пагинацию, если задан лимит элементов на страницу (> =0), даже если флаг multipage выключен
+		$multi_mcount = intval(pluginGetVariable('comments', 'multi_mcount'));
+		if (($multi_mcount >= 0) && ($SQLnews['com'] > $multi_mcount)) {
+			$callingCommentsParams['limitCount'] = $multi_mcount;
+			$flagMoreComments = true;
+			if (!$multi_mcount) {
+				$skipCommShow = true;
 			}
 		}
 		$tcvars = array();
 		// Show comments [ if not skipped ]
 		$tcvars['vars']['entries'] = $skipCommShow ? '' : comments_show($newsID, 0, 0, $callingCommentsParams);
+		$tcvars['vars']['current_page'] = 1;
+		$tcvars['vars']['total_comments'] = $SQLnews['com'];
+		$tcvars['vars']['tpl_url'] = tpl_url;
 		// If multipage is used and we have more comments - show
 		if ($flagMoreComments) {
-			$link = checkLinkAvailable('comments', 'show') ?
-				generateLink('comments', 'show', array('news_id' => $newsID)) :
-				generateLink('core', 'plugin', array('plugin' => 'comments', 'handler' => 'show'), array('news_id' => $newsID));
-			$tcvars['vars']['more_comments'] = str_replace(array('{link}', '{count}'), array($link, $SQLnews['com']), $lang['comments:link.more']);
-			$tcvars['regx']['#\[more_comments\](.*?)\[\/more_comments\]#is'] = '$1';
+			// Генерация пагинации сразу внутри новости для AJAX-встраивания
+			$pageCount = ceil($SQLnews['com'] / max(1, $multi_mcount));
+			$paginationParams = checkLinkAvailable('comments', 'show') ?
+				array('pluginName' => 'comments', 'pluginHandler' => 'show', 'params' => array('news_id' => $newsID), 'xparams' => array(), 'paginator' => array('page', 0, false)) :
+				array('pluginName' => 'core', 'pluginHandler' => 'plugin', 'params' => array('plugin' => 'comments', 'handler' => 'show'), 'xparams' => array('news_id' => $newsID), 'paginator' => array('page', 1, false));
+			templateLoadVariables(true);
+			$navigations = $TemplateCache['site']['#variables']['navigation'];
+			// Используем значение навигаций из конфига новости (newsNavigationsCount) если существует
+			$navCount = isset($config['newsNavigationsCount']) && $config['newsNavigationsCount'] > 2 ? intval($config['newsNavigationsCount']) : 8;
+			$tcvars['vars']['more_comments'] = generatePagination(1, 1, $pageCount, $navCount, $paginationParams, $navigations, true);
+			$tcvars['vars']['pagination'] = comments_buildPaginationStructure(1, $pageCount, $navCount, $paginationParams, $navigations, true);
 		} else {
 			$tcvars['vars']['more_comments'] = '';
 			$tcvars['regx']['#\[more_comments\](.*?)\[\/more_comments\]#is'] = '';
@@ -165,11 +244,12 @@ class CommentsNewsFilter extends NewsFilter
 			$tcvars['regx']['#\[regonly\](.*?)\[\/regonly\]#is'] = $allowCom ? '$1' : '';
 			$tcvars['regx']['#\[commforbidden\](.*?)\[\/commforbidden\]#is'] = $allowCom ? '' : '$1';
 		}
-		// Use Twig template from plugin
+		// Use Twig template with preference to site theme override
 		global $twig;
-		$templateFile = root . '/plugins/comments/tpl/comments.container.tpl';
-		if (file_exists($templateFile)) {
-			$templateContent = file_get_contents($templateFile);
+		$themeTemplateFile = tpl_site . 'plugins/comments/comments.container.tpl';
+		$pluginTemplateFile = root . '/plugins/comments/tpl/comments.container.tpl';
+		if (file_exists($themeTemplateFile) || file_exists($pluginTemplateFile)) {
+			$templateContent = file_get_contents(file_exists($themeTemplateFile) ? $themeTemplateFile : $pluginTemplateFile);
 			$twigTemplate = $twig->createTemplate($templateContent);
 			$tcvars['vars']['is_external'] = false;
 			$tcvars['vars']['regonly'] = $allowCom && !$tcvars['vars']['form'];
@@ -294,71 +374,86 @@ function plugin_comments_add()
 		}
 	}
 }
-// Show dedicated page for comments
+
+// Standalone comments page (pagination across all comments for news)
 function plugin_comments_show()
 {
 	global $config, $catz, $mysql, $catmap, $tpl, $template, $lang, $SUPRESS_TEMPLATE_SHOW, $userROW, $TemplateCache, $SYSTEM_FLAGS;
-	// Load lang file, that is required for [hide]..[/hide] block
 	$lang = LoadLang('news', 'site');
 	$SYSTEM_FLAGS['info']['title']['group'] = $lang['comments:header.title'];
 	include_once(root . "/plugins/comments/inc/comments.show.php");
-	// Try to fetch news
 	$newsID = intval($_REQUEST['news_id']);
-	if (!$newsID || !is_array($newsRow = $mysql->record("select * from " . prefix . "_news where id = " . $newsID))) {
+	if (!$newsID || !is_array($newsRow = $mysql->record("select * from " . prefix . "_news where id = " . db_squote($newsID)))) {
 		error404();
 		return;
 	}
 	$SYSTEM_FLAGS['info']['title']['item'] = $newsRow['title'];
-	// Prepare params for call
-	// AJAX is turned off by default
 	$callingCommentsParams = array('noajax' => 1, 'outprint' => true);
-	// Set default template path [from site template / comments plugin subdirectory]
 	$templatePath = tpl_site . 'plugins/comments';
-	$fcat = array_shift(explode(",", $newsRow['catid']));
-	// Check if there is a custom mapping
+	$fcat = array_shift(explode(',', $newsRow['catid']));
 	if ($fcat && $catmap[$fcat] && ($ctname = $catz[$catmap[$fcat]]['tpl'])) {
-		// Check if directory exists
-		if (is_dir(tpl_site . 'ncustom/' . $ctname))
+		if (is_dir(tpl_site . 'ncustom/' . $ctname)) {
 			$callingCommentsParams['overrideTemplatePath'] = tpl_site . 'ncustom/' . $ctname;
-		$templatePath = tpl_site . 'ncustom/' . $ctname;
+			$templatePath = tpl_site . 'ncustom/' . $ctname;
+		}
 	}
-	// Check if we need pagination
 	$page = 0;
 	$pageCount = 0;
-	// If we have comments more than for one page - activate pagination
-	$multi_scount = intval(pluginGetVariable('comments', 'multi_scount'));
-	if (($multi_scount > 0) && ($newsRow['com'] > $multi_scount)) {
-		// Page count
-		$pageCount = ceil($newsRow['com'] / $multi_scount);
-		// Check if user wants to access not first page
+	// Для встроенной (embedded) AJAX пагинации используем те же настройки, что и на странице новости (multi_mcount), иначе multi_scount.
+	$perPageEmbedded = intval(pluginGetVariable('comments', 'multi_mcount'));
+	$perPageStandalone = intval(pluginGetVariable('comments', 'multi_scount'));
+	$isEmbedded = (isset($_REQUEST['embedded']) && $_REQUEST['embedded']);
+	$perPage = $isEmbedded ? $perPageEmbedded : $perPageStandalone;
+	if (($perPage > 0) && ($newsRow['com'] > $perPage)) {
+		$pageCount = ceil($newsRow['com'] / max(1, $perPage));
 		$page = intval($_REQUEST['page']);
-		if ($page < 1) $page = 1;
-		$callingCommentsParams['limitCount'] = intval(pluginGetVariable('comments', 'multi_scount'));
-		$callingCommentsParams['limitStart'] = ($page - 1) * intval(pluginGetVariable('comments', 'multi_scount'));
+		if ($page < 1) {
+			$page = 1;
+		}
+		$callingCommentsParams['limitCount'] = $perPage;
+		$callingCommentsParams['limitStart'] = ($page - 1) * $perPage;
 	}
-	// Pass total number of comments
 	$callingCommentsParams['total'] = $newsRow['com'];
-	// Show comments
 	$tcvars = array();
 	$tcvars['vars']['entries'] = comments_show($newsID, 0, 0, $callingCommentsParams);
+	$tcvars['vars']['current_page'] = $page ? $page : 1;
+	$tcvars['vars']['total_comments'] = $newsRow['com'];
+	$tcvars['vars']['tpl_url'] = tpl_url;
 	if ($pageCount > 1) {
 		$paginationParams = checkLinkAvailable('comments', 'show') ?
 			array('pluginName' => 'comments', 'pluginHandler' => 'show', 'params' => array('news_id' => $newsID), 'xparams' => array(), 'paginator' => array('page', 0, false)) :
 			array('pluginName' => 'core', 'pluginHandler' => 'plugin', 'params' => array('plugin' => 'comments', 'handler' => 'show'), 'xparams' => array('news_id' => $newsID), 'paginator' => array('page', 1, false));
 		templateLoadVariables(true);
 		$navigations = $TemplateCache['site']['#variables']['navigation'];
-		$tcvars['vars']['more_comments'] = generatePagination($page, 1, $pageCount, 10, $paginationParams, $navigations, true);
-		$tcvars['regx']['#\[more_comments\](.*?)\[\/more_comments\]#is'] = '$1';
+		$navCount = isset($config['newsNavigationsCount']) && $config['newsNavigationsCount'] > 2 ? intval($config['newsNavigationsCount']) : 8;
+		$tcvars['vars']['more_comments'] = generatePagination($page, 1, $pageCount, $navCount, $paginationParams, $navigations, true);
+		$tcvars['vars']['pagination'] = comments_buildPaginationStructure($page ? $page : 1, $pageCount, $navCount, $paginationParams, $navigations, true);
 	} else {
 		$tcvars['vars']['more_comments'] = '';
 		$tcvars['regx']['#\[more_comments\](.*?)\[\/more_comments\]#is'] = '';
 	}
-	// Enable AJAX in case if we are on last page
-	if ($page == $pageCount)
+	if (isset($_REQUEST['ajax']) && $_REQUEST['ajax'] && isset($_REQUEST['embedded'])) {
+		$SUPRESS_TEMPLATE_SHOW = 1;
+		// Рендерим HTML пагинации через шаблон, чтобы верстка была идентичной и на AJAX.
+		global $twig;
+		$themePaginationFile = tpl_site . 'plugins/comments/comments.pagination.tpl';
+		$pluginPaginationFile = root . '/plugins/comments/tpl/comments.pagination.tpl';
+		if (file_exists($themePaginationFile) || file_exists($pluginPaginationFile)) {
+			$templateContent = file_get_contents(file_exists($themePaginationFile) ? $themePaginationFile : $pluginPaginationFile);
+			$twigTemplate = $twig->createTemplate($templateContent);
+			$paginationHtml = $twigTemplate->render(array('more_comments' => $tcvars['vars']['more_comments'], 'pagination' => isset($tcvars['vars']['pagination']) ? $tcvars['vars']['pagination'] : null));
+		} else {
+			$paginationHtml = $tcvars['vars']['more_comments'];
+		}
+		header('Content-Type: application/json; charset=utf-8');
+		echo json_encode(array('status' => 1, 'entries' => $tcvars['vars']['entries'], 'pagination' => $paginationHtml));
+		return;
+	}
+	if ($page == $pageCount) {
 		$callingCommentsParams['noajax'] = 0;
+	}
 	$allowCom = $newsRow['allow_com'];
-	// Show form for adding comments
-	if ($newsRow['allow_com'] && (!pluginGetVariable('comments', 'regonly') || is_array($userROW))) {
+	if ($allowCom && (!pluginGetVariable('comments', 'regonly') || is_array($userROW))) {
 		$tcvars['vars']['form'] = comments_showform($newsID, $callingCommentsParams);
 		$tcvars['regx']['#\[regonly\](.*?)\[\/regonly\]#is'] = '';
 		$tcvars['regx']['#\[commforbidden\](.*?)\[\/commforbidden\]#is'] = '';
@@ -367,11 +462,11 @@ function plugin_comments_show()
 		$tcvars['regx']['#\[regonly\](.*?)\[\/regonly\]#is'] = $allowCom ? '$1' : '';
 		$tcvars['regx']['#\[commforbidden\](.*?)\[\/commforbidden\]#is'] = $allowCom ? '' : '$1';
 	}
-	// Use Twig template from plugin
 	global $twig;
-	$templateFile = root . '/plugins/comments/tpl/comments.container.tpl';
-	if (file_exists($templateFile)) {
-		$templateContent = file_get_contents($templateFile);
+	$themeTemplateFile = tpl_site . 'plugins/comments/comments.container.tpl';
+	$pluginTemplateFile = root . '/plugins/comments/tpl/comments.container.tpl';
+	if (file_exists($themeTemplateFile) || file_exists($pluginTemplateFile)) {
+		$templateContent = file_get_contents(file_exists($themeTemplateFile) ? $themeTemplateFile : $pluginTemplateFile);
 		$twigTemplate = $twig->createTemplate($templateContent);
 		$tcvars['vars']['is_external'] = true;
 		$tcvars['vars']['link'] = newsGenerateLink($newsRow);
@@ -382,7 +477,6 @@ function plugin_comments_show()
 		$tcvars['vars']['lang'] = $lang;
 		$template['vars']['mainblock'] .= $twigTemplate->render($tcvars['vars']);
 	} else {
-		// Fallback to old template
 		$tcvars['vars']['link'] = newsGenerateLink($newsRow);
 		$tcvars['vars']['title'] = secure_html($newsRow['title']);
 		$tcvars['regx']['[\[comheader\](.*)\[/comheader\]]'] = ($newsRow['com']) ? '$1' : '';
