@@ -11,7 +11,6 @@ add_act('usermenu', 'auth_social_links');
 //register_plugin_page('auth_social', 'delete' , 'loginzaDelete', 0);
 function socialAuth()
 {
-
 	global $config, $template, $tpl, $mysql, $userROW, $AUTH_METHOD;
 	require_once ($_SERVER['DOCUMENT_ROOT']) . '/engine/plugins/auth_social/lib/SocialAuther/autoload.php';
 	$adapterConfigs = array(
@@ -164,13 +163,60 @@ function socialAuth()
 		header('Location: ' . $config['home_url']);
 	}
 }
-
+// Callback для add_act('usermenu', 'auth_social_links')
+// Выводит набор ссылок авторизации через доступные провайдеры.
+// Если пользователь уже авторизован - ничего не возвращает.
+function auth_social_links()
+{
+	global $userROW, $config;
+	// Не показываем, если пользователь залогинен
+	if (is_array($userROW)) {
+		return '';
+	}
+	// Подключаем автолоадер
+	if (!class_exists('SocialAuther\\SocialAuther')) {
+		// Используем константу root, если определена
+		if (defined('root')) {
+			@require_once root . 'plugins/auth_social/lib/SocialAuther/autoload.php';
+		} else {
+			@require_once ($_SERVER['DOCUMENT_ROOT']) . '/engine/plugins/auth_social/lib/SocialAuther/autoload.php';
+		}
+	}
+	$providers = ['vk', 'yandex', 'google', 'facebook', 'github'];
+	$links = [];
+	foreach ($providers as $p) {
+		$clientId = pluginGetVariable('auth_social', $p . '_client_id');
+		$clientSecret = pluginGetVariable('auth_social', $p . '_client_secret');
+		if (!$clientId || !$clientSecret) {
+			continue; // пропускаем не настроенных
+		}
+		$settings = [
+			'client_id'     => $clientId,
+			'client_secret' => $clientSecret,
+			'redirect_uri'  => home . '/plugin/auth_social/?provider=' . $p,
+		];
+		$className = 'SocialAuther\\Adapter\\' . ucfirst($p);
+		try {
+			if (!class_exists($className)) {
+				continue;
+			}
+			$adapter = new $className($settings);
+			$authUrl = $adapter->getAuthUrl();
+			$links[] = '<a class="auth-social-link auth-social-link--' . $p . '" href="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '" rel="nofollow" title="' . ucfirst($p) . '">' . ucfirst($p) . '</a>';
+		} catch (Throwable $e) {
+			// Тихо игнорируем ошибки конкретного провайдера
+		}
+	}
+	if (!$links) {
+		return '';
+	}
+	// Оборачиваем в контейнер (можно стилизовать через .auth-social-links)
+	return '<div class="auth-social-links">' . implode(' ', $links) . '</div>';
+}
 class SocialAuthCoreFilter extends CoreFilter
 {
-
 	function showUserMenu(&$tVars)
 	{
-
 		global $mysql, $userROW, $lang;
 		require_once root . 'plugins/auth_social/lib/SocialAuther/autoload.php';
 		$adapterConfigs = array(
@@ -213,12 +259,10 @@ class SocialAuthCoreFilter extends CoreFilter
 		}
 	}
 }
-
 register_filter('core.userMenu', 'auth_social', new SocialAuthCoreFilter);
 if (class_exists('p_uprofileFilter')) {
 	class uSocialFilter extends p_uprofileFilter
 	{
-
 		function showProfile($userID, $SQLrow, &$tvars)
 		{
 			/*
@@ -232,7 +276,6 @@ if (class_exists('p_uprofileFilter')) {
 			}
 			*/
 		}
-
 		function editProfileForm($userID, $SQLrow, &$tvars)
 		{
 			/*
@@ -248,16 +291,13 @@ if (class_exists('p_uprofileFilter')) {
 			}
 			*/
 		}
-
 		function editProfile($userID, $SQLrow, &$SQLnew)
 		{
-
 			global $lang, $config, $mysql;
 			$SQLnew['sex'] = secure_html($_REQUEST['editsex']);
 			$SQLnew['birthday'] = secure_html($_REQUEST['editbirthday']);
 		}
 	}
-
 	register_filter('plugin.uprofile', 'auth_social', new uSocialFilter);
 }
 /**
@@ -271,7 +311,6 @@ if (class_exists('p_uprofileFilter')) {
  */
 function addAvatarToFiles($key, $url)
 {
-
 	$scheme = strtolower(parse_url($url, PHP_URL_SCHEME) ?? '');
 	if (!in_array($scheme, ['http', 'https'], true)) {
 		return;
