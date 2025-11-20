@@ -3,14 +3,17 @@
 ;
 ID: ognews
 Name: Open Graph Tags
-Version: 0.04
+Version: 0.05
 Actions: news; ognews.php
+Config: config.php
 Type: plugin
 Title: ognews example
 Description: ognews example
-Information: ognews example
+Information: Протокол Open Graph - это разметка, которую вы можете добавить к своим HTML-документам,
+чтобы логически структурировать ваш контент и получить контроль над фрагментами,которые отображаются, когда ваши URL-адреса публикуются через социальные сети,такие как :Facebook,LinkedIn,Twitter,VKontakte,Odnoklassniki и такие приложения, как Slack,WhatsApp,Viber и Telegram
 Author: Rostunov Sergey,irbees2008
 Author_URI: http://rostunov.com/  https://ngcmshak.ru
 Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa Example of terminal fa-terminal fa-3x" aria-hidden="true"></i>
+Протокол Open Graph
