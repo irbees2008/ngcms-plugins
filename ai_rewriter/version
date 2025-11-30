@@ -1,0 +1,17 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: ai_rewriter
+Name: Рерайт новостей ИИ
+Version: 0.1.0
+Actions: news; ai_rewriter.php
+Config: config.php
+Type: plugin
+Title: Авто-рерайт новостей (ИИ)
+Description: Автоматический рерайт текста новости при добавлении/редактировании через выбранного ИИ-провайдера
+Information: Поддержка OpenAI-совместимых API и Anthropic; настраиваемый процент оригинальности
+Author: Copilot
+Author_URI: https://github.com/
+Preinstall: no
+MinEngineBuild:
+Icons: <i class="fa fa-magic fa-3x" aria-hidden="true"></i>
