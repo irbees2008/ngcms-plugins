@@ -3,46 +3,68 @@
 # =========================================================================== #
 Плагин не является самостоятельным модулем авторизации, а работает лишь как
 дополнение к одному из уже работающих плагинов, например auth_basic.
-В данный момент поддерживается авторизация через: vk, yandex, google, facebook, github.
+В данный момент поддерживается авторизация через: VK ID, Yandex, Google, Facebook, GitHub.
 #=====================================#
 Установка
 #=====================================#
 1. Зарегистрировать приложения в соцсетях (см. также https://github.com/stanislas-prime/SocialAuther).
 В параметре redirect_uri укажите соответствующие URL:
-https://sitename.ru/plugin/auth_social/?provider=vk
-https://sitename.ru/plugin/auth_social/?provider=yandex
-https://sitename.ru/plugin/auth_social/?provider=google
-https://sitename.ru/plugin/auth_social/?provider=facebook
-https://sitename.ru/plugin/auth_social/?provider=github
-Примечание: для GitHub рекомендуется scope: read:user, user:email (для получения e‑mail).
-2. Включить плагин. В настройках плагина, внести данные о приложениях в соц.сетях (client_id, client_secret, public_key)
-3. В шаблоне usermenu.tpl прописать ссылки по которым будет осуществляться авторизация, например:
-<a href="{{p.auth_social.vk.authUrl}}" title="{{p.auth_social.vk.title}}"><img src="/engine/plugins/auth_social/social/VK.png" alt="{{p.auth_social.vk.title}}"/></a>
+**VK ID** (новый VK ID SDK с PKCE):
+https://sitename.ru/plugin/auth_social/vkid/
+Настройки приложения VK ID:
+- Получите Client ID и Client Secret на https://id.vk.com/about/business/go/docs/ru/vkid/latest/vk-id/connection/create-app
+- Scope: email (примечание: VK может не возвращать email даже при запросе)
+**Yandex**:
+https://sitename.ru/plugin/auth_social/yandex/
+**Google**:
+https://sitename.ru/plugin/auth_social/google/
+**Facebook**:
+https://sitename.ru/plugin/auth_social/facebook/
+**GitHub**:
+https://sitename.ru/plugin/auth_social/github/
+Рекомендуется scope: read:user, user:email (для получения e‑mail).
+2. Включить плагин. В настройках плагина внести данные о приложениях в соц.сетях:
+   - VK ID: vkid_client_id, vkid_client_secret, vkid_scope
+   - Остальные: client_id, client_secret, public_key (где требуется)
+3. В шаблоне usermenu.tpl прописать ссылки для авторизации:
+**Для VK ID (новый SDK):**
+<a href="{{p.auth_social.vkid.authUrl}}" title="VK ID"><img src="/engine/plugins/auth_social/social/VK.png" alt="VK ID"/></a>
+**Для остальных провайдеров:**
 <a href="{{p.auth_social.yandex.authUrl}}" title="{{p.auth_social.yandex.title}}"><img src="/engine/plugins/auth_social/social/ya.png" alt="{{p.auth_social.yandex.title}}"/></a>
 <a href="{{p.auth_social.google.authUrl}}" title="{{p.auth_social.google.title}}"><img src="/engine/plugins/auth_social/social/G.png" alt="{{p.auth_social.google.title}}"/></a>
 <a href="{{p.auth_social.facebook.authUrl}}" title="{{p.auth_social.facebook.title}}"><img src="/engine/plugins/auth_social/social/FB.png" alt="{{p.auth_social.facebook.title}}"/></a>
 <a href="{{p.auth_social.github.authUrl}}" title="{{p.auth_social.github.title}}"><img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="{{p.auth_social.github.title}}" style="width:32px;height:32px"/></a>
 #=====================================#
+Технические особенности VK ID
+#=====================================#
+- Используется OAuth 2.0 с PKCE (Proof Key for Code Exchange)
+- Реализован через отдельный адаптер Adapter\Vkid
+- Поддержка code_verifier и code_challenge для безопасного обмена токенами
+- Автоматическое управление session state для защиты от CSRF
+- Аватары загружаются автоматически при первой регистрации
+- Email может быть недоступен даже при запросе scope=email
+#=====================================#
 Интеграция с профилем (плагин uprofile)
 #=====================================#
 При установке плагина в таблице users создаются новые поля: provider, social_id, social_page, sex, birthday
-Данные в данных полях слабоструктурированы и могут либо вообще отсутствовать, либо их вид может различаться в зависимости от соц. сети.
+Данные в этих полях слабоструктурированы и могут либо вообще отсутствовать, либо их вид может различаться в зависимости от соц. сети.
 1. \templates\ваш_шаблон\plugins\uprofile\users.tpl
-{{ userRec.provider }} - тип. соц. сети.
-{{ userRec.social_page }} - ссылка на профиль с социальной сети.
-{{ userRec.sex }} - пол пользователя.
-{{ userRec.birthday }} - дата рождения пользователя.
+{{ userRec.provider }} - тип соц. сети (vkid, yandex, google, facebook, github).
+{{ userRec.social_id }} - уникальный ID пользователя в социальной сети.
+{{ userRec.social_page }} - ссылка на профиль в социальной сети.
+{{ userRec.sex }} - пол пользователя (male/female или пусто).
+{{ userRec.birthday }} - дата рождения пользователя в формате YYYY-MM-DD.
 Пример вывода:
 {% if (userRec.provider) and (userRec.social_page) %}
     <tr>
         <td>Профиль соцсети:</td>
-        <td class="second">{{ userRec.social_page }}</td>
+        <td class="second"><a href="{{ userRec.social_page }}" target="_blank">{{ userRec.provider }}</a></td>
     </tr>
 {% endif %}
 {% if (userRec.provider) and (userRec.sex) %}
     <tr>
         <td>Пол:</td>
-        <td class="second">{{ userRec.sex }}</td>
+        <td class="second">{% if userRec.sex == 'male' %}Мужской{% elseif userRec.sex == 'female' %}Женский{% else %}{{ userRec.sex }}{% endif %}</td>
     </tr>
 {% endif %}
 {% if (userRec.provider) and (userRec.birthday) %}
@@ -57,9 +79,27 @@ https://sitename.ru/plugin/auth_social/?provider=github
 Пример вывода:
 <div class="label label-table">
     <label>Пол:</label>
-    <input type="text" name="editsex" value="{{ userRec.sex }}" class="input" />
+    <select name="editsex" class="input">
+        <option value="">Не указан</option>
+        <option value="male"{% if userRec.sex == 'male' %} selected{% endif %}>Мужской</option>
+        <option value="female"{% if userRec.sex == 'female' %} selected{% endif %}>Женский</option>
+    </select>
 </div>
 <div class="label label-table">
-    <label>Дата рождения:</label>
-    <input type="text" name="editbirthday" value="{{ userRec.birthday }}" class="input" />
+    <label>Дата рождения (YYYY-MM-DD):</label>
+    <input type="date" name="editbirthday" value="{{ userRec.birthday }}" class="input" />
 </div>
+#=====================================#
+Отладка
+#=====================================#
+Для включения отладочного режима раскомментируйте строки с // DEBUG: в файлах:
+- engine/plugins/auth_social/social.php
+- engine/plugins/auth_social/lib/SocialAuther/Adapter/Vkid.php
+Логи будут записываться в файл: engine/plugins/auth_social/log.txt
+#=====================================#
+Известные проблемы
+#=====================================#
+1. VK ID может не возвращать email пользователя даже при scope=email
+2. Длинные URL аватаров не сохраняются в поле avatar - вместо этого аватары загружаются и сохраняются локально
+3. При первой регистрации через соцсеть пользователь получает случайный пароль
+4. HTTPS обязателен для корректной работы OAuth провайдеров

@@ -1,7 +1,7 @@
 <?php
-if (!defined('NGCMS')) die ('Galaxy in danger');
-function plugin_auth_social_install($action) {
-
+if (!defined('NGCMS')) die('Galaxy in danger');
+function plugin_auth_social_install($action)
+{
 	$db_create = array(
 		array(
 			'table'  => 'users',
@@ -28,6 +28,5 @@ function plugin_auth_social_install($action) {
 			}
 			break;
 	}
-
 	return true;
 }

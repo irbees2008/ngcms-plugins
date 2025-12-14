@@ -5,7 +5,7 @@
 				<fieldset class="admGroup">
 					<legend class="title">
 						<b>Настройки авторизации
-						</b>Вконтакте</legend>
+						</b>VK ID</legend>
 					<table width="100%" border="0" class="content">
 						<tbody>
 							<tr>
@@ -13,28 +13,32 @@
 									<div class="alert alert-info" role="alert" style="margin:6px 0">
 										<b>Инструкция:</b>
 										<ol style="margin:8px 0 0 16px; padding-left: 16px;">
-											<li>Зайдите в
-												<a href="https://vk.com/apps?act=manage" target="_blank" rel="noopener">VK Apps</a>
-												и создайте Standalone-приложение.</li>
+											<li>Создайте приложение VK ID (id.vk.com) и получите App ID и Secret.</li>
 											<li>Укажите Redirect URI:
-												<code>{{ home }}/plugin/auth_social/?provider=vk</code>
-											</li>
-											<li>Скопируйте Client ID и Client Secret в поля ниже.</li>
+												<code>{{ home }}/plugin/auth_social/vkid/</code>
+												(без query‑параметров).</li>
+											<li>Рекомендуемый scope:
+												<code>email</code>.</li>
 										</ol>
 									</div>
 								</td>
 							</tr>
-							<!-- VK -->
 							<tr>
-								<td class="contentEntry1" valign="top">Client ID<br/></td>
+								<td class="contentEntry1" valign="top">App ID (Client ID)<br/></td>
 								<td class="contentEntry2" valign="top">
-									<input name="vk_client_id" type="text" size="50" value="{{ vk_client_id }}"/>
+									<input name="vkid_client_id" type="text" size="50" value="{{ vkid_client_id }}"/>
 								</td>
 							</tr>
 							<tr>
 								<td class="contentEntry1" valign="top">Client Secret<br/></td>
 								<td class="contentEntry2" valign="top">
-									<input name="vk_client_secret" type="text" size="50" value="{{ vk_client_secret }}"/>
+									<input name="vkid_client_secret" type="text" size="50" value="{{ vkid_client_secret }}"/>
+								</td>
+							</tr>
+							<tr>
+								<td class="contentEntry1" valign="top">Scope<br/></td>
+								<td class="contentEntry2" valign="top">
+									<input name="vkid_scope" type="text" size="50" value="{{ vkid_scope|default('email') }}"/>
 								</td>
 							</tr>
 						</tbody>
@@ -214,53 +218,53 @@
 		</tr>
 	</table>
 	<!--
-	<tr>
-	<td class="contentEntry1" valign=top>Redirect URI<br /></td>
-	<td class="contentEntry2" valign=top>
-	<input name="vk_redirect_uri" type="text" size="50" value="{{ vk_redirect_uri }}" />
-	</td>
-	</tr>
-	-->
+			<tr>
+			<td class="contentEntry1" valign=top>Redirect URI<br /></td>
+			<td class="contentEntry2" valign=top>
+			<input name="vk_redirect_uri" type="text" size="50" value="{{ vk_redirect_uri }}" />
+			</td>
+			</tr>
+			-->
 	<!--
-	<tr>
-	<td class="contentEntry1" valign=top>Redirect URI<br /></td>
-	<td class="contentEntry2" valign=top>
-	<input name="odnoklassniki_redirect_uri" type="text" size="50" value="{{ odnoklassniki_redirect_uri }}" />
-	</td>
-	</tr>
-	-->
+			<tr>
+			<td class="contentEntry1" valign=top>Redirect URI<br /></td>
+			<td class="contentEntry2" valign=top>
+			<input name="odnoklassniki_redirect_uri" type="text" size="50" value="{{ odnoklassniki_redirect_uri }}" />
+			</td>
+			</tr>
+			-->
 	<!--
-	<tr>
-	<td class="contentEntry1" valign=top>Redirect URI<br /></td>
-	<td class="contentEntry2" valign=top>
-	<input name="mailru_redirect_uri" type="text" size="50" value="{{ mailru_redirect_uri }}" />
-	</td>
-	</tr>
-	-->
+			<tr>
+			<td class="contentEntry1" valign=top>Redirect URI<br /></td>
+			<td class="contentEntry2" valign=top>
+			<input name="mailru_redirect_uri" type="text" size="50" value="{{ mailru_redirect_uri }}" />
+			</td>
+			</tr>
+			-->
 	<!--
-	<tr>
-	<td class="contentEntry1" valign=top>Redirect URI<br /></td>
-	<td class="contentEntry2" valign=top>
-	<input name="yandex_redirect_uri" type="text" size="50" value="{{ yandex_redirect_uri }}" />
-	</td>
-	</tr>
-	-->
+			<tr>
+			<td class="contentEntry1" valign=top>Redirect URI<br /></td>
+			<td class="contentEntry2" valign=top>
+			<input name="yandex_redirect_uri" type="text" size="50" value="{{ yandex_redirect_uri }}" />
+			</td>
+			</tr>
+			-->
 	<!--
-	<tr>
-	<td class="contentEntry1" valign=top>Redirect URI<br /></td>
-	<td class="contentEntry2" valign=top>
-	<input name="google_redirect_uri" type="text" size="50" value="{{ google_redirect_uri }}" />
-	</td>
-	</tr>
-	-->
+			<tr>
+			<td class="contentEntry1" valign=top>Redirect URI<br /></td>
+			<td class="contentEntry2" valign=top>
+			<input name="google_redirect_uri" type="text" size="50" value="{{ google_redirect_uri }}" />
+			</td>
+			</tr>
+			-->
 	<!--
-	<tr>
-	<td class="contentEntry1" valign=top>Redirect URI<br /></td>
-	<td class="contentEntry2" valign=top>
-	<input name="facebook_redirect_uri" type="text" size="50" value="{{ facebook_redirect_uri }}" />
-	</td>
-	</tr>
-	-->
+			<tr>
+			<td class="contentEntry1" valign=top>Redirect URI<br /></td>
+			<td class="contentEntry2" valign=top>
+			<input name="facebook_redirect_uri" type="text" size="50" value="{{ facebook_redirect_uri }}" />
+			</td>
+			</tr>
+			-->
 		<div class="card-footer text-center"> <button type="submit" name="submit" class="btn btn-outline-success">Сохранить изменения</button>
 	</div>
 </form>

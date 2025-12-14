@@ -6,18 +6,44 @@ if (!defined('NGCMS')) die('Galaxy in danger');
 //loadPluginLibrary('comments', 'lib');
 loadPluginLibrary('uprofile', 'lib');
 register_plugin_page('auth_social', '', 'socialAuth', 0);
+// Path-based callbacks per provider (VK requires no query params)
+// VK ID (PKCE) callback route
+register_plugin_page('auth_social', 'vkid', 'socialAuth', 0);
+register_plugin_page('auth_social', 'yandex', 'socialAuth', 0);
+register_plugin_page('auth_social', 'google', 'socialAuth', 0);
+register_plugin_page('auth_social', 'facebook', 'socialAuth', 0);
+register_plugin_page('auth_social', 'github', 'socialAuth', 0);
 add_act('usermenu', 'auth_social_links');
 //register_plugin_page('auth_social', 'register' , 'socialRegister', 0);
 //register_plugin_page('auth_social', 'delete' , 'loginzaDelete', 0);
-function socialAuth()
+function socialAuth($params = [])
 {
-	global $config, $template, $tpl, $mysql, $userROW, $AUTH_METHOD;
+	global $config, $template, $tpl, $mysql, $userROW, $AUTH_METHOD, $CurrentHandler;
 	require_once ($_SERVER['DOCUMENT_ROOT']) . '/engine/plugins/auth_social/lib/SocialAuther/autoload.php';
+	// Log request with absolute path
+	// $logFile = $_SERVER['DOCUMENT_ROOT'] . '/engine/plugins/auth_social/log.txt';
+	// $entry = '[' . date('Y-m-d H:i:s') . '] socialAuth handler=' . ($CurrentHandler['handlerName'] ?? 'none') . ' uri=' . ($_SERVER['REQUEST_URI'] ?? '') . ' GET=' . json_encode($_GET, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+	// // @file_put_contents($logFile, $entry, FILE_APPEND);
+
+	/* DEBUG: Output to screen
+	if (empty($_GET['code']) && empty($_GET['state'])) {
+		echo '<div style="background: yellow; padding: 20px; margin: 20px; border: 2px solid red;">';
+		echo '<h2>socialAuth() executed</h2>';
+		echo '<p>Handler: ' . htmlspecialchars($CurrentHandler['handlerName'] ?? 'none') . '</p>';
+		echo '<p>URI: ' . htmlspecialchars($_SERVER['REQUEST_URI']) . '</p>';
+		echo '<p>Log file: ' . htmlspecialchars($logFile) . '</p>';
+		echo '<p>GET: ' . htmlspecialchars(print_r($_GET, true)) . '</p>';
+		echo '</div>';
+	}
+	*/
+
 	$adapterConfigs = array(
-		'vk'            => array(
-			'client_id'     => pluginGetVariable('auth_social', 'vk_client_id'),
-			'client_secret' => pluginGetVariable('auth_social', 'vk_client_secret'),
-			'redirect_uri'  => home . "/plugin/auth_social/?provider=vk"
+		// VK ID uses PKCE; handled by Adapter\Vkid
+		'vkid'          => array(
+			'client_id'     => pluginGetVariable('auth_social', 'vkid_client_id'),
+			'client_secret' => pluginGetVariable('auth_social', 'vkid_client_secret'),
+			'redirect_uri'  => home . "/plugin/auth_social/vkid/",
+			'scope'         => (pluginGetVariable('auth_social', 'vkid_scope') ?: 'email'),
 		),
 		'yandex'        => array(
 			'client_id'     => pluginGetVariable('auth_social', 'yandex_client_id'),
@@ -43,61 +69,163 @@ function socialAuth()
 	$adapters = array();
 	foreach ($adapterConfigs as $adapter => $settings) {
 		$class = 'SocialAuther\\Adapter\\' . ucfirst($adapter);
+		if (!class_exists($class)) {
+			continue;
+		}
 		$adapters[$adapter] = new $class($settings);
 	}
-	if (isset($_GET['provider']) && array_key_exists($_GET['provider'], $adapters)) {
-		$auther = new SocialAuther\SocialAuther($adapters[$_GET['provider']]);
-		if ($auther->authenticate()) {
+	// Determine provider: prefer route handler name, fallback to query param
+	$provider = null;
+	if (isset($CurrentHandler['handlerName']) && array_key_exists($CurrentHandler['handlerName'], $adapters)) {
+		$provider = $CurrentHandler['handlerName'];
+	} elseif (isset($_GET['provider']) && array_key_exists($_GET['provider'], $adapters)) {
+		$provider = $_GET['provider'];
+	}
+	if ($provider) {
+		// Log provider detection
+		// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] provider=$provider config=" . json_encode($adapterConfigs[$provider], JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
+		// If no code in GET - redirect to OAuth provider
+		if (!isset($_GET['code']) && !isset($_GET['oauth_token'])) {
+			if ($provider === 'vkid') {
+				// VK ID redirect with PKCE
+				if (session_status() === PHP_SESSION_NONE) {
+					@session_start();
+				}
+				$state = bin2hex(random_bytes(16));
+				$codeVerifier = bin2hex(random_bytes(32));
+				$codeChallenge = rtrim(strtr(base64_encode(hash('sha256', $codeVerifier, true)), '+/', '-_'), '=');
+				$_SESSION['vkid_state'] = $state;
+				$_SESSION['vkid_code_verifier'] = $codeVerifier;
+				$params = [
+					'response_type' => 'code',
+					'client_id' => $adapterConfigs[$provider]['client_id'],
+					'redirect_uri' => $adapterConfigs[$provider]['redirect_uri'],
+					'state' => $state,
+					'code_challenge' => $codeChallenge,
+					'code_challenge_method' => 'S256',
+					'scope' => $adapterConfigs[$provider]['scope']
+				];
+				$authUrl = 'https://id.vk.com/authorize?' . http_build_query($params);
+				// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] redirecting to VK: $authUrl\n", FILE_APPEND);
+				header('Location: ' . $authUrl);
+				exit;
+			}
+		}
+		$auther = new SocialAuther\SocialAuther($adapters[$provider]);
+		$authResult = $auther->authenticate();
+		// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] authenticate result=" . ($authResult ? 'true' : 'false') . "\n", FILE_APPEND);
+		if ($authResult) {
+			// Log user data
+			$userData = [
+				'provider' => $auther->getProvider(),
+				'social_id' => $auther->getSocialId(),
+				'name' => $auther->getName(),
+				'email' => $auther->getEmail(),
+				'social_page' => $auther->getSocialPage()
+			];
+			// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] user data=" . json_encode($userData, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
+			// Check existing user
+			$checkQuery = "SELECT * FROM " . uprefix . "_users WHERE (`provider` = '" . $auther->getProvider() . "' AND `social_id` = '" . $auther->getSocialId() . "') OR `social_page` = " . db_squote($auther->getSocialPage()) . " LIMIT 1";
+			// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] checking user: " . $checkQuery . "\n", FILE_APPEND);
 			$record = $mysql->record(
-				"SELECT *  FROM " . uprefix . "_users WHERE `provider` = '" . $auther->getProvider() . "' AND `social_id` = '" . $auther->getSocialId() . "' LIMIT 1"
+				$checkQuery
 			);
+			// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] existing user found=" . (is_array($record) ? 'yes id=' . ($record['id'] ?? 'null') : 'no') . "\n", FILE_APPEND);
 			if (!$record) {
-				$values = array(
-					EncodePassword(MakeRandomPassword()),
-					$auther->getProvider(),
-					$auther->getSocialId(),
-					$auther->getName(),
-					$auther->getEmail(),
-					$auther->getSocialPage(),
-					$auther->getSex(),
-					date('Y-m-d', strtotime($auther->getBirthday())),
-					$auther->getAvatar(),
-					time() + ($config['date_adjust'] * 60),
-					time() + ($config['date_adjust'] * 60)
-				);
-				$query = "INSERT INTO " . uprefix . "_users (`pass`, `provider`, `social_id`, `name`, `mail`, `social_page`, `sex`, `birthday`, `avatar`, `reg`, `last`) VALUES ('";
-				$query .= implode("', '", $values) . "')";
-				$mysql->query($query);
-				$user_doreg = $mysql->record("SELECT * FROM " . uprefix . "_users WHERE social_page = " . db_squote($auther->getSocialPage()));
-				$userid = $user_doreg['id'];
-				$avatar = '';
-				$get_avatar = $auther->getAvatar();
-				if (!empty($get_avatar)) {
-					addAvatarToFiles('newavatar', $get_avatar);
-					@include_once root . 'includes/classes/upload.class.php';
-					if (!empty($_FILES['newavatar']['name'])) {
-						$fmanage = new file_managment();
-						$imanage = new image_managment();
-						$origName = strtolower(basename($_FILES['newavatar']['name']));
-						$ext = pathinfo($origName, PATHINFO_EXTENSION);
-						$safeExt = preg_match('/^(jpe?g|png|gif)$/i', $ext) ? strtolower($ext) : 'jpg';
-						$fname = 'u' . intval($userid) . '_' . substr(md5($origName . microtime(true)), 0, 12) . '.' . $safeExt;
-						$ftmp = $_FILES['newavatar']['tmp_name'];
-						$mysql->query("insert into " . prefix . "_images (name, orig_name, folder, date, user, owner_id, category) values (" . db_squote($fname) . ", " . db_squote($origName) . ", '', unix_timestamp(now()), " . db_squote($auther->getName()) . ", " . db_squote($userid) . ", '1')");
-						$rowID = $mysql->record("select LAST_INSERT_ID() as id");
-						if (@copy($ftmp, $config['avatars_dir'] . $fname)) {
-							$sz = $imanage->get_size($config['avatars_dir'] . $fname);
-							$mysql->query("update " . prefix . "_images set width=" . db_squote($sz['1']) . ", height=" . db_squote($sz['2']) . " where id = " . db_squote($rowID['id']));
-							$avatar = $fname;
+				// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] creating new user\n", FILE_APPEND);
+				try {
+					$birthday_value = $auther->getBirthday();
+					// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] birthday raw=" . json_encode($birthday_value) . "\n", FILE_APPEND);
+					$values = array(
+						EncodePassword(MakeRandomPassword()),
+						$auther->getProvider(),
+						$auther->getSocialId(),
+						$auther->getName(),
+						$auther->getEmail(),
+						$auther->getSocialPage(),
+						$auther->getSex(),
+						$birthday_value ? date('Y-m-d', strtotime($birthday_value)) : '0000-00-00',
+						'', // Avatar будет обработан отдельно
+						time() + ($config['date_adjust'] * 60),
+						time() + ($config['date_adjust'] * 60)
+					);
+					$query = "INSERT INTO " . uprefix . "_users (`pass`, `provider`, `social_id`, `name`, `mail`, `social_page`, `sex`, `birthday`, `avatar`, `reg`, `last`) VALUES ('";
+					$query .= implode("', '", $values) . "')";
+					// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] insert query=" . $query . "\n", FILE_APPEND);
+					$insertResult = $mysql->query($query);
+					// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] insert result=" . ($insertResult ? 'success' : 'failed') . "\n", FILE_APPEND);
+					if (!$insertResult) {
+						// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] INSERT failed, searching for existing user\n", FILE_APPEND);
+						$user_doreg = $mysql->record("SELECT * FROM " . uprefix . "_users WHERE social_page = " . db_squote($auther->getSocialPage()) . " OR (provider = '" . $auther->getProvider() . "' AND social_id = '" . $auther->getSocialId() . "') ORDER BY id DESC LIMIT 1");
+						if (is_array($user_doreg)) {
+							$userid = $user_doreg['id'];
+							// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] user already exists, found id=" . $userid . "\n", FILE_APPEND);
+						} else {
+							// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] cannot create or find user\n", FILE_APPEND);
+							throw new Exception("Failed to insert user and cannot find existing user");
+						}
+					} else {
+						$lastIdRow = $mysql->record("SELECT LAST_INSERT_ID() as id");
+						$userid = $lastIdRow['id'];
+						// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] new user id=" . $userid . "\n", FILE_APPEND);
+						if (empty($userid) || $userid == 0) {
+							// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] LAST_INSERT_ID failed, searching by social_page\n", FILE_APPEND);
+							$user_doreg = $mysql->record("SELECT * FROM " . uprefix . "_users WHERE social_page = " . db_squote($auther->getSocialPage()) . " OR (provider = '" . $auther->getProvider() . "' AND social_id = '" . $auther->getSocialId() . "') ORDER BY id DESC LIMIT 1");
+							if (is_array($user_doreg)) {
+								$userid = $user_doreg['id'];
+								// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] found user by fallback search, id=" . $userid . "\n", FILE_APPEND);
+							} else {
+								throw new Exception("User was inserted but cannot find ID");
+							}
+						} else {
+							$user_doreg = $mysql->record("SELECT * FROM " . uprefix . "_users WHERE id = " . intval($userid));
+							// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] user_doreg found=" . (is_array($user_doreg) ? 'yes id=' . $user_doreg['id'] : 'no') . "\n", FILE_APPEND);
 						}
 					}
-					$mysql->query(
-						"UPDATE `" . uprefix . "_users` SET `activation` = ''" .
-							(!empty($avatar) ? ", `avatar` = " . db_squote($avatar) : '') .
-							" WHERE social_page = " . db_squote($auther->getSocialPage())
-					);
+
+					// Process avatar for new user
+					$avatar = '';
+					$get_avatar = $auther->getAvatar();
+					if (!empty($get_avatar)) {
+						if (addAvatarToFiles('newavatar', $get_avatar)) {
+							@include_once root . 'includes/classes/upload.class.php';
+							if (!empty($_FILES['newavatar']['name'])) {
+								$fmanage = new file_managment();
+								$imanage = new image_managment();
+								$origName = strtolower(basename($_FILES['newavatar']['name']));
+								$ext = pathinfo($origName, PATHINFO_EXTENSION);
+								$safeExt = preg_match('/^(jpe?g|png|gif)$/i', $ext) ? strtolower($ext) : 'jpg';
+								$fname = 'u' . intval($userid) . '_' . substr(md5($origName . microtime(true)), 0, 12) . '.' . $safeExt;
+								$ftmp = $_FILES['newavatar']['tmp_name'];
+
+								if (@copy($ftmp, $config['avatars_dir'] . $fname)) {
+									$sz = $imanage->get_size($config['avatars_dir'] . $fname);
+									$mysql->query("insert into " . prefix . "_images (name, orig_name, folder, date, user, owner_id, category) values (" . db_squote($fname) . ", " . db_squote($origName) . ", '', unix_timestamp(now()), " . db_squote($auther->getName()) . ", " . db_squote($userid) . ", '1')");
+									$rowID = $mysql->record("select LAST_INSERT_ID() as id");
+									if ($rowID && isset($rowID['id'])) {
+										$mysql->query("update " . prefix . "_images set width=" . db_squote($sz['1']) . ", height=" . db_squote($sz['2']) . " where id = " . db_squote($rowID['id']));
+									}
+									$avatar = $fname;
+								}
+
+								// Clean up temp file
+								@unlink($ftmp);
+							}
+						}
+
+						if (!empty($avatar)) {
+							$mysql->query(
+								"UPDATE `" . uprefix . "_users` SET `activation` = '', `avatar` = " . db_squote($avatar) .
+									" WHERE id = " . intval($userid)
+							);
+						}
+					}
+				} catch (Exception $e) {
+					// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] ERROR creating user: " . $e->getMessage() . "\n", FILE_APPEND);
+					die('Error creating user: ' . $e->getMessage());
 				}
 			} else {
+				// User already exists
 				$userFromDb = new stdClass();
 				$userFromDb->provider = $record['provider'];
 				$userFromDb->socialId = $record['social_id'];
@@ -151,11 +279,27 @@ function socialAuth()
 			}
 			$_SESSION['user'] = $user;
 			$user_dologin = $mysql->record("SELECT * FROM " . uprefix . "_users WHERE social_page = " . db_squote($auther->getSocialPage()));
+			try {
+				$logFile = (defined('root') ? root : ($_SERVER['DOCUMENT_ROOT'] . '/')) . 'engine/plugins/auth_social/log.txt';
+				// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] user_dologin found=" . (is_array($user_dologin) ? 'yes id=' . ($user_dologin['id'] ?? 'null') : 'no') . "\n", FILE_APPEND);
+			} catch (Throwable $e) {
+			}
 			if (is_array($user_dologin)) {
 				$auth = $AUTH_METHOD[$config['auth_module']];
 				$auth->save_auth($user_dologin);
+				try {
+					$logFile = (defined('root') ? root : ($_SERVER['DOCUMENT_ROOT'] . '/')) . 'engine/plugins/auth_social/log.txt';
+					// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] login saved, redirecting to home\n", FILE_APPEND);
+				} catch (Throwable $e) {
+				}
 				header('Location: ' . $config['home_url']);
 				return;
+			}
+		} else {
+			try {
+				$logFile = (defined('root') ? root : ($_SERVER['DOCUMENT_ROOT'] . '/')) . 'engine/plugins/auth_social/log.txt';
+				// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] authenticate FAILED for provider=" . $provider . "\n", FILE_APPEND);
+			} catch (Throwable $e) {
 			}
 		}
 		header('Location: ' . $config['home_url']);
@@ -182,7 +326,7 @@ function auth_social_links()
 			@require_once ($_SERVER['DOCUMENT_ROOT']) . '/engine/plugins/auth_social/lib/SocialAuther/autoload.php';
 		}
 	}
-	$providers = ['vk', 'yandex', 'google', 'facebook', 'github'];
+	$providers = ['yandex', 'google', 'facebook', 'github', 'vkid'];
 	$links = [];
 	foreach ($providers as $p) {
 		$clientId = pluginGetVariable('auth_social', $p . '_client_id');
@@ -193,7 +337,7 @@ function auth_social_links()
 		$settings = [
 			'client_id'     => $clientId,
 			'client_secret' => $clientSecret,
-			'redirect_uri'  => home . '/plugin/auth_social/?provider=' . $p,
+			'redirect_uri'  => ($p === 'vkid') ? (home . '/plugin/auth_social/vkid/') : (home . '/plugin/auth_social/?provider=' . $p),
 		];
 		$className = 'SocialAuther\\Adapter\\' . ucfirst($p);
 		try {
@@ -220,10 +364,11 @@ class SocialAuthCoreFilter extends CoreFilter
 		global $mysql, $userROW, $lang;
 		require_once root . 'plugins/auth_social/lib/SocialAuther/autoload.php';
 		$adapterConfigs = array(
-			'vk'            => array(
-				'client_id'     => pluginGetVariable('auth_social', 'vk_client_id'),
-				'client_secret' => pluginGetVariable('auth_social', 'vk_client_secret'),
-				'redirect_uri'  => home . "/plugin/auth_social/?provider=vk"
+			'vkid'          => array(
+				'client_id'     => pluginGetVariable('auth_social', 'vkid_client_id'),
+				'client_secret' => pluginGetVariable('auth_social', 'vkid_client_secret'),
+				'redirect_uri'  => home . "/plugin/auth_social/vkid/",
+				'scope'         => (pluginGetVariable('auth_social', 'vkid_scope') ?: 'email'),
 			),
 			'yandex'        => array(
 				'client_id'     => pluginGetVariable('auth_social', 'yandex_client_id'),
@@ -313,20 +458,29 @@ function addAvatarToFiles($key, $url)
 {
 	$scheme = strtolower(parse_url($url, PHP_URL_SCHEME) ?? '');
 	if (!in_array($scheme, ['http', 'https'], true)) {
-		return;
+		return false;
 	}
-	$tempName = tempnam(ini_get('upload_tmp_dir'), 'upload_');
-	$originalName = basename(parse_url($url, PHP_URL_PATH));
+
+	$tempName = tempnam(sys_get_temp_dir(), 'avatar_');
 	$imgRawData = @file_get_contents($url);
 	if ($imgRawData === false) {
-		return;
+		return false;
 	}
+
 	file_put_contents($tempName, $imgRawData);
 	$info = @getimagesize($tempName);
 	if (!$info || empty($info['mime'])) {
 		@unlink($tempName);
-		return;
+		return false;
 	}
+
+	// Extract filename from URL, remove query parameters
+	$urlPath = parse_url($url, PHP_URL_PATH);
+	$originalName = basename($urlPath);
+	if (empty($originalName)) {
+		$originalName = 'avatar.jpg';
+	}
+
 	$_FILES[$key] = array(
 		'name'     => $originalName,
 		'type'     => $info['mime'],
@@ -334,5 +488,6 @@ function addAvatarToFiles($key, $url)
 		'error'    => 0,
 		'size'     => strlen($imgRawData),
 	);
-	//return $_FILES[$key];
+
+	return true;
 }

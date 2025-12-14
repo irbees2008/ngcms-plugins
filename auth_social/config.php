@@ -13,12 +13,14 @@ switch ($_REQUEST['action']) {
 }
 function show_options()
 {
-
 	global $tpl, $mysql, $lang, $twig;
 	$tpath = locatePluginTemplates(array('config/main', 'config/general.from'), 'auth_social', 1);
 	if (isset($_REQUEST['submit'])) {
-		pluginSetVariable('auth_social', 'vk_client_id', secure_html($_REQUEST['vk_client_id']));
-		pluginSetVariable('auth_social', 'vk_client_secret', secure_html($_REQUEST['vk_client_secret']));
+		// VK classic removed
+		// VK ID (new)
+		pluginSetVariable('auth_social', 'vkid_client_id', secure_html($_REQUEST['vkid_client_id']));
+		pluginSetVariable('auth_social', 'vkid_client_secret', secure_html($_REQUEST['vkid_client_secret']));
+		pluginSetVariable('auth_social', 'vkid_scope', secure_html($_REQUEST['vkid_scope']));
 		//pluginSetVariable('auth_social', 'vk_redirect_uri', intval($_REQUEST['vk_redirect_uri']));
 		pluginSetVariable('auth_social', 'github_client_id', secure_html($_REQUEST['github_client_id']));
 		pluginSetVariable('auth_social', 'github_client_secret', secure_html($_REQUEST['github_client_secret']));
@@ -35,8 +37,11 @@ function show_options()
 		pluginsSaveConfig();
 		redirect_auth_social('?mod=extra-config&plugin=auth_social');
 	}
-	$vk_client_id = pluginGetVariable('auth_social', 'vk_client_id');
-	$vk_client_secret = pluginGetVariable('auth_social', 'vk_client_secret');
+	// VK classic removed
+	// VK ID
+	$vkid_client_id = pluginGetVariable('auth_social', 'vkid_client_id');
+	$vkid_client_secret = pluginGetVariable('auth_social', 'vkid_client_secret');
+	$vkid_scope = pluginGetVariable('auth_social', 'vkid_scope');
 	//$vk_redirect_uri = pluginGetVariable('auth_social', 'vk_redirect_uri');
 	$github_client_id = pluginGetVariable('auth_social', 'github_client_id');
 	$github_client_secret = pluginGetVariable('auth_social', 'github_client_secret');
@@ -55,8 +60,10 @@ function show_options()
 		'skins_url' => skins_url,
 		'home'      => home,
 		'tpl_home'  => admin_url,
-		'vk_client_id'     => $vk_client_id,
-		'vk_client_secret' => $vk_client_secret,
+		// VK classic removed
+		'vkid_client_id'     => $vkid_client_id,
+		'vkid_client_secret' => $vkid_client_secret,
+		'vkid_scope'         => $vkid_scope,
 		//'vk_redirect_uri' => $vk_redirect_uri,
 		'github_client_id'     => $github_client_id,
 		'github_client_secret' => $github_client_secret,
@@ -69,7 +76,6 @@ function show_options()
 		'facebook_client_id'     => $facebook_client_id,
 		'facebook_client_secret' => $facebook_client_secret,
 		//'facebook_redirect_uri' => $facebook_redirect_uri,
-
 	);
 	$xg = $twig->loadTemplate($tpath['config/main'] . 'config/main.tpl');
 	$tVars = array(
@@ -77,10 +83,8 @@ function show_options()
 	);
 	print $xg->render($tVars);
 }
-
 function redirect_auth_social($url)
 {
-
 	if (headers_sent()) {
 		echo "<script>document.location.href='{$url}';</script>\n";
 	} else {
