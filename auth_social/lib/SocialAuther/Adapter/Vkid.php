@@ -1,17 +1,13 @@
 <?php
-
 namespace SocialAuther\Adapter;
-
 class Vkid extends AbstractAdapter
 {
     protected $scope = null;
     protected $authUrl = 'https://id.vk.com/authorize';
     protected $tokenUrl = 'https://id.vk.com/oauth2/auth';
-
     public function __construct($config)
     {
         parent::__construct($config);
-
         if (isset($config['scope']) && is_string($config['scope'])) {
             $this->scope = $config['scope'];
         }
@@ -21,7 +17,6 @@ class Vkid extends AbstractAdapter
         if (!empty($config['token_url'])) {
             $this->tokenUrl = $config['token_url'];
         }
-
         $this->socialFieldsMap = array(
             'socialId'   => 'uid',
             'email'      => 'email',
@@ -32,10 +27,8 @@ class Vkid extends AbstractAdapter
             'city'       => 'city_name',
             'screenName' => 'screen_name'
         );
-
         $this->provider = 'vkid';
     }
-
     public function getName()
     {
         $result = null;
@@ -48,7 +41,6 @@ class Vkid extends AbstractAdapter
         }
         return $result;
     }
-
     public function getSocialPage()
     {
         $result = null;
@@ -57,7 +49,6 @@ class Vkid extends AbstractAdapter
         }
         return $result;
     }
-
     public function getSex()
     {
         $result = null;
@@ -66,7 +57,6 @@ class Vkid extends AbstractAdapter
         }
         return $result;
     }
-
     public function authenticate()
     {
         // $this->log('[VKID] authenticate called', ['has_code' => isset($_GET['code']), 'GET' => $_GET]);
@@ -76,7 +66,6 @@ class Vkid extends AbstractAdapter
                 @session_start();
             }
             // $this->log('[VKID] session started', ['session_id' => session_id(), 'vkid_state' => $_SESSION['vkid_state'] ?? 'none', 'vkid_code_verifier' => isset($_SESSION['vkid_code_verifier']) ? 'exists' : 'none']);
-
             $code = $_GET['code'];
             $deviceId = isset($_GET['device_id']) ? $_GET['device_id'] : null;
             // $this->log('[VKID] authenticate start', ['code' => $code, 'device_id' => $deviceId, 'redirect' => $this->redirectUri]);
@@ -85,7 +74,6 @@ class Vkid extends AbstractAdapter
                 return false;
             }
             $codeVerifier = isset($_SESSION['vkid_code_verifier']) ? $_SESSION['vkid_code_verifier'] : null;
-
             $params = array(
                 'grant_type'    => 'authorization_code',
                 'client_id'     => $this->clientId,
@@ -101,21 +89,16 @@ class Vkid extends AbstractAdapter
             if (!empty($deviceId)) {
                 $params['device_id'] = $deviceId;
             }
-
-            $this->log('[VKID] requesting token', ['url' => $this->tokenUrl, 'params' => $params]);
-
+            // $this->log('[VKID] requesting token', ['url' => $this->tokenUrl, 'params' => $params]);
             // Get raw response first
             $rawResponse = $this->post($this->tokenUrl, $params, false);
-            $this->log('[VKID] raw token response', ['raw' => $rawResponse]);
-
+            // $this->log('[VKID] raw token response', ['raw' => $rawResponse]);
             $tokenInfo = json_decode($rawResponse, true);
-            $this->log('[VKID] parsed token response', ['response' => $tokenInfo]);
-
+            // $this->log('[VKID] parsed token response', ['response' => $tokenInfo]);
             if (isset($tokenInfo['access_token'])) {
                 $accessToken = $tokenInfo['access_token'];
                 $userId = isset($tokenInfo['user_id']) ? $tokenInfo['user_id'] : null;
                 $email = isset($tokenInfo['email']) ? $tokenInfo['email'] : null;
-
                 $params = array(
                     'fields'       => 'id,first_name,last_name,screen_name,sex,bdate,photo_big,city,country,contacts',
                     'access_token' => $accessToken,
@@ -125,9 +108,8 @@ class Vkid extends AbstractAdapter
                     // For API v5.x use user_ids
                     $params['user_ids'] = $userId;
                 }
-
                 $userInfo = $this->get('https://api.vk.com/method/users.get', $params);
-                $this->log('[VKID] users.get response', $userInfo);
+                // $this->log('[VKID] users.get response', $userInfo);
                 if (isset($userInfo['response'][0])) {
                     $this->userInfo = $userInfo['response'][0];
                     if ($email) {
@@ -141,28 +123,25 @@ class Vkid extends AbstractAdapter
                             $this->userInfo['uid'] = $tokenInfo['user_id'];
                         }
                     }
-                    $this->log('[VKID] authenticate success', ['uid' => $this->userInfo['uid'] ?? null, 'email' => $this->userInfo['email'] ?? null]);
+                    // $this->log('[VKID] authenticate success', ['uid' => $this->userInfo['uid'] ?? null, 'email' => $this->userInfo['email'] ?? null]);
                     $result = true;
                 }
             } else {
-                $this->log('[VKID] access_token missing', ['params' => $params]);
+                // $this->log('[VKID] access_token missing', ['params' => $params]);
             }
         }
         return $result;
     }
-
     public function prepareAuthParams()
     {
         if (session_status() === PHP_SESSION_NONE) {
             @session_start();
         }
-
         $verifier = $this->generateCodeVerifier();
         $_SESSION['vkid_code_verifier'] = $verifier;
         $challenge = $this->codeChallengeS256($verifier);
         $state = $this->generateState();
         $_SESSION['vkid_state'] = $state;
-
         $params = array(
             'client_id'             => $this->clientId,
             'redirect_uri'          => $this->redirectUri,
@@ -174,30 +153,25 @@ class Vkid extends AbstractAdapter
         if (!empty($this->scope)) {
             $params['scope'] = $this->scope;
         }
-
         return array(
             'auth_url'    => $this->authUrl,
             'auth_params' => $params,
         );
     }
-
     protected function generateCodeVerifier($length = 64)
     {
         $raw = random_bytes($length);
         return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
     }
-
     protected function codeChallengeS256($verifier)
     {
         return rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
     }
-
     protected function generateState($length = 24)
     {
         $raw = random_bytes($length);
         return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
     }
-
     protected function log($message, $data = null)
     {
         try {

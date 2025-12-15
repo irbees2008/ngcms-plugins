@@ -39,5 +39,5 @@ if ($_REQUEST['action'] == 'commit') {
 		plugin_mark_deinstalled('auth_social');
 	}
 } else {
-	generate_install_page('auth_social', 'You are shure?', 'deinstall');
+	generate_install_page('auth_social', 'Вы уверены?', 'deinstall');
 }

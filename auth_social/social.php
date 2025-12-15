@@ -22,8 +22,8 @@ function socialAuth($params = [])
 	require_once ($_SERVER['DOCUMENT_ROOT']) . '/engine/plugins/auth_social/lib/SocialAuther/autoload.php';
 	// Log request with absolute path
 	// $logFile = $_SERVER['DOCUMENT_ROOT'] . '/engine/plugins/auth_social/log.txt';
-	// $entry = '[' . date('Y-m-d H:i:s') . '] socialAuth handler=' . ($CurrentHandler['handlerName'] ?? 'none') . ' uri=' . ($_SERVER['REQUEST_URI'] ?? '') . ' GET=' . json_encode($_GET, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
-	// // @file_put_contents($logFile, $entry, FILE_APPEND);
+	$entry = '[' . date('Y-m-d H:i:s') . '] socialAuth handler=' . ($CurrentHandler['handlerName'] ?? 'none') . ' uri=' . ($_SERVER['REQUEST_URI'] ?? '') . ' GET=' . json_encode($_GET, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+	// @file_put_contents($logFile, $entry, FILE_APPEND);
 
 	/* DEBUG: Output to screen
 	if (empty($_GET['code']) && empty($_GET['state'])) {
@@ -106,7 +106,7 @@ function socialAuth($params = [])
 					'scope' => $adapterConfigs[$provider]['scope']
 				];
 				$authUrl = 'https://id.vk.com/authorize?' . http_build_query($params);
-				// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] redirecting to VK: $authUrl\n", FILE_APPEND);
+				// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] redirecting to VK: state=$state, $authUrl\n", FILE_APPEND);
 				header('Location: ' . $authUrl);
 				exit;
 			}
@@ -123,19 +123,19 @@ function socialAuth($params = [])
 				'email' => $auther->getEmail(),
 				'social_page' => $auther->getSocialPage()
 			];
-			// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] user data=" . json_encode($userData, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
+			// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] user data=" . json_encode($userData, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
 			// Check existing user
 			$checkQuery = "SELECT * FROM " . uprefix . "_users WHERE (`provider` = '" . $auther->getProvider() . "' AND `social_id` = '" . $auther->getSocialId() . "') OR `social_page` = " . db_squote($auther->getSocialPage()) . " LIMIT 1";
-			// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] checking user: " . $checkQuery . "\n", FILE_APPEND);
+			// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] checking user: " . $checkQuery . "\n", FILE_APPEND);
 			$record = $mysql->record(
 				$checkQuery
 			);
-			// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] existing user found=" . (is_array($record) ? 'yes id=' . ($record['id'] ?? 'null') : 'no') . "\n", FILE_APPEND);
+			// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] existing user found=" . (is_array($record) ? 'yes id=' . ($record['id'] ?? 'null') : 'no') . "\n", FILE_APPEND);
 			if (!$record) {
-				// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] creating new user\n", FILE_APPEND);
+				// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] creating new user\n", FILE_APPEND);
 				try {
 					$birthday_value = $auther->getBirthday();
-					// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] birthday raw=" . json_encode($birthday_value) . "\n", FILE_APPEND);
+					// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] birthday raw=" . json_encode($birthday_value) . "\n", FILE_APPEND);
 					$values = array(
 						EncodePassword(MakeRandomPassword()),
 						$auther->getProvider(),
@@ -151,35 +151,35 @@ function socialAuth($params = [])
 					);
 					$query = "INSERT INTO " . uprefix . "_users (`pass`, `provider`, `social_id`, `name`, `mail`, `social_page`, `sex`, `birthday`, `avatar`, `reg`, `last`) VALUES ('";
 					$query .= implode("', '", $values) . "')";
-					// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] insert query=" . $query . "\n", FILE_APPEND);
+					// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] insert query=" . $query . "\n", FILE_APPEND);
 					$insertResult = $mysql->query($query);
-					// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] insert result=" . ($insertResult ? 'success' : 'failed') . "\n", FILE_APPEND);
+					// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] insert result=" . ($insertResult ? 'success' : 'failed') . "\n", FILE_APPEND);
 					if (!$insertResult) {
-						// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] INSERT failed, searching for existing user\n", FILE_APPEND);
+						// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] INSERT failed, searching for existing user\n", FILE_APPEND);
 						$user_doreg = $mysql->record("SELECT * FROM " . uprefix . "_users WHERE social_page = " . db_squote($auther->getSocialPage()) . " OR (provider = '" . $auther->getProvider() . "' AND social_id = '" . $auther->getSocialId() . "') ORDER BY id DESC LIMIT 1");
 						if (is_array($user_doreg)) {
 							$userid = $user_doreg['id'];
-							// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] user already exists, found id=" . $userid . "\n", FILE_APPEND);
+							// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] user already exists, found id=" . $userid . "\n", FILE_APPEND);
 						} else {
-							// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] cannot create or find user\n", FILE_APPEND);
+							// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] cannot create or find user\n", FILE_APPEND);
 							throw new Exception("Failed to insert user and cannot find existing user");
 						}
 					} else {
 						$lastIdRow = $mysql->record("SELECT LAST_INSERT_ID() as id");
 						$userid = $lastIdRow['id'];
-						// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] new user id=" . $userid . "\n", FILE_APPEND);
+						// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] new user id=" . $userid . "\n", FILE_APPEND);
 						if (empty($userid) || $userid == 0) {
-							// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] LAST_INSERT_ID failed, searching by social_page\n", FILE_APPEND);
+							// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] LAST_INSERT_ID failed, searching by social_page\n", FILE_APPEND);
 							$user_doreg = $mysql->record("SELECT * FROM " . uprefix . "_users WHERE social_page = " . db_squote($auther->getSocialPage()) . " OR (provider = '" . $auther->getProvider() . "' AND social_id = '" . $auther->getSocialId() . "') ORDER BY id DESC LIMIT 1");
 							if (is_array($user_doreg)) {
 								$userid = $user_doreg['id'];
-								// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] found user by fallback search, id=" . $userid . "\n", FILE_APPEND);
+								// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] found user by fallback search, id=" . $userid . "\n", FILE_APPEND);
 							} else {
 								throw new Exception("User was inserted but cannot find ID");
 							}
 						} else {
 							$user_doreg = $mysql->record("SELECT * FROM " . uprefix . "_users WHERE id = " . intval($userid));
-							// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] user_doreg found=" . (is_array($user_doreg) ? 'yes id=' . $user_doreg['id'] : 'no') . "\n", FILE_APPEND);
+							// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] user_doreg found=" . (is_array($user_doreg) ? 'yes id=' . $user_doreg['id'] : 'no') . "\n", FILE_APPEND);
 						}
 					}
 
@@ -221,7 +221,7 @@ function socialAuth($params = [])
 						}
 					}
 				} catch (Exception $e) {
-					// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] ERROR creating user: " . $e->getMessage() . "\n", FILE_APPEND);
+					// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] ERROR creating user: " . $e->getMessage() . "\n", FILE_APPEND);
 					die('Error creating user: ' . $e->getMessage());
 				}
 			} else {
@@ -280,16 +280,16 @@ function socialAuth($params = [])
 			$_SESSION['user'] = $user;
 			$user_dologin = $mysql->record("SELECT * FROM " . uprefix . "_users WHERE social_page = " . db_squote($auther->getSocialPage()));
 			try {
-				$logFile = (defined('root') ? root : ($_SERVER['DOCUMENT_ROOT'] . '/')) . 'engine/plugins/auth_social/log.txt';
-				// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] user_dologin found=" . (is_array($user_dologin) ? 'yes id=' . ($user_dologin['id'] ?? 'null') : 'no') . "\n", FILE_APPEND);
+				// $logFile = (defined('root') ? root : ($_SERVER['DOCUMENT_ROOT'] . '/')) . 'engine/plugins/auth_social/log.txt';
+				// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] user_dologin found=" . (is_array($user_dologin) ? 'yes id=' . ($user_dologin['id'] ?? 'null') : 'no') . "\n", FILE_APPEND);
 			} catch (Throwable $e) {
 			}
 			if (is_array($user_dologin)) {
 				$auth = $AUTH_METHOD[$config['auth_module']];
 				$auth->save_auth($user_dologin);
 				try {
-					$logFile = (defined('root') ? root : ($_SERVER['DOCUMENT_ROOT'] . '/')) . 'engine/plugins/auth_social/log.txt';
-					// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] login saved, redirecting to home\n", FILE_APPEND);
+					// $logFile = (defined('root') ? root : ($_SERVER['DOCUMENT_ROOT'] . '/')) . 'engine/plugins/auth_social/log.txt';
+					// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] login saved, redirecting to home\n", FILE_APPEND);
 				} catch (Throwable $e) {
 				}
 				header('Location: ' . $config['home_url']);
@@ -297,8 +297,8 @@ function socialAuth($params = [])
 			}
 		} else {
 			try {
-				$logFile = (defined('root') ? root : ($_SERVER['DOCUMENT_ROOT'] . '/')) . 'engine/plugins/auth_social/log.txt';
-				// @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] authenticate FAILED for provider=" . $provider . "\n", FILE_APPEND);
+				// $logFile = (defined('root') ? root : ($_SERVER['DOCUMENT_ROOT'] . '/')) . 'engine/plugins/auth_social/log.txt';
+				// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] authenticate FAILED for provider=" . $provider . "\n", FILE_APPEND);
 			} catch (Throwable $e) {
 			}
 		}
@@ -397,14 +397,82 @@ class SocialAuthCoreFilter extends CoreFilter
 			$adapters[$adapter] = new $class($settings);
 		}
 		foreach ($adapters as $title => $adapter) {
-			$tVars['p']['auth_social'][$title] = array(
-				'authUrl' => $adapter->getAuthUrl(),
-				'title'   => ucfirst($title)
-			);
+			// VK ID требует PKCE, поэтому ссылка ведет на наш обработчик, а не напрямую на VK
+			if ($title === 'vkid') {
+				$tVars['p']['auth_social'][$title] = array(
+					'authUrl' => home . '/plugin/auth_social/vkid/',
+					'title'   => 'VK ID'
+				);
+			} else {
+				$tVars['p']['auth_social'][$title] = array(
+					'authUrl' => $adapter->getAuthUrl(),
+					'title'   => ucfirst($title)
+				);
+			}
+		}
+	}
+
+	function loginAction(&$tVars)
+	{
+		global $mysql, $userROW, $lang;
+		// Не показываем социальную авторизацию, если пользователь уже залогинен
+		if (is_array($userROW)) {
+			return;
+		}
+		require_once root . 'plugins/auth_social/lib/SocialAuther/autoload.php';
+		$adapterConfigs = array(
+			'vkid'          => array(
+				'client_id'     => pluginGetVariable('auth_social', 'vkid_client_id'),
+				'client_secret' => pluginGetVariable('auth_social', 'vkid_client_secret'),
+				'redirect_uri'  => home . "/plugin/auth_social/vkid/",
+				'scope'         => (pluginGetVariable('auth_social', 'vkid_scope') ?: 'email'),
+			),
+			'yandex'        => array(
+				'client_id'     => pluginGetVariable('auth_social', 'yandex_client_id'),
+				'client_secret' => pluginGetVariable('auth_social', 'yandex_client_secret'),
+				'redirect_uri'  => home . "/plugin/auth_social/?provider=yandex"
+			),
+			'google'        => array(
+				'client_id'     => pluginGetVariable('auth_social', 'google_client_id'),
+				'client_secret' => pluginGetVariable('auth_social', 'google_client_secret'),
+				'redirect_uri'  => home . "/plugin/auth_social/?provider=google"
+			),
+			'facebook'      => array(
+				'client_id'     => pluginGetVariable('auth_social', 'facebook_client_id'),
+				'client_secret' => pluginGetVariable('auth_social', 'facebook_client_secret'),
+				'redirect_uri'  => home . "/plugin/auth_social/?provider=facebook"
+			),
+			'github'        => array(
+				'client_id'     => pluginGetVariable('auth_social', 'github_client_id'),
+				'client_secret' => pluginGetVariable('auth_social', 'github_client_secret'),
+				'redirect_uri'  => home . "/plugin/auth_social/?provider=github"
+			)
+		);
+		$adapters = array();
+		foreach ($adapterConfigs as $adapter => $settings) {
+			$class = 'SocialAuther\Adapter\\' . ucfirst($adapter);
+			if (class_exists($class)) {
+				$adapters[$adapter] = new $class($settings);
+			}
+		}
+		foreach ($adapters as $title => $adapter) {
+			// VK ID требует PKCE, поэтому ссылка ведет на наш обработчик, а не напрямую на VK
+			if ($title === 'vkid') {
+				$tVars['p']['auth_social'][$title] = array(
+					'authUrl' => home . '/plugin/auth_social/vkid/',
+					'title'   => 'VK ID'
+				);
+			} else {
+				$tVars['p']['auth_social'][$title] = array(
+					'authUrl' => $adapter->getAuthUrl(),
+					'title'   => ucfirst($title)
+				);
+			}
 		}
 	}
 }
 register_filter('core.userMenu', 'auth_social', new SocialAuthCoreFilter);
+register_filter('core.login', 'auth_social', new SocialAuthCoreFilter);
 if (class_exists('p_uprofileFilter')) {
 	class uSocialFilter extends p_uprofileFilter
 	{

@@ -3,7 +3,7 @@
 ;
 ID: auth_social
 Name: social networks auth
-Version: 0.6
+Version: 0.7
 Acts: ppages, action.ppages.uprofile, usermenu
 File: social.php
 Config: config.php
