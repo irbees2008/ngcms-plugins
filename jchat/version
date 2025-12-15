@@ -3,7 +3,7 @@
 ;
 ID: jchat
 Name: AJAX chat
-Version: 0.09
+Version: 0.10
 Acts: index, ppages
 File: jchat.php
 Config: config.php
@@ -13,7 +13,7 @@ Type: plugin
 Title: AJAX chat
 Description: AJAX based чат для сайта
 Author: Vitaly A. Ponomarev
-Author_URI: http://ngcms.ru/
+Author_URI: http://ngcms.org/
 Information: Благодаря этому плагину вы сможете добавить на ваш сайт ЧАТ (на базе технологии AJAX)
 Preinstall: no
 MinEngineBuild: 23b3116

@@ -3,7 +3,7 @@
 ;
 ID: robots_editor
 Name: Robots.txt Editor
-Version: 1.4
+Version: 1.5
 Acts:
 File: robots_editor.php
 Config: config.php

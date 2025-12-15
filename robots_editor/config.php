@@ -59,19 +59,53 @@ function robots_editor_get_system_items()
         )
     );
 }
+// Get AI bots configuration
+function robots_editor_get_ai_bots()
+{
+    return array(
+        'search' => array(
+            'title' => 'AI Search боты (для поиска)',
+            'bots' => array(
+                'OAI-SearchBot' => 'OpenAI Search (ChatGPT)',
+                'PerplexityBot' => 'Perplexity AI Search',
+                'Claude-Web' => 'Anthropic Claude Search',
+                'Claude-SearchBot' => 'Anthropic Claude SearchBot'
+            )
+        ),
+        'training' => array(
+            'title' => 'AI Training боты (обучение)',
+            'bots' => array(
+                'GPTBot' => 'OpenAI GPTBot (обучение)',
+                'ClaudeBot' => 'Anthropic ClaudeBot (обучение)',
+                'Google-Extended' => 'Google AI (обучение)',
+                'Meta-ExternalAgent' => 'Meta AI (обучение)',
+                'Bytespider' => 'ByteDance/TikTok AI',
+                'anthropic-ai' => 'Anthropic AI',
+                'Omgilibot' => 'Omgili Bot',
+                'FacebookBot' => 'Facebook Bot'
+            )
+        )
+    );
+}
+
 // Function to generate robots.txt content
 function robots_editor_generate_content()
 {
     $rules = pluginGetVariable('robots_editor', 'rules');
     $custom_rules = pluginGetVariable('robots_editor', 'custom_rules');
     $auto_sitemap = pluginGetVariable('robots_editor', 'auto_sitemap');
+    $ai_search_allowed = pluginGetVariable('robots_editor', 'ai_search_allowed');
+    $ai_training_blocked = pluginGetVariable('robots_editor', 'ai_training_blocked');
+
     $content = "";
+
     // Generate rules for each user-agent
     $user_agents = array(
         'Yandex' => 'Yandex',
         'Googlebot' => 'Googlebot',
         '*' => 'Все остальные'
     );
+
     foreach ($user_agents as $ua => $title) {
         $content .= "User-agent: $ua\n";
         if (is_array($rules) && isset($rules[$ua])) {
@@ -85,17 +119,51 @@ function robots_editor_generate_content()
         }
         $content .= "\n";
     }
+
+    // Add AI Search bots (if enabled)
+    if ($ai_search_allowed) {
+        $ai_bots = robots_editor_get_ai_bots();
+        $content .= "# --- AI Search Bots (разрешены для индексации) ---\n";
+        foreach ($ai_bots['search']['bots'] as $bot => $title) {
+            $content .= "\nUser-agent: $bot\n";
+            $content .= "Allow: /\n";
+            // Block only system directories for AI search bots
+            if (is_array($rules) && isset($rules['*'])) {
+                foreach ($rules['*'] as $path => $allowed) {
+                    if (!$allowed) {
+                        $content .= "Disallow: $path\n";
+                    }
+                }
+            }
+        }
+        $content .= "\n";
+    }
+
+    // Add AI Training bots (blocked if enabled)
+    if ($ai_training_blocked) {
+        $ai_bots = robots_editor_get_ai_bots();
+        $content .= "# --- AI Training Bots (блокированы для обучения) ---\n";
+        foreach ($ai_bots['training']['bots'] as $bot => $title) {
+            $content .= "\nUser-agent: $bot\n";
+            $content .= "Disallow: /\n";
+        }
+        $content .= "\n";
+    }
+
     // Add custom rules - ДОБАВЛЕНО правильное отображение
     if (!empty($custom_rules)) {
         $content .= trim($custom_rules) . "\n\n";
     }
+
     // Add sitemap if enabled
     if ($auto_sitemap) {
         $sitemap_url = home . '/gsmg.xml';
         $content .= "Sitemap: " . $sitemap_url . "\n";
     }
+
     // Add host
     $content .= "Host: " . home . "\n";
+
     return $content;
 }
 // Function to save robots.txt
@@ -142,19 +210,34 @@ function robots_editor_save_file()
         }
     }
     // Логируем отладочную информацию
-     $debug_log = implode("\n", $debug_info);
-     @file_put_contents($site_root . 'robots_debug.log', $debug_log . "\n\n", FILE_APPEND);
-     return $result !== false;
+    $debug_log = implode("\n", $debug_info);
+    @file_put_contents($site_root . 'robots_debug.log', $debug_log . "\n\n", FILE_APPEND);
+    return $result !== false;
 }
 // Get current settings or set defaults
 $current_rules = pluginGetVariable('robots_editor', 'rules');
 $custom_rules = pluginGetVariable('robots_editor', 'custom_rules');
 $auto_sitemap = pluginGetVariable('robots_editor', 'auto_sitemap');
+$ai_search_allowed = pluginGetVariable('robots_editor', 'ai_search_allowed');
+$ai_training_blocked = pluginGetVariable('robots_editor', 'ai_training_blocked');
+
 // Set defaults if not set
 if ($auto_sitemap === null) {
     pluginSetVariable('robots_editor', 'auto_sitemap', 1);
     $auto_sitemap = 1;
 }
+
+// Set default AI settings
+if ($ai_search_allowed === null) {
+    pluginSetVariable('robots_editor', 'ai_search_allowed', 1);
+    $ai_search_allowed = 1;
+}
+
+if ($ai_training_blocked === null) {
+    pluginSetVariable('robots_editor', 'ai_training_blocked', 1);
+    $ai_training_blocked = 1;
+}
+
 // Set default rules if not set
 if (!is_array($current_rules)) {
     $system_items = robots_editor_get_system_items();
@@ -195,7 +278,9 @@ if ($_REQUEST['action'] == 'commit') {
     $cfg = array(
         'rules' => $new_rules,
         'custom_rules' => $_POST['custom_rules'], // правильно получаем из POST
-        'auto_sitemap' => isset($_POST['auto_sitemap']) ? 1 : 0
+        'auto_sitemap' => isset($_POST['auto_sitemap']) ? 1 : 0,
+        'ai_search_allowed' => isset($_POST['ai_search_allowed']) ? 1 : 0,
+        'ai_training_blocked' => isset($_POST['ai_training_blocked']) ? 1 : 0
     );
     // Update plugin variables
     foreach ($cfg as $key => $value) {
@@ -266,6 +351,26 @@ if ($_REQUEST['action'] == 'commit') {
         'type' => 'select',
         'values' => array('1' => 'Да', '0' => 'Нет'),
         'value' => $auto_sitemap
+    ));
+
+    // AI Search bots option
+    array_push($cfgX, array(
+        'name' => 'ai_search_allowed',
+        'title' => 'Разрешить AI Search ботов',
+        'descr' => 'Разрешить поисковым AI-ботам (ChatGPT Search, Perplexity, Claude Search) индексировать сайт. Это позволит вашему контенту появляться в AI-поиске.',
+        'type' => 'select',
+        'values' => array('1' => 'Да', '0' => 'Нет'),
+        'value' => $ai_search_allowed
+    ));
+
+    // AI Training bots option
+    array_push($cfgX, array(
+        'name' => 'ai_training_blocked',
+        'title' => 'Блокировать AI Training ботов',
+        'descr' => 'Запретить AI-ботам (GPTBot, ClaudeBot, Google-Extended и др.) использовать контент для обучения моделей. Рекомендуется включить для защиты авторских прав.',
+        'type' => 'select',
+        'values' => array('1' => 'Да', '0' => 'Нет'),
+        'value' => $ai_training_blocked
     ));
     // Rules table
     $rules_html = '<div class="robots-rules-table">';

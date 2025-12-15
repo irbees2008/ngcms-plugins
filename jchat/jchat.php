@@ -1,10 +1,11 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 //
 // Show current chat state
 //
-function jchat_show($lastEventID, $maxLoadedID, $commands = array()) {
+function jchat_show($lastEventID, $maxLoadedID, $commands = array())
+{
 
 	global $userROW, $mysql, $tpl;
 	// Check permissions [ guests do not see chat ]
@@ -32,13 +33,13 @@ function jchat_show($lastEventID, $maxLoadedID, $commands = array()) {
 	$winMode = intval(isset($_REQUEST['win']) ? $_REQUEST['win'] : 0);
 	$conf_maxidle = intval(pluginGetVariable('jchat', ($winMode ? 'win.' : '') . 'maxidle'));
 	if (isset($_REQUEST['idle']) && ($conf_maxidle > 0) && (intval($_REQUEST['idle']) > $conf_maxidle)) {
-		$bundle[0] [] = array('stop');
+		$bundle[0][] = array('stop');
 	}
 	// Check if we have new events
 	$newEvents = $mysql->record("select max(id) as id, max(type) as type from " . prefix . "_jchat_events where id > " . intval($lastEventID));
 	// Check if we have to update lastEventID
 	if ($newEvents['id'] > $lastEventID) {
-		$bundle[0] [] = array('setLastEvent', intval($newEvents['id']));
+		$bundle[0][] = array('setLastEvent', intval($newEvents['id']));
 	} else {
 		// No new events
 		return $bundle;
@@ -46,18 +47,25 @@ function jchat_show($lastEventID, $maxLoadedID, $commands = array()) {
 	// Possible actions
 	// * 3 = RELOAD [ only if $lastEventID is set ]
 	if (($newEvents['type'] == 3) && ($lastEventID > 0)) {
-		$bundle[0] [] = array('reload');
+		$bundle[0][] = array('reload');
 
 		return $bundle;
 	}
 	// * 2 = There are deleted messages, return the whole list [ only if $lastEventID is set ]
 	if (($newEvents['type'] == 2) && ($lastEventID > 0)) {
-		$bundle[0] [] = array('clear');
-		$query = "select id, postdate, author, author_id, text from " . prefix . "_jchat order by id desc limit " . $limit;
+		$bundle[0][] = array('clear');
+		$query = "select j.id, j.postdate, j.author, j.author_id, j.text, u.avatar
+		          from " . prefix . "_jchat j
+		          LEFT JOIN " . prefix . "_users u ON j.author_id = u.id
+		          order by j.id desc limit " . $limit;
 	}
 	// * 1 = There are new messages [ or no $lastEventID is set ]
 	if (($newEvents['type'] == 1) || ($lastEventID < 1)) {
-		$query = "select id, postdate, author, author_id, text from " . prefix . "_jchat where id >" . intval($maxLoadedID) . " order by id desc limit " . $limit;
+		$query = "select j.id, j.postdate, j.author, j.author_id, j.text, u.avatar
+		          from " . prefix . "_jchat j
+		          LEFT JOIN " . prefix . "_users u ON j.author_id = u.id
+		          where j.id >" . intval($maxLoadedID) . "
+		          order by j.id desc limit " . $limit;
 	}
 	// * NO NEW EVENTS - do not fetch data
 	if (intval($newEvents['type']) < 1) {
@@ -71,12 +79,21 @@ function jchat_show($lastEventID, $maxLoadedID, $commands = array()) {
 		//		$row['text'] = preg_replace('#^\@(.+?)\:#','<i>$1</i>:',$row['text']);
 		$row['time'] = strftime($format_time, $row['postdate']);
 		$row['datetime'] = strftime($format_date, $row['postdate']);
+
+		// Get user avatar (now from JOIN, optimized!)
+		if ($row['author_id'] > 0 && !empty($row['avatar'])) {
+			$row['avatar'] = avatars_url . '/' . $row['avatar'];
+		} else {
+			// Default avatar for guests or users without avatar
+			$row['avatar'] = avatars_url . '/noavatar.gif';
+		}
+
 		if (getPluginStatusActive('uprofile')) {
 			$row['profile_link'] = generatePluginLink('uprofile', 'show', array('name' => $row['author'], 'id' => $row['author_id']));
 		}
 		// Make some conversions to INT type
 		$row['id'] = intval($row['id']);
-		$data [] = $row;
+		$data[] = $row;
 	}
 	$mysql->query("set names utf8mb4");
 	// Attach messages to bundle
@@ -90,14 +107,15 @@ function jchat_show($lastEventID, $maxLoadedID, $commands = array()) {
 	// Add extra commands (if passed)
 	if (is_array($commands) && count($commands)) {
 		foreach ($commands as $cmd) {
-			$bundle[0] [] = $cmd;
+			$bundle[0][] = $cmd;
 		}
 	}
 
 	return $bundle;
 }
 
-function plugin_jchat_show() {
+function plugin_jchat_show()
+{
 
 	global $template, $SUPRESS_TEMPLATE_SHOW, $mysql;
 	$SUPRESS_TEMPLATE_SHOW = 1;
@@ -109,7 +127,8 @@ function plugin_jchat_show() {
 }
 
 // Index screen for side panel
-function plugin_jchat_index() {
+function plugin_jchat_index()
+{
 
 	global $template, $tpl, $SUPRESS_TEMPLATE_SHOW, $userROW, $CurrentHandler;
 	loadPluginLang('jchat', 'main', '', '', ':');
@@ -143,6 +162,17 @@ function plugin_jchat_index() {
 	$tvars['vars']['link_add'] = generateLink('core', 'plugin', array('plugin' => 'jchat', 'handler' => 'add'), array());
 	$tvars['vars']['link_del'] = generateLink('core', 'plugin', array('plugin' => 'jchat', 'handler' => 'del'), array());
 	$tvars['vars']['link_show'] = generateLink('core', 'plugin', array('plugin' => 'jchat', 'handler' => 'show'), array());
+
+	// Twig переменные
+	$tvars['vars']['is_admin'] = (is_array($userROW) && ($userROW['status'] == 1));
+	$tvars['vars']['logged'] = is_array($userROW);
+	$tvars['vars']['post_enabled'] = (is_array($userROW) || (pluginGetVariable('jchat', 'access') < 2));
+	$tvars['vars']['selfwin'] = pluginGetVariable('jchat', 'enable_win');
+	$tvars['vars']['pluginUrl'] = home . '/engine/plugins/jchat';
+	$tvars['vars']['current_user_id'] = is_array($userROW) ? intval($userROW['id']) : 0;
+	$tvars['vars']['current_user_name'] = is_array($userROW) ? $userROW['name'] : '';
+
+	// Старые регулярные выражения для совместимости
 	$tvars['regx']['#\[is\.admin\](.*?)\[\/is\.admin\]#is'] = (is_array($userROW) && ($userROW['status'] == 1)) ? '$1' : '';
 	$tvars['regx']['#\[not-logged\](.*?)\[\/not-logged\]#is'] = is_array($userROW) ? '' : '$1';
 	$tvars['regx']['#\[post-enabled\](.*?)\[\/post-enabled\]#is'] = (!is_array($userROW) && (pluginGetVariable('jchat', 'access') < 2)) ? '' : '$1';
@@ -154,7 +184,8 @@ function plugin_jchat_index() {
 	$template['vars']['plugin_jchat'] = $tpl->show('jchat');
 }
 
-function plugin_jchat_add() {
+function plugin_jchat_add()
+{
 
 	global $userROW, $template, $mysql, $SUPRESS_TEMPLATE_SHOW, $ip;
 	$SUPRESS_TEMPLATE_SHOW = 1;
@@ -200,7 +231,7 @@ function plugin_jchat_add() {
 	if (($maxwlen < 1) || ($maxlen > 5000)) $maxwlen = 500;
 	// Load text & strip it to maxlen
 	$postText = substr(secure_html(trim($_REQUEST['text'])), 0, $maxlen);
-	
+
 	$ptb = array();
 	foreach (preg_split('#(\s|^)(http\:\/\/[A-Za-z\-\.0-9]+\/\S*)(\s|$)#', $postText, -1, PREG_SPLIT_DELIM_CAPTURE) as $cx) {
 		if (preg_match('#http\:\/\/[A-Za-z\-\.0-9]+\/\S*#', $cx, $m)) {
@@ -230,13 +261,37 @@ function plugin_jchat_add() {
 	$mysql->query("insert into " . prefix . "_jchat_events (chatid, postdate, type) values (" . $SQL['chatid'] . ", " . db_squote($SQL['postdate']) . ", 1)");
 	$lid = $mysql->result("select LAST_INSERT_ID()");
 	$mysql->query("delete from " . prefix . "_jchat_events where type=1 and id <> " . db_squote($lid));
+
+	// Telegram notification integration
+	$tgnotify_file = __DIR__ . '/../jchat_tgnotify/jchat_tgnotify.php';
+	if (file_exists($tgnotify_file)) {
+		@include_once $tgnotify_file;
+		if (function_exists('jchat_tgnotify_send')) {
+			// Определяем гостя
+			$isGuest = true;
+			if (is_array($userROW) && !empty($userROW['id'])) {
+				$isGuest = false;
+			}
+
+			jchat_tgnotify_send([
+				'author'   => $SQL['author'] ?? ($isGuest ? 'Guest' : 'User'),
+				'text'     => strip_tags($postText ?? ''),
+				'datetime' => date('Y-m-d H:i:s', $SQL['postdate']),
+				'ip'       => $ip ?? '',
+				'url'      => $_SERVER['HTTP_REFERER'] ?? '',
+				'is_guest' => $isGuest,
+			]);
+		}
+	}
+
 	print json_encode(array('status' => 1, 'bundle' => jchat_show(intval($_REQUEST['lastEvent']), intval($_REQUEST['start']))));
 	// Terminate execution of script
 	coreNormalTerminate(2);
 	exit;
 }
 
-function plugin_jchat_del() {
+function plugin_jchat_del()
+{
 
 	global $userROW, $template, $mysql, $SUPRESS_TEMPLATE_SHOW, $ip;
 	$SUPRESS_TEMPLATE_SHOW = 1;
@@ -268,7 +323,8 @@ function plugin_jchat_del() {
 	exit;
 }
 
-function plugin_jchat_win() {
+function plugin_jchat_win()
+{
 
 	global $template, $tpl, $SUPRESS_TEMPLATE_SHOW, $userROW, $lang;
 	loadPluginLang('jchat', 'main', '', '', ':');
@@ -301,6 +357,16 @@ function plugin_jchat_win() {
 	$tvars['vars']['link_add'] = generateLink('core', 'plugin', array('plugin' => 'jchat', 'handler' => 'add'), array());
 	$tvars['vars']['link_show'] = generateLink('core', 'plugin', array('plugin' => 'jchat', 'handler' => 'show'), array());
 	$tvars['vars']['link_del'] = generateLink('core', 'plugin', array('plugin' => 'jchat', 'handler' => 'del'), array());
+
+	// Twig переменные
+	$tvars['vars']['is_admin'] = (is_array($userROW) && ($userROW['status'] == 1));
+	$tvars['vars']['logged'] = is_array($userROW);
+	$tvars['vars']['post_enabled'] = (is_array($userROW) || (pluginGetVariable('jchat', 'access') < 2));
+	$tvars['vars']['pluginUrl'] = home . '/engine/plugins/jchat';
+	$tvars['vars']['current_user_id'] = is_array($userROW) ? intval($userROW['id']) : 0;
+	$tvars['vars']['current_user_name'] = is_array($userROW) ? $userROW['name'] : '';
+
+	// Старые регулярные выражения для совместимости
 	$tvars['regx']['#\[is\.admin\](.*?)\[\/is\.admin\]#is'] = (is_array($userROW) && ($userROW['status'] == 1)) ? '$1' : '';
 	$tvars['regx']['#\[not-logged\](.*?)\[\/not-logged\]#is'] = is_array($userROW) ? '' : '$1';
 	$tvars['regx']['#\[post-enabled\](.*?)\[\/post-enabled\]#is'] = (!is_array($userROW) && (pluginGetVariable('jchat', 'access') < 2)) ? '' : '$1';

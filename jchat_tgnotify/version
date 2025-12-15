@@ -1,0 +1,21 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: jchat_tgnotify
+Name: jChat Telegram Уведомления
+Name_EN: jChat Telegram Notifications
+Version: 1.0.0
+Acts: index
+File: jchat_tgnotify.php
+Config: config.php
+Install: install.php
+Deinstall: uninstall.php
+Type: plugin
+Description: Надстройка для jChat, отправляющая уведомления администратору в Telegram о новых сообщениях в чате. Поддерживает фильтры: только гости, первое сообщение за сессию, антифлуд защита.
+Description_EN: jChat add-on that sends Telegram notifications to admin about new chat messages. Supports filters: guests only, first message per session, anti-flood protection.
+Author: GitHub Copilot
+Title: jChat → Telegram
+Information: Интеграция jChat с Telegram Bot API для мгновенных уведомлений
+Preinstall: no
+MinEngineBuild: 23b3116
+Icons: <i class="fa fa-telegram fa-3x" aria-hidden="true"></i>
