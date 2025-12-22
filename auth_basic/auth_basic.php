@@ -37,7 +37,7 @@ class auth_basic extends CoreAuthPlugin
 	// Сохранение авторизации (cookie + запись в сессии пользователей)
 	public function save_auth($dbrow)
 	{
-		global $mysql, $ip, $config;
+		global $mysql, $ip, $config, $ngCookieDomain;
 		if (!is_array($dbrow) || empty($dbrow['id'])) {
 			return false;
 		}
@@ -49,7 +49,16 @@ class auth_basic extends CoreAuthPlugin
 		// Пишем новую сессию
 		$mysql->query('INSERT INTO ' . uprefix . '_users_sessions (userID, ip, last, authcookie) VALUES (' . db_squote($dbrow['id']) . ', ' . db_squote($ip) . ', ' . db_squote(time()) . ', ' . db_squote($auth_cookie) . ')');
 		// Куки ("remember" даёт длинный срок хранения)
-		@setcookie('zz_auth', $auth_cookie, ($config['remember'] ? (time() + 3600 * 24 * 365) : 0), '/');
+		$expires = $config['remember'] ? (time() + 3600 * 24 * 365) : 0;
+		$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+		@setcookie('zz_auth', $auth_cookie, [
+			'expires'  => $expires,
+			'path'     => '/',
+			'domain'   => isset($ngCookieDomain) && $ngCookieDomain !== '' ? $ngCookieDomain : null,
+			'secure'   => $isHttps,
+			'httponly' => true,
+			'samesite' => $isHttps ? 'None' : 'Lax',
+		]);
 		// На всякий случай кладём в сессию ID пользователя
 		$_SESSION['auth_user_id'] = $dbrow['id'];
 		return true;
@@ -86,10 +95,18 @@ class auth_basic extends CoreAuthPlugin
 	// Сброс авторизации
 	public function drop_auth()
 	{
-		global $mysql, $userROW;
+		global $mysql, $userROW, $ngCookieDomain;
 		if (isset($_COOKIE['zz_auth']) && $_COOKIE['zz_auth']) {
 			$mysql->query('DELETE FROM ' . uprefix . '_users_sessions WHERE authcookie = ' . db_squote($_COOKIE['zz_auth']) . ' LIMIT 1');
-			@setcookie('zz_auth', '', time() - 3600 * 24 * 365, '/');
+			$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+			@setcookie('zz_auth', '', [
+				'expires'  => time() - 3600 * 24 * 365,
+				'path'     => '/',
+				'domain'   => isset($ngCookieDomain) && $ngCookieDomain !== '' ? $ngCookieDomain : null,
+				'secure'   => $isHttps,
+				'httponly' => true,
+				'samesite' => $isHttps ? 'None' : 'Lax',
+			]);
 		}
 		unset($_SESSION['auth_user_id']);
 		return true;
