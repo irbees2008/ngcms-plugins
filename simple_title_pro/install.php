@@ -5,7 +5,7 @@ if (!defined('NGCMS')) {
 function plugin_simple_title_pro_install($action)
 {
 	$checkVer = explode('.', substr(engineVersion, 0, 5));
-	if ($checkVer['0'] == 0 && $checkVer['1'] == 9 && $checkVer['2'] = 3)
+	if (($checkVer['0'] == 0 && $checkVer['1'] == 9 && $checkVer['2'] >= 3) || $checkVer['0'] >= 1)
 		$check = true;
 	else
 		$check = false;
@@ -28,7 +28,7 @@ function plugin_simple_title_pro_install($action)
 			if ($check)
 				generate_install_page('simple_title_pro', 'Тыкай установить');
 			else
-				msg(array("type" => "error", "info" => "Версия CMS не соответствует допустимой<br />У вас установлена " . $checkVer['0'] . "." . $checkVer['1'] . ".<b>" . $checkVer['2'] . "</b>. Требуется 0.9.3!"));
+				msg(array("type" => "error", "message" => "Версия CMS не соответствует допустимой<br />У вас установлена " . $checkVer['0'] . "." . $checkVer['1'] . "." . $checkVer['2'] . ". Требуется 0.9.3 или выше!"));
 			break;
 		case 'autoapply':
 		case 'apply':

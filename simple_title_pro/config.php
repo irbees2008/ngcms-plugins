@@ -8,8 +8,8 @@
  Jabber: ROZARD@ya.ru
  E-mail: ROZARD@list.ru
 -----------------------------------------------------
- © Настоящий программист никогда не ставит 
- комментариев. То, что писалось с трудом, должно 
+ © Настоящий программист никогда не ставит
+ комментариев. То, что писалось с трудом, должно
  пониматься с трудом. :))
 -----------------------------------------------------
  Данный код защищен авторскими правами
@@ -60,7 +60,8 @@ switch ($_REQUEST['action']) {
 	default:
 		main();
 }
-function about() {
+function about()
+{
 
 	global $twig;
 	$tpath = locatePluginTemplates(array('main', 'about'), 'simple_title_pro', 1);
@@ -74,7 +75,8 @@ function about() {
 	print $xg->render($tVars);
 }
 
-function clear_cache() {
+function clear_cache()
+{
 
 	global $userROW;
 	$dir = get_plugcache_dir('simple_title_pro');
@@ -86,13 +88,25 @@ function clear_cache() {
 			closedir($dh);
 		}
 	}
-	$_SESSION['simple_title_pro']['info'] = $userROW['name'] . ' Кэш очишен';
+	$_SESSION['simple_title_pro']['notify'] = $userROW['name'] . ', кэш очищен';
 	redirect_simple_title_pro('?mod=extra-config&plugin=simple_title_pro');
 }
 
-function list_news() {
+function list_news()
+{
 
 	global $twig, $mysql;
+
+	// Отображение уведомлений
+	if (isset($_SESSION['simple_title_pro']['notify'])) {
+		msgSticker($_SESSION['simple_title_pro']['notify']);
+		unset($_SESSION['simple_title_pro']['notify']);
+	}
+	if (isset($_SESSION['simple_title_pro']['notify_error'])) {
+		msgSticker($_SESSION['simple_title_pro']['notify_error'], 'error');
+		unset($_SESSION['simple_title_pro']['notify_error']);
+	}
+
 	$tpath = locatePluginTemplates(array('main', 'list_news', 'list_news_entries'), 'simple_title_pro', 1);
 	$news_per_page = pluginGetVariable('simple_title_pro', 'num_news');
 	if (($news_per_page < 2) || ($news_per_page > 2000)) $news_per_page = 2;
@@ -113,7 +127,8 @@ function list_news() {
 	}
 	$xt = $twig->loadTemplate($tpath['list_news'] . 'list_news.tpl');
 	$tVars = array(
-		'pagesss' => generateAdminPagelist(array(
+		'pagesss' => generateAdminPagelist(
+			array(
 				'current' => $pageNo,
 				'count'   => $countPages,
 				'url'     => admin_url . '/admin.php?mod=extra-config&plugin=simple_title_pro&action=list_news&page=%page%'
@@ -129,7 +144,8 @@ function list_news() {
 	print $xg->render($tVars);
 }
 
-function license() {
+function license()
+{
 
 	global $twig;
 	$tpath = locatePluginTemplates(array('main', 'about'), 'simple_title_pro', 1);
@@ -141,9 +157,21 @@ function license() {
 	print $xg->render($tVars);
 }
 
-function list_static() {
+function list_static()
+{
 
 	global $twig, $mysql;
+
+	// Отображение уведомлений
+	if (isset($_SESSION['simple_title_pro']['notify'])) {
+		msgSticker($_SESSION['simple_title_pro']['notify']);
+		unset($_SESSION['simple_title_pro']['notify']);
+	}
+	if (isset($_SESSION['simple_title_pro']['notify_error'])) {
+		msgSticker($_SESSION['simple_title_pro']['notify_error'], 'error');
+		unset($_SESSION['simple_title_pro']['notify_error']);
+	}
+
 	$tpath = locatePluginTemplates(array('main', 'list_static', 'list_static_entries'), 'simple_title_pro', 1);
 	$news_per_page = pluginGetVariable('simple_title_pro', 'num_static');
 	if (($news_per_page < 2) || ($news_per_page > 2000)) $news_per_page = 2;
@@ -164,7 +192,8 @@ function list_static() {
 	}
 	$xt = $twig->loadTemplate($tpath['list_static'] . 'list_static.tpl');
 	$tVars = array(
-		'pagesss' => generateAdminPagelist(array(
+		'pagesss' => generateAdminPagelist(
+			array(
 				'current' => $pageNo,
 				'count'   => $countPages,
 				'url'     => admin_url . '/admin.php?mod=extra-config&plugin=simple_title_pro&action=list_static&page=%page%'
@@ -180,9 +209,21 @@ function list_static() {
 	print $xg->render($tVars);
 }
 
-function list_cat() {
+function list_cat()
+{
 
 	global $twig, $mysql;
+
+	// Отображение уведомлений
+	if (isset($_SESSION['simple_title_pro']['notify'])) {
+		msgSticker($_SESSION['simple_title_pro']['notify']);
+		unset($_SESSION['simple_title_pro']['notify']);
+	}
+	if (isset($_SESSION['simple_title_pro']['notify_error'])) {
+		msgSticker($_SESSION['simple_title_pro']['notify_error'], 'error');
+		unset($_SESSION['simple_title_pro']['notify_error']);
+	}
+
 	$tpath = locatePluginTemplates(array('main', 'list_cat', 'list_cat_entries'), 'simple_title_pro', 1);
 	$news_per_page = pluginGetVariable('simple_title_pro', 'num_cat');
 	if (($news_per_page < 2) || ($news_per_page > 2000)) $news_per_page = 2;
@@ -203,7 +244,8 @@ function list_cat() {
 	}
 	$xt = $twig->loadTemplate($tpath['list_cat'] . 'list_cat.tpl');
 	$tVars = array(
-		'pagesss' => generateAdminPagelist(array(
+		'pagesss' => generateAdminPagelist(
+			array(
 				'current' => $pageNo,
 				'count'   => $countPages,
 				'url'     => admin_url . '/admin.php?mod=extra-config&plugin=simple_title_pro&action=list_cat&page=%page%'
@@ -219,7 +261,8 @@ function list_cat() {
 	print $xg->render($tVars);
 }
 
-function send_title() {
+function send_title()
+{
 
 	global $twig, $mysql, $config;
 	$tpath = locatePluginTemplates(array('main', 'send_cat', 'send_news', 'send_static'), 'simple_title_pro', 1);
@@ -268,13 +311,13 @@ function send_title() {
 				if (empty($error_text)) {
 					if (empty($edit)) {
 						// Добавляем новую запись
-						$mysql->query('INSERT INTO ' . prefix . '_simple_title_pro (title, cat_id) 
+						$mysql->query('INSERT INTO ' . prefix . '_simple_title_pro (title, cat_id)
                 VALUES (' . db_squote($title) . ', ' . db_squote($id) . ')');
 					} else {
 						// Обновляем существующую запись
 						$cacheFileName = md5('block_directory_sites_cat' . $frow['cat_id'] . $config['default_lang']) . '.txt';
 						cacheStoreFile($cacheFileName, $title, 'simple_title_pro');
-						$mysql->query('UPDATE ' . prefix . '_simple_title_pro SET 
+						$mysql->query('UPDATE ' . prefix . '_simple_title_pro SET
                 title = ' . db_squote($title) . ',
                 cat_id = ' . db_squote($id) . '
                 WHERE id = ' . db_squote($edit));
@@ -309,12 +352,12 @@ function send_title() {
 
 				if (empty($error_text)) {
 					if (empty($_REQUEST['edit'])) {
-						$mysql->query('INSERT INTO ' . prefix . '_simple_title_pro (title, news_id) 
+						$mysql->query('INSERT INTO ' . prefix . '_simple_title_pro (title, news_id)
                 VALUES (' . db_squote($title) . ', ' . db_squote($id) . ')');
 					} else {
 						$cacheFileName = md5('block_directory_sites_news' . $frow['news_id'] . $config['default_lang']) . '.txt';
 						cacheStoreFile($cacheFileName, $title, 'simple_title_pro');
-						$mysql->query('UPDATE ' . prefix . '_simple_title_pro SET 
+						$mysql->query('UPDATE ' . prefix . '_simple_title_pro SET
                 title = ' . db_squote($title) . ',
                 news_id = ' . db_squote($id) . '
                 WHERE id = ' . intval($_REQUEST['edit']));
@@ -349,12 +392,12 @@ function send_title() {
 
 				if (empty($error_text)) {
 					if (empty($_REQUEST['edit'])) {
-						$mysql->query('INSERT INTO ' . prefix . '_simple_title_pro (title, static_id) 
+						$mysql->query('INSERT INTO ' . prefix . '_simple_title_pro (title, static_id)
                 VALUES (' . db_squote($title) . ', ' . db_squote($id) . ')');
 					} else {
 						$cacheFileName = md5('block_directory_sites_static' . $frow['static_id'] . $config['default_lang']) . '.txt';
 						cacheStoreFile($cacheFileName, $title, 'simple_title_pro');
-						$mysql->query('UPDATE ' . prefix . '_simple_title_pro SET 
+						$mysql->query('UPDATE ' . prefix . '_simple_title_pro SET
                 title = ' . db_squote($title) . ',
                 static_id = ' . db_squote($id) . '
                 WHERE id = ' . intval($_REQUEST['edit']));
@@ -368,7 +411,7 @@ function send_title() {
 	}
 	if (!empty($error_text)) {
 		foreach ($error_text as $error) {
-			$error_input .= msg(array("type" => "error", "text" => $error), 0, 2);
+			$error_input .= '<div class="alert alert-danger">' . $error . '</div>';
 		}
 	} else {
 		$error_input = '';
@@ -387,7 +430,8 @@ function send_title() {
 	print $xg->render($tVars);
 }
 
-function list_all() {
+function list_all()
+{
 
 	global $mysql, $twig;
 	$tpath = locatePluginTemplates(array('main', 'list_cat', 'list_cat_entries'), 'simple_title_pro', 1);
@@ -433,10 +477,22 @@ function list_all() {
 	print $xg->render($tVars);
 }
 
-function main() {
+function main()
+{
 
 	global $twig;
 	$tpath = locatePluginTemplates(array('main', 'general.from'), 'simple_title_pro', 1);
+
+	// Отображение уведомлений из сессии
+	if (isset($_SESSION['simple_title_pro']['notify'])) {
+		msgSticker($_SESSION['simple_title_pro']['notify']);
+		unset($_SESSION['simple_title_pro']['notify']);
+	}
+	if (isset($_SESSION['simple_title_pro']['notify_error'])) {
+		msgSticker($_SESSION['simple_title_pro']['notify_error'], 'error');
+		unset($_SESSION['simple_title_pro']['notify_error']);
+	}
+
 	if (isset($_SESSION['simple_title_pro']['info'])) {
 		$info = $_SESSION['simple_title_pro']['info'];
 		unset($_SESSION['simple_title_pro']['info']);
@@ -534,7 +590,7 @@ function main() {
 	foreach ($tVars as $row) {
 		//print "<pre>".var_export($row['error'], true)."</pre>";
 		if (!empty($row['error'])) {
-			$info .= msg(array("type" => "info", "info" => 'У вас ошибка! Если не получается её исправить, обратитесь на форум <a href="http://ngcms.ru/forum/viewtopic.php?id=2055" target="_blank"><b>simple_title_pro</b></a> или мне на ICQ: 209388634 или jabber: rozard@ya.ru'), 0, 2);
+			$info .= '<div class="alert alert-warning">У вас ошибка! Если не получается её исправить, обратитесь на форум <a href="http://ngcms.ru/forum/viewtopic.php?id=2055" target="_blank"><b>simple_title_pro</b></a> или мне на ICQ: 209388634 или jabber: rozard@ya.ru</div>';
 			break;
 		}
 	}
@@ -553,37 +609,47 @@ function main() {
 	print $xg->render($tVars);
 }
 
-function del_cat() {
+function del_cat()
+{
 
 	global $mysql;
 	$id = intval($_REQUEST['id']);
-	if (empty($id))
-		return msg(array("type" => "error", "text" => "Ошибка, вы не выбрали что хотите удалить"));
+	if (empty($id)) {
+		$_SESSION['simple_title_pro']['notify_error'] = 'Ошибка, вы не выбрали что хотите удалить';
+		return;
+	}
 	$mysql->query("delete from " . prefix . "_simple_title_pro where id = {$id} LIMIT 1");
-	msg(array("type" => "info", "info" => "Запись удалена"));
+	$_SESSION['simple_title_pro']['notify'] = 'Запись удалена';
 }
 
-function del_news() {
+function del_news()
+{
 
 	global $mysql;
 	$id = intval($_REQUEST['id']);
-	if (empty($id))
-		return msg(array("type" => "error", "text" => "Ошибка, вы не выбрали что хотите удалить"));
+	if (empty($id)) {
+		$_SESSION['simple_title_pro']['notify_error'] = 'Ошибка, вы не выбрали что хотите удалить';
+		return;
+	}
 	$mysql->query("delete from " . prefix . "_simple_title_pro where id = {$id} LIMIT 1");
-	msg(array("type" => "info", "info" => "Запись удалена"));
+	$_SESSION['simple_title_pro']['notify'] = 'Запись удалена';
 }
 
-function del_static() {
+function del_static()
+{
 
 	global $mysql;
 	$id = intval($_REQUEST['id']);
-	if (empty($id))
-		return msg(array("type" => "error", "text" => "Ошибка, вы не выбрали что хотите удалить"));
+	if (empty($id)) {
+		$_SESSION['simple_title_pro']['notify_error'] = 'Ошибка, вы не выбрали что хотите удалить';
+		return;
+	}
 	$mysql->query("delete from " . prefix . "_simple_title_pro where id = {$id} LIMIT 1");
-	msg(array("type" => "info", "info" => "Запись удалена"));
+	$_SESSION['simple_title_pro']['notify'] = 'Запись удалена';
 }
 
-function redirect_simple_title_pro($url) {
+function redirect_simple_title_pro($url)
+{
 
 	if (headers_sent()) {
 		echo "<script>document.location.href='{$url}';</script>\n";
