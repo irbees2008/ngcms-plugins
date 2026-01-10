@@ -3,8 +3,8 @@
 ;
 ID: ai_rewriter
 Name: Рерайт новостей ИИ
-Version: 0.1.0
-Actions: news; ai_rewriter.php
+Version: 0.1.2
+Actions: news; ai_rewriter.php; rpc; lib/librpc.php
 Config: config.php
 Type: plugin
 Title: Авто-рерайт новостей (ИИ)
@@ -13,5 +13,5 @@ Information: Поддержка OpenAI-совместимых API и Anthropic; 
 Author: Copilot
 Author_URI: https://github.com/
 Preinstall: no
-MinEngineBuild:
+MinEngineBuild:23b3116
 Icons: <i class="fa fa-magic fa-3x" aria-hidden="true"></i>
