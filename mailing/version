@@ -1,0 +1,23 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: mailing
+Name: Email-рассылки
+Name_EN: Mailing Plugin
+Version: 2.0.0
+Acts: core, index, admin, admin:mod:news, twig
+File: mailing.php
+Config: config.php
+Install: install.php
+Deinstall: uninstall.php
+Type: plugin
+Description: Плагин для массовых email-рассылок с поддержкой сегментации, вложений, отложенной отправки и авто-рассылки новых новостей. Требует PHP 8.1+
+Description_EN: Mass mailing plugin with segmentation, attachments, scheduled sending and auto-news mailing. Requires PHP 8.1+
+Author: NGCMS Community
+Author_URI: https://ngcms.ru/
+Title: Email Рассылки
+Information: Профессиональная система email-рассылок с очередью, отпиской, вложениями и интеграцией с Twig
+Preinstall: no
+MinEngineBuild: 23b3116
+MinPHPVersion: 8.1.0
+Icons: <i class="fa fa-envelope fa-3x" aria-hidden="true"></i>

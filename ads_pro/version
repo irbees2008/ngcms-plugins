@@ -3,7 +3,7 @@
 ;
 ID: ads_pro
 Name: ADS manager pro
-Version: 0.9
+Version: 1.0.0
 Actions: core; ads_pro.php
 Config: config.php
 Install: install.php
@@ -12,8 +12,7 @@ Type: plugin
 Title: Отображение произвольных блоков на сайте
 Description: Реклама на сайте
 Information: Позволяет редактировать часто изменяемые блоки на сайте.Обычно это реклама или счетчики
-Author: Ivan Litvinenko (Amarelius)
-Author_URI: http://arnit.com.ua/
+Author: Ivan Litvinenko (Amarelius),irbees2008,Copliot
 Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-info fa-3x" aria-hidden="true"></i>

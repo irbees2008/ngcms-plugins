@@ -1,7 +1,14 @@
 <?php
 
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
+
+// Modified with ng-helpers v0.2.0 functions (2026)
+// - Replaced cacheRetrieveFile/cacheStoreFile with cache_get/cache_put
+// - Added logging support
+
+// Import ng-helpers functions
+use function Plugins\{cache_get, cache_put, logger};
 
 // Check execution mode
 if (!pluginGetVariable('archive', 'mode')) {
@@ -12,13 +19,15 @@ if (!pluginGetVariable('archive', 'mode')) {
 }
 // Load lang file
 LoadPluginLang('archive', 'main', '', '', ':');
-function plugin_archive() {
+function plugin_archive()
+{
 
 	global $template, $config;
 	$template['vars']['plugin_archive'] = plug_arch(pluginGetVariable('archive', 'maxnum') ? pluginGetVariable('archive', 'maxnum') : 12, pluginGetVariable('archive', 'counter') ? pluginGetVariable('archive', 'counter') : 0, pluginGetVariable('archive', 'tcounter') ? pluginGetVariable('archive', 'tcounter') : 0, false, pluginGetVariable('archive', 'cache') ? pluginGetVariable('archive', 'cacheExpire') : 0);
 }
 
-function plug_arch($maxnum, $counter, $tcounter, $overrideTemplateName, $cacheExpire) {
+function plug_arch($maxnum, $counter, $tcounter, $overrideTemplateName, $cacheExpire)
+{
 
 	global $config, $mysql, $tpl, $template, $twig, $twigLoader, $langMonths, $lang;
 	//	$maxnum    = intval(pluginGetVariable('archive','maxnum'));
@@ -30,10 +39,10 @@ function plug_arch($maxnum, $counter, $tcounter, $overrideTemplateName, $cacheEx
 		$templateName = 'archive';
 	}
 	// Generate cache file name [ we should take into account SWITCHER plugin ]
-	$cacheFileName = md5('archive' . $config['theme'] . $templateName . $config['default_lang']) . '.txt';
+	$cacheKey = 'archive:' . md5($config['theme'] . $templateName . $config['default_lang']);
 	if ($cacheExpire > 0) {
-		$cacheData = cacheRetrieveFile($cacheFileName, $cacheExpire, 'archive');
-		if ($cacheData != false) {
+		$cacheData = cache_get($cacheKey);
+		if ($cacheData !== null) {
 			// We got data from cache. Return it and stop
 			return $cacheData;
 		}
@@ -72,7 +81,7 @@ function plug_arch($maxnum, $counter, $tcounter, $overrideTemplateName, $cacheEx
 		} else {
 			$ctext = '';
 		}
-		$tEntries [] = array(
+		$tEntries[] = array(
 			'link'    => $month_link,
 			'title'   => $langMonths[$row['month'] - 1] . ' ' . $row['year'],
 			'cnt'     => $row['cnt'],
@@ -105,7 +114,8 @@ function plug_arch($maxnum, $counter, $tcounter, $overrideTemplateName, $cacheEx
 	$xt = $twig->loadTemplate($tpath[$templateName] . $templateName . '.tpl');
 	$output = $xt->render($tVars);
 	if ($cacheExpire > 0) {
-		cacheStoreFile($cacheFileName, $output, 'archive');
+		cache_put($cacheKey, $output, $cacheExpire);
+		logger('archive', 'Archive cached: ' . count($tEntries) . ' months, expire: ' . $cacheExpire . 's');
 	}
 
 	return $output;
@@ -119,7 +129,8 @@ function plug_arch($maxnum, $counter, $tcounter, $overrideTemplateName, $cacheEx
 // * tcounter		- Show text counter in the entries
 // * template	- Personal template for plugin
 // * cacheExpire		- age of cache [in seconds]
-function plugin_archive_showTwig($params) {
+function plugin_archive_showTwig($params)
+{
 	return plug_arch(isset($params['maxnum']) ? $params['maxnum'] : pluginGetVariable('archive', 'maxnum'), isset($params['counter']) ? $params['counter'] : false, isset($params['tcounter']) ? $params['tcounter'] : false, isset($params['template']) ? $params['template'] : false, isset($params['cacheExpire']) ? $params['cacheExpire'] : 0);
 }
 

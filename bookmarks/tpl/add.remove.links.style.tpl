@@ -18,10 +18,3 @@
 		<span id="bookmarks_counter_{{ news }}">{{ counter }}</span>
 	{% endif %}
 </span>
-<script type="text/javascript">
-	document.getElementById('bookmarks_{{ news }}').querySelector('a').addEventListener('click', function (e) {
-e.preventDefault();
-var isFull = {% if isHandler('news:news') %}true{% else %}false{% endif %};
-bookmarks("{{ url }}", "{{ news }}", "{{ action }}", isFull);
-});
-</script>

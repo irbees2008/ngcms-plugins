@@ -21,6 +21,17 @@
  */
 # protect against hack attempts
 if (!defined('NGCMS')) die('Galaxy in danger');
+
+// Modified with ng-helpers v0.2.0 functions (2026)
+// - Added sanitize for input validation
+// - Added get_ip for IP tracking
+// - Added logger for PM operations
+// - Added time_ago for relative timestamps
+// - Added str_limit for length validation
+
+// Import ng-helpers functions
+use function Plugins\{sanitize, get_ip, logger, time_ago, str_limit};
+
 register_plugin_page('pm', '', 'pm', 0);
 loadPluginLang('pm', 'main', '', '', ':');
 add_act('usermenu', 'new_pm');
@@ -141,6 +152,7 @@ function pm_inbox()
 			'php_self' => $PHP_SELF,
 			'pmid'     => $row['id'],
 			'pmdate'   => $row['date'],
+			'time_ago' => time_ago($row['date']),
 			'subject'  => $row['subject'],
 			'link'     => $author,
 			'viewed'   => $row['viewed'],
@@ -231,6 +243,7 @@ function pm_outbox()
 			'php_self' => $PHP_SELF,
 			'pmid'     => $row['id'],
 			'pmdate'   => $row['date'],
+			'time_ago' => time_ago($row['date']),
 			'subject'  => $row['subject'],
 			'link'     => $author,
 			'avatar'   => $avatar[1], // URL аватарки
@@ -305,6 +318,7 @@ function pm_read()
 			'subject'  => $row['subject'],
 			'location' => $row['folder'],
 			'pmdate'   => $row['date'],
+			'time_ago' => time_ago($row['date']),
 			'content'  => $parse->htmlformatter($parse->smilies($parse->bbcodes($row['message']))),
 			'author'   => $author,
 			'avatar'   => $avatar[1], // URL аватарки
@@ -359,6 +373,7 @@ function pm_delete()
 		$ids = array_map('intval', $selected_pm);
 		$mysql->query("DELETE FROM " . prefix . "_pm WHERE `id` IN (" . join(',', $ids) . ") AND ((`from_id`=" . db_squote($userROW['id']) . " AND `folder`='outbox') OR (`to_id`=" . db_squote($userROW['id']) . ") AND `folder`='inbox')");
 		$mysql->query("UPDATE " . uprefix . "_users SET `pm_sync` = 0 WHERE `id` = " . db_squote($userROW['id']));
+		logger('pm', 'Bulk delete: user=' . $userROW['id'] . ', count=' . count($ids) . ', location=' . $location . ', IP=' . get_ip());
 		if (session_status() == PHP_SESSION_NONE) {
 			@session_start();
 		}
@@ -385,6 +400,7 @@ function pm_delete()
 				else
 					$mysql->query("UPDATE " . uprefix . "_users SET `pm_all` = `pm_all` - 1, `pm_unread` = `pm_unread` - 1 WHERE `id` = " . db_squote($userROW['id']));
 			}
+			logger('pm', 'Delete: pmid=' . $pmid . ', user=' . $userROW['id'] . ', folder=' . $row['folder'] . ', IP=' . get_ip());
 			if (session_status() == PHP_SESSION_NONE) {
 				@session_start();
 			}
@@ -417,8 +433,8 @@ function pm_write()
 	$tpath = locatePluginTemplates(array('write'), 'pm', intval(pluginGetVariable('pm', 'localsource')));
 	$tVars = array(
 		'php_self'  => $PHP_SELF,
-		'username'  => trim($_REQUEST['name']),
-		'title' => isset($_REQUEST['title']) ? $_REQUEST['title'] : '',
+		'username'  => sanitize(trim($_REQUEST['name'] ?? ''), 'string'),
+		'title' => isset($_REQUEST['title']) ? sanitize($_REQUEST['title'], 'string') : '',
 		'quicktags' => BBCodes("'pm_content'"),
 		'smilies' => ($config['use_smilies'] == "1") ? InsertSmilies('', 10, 'pm_content') : '',
 		'pm_inbox_link' => generatePluginLink('pm', null),

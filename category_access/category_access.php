@@ -1,6 +1,9 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
+use function Plugins\{logger, get_ip, sanitize};
+
 class CategoryAccessNewsFilter extends NewsFilter
 {
 	public $flag;
@@ -72,6 +75,8 @@ class CategoryAccessNewsFilter extends NewsFilter
 			$mode['overrideTemplatePath'] = extras_dir . '/category_access/tpl/';
 			// Отмечаем, что хотя бы одна новость была скрыта
 			$this->hiddenCount++;
+			$userName = is_array($userROW) ? $userROW['name'] : 'guest';
+			logger('category_access', 'Access denied: newsID=' . $newsID . ', user=' . $userName . ', catid=' . $SQLnews['catid'] . ', IP=' . get_ip());
 		} else $this->flag2 = true;
 		return 1;
 	}
@@ -86,6 +91,7 @@ class CategoryAccessNewsFilter extends NewsFilter
 			if (!$this->notified) {
 				msg(array('type' => 'error', 'text' => $message));
 				$this->notified = true;
+				logger('category_access', 'Full access denied notification shown, IP=' . get_ip());
 			}
 			$template['vars']['mainblock'] = $message;
 		} else if ($this->hiddenCount > 0 && !$this->notified) {
@@ -94,6 +100,7 @@ class CategoryAccessNewsFilter extends NewsFilter
 			$txt = $pm ? $pm : 'Доступ к части материалов ограничен';
 			msg(array('type' => 'info', 'text' => $txt));
 			$this->notified = true;
+			logger('category_access', 'Partial access: hidden=' . $this->hiddenCount . ' items, IP=' . get_ip());
 		}
 		return 1;
 	}
@@ -108,6 +115,7 @@ class CategoryAccessNewsFilter extends NewsFilter
 			if (!$this->notified) {
 				msg(array('type' => 'error', 'text' => $message));
 				$this->notified = true;
+				logger('category_access', 'News access denied: newsID=' . $newsID . ', IP=' . get_ip());
 			}
 			$template['vars']['mainblock'] = $message;
 		}

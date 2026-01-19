@@ -1,21 +1,25 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
+
+use function Plugins\{logger, sanitize, get_ip, formatMoney};
+
 LoadPluginLibrary('xfields', 'common');
 LoadPluginLibrary('feedback', 'common');
 register_htmlvar('js', admin_url . '/plugins/basket/js/basket.js');
 //
 // Отображение общей информации/остатков в корзине
-function plugin_basket_total() {
+function plugin_basket_total()
+{
 
 	global $mysql, $twig, $userROW, $template;
 	// Определяем условия выборки
 	$filter = array();
 	if (is_array($userROW)) {
-		$filter [] = '(user_id = ' . db_squote($userROW['id']) . ')';
+		$filter[] = '(user_id = ' . db_squote($userROW['id']) . ')';
 	}
 	if (isset($_COOKIE['ngTrackID']) && ($_COOKIE['ngTrackID'] != '')) {
-		$filter [] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
+		$filter[] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
 	}
 	// Считаем итоги
 	$tCount = 0;
@@ -23,11 +27,13 @@ function plugin_basket_total() {
 	if (count($filter) && is_array($res = $mysql->record("select count(*) as count, sum(price*count) as price from " . prefix . "_basket where " . join(" or ", $filter), 1))) {
 		$tCount = $res['count'];
 		$tPrice = $res['price'];
+		logger('basket', 'Total: count=' . $tCount . ', price=' . $tPrice . ', IP=' . get_ip());
 	}
 	// Готовим переменные
 	$tVars = array(
 		'count' => $tCount,
 		'price' => $tPrice,
+		'price_formatted' => formatMoney($tPrice),
 	);
 	// Выводим шаблон
 	$tpath = locatePluginTemplates(array('total'), 'basket', pluginGetVariable('basket', 'localsource'));
@@ -37,16 +43,17 @@ function plugin_basket_total() {
 
 //
 // Показать содержимое корзины
-function plugin_basket_list() {
+function plugin_basket_list()
+{
 
 	global $mysql, $twig, $userROW, $template;
 	// Определяем условия выборки
 	$filter = array();
 	if (is_array($userROW)) {
-		$filter [] = '(user_id = ' . db_squote($userROW['id']) . ')';
+		$filter[] = '(user_id = ' . db_squote($userROW['id']) . ')';
 	}
 	if (isset($_COOKIE['ngTrackID']) && ($_COOKIE['ngTrackID'] != '')) {
-		$filter [] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
+		$filter[] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
 	}
 	// Выполняем выборку
 	$recs = array();
@@ -55,15 +62,19 @@ function plugin_basket_list() {
 		foreach ($mysql->select("select * from " . prefix . "_basket where " . join(" or ", $filter), 1) as $rec) {
 			$total += round($rec['price'] * $rec['count'], 2);
 			$rec['sum'] = sprintf('%9.2f', round($rec['price'] * $rec['count'], 2));
+			$rec['sum_formatted'] = formatMoney(round($rec['price'] * $rec['count'], 2));
+			$rec['price_formatted'] = formatMoney($rec['price']);
 			$rec['xfields'] = unserialize($rec['linked_fld']);
 			unset($rec['linked_fld']);
-			$recs [] = $rec;
+			$recs[] = $rec;
 		}
+		logger('basket', 'List: count=' . count($recs) . ', total=' . $total . ', IP=' . get_ip());
 	}
 	$tVars = array(
 		'recs'     => count($recs),
 		'entries'  => $recs,
 		'total'    => sprintf('%9.2f', $total),
+		'total_formatted' => formatMoney($total),
 		'form_url' => generatePluginLink('feedback', null, array(), array('id' => intval(pluginGetVariable('basket', 'feedback_form')))),
 	);
 	// Выводим шаблон
@@ -72,28 +83,36 @@ function plugin_basket_list() {
 }
 
 // Update basket content/counters
-function plugin_basket_update() {
+function plugin_basket_update()
+{
 
 	global $mysql, $twig, $userROW, $template, $SUPRESS_TEMPLATE_SHOW;
 	// Определяем условия выборки
 	$filter = array();
 	if (is_array($userROW)) {
-		$filter [] = '(user_id = ' . db_squote($userROW['id']) . ')';
+		$filter[] = '(user_id = ' . db_squote($userROW['id']) . ')';
 	}
 	if (isset($_COOKIE['ngTrackID']) && ($_COOKIE['ngTrackID'] != '')) {
-		$filter [] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
+		$filter[] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
 	}
 	// Scan POST params
 	if (count($filter)) {
+		$updatedCount = 0;
+		$deletedCount = 0;
 		foreach ($_POST as $k => $v) {
 			if (preg_match('#^count_(\d+)$#', $k, $m)) {
-				if (intval($v) < 1) {
-					$mysql->query("delete from " . prefix . "_basket where (id = " . db_squote($m[1]) . ") and (" . join(" or ", $filter) . ")");
+				$itemId = intval($m[1]);
+				$newCount = intval(sanitize($v, 'int'));
+				if ($newCount < 1) {
+					$mysql->query("delete from " . prefix . "_basket where (id = " . db_squote($itemId) . ") and (" . join(" or ", $filter) . ")");
+					$deletedCount++;
 				} else {
-					$mysql->query("update " . prefix . "_basket set count = " . db_squote(intval($v)) . "where (id = " . db_squote($m[1]) . ") and (" . join(" or ", $filter) . ")");
+					$mysql->query("update " . prefix . "_basket set count = " . db_squote($newCount) . "where (id = " . db_squote($itemId) . ") and (" . join(" or ", $filter) . ")");
+					$updatedCount++;
 				}
 			}
 		}
+		logger('basket', 'Update: updated=' . $updatedCount . ', deleted=' . $deletedCount . ', IP=' . get_ip());
 	}
 	// Redirect to basket page
 	$SUPRESS_TEMPLATE_SHOW = true;
@@ -102,9 +121,11 @@ function plugin_basket_update() {
 
 // XFields filter
 if (class_exists('XFieldsFilter') && class_exists('FeedbackFilter')) {
-	class BasketXFieldsFilter extends XFieldsFilter {
+	class BasketXFieldsFilter extends XFieldsFilter
+	{
 
-		function showTableEntry($newsID, $SQLnews, $rowData, &$rowVars) {
+		function showTableEntry($newsID, $SQLnews, $rowData, &$rowVars)
+		{
 
 			global $DSlist;
 			// Определяем - работаем ли мы внутри строк таблиц
@@ -123,10 +144,12 @@ if (class_exists('XFieldsFilter') && class_exists('FeedbackFilter')) {
 	}
 
 	// Feedback filter
-	class BasketFeedbackFilter extends FeedbackFilter {
+	class BasketFeedbackFilter extends FeedbackFilter
+	{
 
 		// Action executed when form is showed
-		function onShow($formID, $formStruct, $formData, &$tvars) {
+		function onShow($formID, $formStruct, $formData, &$tvars)
+		{
 
 			global $userROW, $mysql, $twig;
 			// Проверяем ID формы - данные корзины отображаются только в конкретной форме
@@ -135,10 +158,10 @@ if (class_exists('XFieldsFilter') && class_exists('FeedbackFilter')) {
 			// Определяем условия выборки
 			$filter = array();
 			if (is_array($userROW)) {
-				$filter [] = '(user_id = ' . db_squote($userROW['id']) . ')';
+				$filter[] = '(user_id = ' . db_squote($userROW['id']) . ')';
 			}
 			if (isset($_COOKIE['ngTrackID']) && ($_COOKIE['ngTrackID'] != '')) {
-				$filter [] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
+				$filter[] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
 			}
 			// Выполняем выборку
 			$recs = array();
@@ -147,22 +170,27 @@ if (class_exists('XFieldsFilter') && class_exists('FeedbackFilter')) {
 				foreach ($mysql->select("select * from " . prefix . "_basket where " . join(" or ", $filter)) as $rec) {
 					$total += round($rec['price'] * $rec['count'], 2);
 					$rec['sum'] = sprintf('%9.2f', round($rec['price'] * $rec['count'], 2));
+					$rec['sum_formatted'] = formatMoney(round($rec['price'] * $rec['count'], 2));
+					$rec['price_formatted'] = formatMoney($rec['price']);
 					$rec['xfields'] = unserialize($rec['linked_fld']);
 					unset($rec['linked_fld']);
-					$recs [] = $rec;
+					$recs[] = $rec;
 				}
+				logger('basket', 'Feedback show: formID=' . $formID . ', count=' . count($recs) . ', total=' . $total . ', IP=' . get_ip());
 			}
 			$tVars = array(
 				'recs'    => count($recs),
 				'entries' => $recs,
 				'total'   => sprintf('%9.2f', $total),
+				'total_formatted' => formatMoney($total),
 			);
 			// Выводим шаблон
 			$xt = $twig->loadTemplate('plugins/basket/lfeedback.tpl');
-			$tvars['plugin_basket'] .= $xt->render($tVars);
+			$tvars['plugin_basket'] = $xt->render($tVars);
 		}
 
-		function onProcess($formID, $formStruct, $formData, $flagHTML, &$tvars) {
+		function onProcess($formID, $formStruct, $formData, $flagHTML, &$tvars)
+		{
 
 			global $userROW, $mysql, $twig;
 			// Проверяем ID формы - данные корзины отображаются только в конкретной форме
@@ -171,10 +199,10 @@ if (class_exists('XFieldsFilter') && class_exists('FeedbackFilter')) {
 			// Определяем условия выборки
 			$filter = array();
 			if (is_array($userROW)) {
-				$filter [] = '(user_id = ' . db_squote($userROW['id']) . ')';
+				$filter[] = '(user_id = ' . db_squote($userROW['id']) . ')';
 			}
 			if (isset($_COOKIE['ngTrackID']) && ($_COOKIE['ngTrackID'] != '')) {
-				$filter [] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
+				$filter[] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
 			}
 			// Выполняем выборку
 			$recs = array();
@@ -183,15 +211,19 @@ if (class_exists('XFieldsFilter') && class_exists('FeedbackFilter')) {
 				foreach ($mysql->select("select * from " . prefix . "_basket where " . join(" or ", $filter)) as $rec) {
 					$total += round($rec['price'] * $rec['count'], 2);
 					$rec['sum'] = sprintf('%9.2f', round($rec['price'] * $rec['count'], 2));
+					$rec['sum_formatted'] = formatMoney(round($rec['price'] * $rec['count'], 2));
+					$rec['price_formatted'] = formatMoney($rec['price']);
 					$rec['xfields'] = unserialize($rec['linked_fld']);
 					unset($rec['linked_fld']);
-					$recs [] = $rec;
+					$recs[] = $rec;
 				}
+				logger('basket', 'Feedback process: formID=' . $formID . ', count=' . count($recs) . ', total=' . $total . ', IP=' . get_ip());
 			}
 			$bVars = array(
 				'recs'    => count($recs),
 				'entries' => $recs,
 				'total'   => sprintf('%9.2f', $total),
+				'total_formatted' => formatMoney($total),
 			);
 			// Выводим шаблон
 			$xt = $twig->loadTemplate('plugins/basket/lfeedback.tpl');
@@ -199,20 +231,23 @@ if (class_exists('XFieldsFilter') && class_exists('FeedbackFilter')) {
 		}
 
 		// Action executed when post request is completed
-		function onProcessNotify($formID) {
+		function onProcessNotify($formID)
+		{
 
 			global $mysql, $userROW;
 			// Определяем условия выборки
 			$filter = array();
 			if (is_array($userROW)) {
-				$filter [] = '(user_id = ' . db_squote($userROW['id']) . ')';
+				$filter[] = '(user_id = ' . db_squote($userROW['id']) . ')';
 			}
 			if (isset($_COOKIE['ngTrackID']) && ($_COOKIE['ngTrackID'] != '')) {
-				$filter [] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
+				$filter[] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
 			}
 			// Выполняем выборку
 			if (count($filter)) {
-				$mysql->query("delete from " . prefix . "_basket where " . join(" or ", $filter));
+				$stmt = $mysql->query("delete from " . prefix . "_basket where " . join(" or ", $filter));
+				$deletedCount = $mysql->affected_rows($stmt);
+				logger('basket', 'Feedback notify: formID=' . $formID . ', cleared=' . $deletedCount . ' items, IP=' . get_ip());
 			}
 		}
 	}
@@ -226,10 +261,12 @@ if (class_exists('XFieldsFilter') && class_exists('FeedbackFilter')) {
 }
 
 // Perform replacements while showing news
-class BasketNewsFilter extends NewsFilter {
+class BasketNewsFilter extends NewsFilter
+{
 
 	// Show news call :: processor (call after all processing is finished and before show)
-    public function showNews($newsID, $SQLnews, &$tvars, $mode = []) {
+	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
+	{
 
 		global $DSlist;
 		// Определяем - работаем ли мы внутри строк таблиц

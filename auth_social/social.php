@@ -1,6 +1,15 @@
 <?php
 # protect against hack attempts
 if (!defined('NGCMS')) die('Galaxy in danger');
+
+// Modified with ng-helpers v0.2.0 functions (2026)
+// - Added email validation
+// - Added secure random string generation
+// - Added logging support
+
+// Import ng-helpers functions
+use function Plugins\{validate_email, random_string, logger, get_ip};
+
 # preload required libraries
 //loadPluginLibrary('uprofile', 'lib');
 //loadPluginLibrary('comments', 'lib');
@@ -91,11 +100,14 @@ function socialAuth($params = [])
 				if (session_status() === PHP_SESSION_NONE) {
 					@session_start();
 				}
-				$state = bin2hex(random_bytes(16));
-				$codeVerifier = bin2hex(random_bytes(32));
+				$state = random_string(32);
+				$codeVerifier = random_string(64);
 				$codeChallenge = rtrim(strtr(base64_encode(hash('sha256', $codeVerifier, true)), '+/', '-_'), '=');
 				$_SESSION['vkid_state'] = $state;
 				$_SESSION['vkid_code_verifier'] = $codeVerifier;
+
+				logger('auth_social', 'VK ID OAuth redirect initiated, IP: ' . get_ip());
+
 				$params = [
 					'response_type' => 'code',
 					'client_id' => $adapterConfigs[$provider]['client_id'],
@@ -123,6 +135,16 @@ function socialAuth($params = [])
 				'email' => $auther->getEmail(),
 				'social_page' => $auther->getSocialPage()
 			];
+
+			// Валидация email
+			$email = $auther->getEmail();
+			if ($email && !validate_email($email)) {
+				logger('auth_social', 'Invalid email from ' . $auther->getProvider() . ': ' . $email . ', IP: ' . get_ip(), 'warning');
+				die('Invalid email address received from social network');
+			}
+
+			logger('auth_social', 'Successful OAuth authentication: ' . $auther->getProvider() . ' user ' . $auther->getName() . ' (' . $email . '), IP: ' . get_ip());
+
 			// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] user data=" . json_encode($userData, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
 			// Check existing user
 			$checkQuery = "SELECT * FROM " . uprefix . "_users WHERE (`provider` = '" . $auther->getProvider() . "' AND `social_id` = '" . $auther->getSocialId() . "') OR `social_page` = " . db_squote($auther->getSocialPage()) . " LIMIT 1";
@@ -133,6 +155,7 @@ function socialAuth($params = [])
 			// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] existing user found=" . (is_array($record) ? 'yes id=' . ($record['id'] ?? 'null') : 'no') . "\n", FILE_APPEND);
 			if (!$record) {
 				// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] creating new user\n", FILE_APPEND);
+				logger('auth_social', 'Creating new user from ' . $auther->getProvider() . ': ' . $auther->getName() . ' (' . $auther->getEmail() . '), IP: ' . get_ip());
 				try {
 					$birthday_value = $auther->getBirthday();
 					// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] birthday raw=" . json_encode($birthday_value) . "\n", FILE_APPEND);

@@ -5,6 +5,11 @@
  * web:    http://digitalplace.ru
  * e-mail: zhukov.alexei@gmail.com
  *
+ * Modified with ng-helpers v0.2.0 functions (2026)
+ * - Added cache support for performance
+ * - Added array_pluck for data extraction
+ * - Improved code readability
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or (at
@@ -20,15 +25,36 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  *
  */
-if (!defined('NGCMS')) die ('Galaxy in danger');
+if (!defined('NGCMS')) die('Galaxy in danger');
+
+// Import ng-helpers functions
+use function Plugins\{cache_get, cache_put, array_pluck};
+
 add_act('index', 'breadcrumbs');
 LoadPluginLang('breadcrumbs', 'main', '', 'bc', ':');
-function breadcrumbs() {
 
+function breadcrumbs()
+{
 	global $lang, $catz, $catmap, $template, $CurrentHandler, $config,
-		   $SYSTEM_FLAGS, $tpl, $systemAccessURL, $twig;
+		$SYSTEM_FLAGS, $tpl, $systemAccessURL, $twig;
+
+	// Hide breadcrumbs on main page if configured
+	if ($systemAccessURL == '/' && pluginGetVariable('breadcrumbs', 'hide_on_main')) {
+		$template['vars']['breadcrumbs'] = '';
+		return;
+	}
+
+	// Generate cache key based on current URL and language
+	$cacheKey = 'breadcrumbs_' . md5($systemAccessURL . $lang['locale'] . serialize($CurrentHandler));
+
+	// Try to get from cache (5 minutes)
+	if ($cached = cache_get($cacheKey)) {
+		$template['vars']['breadcrumbs'] = $cached;
+		return;
+	}
 	$tpath = locatePluginTemplates(
-		array('breadcrumbs'), 'breadcrumbs',
+		array('breadcrumbs'),
+		'breadcrumbs',
 		pluginGetVariable('breadcrumbs', 'template_source')
 	);
 	$location = array();
@@ -58,8 +84,8 @@ function breadcrumbs() {
 			$pluginName = $CurrentHandler['pluginName'];
 		}
 		# generate main page with or without link
-		$main_page = ($systemAccessURL != '/'
-			? str_replace(
+		if ($systemAccessURL != '/') {
+			$main_page = str_replace(
 				array(
 					'{home_url}',
 					'{home_title}'
@@ -69,15 +95,16 @@ function breadcrumbs() {
 					$lang['bc:mainpage']
 				),
 				$lang['bc:page_404']
-			)
-			: $lang['bc:mainpage']
-		);
-		$location[] = array(
-			'url'   => ($systemAccessURL != '/') ? $config['home_url'] : '',
-			'title' => ($systemAccessURL != '/') ? $lang['bc:mainpage'] : $lang['bc:mainpage'],
-			'link'  => $main_page,
-		);
-		$location_last = $main_page;
+			);
+			$location[] = array(
+				'url'   => $config['home_url'],
+				'title' => $lang['bc:mainpage'],
+				'link'  => $main_page,
+			);
+		} else {
+			# on main page - don't add to location array, only set location_last
+			$location_last = $lang['bc:mainpage'];
+		}
 		# if category
 		if ($CurrentHandler['handlerName'] == 'by.category') {
 			$location_last = GetCategories($catz[$params['category']]['id'], true);
@@ -184,8 +211,8 @@ function breadcrumbs() {
 					$location_last = $SYSTEM_FLAGS['info']['breadcrumbs'][$i]['text'];
 				} else {
 					$location_last = $SYSTEM_FLAGS['info']['title']['group'] != $lang['loc_plugin']
-					    ? $SYSTEM_FLAGS['info']['title']['group']
-					    : $params['plugin'];
+						? $SYSTEM_FLAGS['info']['title']['group']
+						: $params['plugin'];
 				}
 			}
 			# full news
@@ -235,5 +262,10 @@ function breadcrumbs() {
 		'separator'     => $separator
 	);
 	$xt = $twig->loadTemplate($tpath['breadcrumbs'] . 'breadcrumbs.tpl');
-	$template['vars']['breadcrumbs'] = $xt->render($tVars);
+	$result = $xt->render($tVars);
+
+	// Cache the result for 5 minutes
+	cache_put($cacheKey, $result, 5);
+
+	$template['vars']['breadcrumbs'] = $result;
 }

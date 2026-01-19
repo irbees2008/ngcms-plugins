@@ -1,0 +1,20 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+
+ID: avtek_callback
+Name: AVTEK Callback
+Version: 1.0.0
+Acts: core, twig, index, news_short, news_full, admin:mod:extra-config
+File: avtek_callback.php
+Config: config.php
+Install: install.php
+Deinstall: uninstall.php
+Type: plugin
+Description: Конструктор форм обратной связи (Email + Telegram + Leads + XLS)
+Author: AVTEK
+Title: AVTEK Callback
+Information: Создание форм, модалка/встройка, заявки, экспорт XLS
+Preinstall: no
+MinEngineBuild: 23b3116
+Icons: <i class="fa fa-envelope-o fa-3x" aria-hidden="true"></i>

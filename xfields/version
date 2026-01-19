@@ -2,8 +2,8 @@
 ; Version description file for plugin @@ Next Generation CMS
 ;
 ID: xfields
-Name: Custom fields
-Version: 0.32
+Name: Custom fields (modernized with ng-helpers)
+Version: 0.33
 Acts: core, admin:mod:news, admin:mod:categories
 File: xfields.php
 Actions: rpc;lib/librpc.php
@@ -12,11 +12,11 @@ Install: install.php
 Deinstall: uninstall.php
 Library: common; lib/common.php
 Type: plugin
-Description: Дополнительные поля
+Description: Дополнительные поля (модернизировано с ng-helpers v0.2.1)
 Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru
 Title: Дополнительные поля
-Information: Позволяет создавать пользовательские дополнительные поля в новостях.
+Information: Позволяет создавать пользовательские дополнительные поля в новостях. Модернизировано с ng-helpers для улучшенной безопасности, логирования и производительности.
 Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-list-alt fa-3x" aria-hidden="true"></i>

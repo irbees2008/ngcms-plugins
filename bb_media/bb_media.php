@@ -1,8 +1,11 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 
-class BBmediaNewsfilter extends NewsFilter {
+use function Plugins\{logger};
+
+class BBmediaNewsfilter extends NewsFilter
+{
 
 	public function __construct()
 	{
@@ -31,30 +34,46 @@ class BBmediaNewsfilter extends NewsFilter {
 						return $content;
 					}
 				}
+				logger('bb_media', 'WARNING: No player handler found, using fallback');
 			}
 		}
+
+		logger('bb_media', 'BBmediaNewsfilter initialized: player=' . ($player_name ?: 'videojs'));
 	}
 
-    public function showNews($newsID, $SQLnews, &$tvars, $mode = []) {
+	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
+	{
+
+		$processed = false;
 
 		if (($t = bbMediaProcess($tvars['vars']['short-story'])) !== false) {
 			$tvars['vars']['short-story'] = $t;
+			$processed = true;
 		}
 		if (($t = bbMediaProcess($tvars['vars']['full-story'])) !== false) {
 			$tvars['vars']['full-story'] = $t;
+			$processed = true;
 		}
 		if (($t = bbMediaProcess($tvars['vars']['news']['short'])) !== false) {
 			$tvars['vars']['news']['short'] = $t;
+			$processed = true;
 		}
 		if (($t = bbMediaProcess($tvars['vars']['news']['full'])) !== false) {
 			$tvars['vars']['news']['full'] = $t;
+			$processed = true;
+		}
+
+		if ($processed) {
+			logger('bb_media', 'News processed: id=' . $newsID . ', title=' . ($SQLnews['title'] ?? 'unknown'));
 		}
 	}
 }
 
-class BBmediaStaticFilter extends StaticFilter {
-	
-	public function __construct() {
+class BBmediaStaticFilter extends StaticFilter
+{
+
+	public function __construct()
+	{
 
 		$player_name = pluginGetVariable('bb_media', 'player_name');
 		$player_handler = __DIR__ . '/players/' . $player_name . '/bb_media.php';
@@ -62,15 +81,16 @@ class BBmediaStaticFilter extends StaticFilter {
 			include_once($player_handler);
 		}
 	}
-	
-	public function showStatic($staticID, $SQLstatic, &$tvars, $mode) {
+
+	public function showStatic($staticID, $SQLstatic, &$tvars, $mode)
+	{
 		if (($t = bbMediaProcess($tvars['content'])) !== false) {
 			$tvars['content'] = $t;
+			logger('bb_media', 'Static page processed: id=' . $staticID . ', title=' . ($SQLstatic['title'] ?? 'unknown'));
 		}
 	}
 }
 
 // Preload plugin tags
-register_filter('static','bb_media', new BBmediaStaticFilter);
+register_filter('static', 'bb_media', new BBmediaStaticFilter);
 register_filter('news', 'bb_media', new BBmediaNewsFilter);
-

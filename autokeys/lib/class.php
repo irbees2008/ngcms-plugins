@@ -1,4 +1,7 @@
 <?php
+
+use function Plugins\{logger, sanitize, cache_get, cache_put};
+
 // Подключаем необходимые файлы Morphos вручную
 require __DIR__ . '/morphos/src/Cases.php'; // Подключаем интерфейс Cases
 require __DIR__ . '/morphos/src/CasesHelper.php'; // Подключаем интерфейс Cases
@@ -58,52 +61,136 @@ class AutoKeyword
 		}
 
 		$this->contents = $this->replace_chars($params['content'] ?? '');
+		logger('autokeys', 'AutoKeyword init: length=' . mb_strlen($this->contents) . ' chars, minLen=' . $this->wordLengthMin . ', maxLen=' . $this->wordLengthMax);
 	}
 
 	public function replace_chars($content)
 	{
-		$content = strtolower($content); // Приводим текст к нижнему регистру
+		$content = sanitize($content, 'html'); // Очистка HTML
+		$content = mb_strtolower($content, $this->encoding); // Приводим текст к нижнему регистру с учетом кодировки
 		$content = strip_tags($content); // Удаляем HTML-теги
-		$content = preg_replace('/[^\p{L}\p{N}\s]/u', '', $content); // Удаляем все символы, кроме букв, цифр и пробелов
-		$content = preg_replace('/\s+/', ' ', $content); // Удаляем лишние пробелы
+		$content = html_entity_decode($content, ENT_QUOTES, $this->encoding); // Декодируем HTML-сущности
+		$content = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $content); // Заменяем спецсимволы на пробелы
+		$content = preg_replace('/\s+/u', ' ', $content); // Удаляем лишние пробелы
+		$content = trim($content); // Удаляем пробелы в начале и конце
 
 		return $content;
 	}
 
 	public function parse_words()
 	{
-		$common = ["aaaaaaa", "aaaaaaa"];
+		$startTime = microtime(true);
+
+		// Стоп-слова (общие предлоги, союзы, частицы)
+		$stopWords = [
+			'это',
+			'как',
+			'так',
+			'для',
+			'что',
+			'или',
+			'его',
+			'все',
+			'уже',
+			'был',
+			'быть',
+			'она',
+			'при',
+			'даже',
+			'если',
+			'под',
+			'еще',
+			'ещё',
+			'может',
+			'мне',
+			'вас',
+			'нас',
+			'они',
+			'тот',
+			'эта',
+			'эти',
+			'тем',
+			'чем',
+			'без',
+			'где',
+			'над',
+			'про',
+			'раз',
+			'там',
+			'зачем',
+			'потом',
+			'того',
+			'чтобы',
+			'можно',
+			'было',
+			'были',
+			'будет',
+			'была',
+			'этот',
+			'этой',
+			'этом',
+			'этих',
+			'через',
+			'после',
+			'перед',
+			'между',
+			'около',
+			'более',
+			'менее',
+			'очень',
+			'также',
+			'тоже',
+			'только',
+			'лишь',
+			'ведь',
+			'вот',
+			'вообще',
+			'всегда'
+		];
+
 		$s = explode(" ", $this->contents);
 		$k = [];
 
 		foreach ($s as $val) {
 			$val = trim($val);
+			// Проверяем длину, стоп-слова, числа
 			if (
-				strlen($val) >= $this->wordLengthMin &&
-				strlen($val) <= $this->wordLengthMax &&
-				!in_array($val, $common) &&
-				!is_numeric($val)
+				mb_strlen($val, $this->encoding) >= $this->wordLengthMin &&
+				mb_strlen($val, $this->encoding) <= $this->wordLengthMax &&
+				!in_array($val, $stopWords) &&
+				!is_numeric($val) &&
+				!preg_match('/^\d/', $val) // Исключаем слова, начинающиеся с цифры
 			) {
-				// Склоняем слово в родительный падеж с помощью Morphos
+				// Приводим к начальной форме с помощью Morphos
 				try {
-					$val = NounDeclension::getCase($val, 'именительный');
+					// Получаем именительный падеж единственного числа
+					$normalizedWord = NounDeclension::isMutable($val)
+						? NounDeclension::getCase($val, \Morphos\Russian\Cases::IMENIT)
+						: $val;
+					$k[] = $normalizedWord;
 				} catch (Exception $e) {
-					// Если слово не найдено в словаре, пропускаем его
-					continue;
+					// Если морфология не сработала, используем исходное слово
+					$k[] = $val;
 				}
-				$k[] = $val;
 			}
 		}
 
 		$k = array_count_values($k);
 		$occur_filtered = $this->occure_filter($k, $this->wordOccuredMin);
 		arsort($occur_filtered);
+
+		// Добавляем приоритетные слова в начало
 		$occur_filtered = array_flip($this->wordGoodArray) + $occur_filtered;
+
+		// Ограничиваем количество ключевых слов
 		array_splice($occur_filtered, $this->wordMaxCount);
 
 		$imploded = $this->implode(", ", $occur_filtered);
 		unset($k);
 		unset($s);
+
+		$duration = round((microtime(true) - $startTime) * 1000, 2);
+		logger('autokeys', 'parse_words: extracted ' . count($occur_filtered) . ' keywords, time=' . $duration . 'ms');
 
 		return $imploded;
 	}
@@ -157,6 +244,8 @@ function akeysGetKeys($params)
 	if (!empty($words)) {
 		$words = rtrim($words, ', ');
 	}
+
+	logger('autokeys', 'akeysGetKeys: result=' . count(explode(', ', $words)) . ' keywords, length=' . mb_strlen($words) . ' chars');
 
 	return $words;
 }

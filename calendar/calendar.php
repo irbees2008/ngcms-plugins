@@ -1,7 +1,13 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 
+// Modified with ng-helpers v0.2.0 functions (2026)
+// - Replaced cacheRetrieveFile/cacheStoreFile with cache_get/cache_put
+// - Added logging support for cache operations
+
+// Import ng-helpers functions
+use function Plugins\{cache_get, cache_put, logger};
 
 function plugin_calendar()
 {
@@ -33,11 +39,11 @@ function plug_calgen($month, $year, $overrideTemplateName = false, $categoryList
 
     // Add leading zeroes to month (if needed)
     $month = sprintf('%02s', $month);
-    // Generate cache file name [ we should take into account SWITCHER plugin ]
-    $cacheFileName = md5('calendar' . $config['theme'] . '|' . join(",", $categoryList) . $overrideTemplateName . $config['default_lang'] . $year . $month) . '.txt';
+    // Generate cache key [ we should take into account SWITCHER plugin ]
+    $cacheKey = 'calendar:' . md5($config['theme'] . '|' . join(",", $categoryList) . $overrideTemplateName . $config['default_lang'] . $year . $month);
     if ($cacheExpire > 0) {
-        $cacheData = cacheRetrieveFile($cacheFileName, $cacheExpire, 'calendar');
-        if ($cacheData != false) {
+        $cacheData = cache_get($cacheKey);
+        if ($cacheData !== null) {
             // We got data from cache. Return it and stop
             return $cacheData;
         }
@@ -56,7 +62,7 @@ function plug_calgen($month, $year, $overrideTemplateName = false, $categoryList
         $sqlList = array();
         foreach ($categoryList as $c) {
             if (intval($c) > 0)
-                $sqlList [] = intval($c);
+                $sqlList[] = intval($c);
         }
         $sql = "SELECT day(dt) as day, to_days(dt) as to_days, count(newsID) as count FROM " . prefix . "_news_map WHERE categoryID in (" . join(",", $sqlList) . ") AND (dt >= '" . $year . "-" . $month . "-01 00:00:00') AND dt < (date_add('" . $year . "-" . $month . "-01 00:00:00', interval 1 month)) group by to_days, day";
     }
@@ -196,7 +202,8 @@ function plug_calgen($month, $year, $overrideTemplateName = false, $categoryList
     $xt = $twig->loadTemplate($tpath['calendar'] . 'calendar.tpl');
     $output = $xt->render($tVars);
     if ($cacheExpire > 0) {
-        cacheStoreFile($cacheFileName, $output, 'calendar');
+        cache_put($cacheKey, $output, $cacheExpire);
+        logger('calendar', 'Calendar cached: ' . $year . '-' . $month . ', categories: ' . join(',', $categoryList) . ', expire: ' . $cacheExpire . 's');
     }
 
     return $output;

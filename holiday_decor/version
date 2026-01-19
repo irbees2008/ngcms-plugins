@@ -1,0 +1,17 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: holiday_decor
+Name: Новогодние украшения
+Name_EN: Holiday Decorations
+Version: 0.1.0
+Acts: core, index, news_short, news_full
+File: holiday_decor.php
+Config: config.php
+Type: plugin
+Description: Автоматическое добавление гирлянды и снега на сайте.
+Author: Copilot
+Title: HolidayDecor
+Information: Включает гирлянду и снег с настраиваемыми параметрами.
+MinEngineBuild: 23b3116
+Icons: <i class="fa fa-snowflake-o fa-3x" aria-hidden="true"></i>

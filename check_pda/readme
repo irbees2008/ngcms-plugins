@@ -1,12 +1,143 @@
 # =========================================================================== #
-# NG CMS // Плагины // check_pda					                          #
+# NG CMS // Плагины // check_pda - Определение мобильных устройств           #
 # =========================================================================== #
-
-Плагин позволяет делать проверку на mobile/tablet внутри TWIG шаблонов:
-
-Примеры использования:
-{% extends is_mobile() ? "layout_mobile.html.twig" : "layout.html.twig" %}
-{% if is_mobile() %} ... {% endif %}
-{% if is_tablet() %} ... {% endif %}
-{% if is_mobile() and is_samsung() %} ... {% endif %}
-{{ get_available_devices()|join("<br />")|raw }}
+## Описание
+Плагин check_pda добавляет в TWIG-шаблоны возможность определения типа
+устройства пользователя (мобильный телефон, планшет, десктоп) и позволяет
+адаптировать отображение контента под различные устройства.
+Использует библиотеку Mobile_Detect для точного определения устройств.
+## Установка и активация
+1. Плагин должен быть установлен в папку: engine/plugins/check_pda/
+2. Активируйте плагин в панели администратора
+3. После активации функции станут доступны во всех TWIG-шаблонах
+## Основные функции
+### is_mobile()
+Проверяет, является ли устройство мобильным телефоном (не включает планшеты).
+Возвращает: true/false
+### is_tablet()
+Проверяет, является ли устройство планшетом.
+Возвращает: true/false
+### is_samsung(), is_apple(), is_htc() и др.
+Проверяет конкретного производителя устройства.
+Возвращает: true/false
+### get_available_devices()
+Возвращает массив всех доступных для проверки устройств.
+## Примеры использования
+### 1. Простая проверка на мобильное устройство
+```twig
+{% if is_mobile() %}
+    <div class="mobile-menu">Мобильное меню</div>
+{% else %}
+    <div class="desktop-menu">Десктопное меню</div>
+{% endif %}
+```
+### 2. Проверка на планшет
+```twig
+{% if is_tablet() %}
+    <p>Вы используете планшет</p>
+{% endif %}
+```
+### 3. Выбор разных шаблонов для разных устройств
+```twig
+{% extends is_mobile() ? "layout_mobile.tpl" : "layout_desktop.tpl" %}
+```
+### 4. Проверка конкретного производителя
+```twig
+{% if is_mobile() and is_samsung() %}
+    <p>Специальное предложение для владельцев Samsung!</p>
+{% endif %}
+{% if is_apple() %}
+    <link rel="apple-touch-icon" href="/apple-icon.png">
+{% endif %}
+```
+### 5. Адаптивный контент в сайдбаре
+```twig
+<div class="sidebar">
+    {% if is_mobile() %}
+        {# Упрощенный виджет для мобильных #}
+        {{ callPlugin('xnews.show', {'count': 3}) }}
+    {% else %}
+        {# Полная версия для десктопа #}
+        {{ callPlugin('xnews.show', {'count': 10}) }}
+        {{ plugin_tags }}
+        {{ categories }}
+    {% endif %}
+</div>
+```
+### 6. Разные размеры изображений
+```twig
+{% if is_mobile() %}
+    <img src="{{ image }}_mobile.jpg" alt="Фото">
+{% else %}
+    <img src="{{ image }}_desktop.jpg" alt="Фото">
+{% endif %}
+```
+### 7. Условная загрузка скриптов
+```twig
+{% if not is_mobile() %}
+    <script src="{{ tpl_url }}/js/parallax.js"></script>
+    <script src="{{ tpl_url }}/js/animations.js"></script>
+{% endif %}
+```
+### 8. Комбинированные условия
+```twig
+{% if is_mobile() or is_tablet() %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ tpl_url }}/css/mobile.css">
+{% endif %}
+```
+### 9. Вывод списка поддерживаемых устройств (для отладки)
+```twig
+<div class="debug-info">
+    Поддерживаемые устройства:<br>
+    {{ get_available_devices()|join(", ")|raw }}
+</div>
+```
+### 10. Тернарный оператор для классов CSS
+```twig
+<div class="{{ is_mobile() ? 'col-12' : 'col-lg-9' }}">
+    {{ mainblock }}
+</div>
+```
+## Практические применения
+### Адаптивная структура страницы
+```twig
+<div class="container">
+    <div class="row">
+        {% if not is_mobile() %}
+            <aside class="col-lg-3">
+                {{ leftSidebar }}
+            </aside>
+        {% endif %}
+        <main class="{{ is_mobile() ? 'col-12' : 'col-lg-6' }}">
+            {{ mainContent }}
+        </main>
+        {% if not is_mobile() %}
+            <aside class="col-lg-3">
+                {{ rightSidebar }}
+            </aside>
+        {% endif %}
+    </div>
+</div>
+```
+### Оптимизация рекламных блоков
+```twig
+{% if is_mobile() %}
+    {# Мобильная реклама 320x50 #}
+    <div class="ad-mobile">{{ mobile_ads }}</div>
+{% else %}
+    {# Десктопная реклама 728x90 #}
+    <div class="ad-desktop">{{ desktop_ads }}</div>
+{% endif %}
+```
+## Совместимость
+- Работает с PHP 7.4+
+- Совместимо с Twig 2.x и 3.x
+- Определяет более 100 различных устройств
+- Регулярно обновляемая база устройств
+## Техническая информация
+Плагин использует HTTP заголовок User-Agent для определения устройства.
+Результаты определения логируются в системный лог для отладки.
+## Автор и поддержка
+Плагин основан на библиотеке Mobile_Detect
+Адаптация для NGCMS: ngcmshak.ru

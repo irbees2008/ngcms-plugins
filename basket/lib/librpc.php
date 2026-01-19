@@ -2,7 +2,10 @@
 //
 // Shipping cart RPC manipulations
 //
-function basket_add_item($linked_ds, $linked_id, $title, $price, $count, $xfld = array()) {
+use function Plugins\{notify, formatMoney, logger};
+
+function basket_add_item($linked_ds, $linked_id, $title, $price, $count, $xfld = array())
+{
 
 	global $mysql, $userROW, $twig;
 	// Check if now we're logged in and earlier we started filling basket before logging in
@@ -13,10 +16,10 @@ function basket_add_item($linked_ds, $linked_id, $title, $price, $count, $xfld =
 	// ======== Prepare update of totals informer ========
 	$filter = array();
 	if (is_array($userROW)) {
-		$filter [] = '(user_id = ' . db_squote($userROW['id']) . ')';
+		$filter[] = '(user_id = ' . db_squote($userROW['id']) . ')';
 	}
 	if (isset($_COOKIE['ngTrackID']) && ($_COOKIE['ngTrackID'] != '')) {
-		$filter [] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
+		$filter[] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
 	}
 	$tCount = 0;
 	$tPrice = 0;
@@ -33,15 +36,31 @@ function basket_add_item($linked_ds, $linked_id, $title, $price, $count, $xfld =
 	// Выводим шаблон с общим итогом
 	$xt = $twig->loadTemplate('plugins/basket/total.tpl');
 
-	return array('status' => 1, 'errorCode' => 0, 'data' => 'Item added into basket', 'update' => arrayCharsetConvert(0, $xt->render($tVars)));
+	// Логируем добавление
+	logger('basket', 'Item added: id=' . $linked_id . ', price=' . formatMoney($price) . ', count=' . $count);
+
+	return array(
+		'status' => 1,
+		'errorCode' => 0,
+		'data' => notify('success', 'Товар добавлен в корзину'),
+		'update' => arrayCharsetConvert(0, $xt->render($tVars))
+	);
 }
 
-function basket_rpc_manage($params) {
+function basket_rpc_manage($params)
+{
 
 	global $userROW, $DSlist, $mysql, $twig;
 	LoadPluginLibrary('xfields', 'common');
-	if (!is_array($params) || !isset($params['action']))
-		return array('status' => 0, 'errorCode' => 1, 'errorText' => 'Activity mode is not set');
+	if (!is_array($params) || !isset($params['action'])) {
+		return array(
+			'status' => 0,
+			'errorCode' => 1,
+			'errorText' => 'Режим работы не указан',
+			'data' => notify('error', 'Режим работы не указан')
+		);
+	}
+
 	$params = arrayCharsetConvert(1, $params);
 	switch ($params['action']) {
 		// **** ADD NEW ITEM INTO BASKET ****
@@ -49,13 +68,25 @@ function basket_rpc_manage($params) {
 			$linked_ds = intval($params['ds']);
 			$linked_id = intval($params['id']);
 			$count = intval($params['count']);
+
 			// Check available DataSources
 			if (!(in_array($linked_ds, array($DSlist['news'], $DSlist['#xfields:tdata'])))) {
-				return array('status' => 0, 'errorCode' => 2, 'errorText' => 'Basket can be used only for NEWS');
+				return array(
+					'status' => 0,
+					'errorCode' => 2,
+					'errorText' => 'Корзина работает только с новостями',
+					'data' => notify('error', 'Корзина работает только с новостями')
+				);
 			}
-			// Check available DataSources
+
+			// Check count
 			if ($count < 1) {
-				return array('status' => 0, 'errorCode' => 2, 'errorText' => 'Count should be positive');
+				return array(
+					'status' => 0,
+					'errorCode' => 3,
+					'errorText' => 'Количество должно быть положительным числом',
+					'data' => notify('warning', 'Количество должно быть положительным числом')
+				);
 			}
 			// Check if linked item is available
 			switch ($linked_ds) {
@@ -141,11 +172,11 @@ function basket_rpc_manage($params) {
 	return array('status' => 1, 'errorCode' => 0, 'data' => 'OK, ' . var_export($params, true));
 }
 
-function basket_rpc_demo($params) {
+function basket_rpc_demo($params)
+{
 
 	return array('status' => 1, 'errorCode' => 0, 'data' => var_export($params, true));
 }
 
 //rpcRegisterFunction('plugin.cart.demo', 'cart_rpc_demo');
 rpcRegisterFunction('plugin.basket.manage', 'basket_rpc_manage');
-

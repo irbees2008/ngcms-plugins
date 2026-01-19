@@ -1,12 +1,19 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
+
+use function Plugins\{logger, get_ip, validate_email, is_post, sanitize};
 //
 // Params for filtering and processing
 //
-function comments_add() {
-
+function comments_add()
+{
 	global $mysql, $config, $AUTH_METHOD, $userROW, $ip, $lang, $parse, $catmap, $catz, $PFILTERS;
+	// Проверка метода запроса
+	if (!is_post()) {
+		msg(array("type" => "error", "text" => "Invalid request method"));
+		return;
+	}
 	// Check membership
 	// If login/pass is entered (either logged or not)
 	if ($_POST['name'] && $_POST['password']) {
@@ -14,7 +21,6 @@ function comments_add() {
 		$user = $auth->login(0, $_POST['name'], $_POST['password']);
 		if (!is_array($user)) {
 			msg(array("type" => "error", "text" => $lang['comments:err.password']));
-
 			return;
 		}
 	}
@@ -46,17 +52,14 @@ function comments_add() {
 	}
 	if ($sValue != genUToken('comment.add.' . $SQL['post'])) {
 		msg(array("type" => "error", "text" => $lang['comments:err.regonly']));
-
 		return;
 	}
-	$SQL['text'] = secure_html(trim($_POST['content']));
-
+	$SQL['text'] = sanitize(trim($_POST['content']));
 	// If user is not logged, make some additional tests
 	if (!$is_member) {
 		// Check if unreg are allowed to make comments
 		if (pluginGetVariable('comments', 'regonly')) {
 			msg(array("type" => "error", "text" => $lang['comments:err.regonly']));
-
 			return;
 		}
 		// Check captcha for unregistered visitors
@@ -64,7 +67,6 @@ function comments_add() {
 			$vcode = $_POST['vcode'];
 			if ($vcode != $_SESSION['captcha']) {
 				msg(array("type" => "error", "text" => $lang['comments:err.vcode']));
-
 				return;
 			}
 			// Update captcha
@@ -72,30 +74,26 @@ function comments_add() {
 		}
 		if (!$SQL['author']) {
 			msg(array("type" => "error", "text" => $lang['comments:err.name']));
-
 			return;
 		}
 		if (!$SQL['mail']) {
 			msg(array("type" => "error", "text" => $lang['comments:err.mail']));
-
 			return;
 		}
 		// Check if author name use incorrect symbols. Check should be done only for unregs
 		if ((!$SQL['author_id']) && (preg_match("/[^(\w)|(\x7F-\xFF)|(\s)]/", $SQL['author']) || strlen($SQL['author']) > 60)) {
 			msg(array("type" => "error", "text" => $lang['comments:err.badname']));
-
 			return;
 		}
-		if (strlen($SQL['mail']) > 70 || !preg_match("/^[\.A-z0-9_\-]+[@][A-z0-9_\-]+([.][A-z0-9_\-]+)+[A-z]{1,4}$/", $SQL['mail'])) {
+		if (!validate_email($SQL['mail'])) {
 			msg(array("type" => "error", "text" => $lang['comments:err.badmail']));
-
+			logger('comments', 'Invalid email attempt: ' . $SQL['mail'] . ' from IP: ' . get_ip(), 'warning');
 			return;
 		}
 		// Check if guest wants to use email of already registered user
 		if (pluginGetVariable('comments', 'guest_edup_lock')) {
 			if (is_array($mysql->record("select * from " . uprefix . "_users where mail = " . db_squote($SQL['mail']) . " limit 1"))) {
 				msg(array("type" => "error", "text" => $lang['comments:err.edupmail']));
-
 				return;
 			}
 		}
@@ -103,13 +101,11 @@ function comments_add() {
 	$maxlen = intval(pluginGetVariable('comments', 'maxlen'));
 	if (($maxlen) && (strlen($SQL['text']) > $maxlen || strlen($SQL['text']) < 2)) {
 		msg(array("type" => "error", "text" => str_replace('{maxlen}', pluginGetVariable('comments', 'maxlen'), $lang['comments:err.badtext'])));
-
 		return;
 	}
 	// Check for flood
 	if (checkFlood(0, $ip, 'comments', 'add', $is_member ? $memberRec : null, $is_member ? null : $SQL['author'])) {
 		msg(array("type" => "error", "text" => str_replace('{timeout}', $config['flood_time'], $lang['comments:err.flood'])));
-
 		return;
 	}
 	// Check for bans
@@ -120,7 +116,6 @@ function comments_add() {
 		} else {
 			msg(array("type" => "error", "text" => $lang['comments:err.ipban']));
 		}
-
 		return;
 	}
 	// Locate news
@@ -140,12 +135,10 @@ function comments_add() {
 		}
 		if (!$allowCom) {
 			msg(array("type" => "error", "text" => $lang['comments:err.forbidden']));
-
 			return;
 		}
 	} else {
 		msg(array("type" => "error", "text" => $lang['comments:err.notfound']));
-
 		return;
 	}
 	// Check for multiple comments block [!!! ADMINS CAN DO IT IN ANY CASE !!!]
@@ -168,14 +161,12 @@ function comments_add() {
 			if (is_array($userROW)) {
 				if ($userROW['id'] == $lpost['author_id']) {
 					msg(array("type" => "error", "text" => $lang['comments:err.multilock']));
-
 					return;
 				}
 			} else {
 				//print "Last post: ".$lpost['id']."<br>\n";
 				if (($lpost['author'] == $SQL['author']) || ($lpost['mail'] == $SQL['mail'])) {
 					msg(array("type" => "error", "text" => $lang['comments:err.multilock']));
-
 					return;
 				}
 			}
@@ -213,7 +204,6 @@ function comments_add() {
 			if ((is_array($pluginResult) && ($pluginResult['result'])) || (!is_array($pluginResult) && $pluginResult))
 				continue;
 			msg(array("type" => "error", "text" => str_replace(array('{plugin}', '{errorText}'), array($k, (is_array($pluginResult) && isset($pluginResult['errorText']) ? $pluginResult['errorText'] : '')), $lang['comments:err.' . ((is_array($pluginResult) && isset($pluginResult['errorText'])) ? 'e' : '') . 'pluginlock'])));
-
 			return 0;
 		}
 	// Create comment
@@ -226,6 +216,16 @@ function comments_add() {
 	$mysql->query("insert into " . prefix . "_comments (" . implode(",", $vnames) . ") values (" . implode(",", $vparams) . ")");
 	// Retrieve comment ID
 	$comment_id = $mysql->result("select LAST_INSERT_ID() as id");
+	// Логирование добавления комментария
+	logger('comments', sprintf(
+		'New comment #%d by %s (ID: %d, IP: %s) for news #%d%s',
+		$comment_id,
+		$SQL['author'],
+		$SQL['author_id'],
+		get_ip(),
+		$SQL['post'],
+		$SQL['moderated'] == 0 ? ' [MODERATION]' : ''
+	));
 	// Update comment counter in news (only if comment is approved)
 	if ($SQL['moderated'] == 1) {
 		$mysql->query("update " . prefix . "_news set com=com+1 where id=" . db_squote($SQL['post']));
@@ -273,6 +273,5 @@ function comments_add() {
 	}
 	@setcookie("com_username", urlencode($SQL['author']), 0, '/');
 	@setcookie("com_usermail", urlencode($SQL['mail']), 0, '/');
-
 	return array($news_row, $comment_id);
 }

@@ -1,0 +1,21 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: webpush
+Name: Web Push Уведомления
+Name_EN: Web Push Notifications
+Version: 1.0.7
+Acts: index, news_full, ppages, twig
+File: webpush.php
+Config: config.php
+Install: install.php
+Deinstall: uninstall.php
+Type: plugin
+Description: Web Push уведомления для подписчиков (VAPID). Библиотека встроена в плагин. Требует только HTTPS.
+Description_EN: Web Push notifications for subscribers (VAPID). Library is bundled. Requires only HTTPS.
+Author: NGCMS Team
+Title: Web Push
+Information: Позволяет посетителям подписаться на push-уведомления и получать оповещения о новых материалах.
+Preinstall: no
+MinEngineBuild: 23b3116
+Icons: <i class="fa fa-bell fa-3x" aria-hidden="true"></i>

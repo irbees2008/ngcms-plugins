@@ -1,0 +1,12 @@
+{
+  "name": "ngcms/webpush",
+  "description": "Web Push notifications plugin for NGCMS",
+  "type": "library",
+  "require": {
+    "php": ">=8.0",
+    "minishlink/web-push": "^8.0"
+  },
+  "config": {
+    "vendor-dir": "lib/vendor"
+  }
+}

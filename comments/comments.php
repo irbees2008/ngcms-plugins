@@ -314,9 +314,11 @@ function plugin_comments_add()
 {
 	global $config, $catz, $catmap, $tpl, $template, $lang, $SUPRESS_TEMPLATE_SHOW;
 	$SUPRESS_TEMPLATE_SHOW = 1;
+
 	// Connect library
 	include_once(root . "/plugins/comments/inc/comments.show.php");
 	include_once(root . "/plugins/comments/inc/comments.add.php");
+
 	// Call comments_add() to ADD COMMENT
 	if (is_array($addResult = comments_add())) {
 		// Ok.
@@ -494,8 +496,9 @@ function plugin_comments_delete()
 	// First: check if user have enough permissions
 	if (!is_array($userROW) || ($userROW['status'] > 2) || ($_GET['uT'] != genUToken(intval($_REQUEST['id'])))) {
 		// Not allowed
+		msg(array('type' => 'error', 'text' => $lang['perm.denied']));
 		$output['status'] = 0;
-		$output['data'] = $lang['perm.denied'];
+		$output['data'] = $template['vars']['mainblock'];
 	} else {
 		// Second: check if this comment exists
 		$comid = intval($_REQUEST['id']);
@@ -503,12 +506,24 @@ function plugin_comments_delete()
 			$mysql->query("delete from " . prefix . "_comments where id=" . db_squote($comid));
 			$mysql->query("update " . uprefix . "_users set com=com-1 where id=" . db_squote($row['author_id']));
 			$mysql->query("update " . prefix . "_news set com=com-1 where id=" . db_squote($row['post']));
+			// Логирование удаления
+			if (function_exists('Plugins\\logger') && function_exists('Plugins\\get_ip')) {
+				\Plugins\logger('comments', sprintf(
+					'Comment #%d deleted by %s (ID: %d, IP: %s)',
+					$comid,
+					$userROW['name'],
+					$userROW['id'],
+					\Plugins\get_ip()
+				));
+			}
+			msg(array('type' => 'info', 'text' => $lang['comments:deleted.text']));
 			$output['status'] = 1;
-			$output['data'] = $lang['comments:deleted.text'];
+			$output['data'] = $template['vars']['mainblock'];
 			$params['newsid'] = $row['post'];
 		} else {
+			msg(array('type' => 'error', 'text' => $lang['comments:err.nocomment']));
 			$output['status'] = 0;
-			$output['data'] = $lang['comments:err.nocomment'];
+			$output['data'] = $template['vars']['mainblock'];
 		}
 	}
 	$SUPRESS_TEMPLATE_SHOW = 1;
@@ -536,14 +551,15 @@ function plugin_comments_delete()
 // Edit comment
 function plugin_comments_edit()
 {
-	global $mysql, $config, $userROW, $lang, $parse, $SUPRESS_TEMPLATE_SHOW;
+	global $mysql, $config, $userROW, $lang, $parse, $SUPRESS_TEMPLATE_SHOW, $template;
 	$SUPRESS_TEMPLATE_SHOW = 1;
 	$output = array();
 	$comment_id = intval($_REQUEST['id']);
 	// Проверка прав
 	if (!is_array($userROW) || ($userROW['status'] > 2)) {
+		msg(array('type' => 'error', 'text' => 'Недостаточно прав'));
 		$output['status'] = 0;
-		$output['data'] = 'Недостаточно прав';
+		$output['data'] = $template['vars']['mainblock'];
 		header('Content-Type: application/json; charset=utf-8');
 		echo json_encode($output);
 		exit;
@@ -554,8 +570,9 @@ function plugin_comments_edit()
 			$output['status'] = 1;
 			$output['text'] = str_replace('<br />', "\n", $row['text']);
 		} else {
+			msg(array('type' => 'error', 'text' => 'Комментарий не найден'));
 			$output['status'] = 0;
-			$output['data'] = 'Комментарий не найден';
+			$output['data'] = $template['vars']['mainblock'];
 		}
 	} elseif ($_REQUEST['action'] == 'save') {
 		// Сохранение отредактированного комментария
@@ -572,11 +589,22 @@ function plugin_comments_edit()
 				$updOK = $mysql->query("update " . prefix . "_comments set text=" . db_squote($new_text) . " where id=" . db_squote($comment_id));
 			}
 			if (!$updOK) {
+				msg(array('type' => 'error', 'text' => 'Не удалось сохранить комментарий (ошибка БД)'));
 				$output['status'] = 0;
-				$output['data'] = 'Не удалось сохранить комментарий (ошибка БД)';
+				$output['data'] = $template['vars']['mainblock'];
 				header('Content-Type: application/json; charset=utf-8');
 				echo json_encode($output);
 				exit;
+			}
+			// Логирование редактирования
+			if (function_exists('Plugins\\logger') && function_exists('Plugins\\get_ip')) {
+				\Plugins\logger('comments', sprintf(
+					'Comment #%d edited by %s (ID: %d, IP: %s)',
+					$comment_id,
+					$userROW['name'],
+					$userROW['id'],
+					\Plugins\get_ip()
+				));
 			}
 			// Формируем HTML для отображения
 			$display_text = $new_text;
@@ -595,11 +623,14 @@ function plugin_comments_edit()
 			$timestamp = pluginGetVariable('comments', 'timestamp');
 			if (!$timestamp) $timestamp = 'j.m.Y - H:i';
 			$edit_info = '<br/><small><i>Изменено: ' . LangDate($timestamp, $edit_date) . '</i></small>';
+			msg(array('type' => 'info', 'text' => 'Комментарий успешно обновлён'));
 			$output['status'] = 1;
 			$output['html'] = $display_text . $edit_info;
+			$output['data'] = $template['vars']['mainblock'];
 		} else {
+			msg(array('type' => 'error', 'text' => 'Комментарий не найден'));
 			$output['status'] = 0;
-			$output['data'] = 'Комментарий не найден';
+			$output['data'] = $template['vars']['mainblock'];
 		}
 	}
 	header('Content-Type: application/json; charset=utf-8');

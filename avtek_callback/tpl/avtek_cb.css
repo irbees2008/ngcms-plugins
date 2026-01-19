@@ -1,0 +1,94 @@
+.avtek-cb {
+    max-width: 640px
+}
+
+.avtek-cb-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px
+}
+
+.avtek-cb-field label {
+    display: block;
+    font-weight: 600;
+    margin: 0 0 4px
+}
+
+.avtek-cb-field input,
+.avtek-cb-field select,
+.avtek-cb-field textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-sizing: border-box
+}
+
+.avtek-cb-field textarea {
+    min-height: 90px
+}
+
+.avtek-cb-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap
+}
+
+.avtek-cb-actions button {
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 10px;
+    cursor: pointer
+}
+
+.avtek-cb-msg {
+    padding: 8px 12px;
+    border-radius: 10px
+}
+
+.avtek-cb-msg.ok {
+    background: #e8fff1
+}
+
+.avtek-cb-msg.err {
+    background: #fff0f0
+}
+
+.avtek-cb-req {
+    color: #c00
+}
+
+.avtek-cb-modal-backdrop {
+    position: fixed;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, .55);
+    display: none;
+    z-index: 9999
+}
+
+.avtek-cb-modal {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    padding: 18px;
+    border-radius: 14px;
+    max-width: 720px;
+    width: 92%;
+    display: none;
+    z-index: 10000
+}
+
+.avtek-cb-modal .close {
+    position: absolute;
+    right: 12px;
+    top: 10px;
+    cursor: pointer;
+    font-size: 18px
+}

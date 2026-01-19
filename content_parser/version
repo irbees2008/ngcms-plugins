@@ -1,0 +1,16 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+
+ID: content_parser
+Name: Парсер контента 
+Version: 0.01
+Acts: index, ppages
+File: content_parser.php
+Config: config.php
+Type: plugin
+Description: Парсер контента из rss каналов
+Author: irbees2008
+Author_URI: http://rostunov.com
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-info fa-3x" aria-hidden="true"></i>

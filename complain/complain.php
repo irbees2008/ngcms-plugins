@@ -1,6 +1,8 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
+use function Plugins\{logger, get_ip, sanitize, validate_email};
 // Ensure plugin assets are attached globally so links with class `complain-open` work on any page
 $home = isset($config['home_url']) ? rtrim($config['home_url'], '/') : '';
 $cssPath = $home . '/engine/plugins/complain/tpl/complain.css';
@@ -238,19 +240,27 @@ function plugin_complain_post()
 		$flagNotify = ((pluginGetVariable('complain', 'inform_reporter') == '1') || ((pluginGetVariable('complain', 'inform_reporter') == '2') && ($_REQUEST['notify']))) ? 1 : 0;
 		$publisherMail = $userROW['mail'];
 	} else {
-		if ((strlen($_REQUEST['mail']) < 70) && (preg_match("/^[\.A-z0-9_\-]+[@][A-z0-9_\-]+([.][A-z0-9_\-]+)+[A-z]{1,4}$/", $_REQUEST['mail']))) {
+		// Use validate_email for proper email validation
+		if (!empty($_REQUEST['mail']) && validate_email($_REQUEST['mail'])) {
 			$publisherMail = $_REQUEST['mail'];
 		} else {
 			$publisherMail = '';
+			if (!empty($_REQUEST['mail'])) {
+				logger('complain', 'Invalid email provided: ' . sanitize($_REQUEST['mail']) . ', IP=' . get_ip());
+			}
 		}
 		$flagNotify = (pluginGetVariable('complain', 'allow_unreg_inform') && $publisherMail) ? 1 : 0;
 	}
-	// Text error description
-	$errorText = ((is_array($userROW) && (pluginGetVariable('complain', 'allow_text') == 1)) || (pluginGetVariable('complain', 'allow_text') == 2)) ? $_REQUEST['error_text'] : '';
+	// Text error description with sanitization
+	$errorText = ((is_array($userROW) && (pluginGetVariable('complain', 'allow_text') == 1)) || (pluginGetVariable('complain', 'allow_text') == 2)) ? sanitize($_REQUEST['error_text']) : '';
 	// Fill flags variable
 	$flags = $flagNotify ? 'N' : '';
 	// Let's make a report
 	$mysql->query("insert into " . prefix . "_complain (author_id, publisher_id, publisher_ip, publisher_mail, date, ds_id, entry_id, error_code, error_text, flags) values (" . db_squote($cdata['author_id']) . ", " . db_squote(is_array($userROW) ? $userROW['id'] : 0) . ", " . db_squote($ip) . ", " . db_squote($publisherMail) . ", now(), " . db_squote($cdata['ds_id']) . ", " . db_squote($cdata['id']) . ", " . db_squote($errid) . ", " . db_squote($errorText) . ", " . db_squote($flags) . ")");
+
+	// Log complain creation
+	$userInfo = is_array($userROW) ? $userROW['name'] : 'guest';
+	logger('complain', 'New complaint: error=' . $errid . ', entry=' . $cdata['id'] . ', user=' . $userInfo . ', IP=' . get_ip());
 	// Write a mail (if needed)
 	if (pluginGetVariable('complain', 'inform_author') || pluginGetVariable('complain', 'inform_admin') || pluginGetVariable('complain', 'inform_admins')) {
 		$tmvars = array(
@@ -267,6 +277,7 @@ function plugin_complain_post()
 		// Inform author
 		if (pluginGetVariable('complain', 'inform_author') && strlen($cdata['author_mail'])) {
 			zzMail($cdata['author_mail'], $lang['complain:mail.open.subj'], $mail_text, 'text');
+			logger('complain', 'Email sent to author: ' . $cdata['author'] . ', email=' . $cdata['author_mail']);
 		}
 		// Inform site admins
 		if (pluginGetVariable('complain', 'inform_admin')) {
@@ -340,6 +351,7 @@ function plugin_complain_update()
 		// Admins can change all ownerships, users - can set ownership only for their news
 		// that are not already owned by anyone
 		$mysql->query("update " . prefix . "_complain set owner_id = " . db_squote($userROW['id']) . " where id in (" . join(",", $ilist) . ")" . (($userROW['status'] > 1 && (!in_array($userROW['name'], $admins))) ? ' and owner_id = 0 and author_id=' . db_squote($userROW['id']) : ''));
+		logger('complain', 'Owner changed for incidents: ' . join(',', $ilist) . ', new_owner=' . $userROW['name'] . ', IP=' . get_ip());
 	}
 	// Change status
 	if ($_REQUEST['setstatus'] == '1') {
@@ -376,6 +388,7 @@ function plugin_complain_update()
 			}
 			// Update report status
 			$mysql->query("update " . prefix . "_complain set status = " . db_squote($newstatus) . ((($newstatus == 3) || ($newstatus == 4)) ? ", complete = 1, rdate = now()" : '') . " where id = " . db_squote($irow['id']));
+			logger('complain', 'Status changed: id=' . $irow['id'] . ', old_status=' . $irow['status'] . ', new_status=' . $newstatus . ', user=' . $userROW['name'] . ', IP=' . get_ip());
 		}
 	}
 	$tpl->template('infoblock', $tpath['infoblock']);

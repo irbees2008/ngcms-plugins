@@ -10,6 +10,13 @@ LoadPluginLang('breadcrumbs', 'config', '', 'bc', ':');
 $cfg = array();
 array_push($cfg, array('descr' => $lang['bc:description']));
 array_push($cfg, array(
+	'name'   => 'hide_on_main',
+	'title'  => $lang['bc:hide_on_main'] ?? 'Скрывать на главной странице',
+	'type'   => 'select',
+	'values' => array(1 => $lang['yesa'], 0 => $lang['noa']),
+	'value'  => intval(pluginGetVariable($plugin, 'hide_on_main'))
+));
+array_push($cfg, array(
 	'name'   => 'block_full_path',
 	'title'  => $lang['bc:block_full_path'],
 	'type'   => 'select',

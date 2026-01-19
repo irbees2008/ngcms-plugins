@@ -6,7 +6,10 @@
 // Author: Vitaly Ponomarev, Alexey Zinchenko
 //
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
+
+use function Plugins\{time_ago, excerpt};
+
 //
 // Show comments for a news
 // $newsID - [required] ID of the news for that comments should be showed
@@ -20,7 +23,8 @@ if (!defined('NGCMS')) die ('HAL');
 //		'limitCount' => number of comments to show (for pagination)
 //		'outprint'	 => flag: if set, output will be returned, elsewhere - will be added to mainblock
 //		'total'		=> total number of comments in this news
-function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams = array()) {
+function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams = array())
+{
 
 	global $mysql, $tpl, $template, $config, $userROW, $parse, $lang, $PFILTERS, $TemplateCache;
 	// Preload template configuration variables
@@ -55,7 +59,8 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 			}
 		}
 	//print "ARRAY CFG: <pre>".var_export($joinFilter, true)."</pre>";
-	function _cs_am($k) {
+	function _cs_am($k)
+	{
 
 		return 'u.' . $k . ' as `users_' . $k . '`';
 	}
@@ -95,6 +100,7 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 			$tvars['vars']['edit_info'] = '';
 		}
 		$tvars['vars']['date'] = LangDate($timestamp, $row['postdate']);
+		$tvars['vars']['time_ago'] = time_ago($row['postdate']);
 		if ($row['reg'] && getPluginStatusActive('uprofile')) {
 			$tvars['vars']['profile_link'] = checkLinkAvailable('uprofile', 'show') ?
 				generateLink('uprofile', 'show', array('name' => $row['author'], 'id' => $row['author_id'])) :
@@ -126,6 +132,7 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 		} else {
 		*/
 		$tvars['vars']['comment-short'] = $text;
+		$tvars['vars']['comment_preview'] = excerpt($text, 150);
 		$tvars['regx']["'\[comment_full\](.*?)\[/comment_full\]'si"] = '';
 		/* } */
 		if ($commID && $commDisplayNum) {
@@ -194,14 +201,14 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 				$canDelete = true;
 			}
 		}
-		
+
 		$tvars['vars']['can_edit'] = $canEdit;
 		$tvars['vars']['can_delete'] = $canDelete;
 		$tvars['vars']['can_admin_reply'] = $canAdminReply;
 		$tvars['vars']['text'] = $tvars['vars']['comment-short'];
 		$tvars['vars']['newsid'] = $newsID;
 		$tvars['vars']['admin_url'] = admin_url;
-		
+
 		if (is_array($userROW) && (($userROW['status'] == 1) || ($userROW['status'] == 2))) {
 			$edit_link = admin_url . "/admin.php?mod=editcomments&amp;newsid=" . $newsID . "&amp;comid=" . $row['id'];
 			$delete_link = generateLink('core', 'plugin', array('plugin' => 'comments', 'handler' => 'delete'), array('id' => $row['id'], 'uT' => genUToken($row['id'])), true);
@@ -254,7 +261,8 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 //		'overrideTemplatePath'	=> alternative path for searching of template
 //		'noajax'		=> DISABLE AJAX mode
 //		'outprint'	 	=> flag: if set, output will be returned, elsewhere - will be added to mainblock
-function comments_showform($newsID, $callingParams = array()) {
+function comments_showform($newsID, $callingParams = array())
+{
 
 	global $mysql, $config, $template, $tpl, $userROW, $PFILTERS;
 	// -> desired template path

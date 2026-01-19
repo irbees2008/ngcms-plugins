@@ -1,6 +1,16 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
+// Modified with ng-helpers v0.2.0 functions (2026)
+// - Replaced cacheRetrieveFile/cacheStoreFile with cache_get/cache_put
+// - Added sanitize for tag input cleaning
+// - Added logger for tag operations tracking
+// - Added str_limit for tag length validation
+
+// Import ng-helpers functions
+use function Plugins\{cache_get, cache_put, sanitize, logger, str_limit};
+
 // Safe stub to avoid undefined function in analysis/dev environments
 if (!function_exists('loadCategoryMap')) {
 	function loadCategoryMap() {}
@@ -21,9 +31,9 @@ class TagsNewsfilter extends NewsFilter
 	{
 		// Scan tags, delete dups
 		$tags = array();
-		$tagsInput = $_REQUEST['tags'] ?? '';
+		$tagsInput = sanitize($_REQUEST['tags'] ?? '', 'string');
 		foreach (explode(",", $tagsInput) as $tag) {
-			$tag = trim($tag);
+			$tag = str_limit(trim($tag), 100); // Limit tag length to 100 chars
 			if (!strlen($tag)) continue;
 			$tags[$tag] = 1;
 		}
@@ -68,6 +78,7 @@ class TagsNewsfilter extends NewsFilter
 		// Recreate indexes for this news
 		if (count($tagsNewQ))
 			$mysql->query("insert into " . prefix . "_tags_index (newsID, tagID) select " . db_squote($newsid) . ", id from " . prefix . "_tags where tag in (" . join(",", $tagsNewQ) . ")");
+		logger('tags', 'News added with tags: newsid=' . $newsid . ', tags=' . count($tagsNew) . ' (' . implode(', ', $tagsNew) . ')');
 		return 1;
 	}
 
@@ -155,8 +166,9 @@ class TagsNewsfilter extends NewsFilter
 			$SQLnew['tags'] = $SQLold['tags'];
 			return 1;
 		}
-		foreach (explode(",", $_REQUEST['tags']) as $tag) {
-			$tag = trim($tag);
+		$tagsInput = sanitize($_REQUEST['tags'], 'string');
+		foreach (explode(",", $tagsInput) as $tag) {
+			$tag = str_limit(trim($tag), 100); // Limit tag length to 100 chars
 			if (!strlen($tag)) continue;
 			$tags[$tag] = 1;
 		}
@@ -217,6 +229,8 @@ class TagsNewsfilter extends NewsFilter
 		// Recreate indexes for this news
 		if (count($tagsNewQ))
 			$mysql->query("insert into " . prefix . "_tags_index (newsID, tagID) select " . db_squote($newsID) . ", id from " . prefix . "_tags where tag in (" . join(",", $tagsNewQ) . ")");
+		if (count($tagsDiffQ))
+			logger('tags', 'News tags updated: newsid=' . $newsID . ', added=' . count($tagsAddQ) . ', removed=' . count($tagsDelQ));
 		return 1;
 	}
 	// Add {plugin_tags_news} variable into news
@@ -275,7 +289,9 @@ class TagsNewsfilter extends NewsFilter
 		global $mysql;
 		$mysql->query("update " . prefix . "_tags set posts = posts-1 where id in (select tagID from " . prefix . "_tags_index where newsID=" . intval($newsID) . ")");
 		$mysql->query("delete from " . prefix . "_tags_index where newsID = " . intval($newsID));
-		$mysql->query("delete from " . prefix . "_tags where posts = 0");
+		$deletedCount = $mysql->query("delete from " . prefix . "_tags where posts = 0");
+		if ($deletedCount > 0)
+			logger('tags', 'News deleted: newsid=' . $newsID . ', cleaned unused tags: ' . $deletedCount);
 		return 1;
 	}
 	// Mass news modify
@@ -465,10 +481,10 @@ function plugin_tags_generatecloud($ppage = 0, $catlist = '', $age = 0)
 		}
 	}
 	// Generate cache file name [ we should take into account SWITCHER plugin ]
-	$cacheFileName = md5('tags' . $config['home_url'] . $config['theme'] . $config['default_lang'] . $masterTPL . ('page' . (isset($_REQUEST['page']) ? $_REQUEST['page'] : '')) . 'age' . $age . 'cat' . (is_array($cl) ? join(",", $cl) : $cl)) . '.txt';
+	$cacheKey = 'tags:cloud:' . md5($config['home_url'] . $config['theme'] . $config['default_lang'] . $masterTPL . ('page' . (isset($_REQUEST['page']) ? $_REQUEST['page'] : '')) . 'age' . $age . 'cat' . (is_array($cl) ? join(",", $cl) : $cl));
 	if (pluginGetVariable('tags', 'cache')) {
-		$cacheData = cacheRetrieveFile($cacheFileName, pluginGetVariable('tags', 'cacheExpire'), 'tags');
-		if ($cacheData != false) {
+		$cacheData = cache_get($cacheKey);
+		if ($cacheData !== null) {
 			// We got data from cache. Return it and stop
 			$template['vars'][$ppage ? 'mainblock' : 'plugin_tags'] = $cacheData;
 			return;
@@ -596,8 +612,10 @@ function plugin_tags_generatecloud($ppage = 0, $catlist = '', $age = 0)
 	$tpl->vars($masterTPL, $tvars);
 	$output = $tpl->show($masterTPL);
 	$template['vars'][$ppage ? 'mainblock' : 'plugin_tags'] = $output;
-	if (pluginGetVariable('tags', 'cache'))
-		cacheStoreFile($cacheFileName, $output, 'tags');
+	if (pluginGetVariable('tags', 'cache')) {
+		cache_put($cacheKey, $output, pluginGetVariable('tags', 'cacheExpire'));
+		logger('tags', 'Tags cloud cached: type=' . $masterTPL . ', tags=' . $tagCount . ', age=' . $age . ', categories=' . count($cl));
+	}
 }
 /**
  * Функция для вызова плагина Tags через callPlugin()

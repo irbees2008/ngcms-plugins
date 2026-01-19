@@ -3,7 +3,7 @@
 ;
 ID: bookmarks
 Name: Users Bookmarks
-Version: 2.6
+Version: 2.7
 Acts: index, news, ppages
 File: bookmarks.php
 Type: widget
@@ -11,7 +11,7 @@ Install: install.php
 Deinstall: uninstall.php
 Config: config.php
 Description: Закладки пользователей
-Author: Wolverine, kt2k
+Author: Wolverine, kt2k,irbees2008,copliot
 Author_URI: http://digitalplace.ru/
 Preinstall: no
 MinEngineBuild: 23b3116

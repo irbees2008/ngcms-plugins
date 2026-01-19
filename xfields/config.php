@@ -3,6 +3,10 @@
 if (!defined('NGCMS')) {
     die('HAL');
 }
+
+// Modernized with ng-helpers v0.2.1 (18 января 2026)
+use function Plugins\{notify, sanitize, logger};
+
 // Load lang files
 LoadPluginLang('xfields', 'config');
 LoadPluginLang('xfields', 'config', '', 'xfconfig', '#');
@@ -252,16 +256,19 @@ function doAddEdit()
     $editMode = $_REQUEST['edit'] ? 1 : 0;
     // Check if field exists or not [depends on mode]
     if ($editMode && (!isset($xf[$sectionID][$field]) || !is_array($xf[$sectionID][$field]))) {
-        msg(['type' => 'error', 'text' => $lang['xfields_msge_noexists']]);
+        notify('error', $lang['xfields_msge_noexists']);
+        logger("Field not exists: {$field}, section: {$sectionID}", 'error');
         $error = 1;
     } elseif (!$editMode && (isset($xf[$sectionID][$field]) && is_array($xf[$sectionID][$field]))) {
-        msg(['type' => 'error', 'text' => $lang['xfields_msge_exists']]);
+        notify('error', $lang['xfields_msge_exists']);
+        logger("Field already exists: {$field}, section: {$sectionID}", 'error');
         $error = 1;
     }
     // Check if Field name fits our requirements
     if (!$editMode) {
         if (!preg_match('/^[a-z]{1}[a-z0-9]{2}[a-z0-9]*$/', $field)) {
-            msg(['type' => 'error', 'text' => $lang['xfields_msge_format']]);
+            notify('error', $lang['xfields_msge_format']);
+            logger("Invalid field name format: {$field}", 'error');
             $error = 1;
         }
     }
@@ -380,7 +387,8 @@ function doAddEdit()
                     (($data['storekeys']) && (!array_key_exists($data['default'], $optlist))) ||
                     ((!$data['storekeys']) && (!in_array($data['default'], $optlist)))
                 ) {
-                    msg(['type' => 'error', 'text' => $lang['xfields_msge_errdefault']]);
+                    notify('error', $lang['xfields_msge_errdefault']);
+                    logger("Invalid default value for multiselect field: {$field}, value: {$data['default']}", 'error');
                     $error = 1;
                 }
             }
@@ -400,11 +408,13 @@ function doAddEdit()
             break;
     }
     if (!$data['type']) {
-        msg(['type' => 'error', 'text' => $lang['xfields_msge_errtype']]);
+        notify('error', $lang['xfields_msge_errtype']);
+        logger("Empty field type: {$field}", 'error');
         $error = 1;
     }
     if (!$data['title']) {
-        msg(['type' => 'error', 'text' => $lang['xfields_msge_errtitle']]);
+        notify('error', $lang['xfields_msge_errtitle']);
+        logger("Empty field title: {$field}", 'error');
         $error = 1;
     }
     // Check for storage params
@@ -414,12 +424,14 @@ function doAddEdit()
     if ($data['storage']) {
         // Check for correct DB type
         if (!in_array($data['db.type'], ['int', 'decimal', 'char', 'datetime', 'text'])) {
-            msg(['type' => 'error', 'text' => $lang['xfields_error.db.type']]);
+            notify('error', $lang['xfields_error.db.type']);
+            logger("Invalid DB type: {$field}, type: {$data['db.type']}", 'error');
             $error = 1;
         }
         // Check for correct DB len (if applicable)
         if (($data['db.type'] == 'char') && ((intval($data['db.len']) < 1) || (intval($data['db.len']) > 255))) {
-            msg(['type' => 'error', 'text' => $lang['xfields_error.db.len']]);
+            notify('error', $lang['xfields_error.db.len']);
+            logger("Invalid DB length: {$field}, len: {$data['db.len']}", 'error');
             $error = 1;
         }
     }
@@ -434,7 +446,8 @@ function doAddEdit()
     }
     $XF[$sectionID][$field] = $data;
     if (!xf_configSave()) {
-        msg(['type' => 'error', 'text' => $lang['xfields_msge_errcsave']]);
+        notify('error', $lang['xfields_msge_errcsave']);
+        logger("Failed to save config: {$field}, section: {$sectionID}", 'error');
         showAddEditForm($data, $editMode, $field);
         return;
     }
@@ -534,7 +547,8 @@ function doUpdate()
     $field = $_REQUEST['field'];
     // Check if field exists or not [depends on mode]
     if (!isset($xf[$sectionID][$field]) || !is_array($xf[$sectionID][$field])) {
-        msg(['type' => 'error', 'text' => $lang['xfields_msge_noexists'] . '(' . $sectionID . ': ' . $field . ')']);
+        notify('error', $lang['xfields_msge_noexists'] . '(' . $sectionID . ': ' . $field . ')');
+        logger("Field not found for update: {$field}, section: {$sectionID}", 'error');
         $error = 1;
     }
     $notif = '';
@@ -568,7 +582,8 @@ function doUpdate()
             $notif = $lang['xfields_updateunk'];
     }
     if (!xf_configSave()) {
-        msg(['type' => 'error', 'text' => $lang['xfields_msge_errcsave']]);
+        notify('error', $lang['xfields_msge_errcsave']);
+        logger("Failed to save config after update: {$field}, section: {$sectionID}, action: {$_REQUEST['subaction']}", 'error');
         return;
     }
     $xf = $XF;

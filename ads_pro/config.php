@@ -41,34 +41,38 @@ switch ($_REQUEST['action']) {
 	default:
 		main();
 }
-function main() {
-
+function main()
+{
 	global $tpl, $lang;
 	$tpath = locatePluginTemplates(array('conf.main', 'conf.general'), 'ads_pro', 1);
 	$s_news = pluginGetVariable('ads_pro', 'support_news');
 	$s_news_sort = pluginGetVariable('ads_pro', 'news_cfg_sort');
 	$s_multidisplay = pluginGetVariable('ads_pro', 'multidisplay_mode');
+
 	$ttvars = array();
 	$ttvars['vars'] = array(
-		'action'              => $lang['ads_pro:button_general'],
-		's_news0'             => ($s_news ? '' : ' selected'),
-		's_news1'             => ($s_news ? ' selected' : ''),
-		's_news_sort0'        => ($s_news_sort ? '' : ' selected'),
-		's_news_sort1'        => ($s_news_sort ? ' selected' : ''),
-		'multidisplay_mode_0' => (($s_multidisplay == 0) ? ' selected' : ''),
-		'multidisplay_mode_1' => (($s_multidisplay == 1) ? ' selected' : ''),
-		'multidisplay_mode_2' => (($s_multidisplay == 2) ? ' selected' : ''),
+		'action' => $lang['ads_pro:button_general'],
+		's_news' => $s_news,
+		's_news_sort' => $s_news_sort,
+		'multidisplay_mode' => $s_multidisplay,
+		'lang' => $lang,
 	);
+
 	$tpl->template('conf.general', $tpath['conf.general']);
 	$tpl->vars('conf.general', $ttvars);
 	$tvars['vars']['entries'] = $tpl->show('conf.general');
 	$tvars['vars']['action'] = $lang['ads_pro:button_general'];
+	$tvars['vars']['tab_general_active'] = 'active';
+	$tvars['vars']['tab_list_active'] = '';
+	$tvars['vars']['tab_add_active'] = '';
+	$tvars['vars']['lang'] = $lang;
 	$tpl->template('conf.main', $tpath['conf.main']);
 	$tpl->vars('conf.main', $tvars);
 	print $tpl->show('conf.main');
 }
 
-function main_submit() {
+function main_submit()
+{
 
 	global $tpl, $lang;
 	$chg = 0;
@@ -89,54 +93,62 @@ function main_submit() {
 	}
 	if ($chg) {
 		pluginsSaveConfig();
-
 	}
 	//main();
 	print_commit_complete('ads_pro');
 }
 
-function showlist() {
-
+function showlist()
+{
 	global $tpl, $lang;
-	$tpath = locatePluginTemplates(array('conf.main', 'conf.list', 'conf.list.row'), 'ads_pro', 1);
+	$tpath = locatePluginTemplates(array('conf.main', 'conf.list'), 'ads_pro', 1);
 	$var = pluginGetVariable('ads_pro', 'data');
 	// Синхронизация с базой данных
 	if (function_exists('ads_pro_sync_with_database')) {
 		$var = ads_pro_sync_with_database($var);
 	}
-	$output = '';
+
+	$items = [];
 	$t_time = time();
 	$t_state = array(0 => $lang['ads_pro:label_off'], 1 => $lang['ads_pro:label_on'], 2 => $lang['ads_pro:label_sched']);
 	$t_type = array(0 => $lang['ads_pro:html'], 1 => $lang['ads_pro:php'], 2 => $lang['ads_pro:text']);
+
 	foreach ($var as $k => $v) {
 		foreach ($v as $kk => $vv) {
-			$pvars['vars']['name'] = $k ? $k : $lang['ads_pro:error_name'];
-			$pvars['vars']['id'] = $kk;
-			$pvars['vars']['description'] = $vv['description'];
 			$if_view = $vv['state'] ? true : false;
 			if ($vv['start_view'] && $vv['start_view'] > $t_time)
 				$if_view = false;
 			if ($vv['end_view'] && $vv['end_view'] <= $t_time)
 				$if_view = false;
-			$pvars['vars']['online'] = ($if_view || $vv['state'] == 1) ? $lang['ads_pro:online_on'] : $lang['ads_pro:online_off'];
-			$pvars['vars']['state'] = $t_state[$vv['state']];
-			$pvars['vars']['type'] = $t_type[$vv['type']];
-			$tpl->template('conf.list.row', $tpath['conf.list.row']);
-			$tpl->vars('conf.list.row', $pvars);
-			$output .= $tpl->show('conf.list.row');
+
+			$items[] = [
+				'id' => $kk,
+				'name' => $k ? $k : $lang['ads_pro:error_name'],
+				'description' => $vv['description'],
+				'type' => $t_type[$vv['type']],
+				'state' => $t_state[$vv['state']],
+				'online' => ($if_view || $vv['state'] == 1) ? $lang['ads_pro:online_on'] : $lang['ads_pro:online_off']
+			];
 		}
 	}
-	$ttvars['vars']['entries'] = $output;
+
+	$ttvars['vars']['items'] = $items;
+	$ttvars['vars']['lang'] = $lang;
 	$tpl->template('conf.list', $tpath['conf.list']);
 	$tpl->vars('conf.list', $ttvars);
 	$tvars['vars']['entries'] = $tpl->show('conf.list');
 	$tvars['vars']['action'] = $lang['ads_pro:button_list'];
+	$tvars['vars']['tab_general_active'] = '';
+	$tvars['vars']['tab_list_active'] = 'active';
+	$tvars['vars']['tab_add_active'] = '';
+	$tvars['vars']['lang'] = $lang;
 	$tpl->template('conf.main', $tpath['conf.main']);
 	$tpl->vars('conf.main', $tvars);
 	print $tpl->show('conf.main');
 }
 
-function add() {
+function add()
+{
 
 	global $mysql, $tpl, $lang;
 	$PluginsList = getPluginsActiveList();
@@ -156,7 +168,7 @@ function add() {
 				if ($id == $kk) {
 					$var = $vv;
 					$name = $k ? $k : '';
-					break(2);
+					break (2);
 				}
 			}
 		}
@@ -185,7 +197,7 @@ function add() {
 		$t_category_list[$row['id']] = $row['name'];
 		$ttvars['vars']['category_list'] .= "\n\t\t\t" . 'subsubel = document.createElement("option");' . "\n";
 		$ttvars['vars']['category_list'] .= "\t\t\t" . 'subsubel.setAttribute("value", "' . $row['id'] . '");' . "\n";
-		$ttvars['vars']['category_list'] .= "\t\t\t" . 'subsubel.appendChild(document.createTextNode("' . htmlspecialchars($row['name']) . '"));' . "\n";
+		$ttvars['vars']['category_list'] .= "\t\t\t" . 'subsubel.appendChild(document.createTextNode("' . str_replace(["\r\n", "\n", "\r"], ' ', htmlspecialchars($row['name'])) . '"));' . "\n";
 		$ttvars['vars']['category_list'] .= "\t\t\t" . 'subel.appendChild(subsubel);' . "\n";
 	}
 	$ttvars['vars']['static_list'] = "\n";
@@ -198,7 +210,7 @@ function add() {
 		$t_static_list[$row['id']] = $row['title'];
 		$ttvars['vars']['static_list'] .= "\n\t\t\t" . 'subsubel = document.createElement("option");' . "\n";
 		$ttvars['vars']['static_list'] .= "\t\t\t" . 'subsubel.setAttribute("value", "' . $row['id'] . '");' . "\n";
-		$ttvars['vars']['static_list'] .= "\t\t\t" . 'subsubel.appendChild(document.createTextNode("' . htmlspecialchars($row['title']) . '"));' . "\n";
+		$ttvars['vars']['static_list'] .= "\t\t\t" . 'subsubel.appendChild(document.createTextNode("' . str_replace(["\r\n", "\n", "\r"], ' ', htmlspecialchars($row['title'])) . '"));' . "\n";
 		$ttvars['vars']['static_list'] .= "\t\t\t" . 'subel.appendChild(subsubel);' . "\n";
 	}
 	if (pluginGetVariable('ads_pro', 'support_news')) {
@@ -212,12 +224,11 @@ function add() {
 			$t_news_list[$row['id']] = $row['title'];
 			$ttvars['vars']['news_list'] .= "\n\t\t\t" . 'subsubel = document.createElement("option");' . "\n";
 			$ttvars['vars']['news_list'] .= "\t\t\t" . 'subsubel.setAttribute("value", "' . $row['id'] . '");' . "\n";
-			$ttvars['vars']['news_list'] .= "\t\t\t" . 'subsubel.appendChild(document.createTextNode("' . htmlspecialchars((pluginGetVariable('ads_pro', 'news_cfg_sort') ? '' : ($row['id'] . ' :: ')) . $row['title']) . '"));' . "\n";
+			$ttvars['vars']['news_list'] .= "\t\t\t" . 'subsubel.appendChild(document.createTextNode("' . str_replace(["\r\n", "\n", "\r"], ' ', htmlspecialchars((pluginGetVariable('ads_pro', 'news_cfg_sort') ? '' : ($row['id'] . ' :: ')) . $row['title'])) . '"));' . "\n";
 			$ttvars['vars']['news_list'] .= "\t\t\t" . 'subel.appendChild(subsubel);' . "\n";
 		}
-		$ttvars['regx']['#\[support_news\](.*?)\[\/support_news\]#si'] = '$1';
 	} else {
-		$ttvars['regx']['#\[support_news\](.*?)\[\/support_news\]#si'] = '';
+		$ttvars['vars']['news_list'] = '';
 	}
 	if ($id) {
 		$ttvars['vars']['id'] = $id;
@@ -238,21 +249,35 @@ function add() {
 		}
 		$ttvars['vars']['ads_blok'] = '';
 		foreach ($mysql->select("select ads_blok from " . prefix . "_ads_pro where id=" . db_squote($id) . " limit 1") as $row) $ttvars['vars']['ads_blok'] = $row['ads_blok'];
+	} else {
+		// Инициализация переменных для режима add
+		$ttvars['vars']['name'] = '';
+		$ttvars['vars']['description'] = '';
+		$ttvars['vars']['start_view'] = '';
+		$ttvars['vars']['end_view'] = '';
+		$ttvars['vars']['location_list'] = '';
+		$ttvars['vars']['ads_blok'] = '';
 	}
 	$ttvars['vars']['type_list'] = MakeDropDown(array(0 => $lang['ads_pro:html'], 1 => $lang['ads_pro:php'], 2 => $lang['ads_pro:text']), 'type', ($id) ? $var['type'] : 0);
 	$ttvars['vars']['state_list'] = MakeDropDown(array(0 => $lang['ads_pro:label_off'], 1 => $lang['ads_pro:label_on'], 2 => $lang['ads_pro:label_sched']), 'state', ($id) ? $var['state'] : 0);
-	$ttvars['regx']['/\[add\](.*?)\[\/add\]/si'] = ($id) ? '' : '$1';
-	$ttvars['regx']['/\[edit\](.*?)\[\/edit\]/si'] = ($id) ? '$1' : '';
+	$ttvars['vars']['mode'] = ($id) ? 'edit' : 'add';
+	$ttvars['vars']['support_news'] = pluginGetVariable('ads_pro', 'support_news');
+	$ttvars['vars']['lang'] = $lang;
 	$tpl->template('conf.add_edit.form', $tpath['conf.add_edit.form']);
 	$tpl->vars('conf.add_edit.form', $ttvars);
 	$tvars['vars']['entries'] = $tpl->show('conf.add_edit.form');
 	$tvars['vars']['action'] = $id ? $lang['ads_pro:button_edit'] : $lang['ads_pro:button_add'];
+	$tvars['vars']['tab_general_active'] = '';
+	$tvars['vars']['tab_list_active'] = '';
+	$tvars['vars']['tab_add_active'] = 'active';
+	$tvars['vars']['lang'] = $lang;
 	$tpl->template('conf.main', $tpath['conf.main']);
 	$tpl->vars('conf.main', $tvars);
 	print $tpl->show('conf.main');
 }
 
-function add_submit() {
+function add_submit()
+{
 
 	global $mysql, $parse, $lang;
 	$id = isset($_REQUEST['id']) ? intval($_REQUEST['id']) : 0;
@@ -263,7 +288,6 @@ function add_submit() {
 	$location = $_REQUEST['location'] ?? [];
 	array_walk_recursive($location, function (&$value) {
 		$value = intval($value);
-
 	});
 
 	$state = intval($_REQUEST['state']);
@@ -308,7 +332,8 @@ function add_submit() {
 	print_commit_complete('ads_pro');
 }
 
-function move($action) {
+function move($action)
+{
 
 	$id = intval($_REQUEST['id']);
 	$var = pluginGetVariable('ads_pro', 'data');
@@ -358,38 +383,40 @@ function move($action) {
 	showlist();
 }
 
-function GetTimeStamp($date) {
-    $parts = explode(' ', trim($date));
-    if (count($parts) > 2) {
-        return null;
-    }
-
-    $tdate = explode('.', $parts[0]);
-    if (count($tdate) !== 3 || !is_numeric($tdate[0]) || !is_numeric($tdate[1]) || !is_numeric($tdate[2])) {
-        return null;
-    }
-
-    $ttime = [0, 0];
-    if (isset($parts[1])) {
-        $ttime = explode(':', $parts[1]);
-        if (count($ttime) !== 2 || !is_numeric($ttime[0]) || !is_numeric($ttime[1])) {
-            return null;
-        }
-    }
-
-    list($day, $month, $year) = $tdate;
-    list($hour, $minute) = $ttime;
-
-    if ($year < 0 || $month < 1 || $month > 12 || $day < 1 || $day > 31) {
-        return null;
+function GetTimeStamp($date)
+{
+	$parts = explode(' ', trim($date));
+	if (count($parts) > 2) {
+		return null;
 	}
 
-    $timestamp = mktime((int)$hour, (int)$minute, 0, (int)$month, (int)$day, (int)$year);
+	$tdate = explode('.', $parts[0]);
+	if (count($tdate) !== 3 || !is_numeric($tdate[0]) || !is_numeric($tdate[1]) || !is_numeric($tdate[2])) {
+		return null;
+	}
 
-    return $timestamp;
+	$ttime = [0, 0];
+	if (isset($parts[1])) {
+		$ttime = explode(':', $parts[1]);
+		if (count($ttime) !== 2 || !is_numeric($ttime[0]) || !is_numeric($ttime[1])) {
+			return null;
+		}
+	}
+
+	list($day, $month, $year) = $tdate;
+	list($hour, $minute) = $ttime;
+
+	if ($year < 0 || $month < 1 || $month > 12 || $day < 1 || $day > 31) {
+		return null;
+	}
+
+	$timestamp = mktime((int)$hour, (int)$minute, 0, (int)$month, (int)$day, (int)$year);
+
+	return $timestamp;
 }
 
-function delete() {
+function delete()
+{
 
 	global $mysql, $lang;
 	$id = intval($_REQUEST['id']);
@@ -419,7 +446,8 @@ function delete() {
 	showlist();
 }
 
-function clear_cash() {
+function clear_cash()
+{
 
 	if (($dir = get_plugcache_dir('ads_pro'))) {
 		if ($handle = opendir($dir)) {

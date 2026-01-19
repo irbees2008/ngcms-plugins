@@ -3,31 +3,40 @@
  * sitemap for Next Generation CMS (http://ngcms.ru/)
  * Copyright (C) 2010 Alexey N. Zhukov (http://digitalplace.ru), kt2k (http://kt2k.ru/)
  * http://digitalplace.ru
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or (at
  * your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  *
  */
-if (!defined('NGCMS')) die ('Galaxy in danger');
+if (!defined('NGCMS')) die('Galaxy in danger');
+
+// Modified with ng-helpers v0.2.0 functions (2026)
+// - Replaced cacheRetrieveFile/cacheStoreFile with cache_get/cache_put
+// - Added logging support for sitemap generation
+
+// Import ng-helpers functions
+use function Plugins\{cache_get, cache_put, logger};
+
 register_plugin_page('sitemap', '', 'generateSitemap', 0);
-function generateSitemap() {
+function generateSitemap()
+{
 
 	global $template, $twig, $tpl, $lang, $mysql, $config, $parse, $catz, $SYSTEM_FLAGS, $TemplateCache;
 	$tpath = locatePluginTemplates(array('sitemap', 'sitemap'), 'sitemap', intval(pluginGetVariable('sitemap', 'localsource')));
 	$xt = $twig->loadTemplate($tpath['sitemap'] . 'sitemap.tpl');
 	//var_dump($catz);
-	/*   
+	/*
 	$cList = $mysql->select("select * from ".prefix."_category order by posorder");
 	var_dump($cList);
 	foreach ( $cList as $num => $row) {
@@ -126,7 +135,11 @@ function generateSitemap() {
 	$tVars['news_per_page'] = $news_per_page;
 	$tVars['pages_count'] = $pages_count;
 	$tVars['page'] = $page;
-	if (pluginGetVariable('sitemap', 's_cache'))
-		cacheStoreFile('sitemap_' . $page . '.txt', $result, 'sitemap');
-	$template['vars']['mainblock'] = $xt->render($tVars);
+	$result = $xt->render($tVars);
+	if (pluginGetVariable('sitemap', 's_cache')) {
+		$cacheKey = 'sitemap:page:' . $page;
+		cache_put($cacheKey, $result, pluginGetVariable('sitemap', 's_cacheExpire'));
+		logger('sitemap', 'Sitemap cached: page=' . $page . ', news=' . count($news) . ', static=' . $countStatic . ', categories=' . $countCatz);
+	}
+	$template['vars']['mainblock'] = $result;
 }

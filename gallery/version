@@ -3,7 +3,7 @@
 ;
 ID: gallery
 Type: plugin
-Version: 0.0.1
+Version: 0.2.0
 File: gallery.php
 Config: config.php
 Acts: index, ppages
@@ -12,9 +12,9 @@ Install: install.php
 Preinstall: no
 Deinstall: deinstall.php
 Title: Gallery Manager
-Name: Gallery Manager
-Description: Позволяет управлять галереями на сайте.
-Information: Позволяет управлять галереями на сайте.
+Name: Gallery Manager (modernized with ng-helpers)
+Description: Менеджер галерей с оптимизацией БД и интеграцией ng-helpers v0.2.1.
+Information: Модернизированный плагин управления галереями: оптимизированные запросы, автоматическое подключение CSS/JS скинов, интеграция с ng-helpers (кэширование, логирование, уведомления).
 Author: rusiq
 Author_URI: https://github.com/russsiq
 MinEngineBuild: 23b3116

@@ -1,0 +1,242 @@
+/* ============================================================
+   AVTEK Callback — Admin UI styles (plugin-scoped)
+   Place file as:
+     /engine/plugins/avtek_callback/tpl/admin.css
+   ============================================================ */
+
+/* Scope everything to plugin wrapper to avoid breaking admin skin */
+.avtek_cb_admin_wrap {
+    position: relative;
+    padding: 14px 14px 24px;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+/* Animated gradient background (behind content) */
+.avtek_cb_admin_wrap::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(
+        149deg,
+        rgba(24, 187, 156, 1) 0%,
+        rgba(106, 57, 175, 1) 42%,
+        rgba(187, 24, 148, 1) 72%,
+        rgba(115, 53, 134, 1) 100%
+    );
+    animation: avtek_cb_gradient 10s infinite linear;
+    background-size: 400%;
+    opacity: 0.18; /* intensity of background */
+}
+
+/* Keep actual content above gradient */
+.avtek_cb_admin_wrap > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Optional: “card” look for inner blocks */
+.avtek_cb_card {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+}
+
+/* Top tabs/menu (Формы / Заявки / Настройки) */
+.avtek_cb_tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 2px 0 14px;
+}
+
+.avtek_cb_tabs a {
+    text-decoration: none !important;
+}
+
+/* Buttons */
+.avtek_cb_admin_wrap .btn,
+.avtek_cb_admin_wrap a.btn,
+.avtek_cb_admin_wrap button.btn,
+.avtek_cb_admin_wrap input.btn {
+    display: inline-block;
+    box-sizing: border-box;
+    padding: 0 25px;
+    margin: 0 10px 10px 0;
+    outline: none;
+    border: 1px solid #fff;
+    border-radius: 10px;
+    height: 46px;
+    line-height: 46px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    color: #444;
+    background-color: #fff;
+    box-shadow: 0 4px 6px rgba(65, 132, 144, 0.10), 0 1px 3px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    user-select: none;
+    appearance: none;
+    touch-action: manipulation;
+    vertical-align: top;
+    transition: box-shadow 0.2s, transform 0.15s, background-color 0.2s;
+}
+
+.avtek_cb_admin_wrap .btn:focus-visible,
+.avtek_cb_admin_wrap a.btn:focus-visible,
+.avtek_cb_admin_wrap button.btn:focus-visible,
+.avtek_cb_admin_wrap input.btn:focus-visible {
+    border: 1px solid #4c51f9;
+    outline: none;
+}
+
+.avtek_cb_admin_wrap .btn:hover,
+.avtek_cb_admin_wrap a.btn:hover,
+.avtek_cb_admin_wrap button.btn:hover,
+.avtek_cb_admin_wrap input.btn:hover {
+    box-shadow: 0 7px 14px rgba(65, 132, 144, 0.10), 0 3px 6px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+}
+
+.avtek_cb_admin_wrap .btn:active,
+.avtek_cb_admin_wrap a.btn:active,
+.avtek_cb_admin_wrap button.btn:active,
+.avtek_cb_admin_wrap input.btn:active {
+    background-color: #f1f1f1;
+    transform: translateY(0);
+}
+
+.avtek_cb_admin_wrap .btn:disabled,
+.avtek_cb_admin_wrap a.btn[aria-disabled="true"],
+.avtek_cb_admin_wrap button.btn:disabled,
+.avtek_cb_admin_wrap input.btn:disabled {
+    background-color: #eee;
+    border-color: #eee;
+    color: #444;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+
+/* Small buttons (for table actions) */
+.avtek_cb_admin_wrap .btn.btn-sm,
+.avtek_cb_admin_wrap a.btn.btn-sm,
+.avtek_cb_admin_wrap button.btn.btn-sm,
+.avtek_cb_admin_wrap input.btn.btn-sm {
+    height: 34px;
+    line-height: 34px;
+    padding: 0 14px;
+    font-size: 13px;
+    border-radius: 999px;
+}
+/* Button variants (optional) */
+.avtek_cb_admin_wrap .btn.btn-primary {
+    color: #fff;
+    border-color: rgba(255,255,255,0.25);
+    background: linear-gradient(135deg, rgba(106,57,175,1), rgba(187,24,148,1));
+}
+.avtek_cb_admin_wrap .btn.btn-primary:active {
+    color: #3F51B5;
+    border-color: rgba(255,255,255,0.25);
+    background: linear-gradient(135deg, rgba(106,57,175,1), rgba(187,24,148,1));
+}
+.avtek_cb_admin_wrap .btn.btn-primary:hover { filter: brightness(1.03); }
+
+.avtek_cb_admin_wrap .btn.btn-danger {
+    color: #fff;
+    border-color: rgba(255,255,255,0.25);
+    background: linear-gradient(135deg, #ff4b4b, #c81d1d);
+}
+
+.avtek_cb_admin_wrap .btn.btn-ghost {
+    background: rgba(255,255,255,0.55);
+    border-color: rgba(255,255,255,0.8);
+}
+
+/* Tables: soften look */
+.avtek_cb_admin_wrap table {
+    background: rgba(255,255,255,0.92);
+    border-radius: 4px;
+    overflow: hidden;
+    border-collapse: separate;
+    border-spacing: 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+}
+
+.avtek_cb_admin_wrap table th {
+    background: rgba(0,0,0,0.03);
+    font-weight: 700;
+}
+
+.avtek_cb_admin_wrap table th,
+.avtek_cb_admin_wrap table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.avtek_cb_admin_wrap table tr:last-child td {
+    border-bottom: 0;
+}
+
+/* Inputs */
+.avtek_cb_admin_wrap input[type="text"],
+.avtek_cb_admin_wrap input[type="email"],
+.avtek_cb_admin_wrap input[type="number"],
+.avtek_cb_admin_wrap textarea,
+.avtek_cb_admin_wrap select {
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.12);
+    padding: 10px 12px;
+    outline: none;
+    width: 60%;
+    box-sizing: border-box;
+    background: rgba(255,255,255,0.94);
+	height: 100%;
+}
+
+.avtek_cb_admin_wrap textarea { min-height: 110px; resize: vertical; }
+
+.avtek_cb_admin_wrap input:focus,
+.avtek_cb_admin_wrap textarea:focus,
+.avtek_cb_admin_wrap select:focus {
+    border-color: rgba(76,81,249,0.7);
+    box-shadow: 0 0 0 4px rgba(76,81,249,0.12);
+}
+
+/* Small helper text */
+.avtek_cb_admin_wrap .hint,
+.avtek_cb_admin_wrap .muted {
+    color: rgba(0,0,0,0.55);
+    font-size: 13px;
+}
+
+/* Gradient animation */
+@keyframes avtek_cb_gradient {
+    0%   { background-position: 80% 0%; }
+    50%  { background-position: 20% 100%; }
+    100% { background-position: 80% 0%; }
+}
+
+
+/* Snippet box */
+.avtek_cb_admin_wrap .avtek_cb_snippet textarea{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12.5px;
+    line-height: 1.4;
+}
+.avtek-cb-actions button {
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 10px;
+    cursor: pointer;
+    width: 100%;
+    background: #4CAF50;
+    color: #fff;
+}
+.avtek-cb-actions button:hover {
+    background: #323232;
+    color: #fff;
+}

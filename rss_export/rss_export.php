@@ -1,6 +1,7 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+use function Plugins\{logger, cache_get, cache_put};
 // Очищаем все возможные буферы вывода
 while (ob_get_level()) ob_end_clean();
 // Устанавливаем заголовок XML ДО любого вывода
@@ -9,6 +10,31 @@ header('Content-Type: application/rss+xml; charset=utf-8');
 include_once root . "/includes/news.php";
 register_plugin_page('rss_export', '', 'plugin_rss_export', 0);
 register_plugin_page('rss_export', 'category', 'plugin_rss_export_category', 0);
+// Обработчик для URL вида {category}.xml
+add_act('index', 'rss_export_check_category_url', 1);
+function rss_export_check_category_url()
+{
+	global $catz;
+	// Получаем запрошенный URL
+	$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+	// Проверяем формат: /category.xml или category.xml
+	if (preg_match('#/([a-z0-9_-]+)\.xml$#i', $requestUri, $matches)) {
+		$catName = $matches[1];
+		// Пропускаем rss.xml - это главная лента
+		if ($catName === 'rss') {
+			return;
+		}
+		// Проверяем существует ли такая категория (с учетом того что $catz может быть не загружен)
+		if (!empty($catz) && isset($catz[$catName])) {
+			echo "<!-- DEBUG: Generating RSS for category: $catName -->\n";
+			// Вызываем генерацию RSS для категории
+			plugin_rss_export_generate($catName);
+			exit;
+		} else {
+			echo "<!-- DEBUG: Category not found or \$catz not loaded -->\n";
+		}
+	}
+}
 function plugin_rss_export()
 {
 	plugin_rss_export_generate();
@@ -35,13 +61,17 @@ function plugin_rss_export_generate($catname = '')
 	}
 	$xcat = (($catname != '') && isset($catz[$catname])) ? $catz[$catname] : '';
 	$cacheFileName = md5('rss_export' . $config['theme'] . $config['home_url'] . $config['default_lang'] . (is_array($xcat) ? $xcat['id'] : '') . pluginGetVariable('rss_export', 'use_hide') . is_array($userROW)) . '.txt';
+	// Start benchmark
+	$startTime = microtime(true);
 	if (pluginGetVariable('rss_export', 'cache')) {
-		$cacheData = cacheRetrieveFile($cacheFileName, pluginGetVariable('rss_export', 'cacheExpire'), 'rss_export');
-		if ($cacheData != false) {
-			echo $cacheData;
+		$cached = cache_get('rss_export_' . $cacheFileName);
+		if ($cached !== null) {
+			logger('rss_export', 'RSS feed served from cache: category=' . ($catname ?: 'all'));
+			echo $cached;
 			exit;
 		}
 	}
+	logger('rss_export', 'Generating RSS feed: category=' . ($catname ?: 'all'));
 	// Буферизация для корректного кеширования
 	ob_start();
 	// Нормализация URL (коллапс двойных слешей в пути)
@@ -94,7 +124,6 @@ function plugin_rss_export_generate($catname = '')
 	$rssLang = 'ru';
 	$mode = pluginGetVariable('rss_export', 'feed_lang_mode');
 	$manual = trim(strval(pluginGetVariable('rss_export', 'feed_lang_code')));
-
 	if ($mode === 'manual' && $manual !== '') {
 		$__rawLang = strtolower($manual);
 		$__rawLang = str_replace('_', '-', $__rawLang);
@@ -204,10 +233,10 @@ function plugin_rss_export_generate($catname = '')
 			$q = $m[1];
 			$u = $m[2];
 			// Пропускаем абсолютные URL, протокол-агностичные, data:, mailto:, tel:, якоря
-			if (preg_match('#^(?:[a-z]+:)?//#i', $u) || preg_match('#^[a-z]+:#i', $u) || (isset($u[0]) && $u[0] === '#')) {
+			if (preg_match('#^(?:[a-z]+:)?//#i', $u) || preg_match('#^[a-z]+:#i', $u) || ($u !== '' && mb_substr($u, 0, 1) === '#')) {
 				return $attr;
 			}
-			if (isset($u[0]) && $u[0] === '/') {
+			if ($u !== '' && mb_substr($u, 0, 1) === '/') {
 				$new = $base . $u;
 			} else {
 				$new = $base . '/' . $u;
@@ -253,8 +282,14 @@ function plugin_rss_export_generate($catname = '')
 	echo " </channel>\n</rss>\n";
 	// Сохраняем и отдаём буфер
 	$output = ob_get_clean();
+	$itemCount = count($sqlData);
+	$elapsed = round((microtime(true) - $startTime) * 1000, 2);
 	if (pluginGetVariable('rss_export', 'cache')) {
-		cacheStoreFile($cacheFileName, $output, 'rss_export');
+		$cacheExpire = intval(pluginGetVariable('rss_export', 'cacheExpire'));
+		cache_put('rss_export_' . $cacheFileName, $output, $cacheExpire > 0 ? $cacheExpire * 60 : 3600);
+		logger('rss_export', 'RSS feed cached: items=' . $itemCount . ', category=' . ($catname ?: 'all') . ', elapsed=' . $elapsed . 'ms');
+	} else {
+		logger('rss_export', 'RSS feed generated (no cache): items=' . $itemCount . ', category=' . ($catname ?: 'all') . ', elapsed=' . $elapsed . 'ms');
 	}
 	echo $output;
 	exit;

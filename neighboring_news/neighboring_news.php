@@ -22,14 +22,20 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('Galaxy in danger');
 
+// Modified with ng-helpers v0.2.0 functions (2026)
+// - Added cache_get/cache_put for caching neighboring news
+// - Added logger for operations tracking
+// - Added time_ago for relative timestamps
+
+// Import ng-helpers functions
+use function Plugins\{cache_get, cache_put, logger, time_ago};
+
 class NeighboringNewsFilter extends NewsFilter
 {
 
 	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
 	{
 		global $mysql, $config, $tpl, $catz, $catmap, $CurrentHandler;
-
-		$tpath = locatePluginTemplates(['neighboring_news', 'next_news', 'previous_news'], 'neighboring_news', pluginGetVariable('neighboring_news', 'localsource'));
 
 		$style = $mode['style'] ?? '';
 		$fullEnabled  = pluginGetVariable('neighboring_news', 'full_mode')  && $style == 'full';
@@ -41,6 +47,19 @@ class NeighboringNewsFilter extends NewsFilter
 			$tvars['vars']['neighboring_news'] = '';
 			return 1;
 		}
+
+		// Check cache
+		$cacheExpire = intval(pluginGetVariable('neighboring_news', 'cache_expire') ?? 0);
+		if ($cacheExpire > 0) {
+			$cacheKey = 'neighboring_news:' . $newsID . ':' . $style . ':' . md5($SQLnews['catid']);
+			$cached = cache_get($cacheKey);
+			if ($cached !== null) {
+				$tvars['vars']['neighboring_news'] = $cached;
+				return 1;
+			}
+		}
+
+		$tpath = locatePluginTemplates(['neighboring_news', 'next_news', 'previous_news'], 'neighboring_news', pluginGetVariable('neighboring_news', 'localsource'));
 
 		// Главная категория новости
 		$fcat = array_shift(explode(',', $SQLnews['catid']));
@@ -93,10 +112,11 @@ class NeighboringNewsFilter extends NewsFilter
 			}
 			$tpl->template($templateName, $tpath[$templateName]);
 			$tpl->vars($templateName, ['vars' => [
-				'link'   => newsGenerateLink(['id' => $row['id'], 'alt_name' => $row['alt_name'], 'catid' => $row['catid'], 'postdate' => $row['postdate']], false, 0, true),
-				'date'   => langdate('d.m.Y', $row['postdate']),
-				'author' => $authorLink,
-				'title'  => $row['title'],
+				'link'     => newsGenerateLink(['id' => $row['id'], 'alt_name' => $row['alt_name'], 'catid' => $row['catid'], 'postdate' => $row['postdate']], false, 0, true),
+				'date'     => langdate('d.m.Y', $row['postdate']),
+				'time_ago' => time_ago($row['postdate']),
+				'author'   => $authorLink,
+				'title'    => $row['title'],
 			]]);
 			return $tpl->show($templateName);
 		};
@@ -109,7 +129,16 @@ class NeighboringNewsFilter extends NewsFilter
 			'next_news'     => $nextHTML,
 			'previous_news' => $prevHTML,
 		]]);
-		$tvars['vars']['neighboring_news'] = ($nextHTML || $prevHTML) ? $tpl->show('neighboring_news') : '';
+		$output = ($nextHTML || $prevHTML) ? $tpl->show('neighboring_news') : '';
+		$tvars['vars']['neighboring_news'] = $output;
+
+		// Save to cache
+		if ($cacheExpire > 0 && $output) {
+			$cacheKey = 'neighboring_news:' . $newsID . ':' . $style . ':' . md5($SQLnews['catid']);
+			cache_put($cacheKey, $output, $cacheExpire);
+			logger('neighboring_news', 'Cached: newsid=' . $newsID . ', style=' . $style . ', has_next=' . ($rowNext ? 'yes' : 'no') . ', has_prev=' . ($rowPrev ? 'yes' : 'no'));
+		}
+
 		return 1;
 	}
 }

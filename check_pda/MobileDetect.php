@@ -2,6 +2,7 @@
 
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
+use function Plugins\{logger, cache_get, cache_put, get_ip};
 
 require_once 'lib/Mobile_Detect.php';
 
@@ -15,6 +16,14 @@ class Twig_Extension_MobileDetect extends AbstractExtension
     public function __construct()
     {
         $this->detector = new Mobile_Detect();
+
+        // Log device detection
+        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
+        $isMobile = $this->detector->isMobile();
+        $isTablet = $this->detector->isTablet();
+        $deviceType = $isTablet ? 'tablet' : ($isMobile ? 'mobile' : 'desktop');
+
+        logger('check_pda', 'Device detected: ' . $deviceType . ', IP=' . get_ip() . ', UA=' . substr($userAgent, 0, 100));
     }
 
     /**
@@ -25,15 +34,15 @@ class Twig_Extension_MobileDetect extends AbstractExtension
     public function getFunctions()
     {
         $functions = [
-            new TwigFunction('get_available_devices', 'getAvailableDevices'),
-            new TwigFunction('is_mobile', 'isMobile'),
-            new TwigFunction('is_tablet', 'isTablet'),
+            new TwigFunction('get_available_devices', [$this, 'getAvailableDevices']),
+            new TwigFunction('is_mobile', [$this, 'isMobile']),
+            new TwigFunction('is_tablet', [$this, 'isTablet']),
         ];
 
         foreach ($this->getAvailableDevices() as $device => $fixedName) {
-            $methodName = 'is'.$device;
-            $twigFunctionName = 'is_'.$fixedName;
-            $functions[] = new TwigFunction($twigFunctionName, 'is'.$methodName);
+            $methodName = 'is' . $device;
+            $twigFunctionName = 'is_' . $fixedName;
+            $functions[] = new TwigFunction($twigFunctionName, [$this, $methodName]);
         }
 
         return $functions;
@@ -46,12 +55,24 @@ class Twig_Extension_MobileDetect extends AbstractExtension
      */
     public function getAvailableDevices()
     {
+        // Cache available devices list
+        $cacheKey = 'check_pda_available_devices';
+        $cached = cache_get($cacheKey);
+
+        if ($cached !== null) {
+            return $cached;
+        }
+
         $availableDevices = array();
         $rules = array_change_key_case($this->detector->getRules());
 
         foreach ($rules as $device => $rule) {
             $availableDevices[$device] = static::fromCamelCase($device);
         }
+
+        // Cache for 24 hours (devices list doesn't change often)
+        cache_put($cacheKey, $availableDevices, 86400);
+        logger('check_pda', 'Available devices list cached: ' . count($availableDevices) . ' devices');
 
         return $availableDevices;
     }
@@ -88,7 +109,7 @@ class Twig_Extension_MobileDetect extends AbstractExtension
      */
     protected static function fromCamelCase($string, $separator = '_')
     {
-        return strtolower(preg_replace('/(?!^)[[:upper:]]+/', $separator.'$0', $string));
+        return strtolower(preg_replace('/(?!^)[[:upper:]]+/', $separator . '$0', $string));
     }
 
     /**

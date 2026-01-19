@@ -1,25 +1,41 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
+
+// Modified with ng-helpers v0.2.0 functions (2026)
+// - Added array_pluck for data extraction
+// - Added array_first/array_last for selection
+// - Added cache support for similar news
+// - Added logger for debugging
+
+// Import ng-helpers functions
+use function Plugins\{array_pluck, array_first, array_last, cache_get, cache_put, cache_forget, logger};
+
 // Preload plugin tags
 load_extras('core', 'tags');
 include_once("inc/similar.php");
 
-class SimilarNewsfilter extends NewsFilter {
+class SimilarNewsfilter extends NewsFilter
+{
 
-	function addNewsNotify(&$tvars, $SQL, $newsid) {
+	function addNewsNotify(&$tvars, $SQL, $newsid)
+	{
 
 		global $mysql;
 		$scount = pluginGetVariable('similar', 'count');
 		$scount = (($scount < 1) || ($scount > 20)) ? 5 : $scount;
 		// Make reset for all tags for new news
 		plugin_similar_reset($newsid);
+		// Clear cache for this news
+		cache_forget("similar_news_{$newsid}");
+		logger("Similar: Reset similarity for new news #{$newsid}", 'debug', 'similar.log');
 
 		return 1;
 	}
 
 	// Make changes in DB after EditNews was successfully executed
-	function editNewsNotify($newsID, $SQLnews, &$SQLnew, &$tvars) {
+	function editNewsNotify($newsID, $SQLnews, &$SQLnew, &$tvars)
+	{
 
 		global $mysql;
 		if (!$SQLnews['approve'])
@@ -28,17 +44,28 @@ class SimilarNewsfilter extends NewsFilter {
 		plugin_similar_resetLinked($newsID);
 		// Reset news with the same tags [ AFTER actual edit - new tags ]
 		plugin_similar_reset($newsID);
+		// Clear cache for this news and linked
+		cache_forget("similar_news_{$newsID}");
+		logger("Similar: Reset similarity for edited news #{$newsID}", 'debug', 'similar.log');
 
 		return 1;
 	}
 
 	// Add {plugin_similar} variable into news
-    public function showNews($newsID, $SQLnews, &$tvars, $mode = []) {
+	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
+	{
 
 		global $mysql, $tpl, $PFILTERS;
 		$tpath = locatePluginTemplates(array('similar', 'similar_entry'), 'similar', pluginGetVariable('similar', 'localsource'));
 		// Show similar news only in full mode
 		if ($mode['style'] == 'full') {
+			// Try to get from cache first (5 minutes)
+			$cacheKey = "similar_news_{$newsID}";
+			if ($cached = cache_get($cacheKey)) {
+				$tvars['vars']['plugin_similar_tags'] = $cached;
+				return 1;
+			}
+
 			// Check if we have similar news
 			$similars = $SQLnews['similar_status'];
 			if (!$similars) {
@@ -89,8 +116,11 @@ class SimilarNewsfilter extends NewsFilter {
 						}
 					// Set formatted date
 					$dformat = pluginGetVariable('similar', 'dateformat') ? pluginGetVariable('similar', 'dateformat') : '{day0}.{month0}.{year}';
-					$txvars['vars']['date'] = str_replace(array('{day}', '{day0}', '{month}', '{month0}', '{year}', '{year2}', '{month_s}', '{month_l}'),
-						array(date('j', $similar['si_refNewsDate']), date('d', $similar['si_refNewsDate']), date('n', $similar['si_refNewsDate']), date('m', $similar['si_refNewsDate']), date('y', $similar['si_refNewsDate']), date('Y', $similar['si_refNewsDate']), $langShortMonths[date('n', $similar['si_refNewsDate']) - 1], $langMonths[date('n', $similar['si_refNewsDate']) - 1]), $dformat);
+					$txvars['vars']['date'] = str_replace(
+						array('{day}', '{day0}', '{month}', '{month0}', '{year}', '{year2}', '{month_s}', '{month_l}'),
+						array(date('j', $similar['si_refNewsDate']), date('d', $similar['si_refNewsDate']), date('n', $similar['si_refNewsDate']), date('m', $similar['si_refNewsDate']), date('y', $similar['si_refNewsDate']), date('Y', $similar['si_refNewsDate']), $langShortMonths[date('n', $similar['si_refNewsDate']) - 1], $langMonths[date('n', $similar['si_refNewsDate']) - 1]),
+						$dformat
+					);
 					$txvars['vars']['title'] = $similar['si_refNewsTitle'];
 					$txvars['vars']['url'] = newsGenerateLink($similar);
 					// Execute filters [ if requested ]
@@ -105,9 +135,13 @@ class SimilarNewsfilter extends NewsFilter {
 				$tpl->template('similar', $tpath['similar']);
 				$tpl->vars('similar', array('vars' => array('entries' => $result[0])));
 				$tvars['vars']['plugin_similar_tags'] = $tpl->show('similar');
+				// Cache the result for 5 minutes
+				cache_put($cacheKey, $tvars['vars']['plugin_similar_tags'], 5);
 			} else {
 				$tvars['vars']['plugin_similar_tags'] = '';
 				$tvars['vars']['plugin_similar_categ'] = '';
+				// Cache empty result too (1 minute)
+				cache_put($cacheKey, '', 1);
 			}
 		}
 
@@ -115,7 +149,8 @@ class SimilarNewsfilter extends NewsFilter {
 	}
 
 	// Mass news modify
-	function massModifyNewsNotify($idList, $setValue, $currentData) {
+	function massModifyNewsNotify($idList, $setValue, $currentData)
+	{
 
 		// We are interested only in 'approve' field modification
 		if (!isset($setValue['approve']))
@@ -131,12 +166,16 @@ class SimilarNewsfilter extends NewsFilter {
 		return 1;
 	}
 
-	function deleteNews($newsID, $SQLnews) {
+	function deleteNews($newsID, $SQLnews)
+	{
 
 		global $mysql;
 		plugin_similar_resetLinked($newsID);
 		// Delete similarity info
 		$mysql->query("delete from " . prefix . "_similar_index where newsID = " . intval($newsID));
+		// Clear cache
+		cache_forget("similar_news_{$newsID}");
+		logger("Similar: Deleted similarity data for news #{$newsID}", 'info', 'similar.log');
 	}
 }
 

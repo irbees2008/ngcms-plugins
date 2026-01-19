@@ -1,0 +1,11 @@
+[2025-12-29 14:46:40] ВЫЗОВ jchat_tgnotify_send
+Данные: Array
+(
+    [author] => irbees2008
+    [text] => rturturt
+    [datetime] => 2025-12-29 14:46:40
+    [ip] => 127.0.0.1
+    [url] => https://test.ru/none/pagpgoae.html
+    [is_guest] => 
+)
+

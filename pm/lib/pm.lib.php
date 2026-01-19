@@ -4,26 +4,31 @@
  * Plugin's "Private message" API for NextGeneration CMS (http://ngcms.ru/)
  * Copyright (C) 2011 Alexey N. Zhukov (http://digitalplace.ru)
  * http://digitalplace.ru
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or (at
  * your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  *
  */
 
-class pm {
+// Modified with ng-helpers v0.2.0 functions (2026)
+use function Plugins\{sanitize, str_limit, logger, get_ip};
 
-	function __construct() {
+class pm
+{
+
+	function __construct()
+	{
 
 		LoadPluginLang('pm', 'main', '', '', ':');
 	}
@@ -41,9 +46,17 @@ class pm {
 	 *		-5: if user not found
 	 *		 0: all rigth, message was send
 	 */
-	function sendMsg($to_user, $from_username, $title, $message, $mail_from = false, $saveoutbox = 0) {
+	function sendMsg($to_user, $from_username, $title, $message, $mail_from = false, $saveoutbox = 0)
+	{
 
 		global $lang, $mysql, $config;
+
+		// Sanitize and limit inputs
+		$title = sanitize($title, 'string');
+		$message = sanitize($message, 'string');
+		$title = str_limit($title, pluginGetVariable('pm', 'title_length'));
+		$message = str_limit($message, pluginGetVariable('pm', 'message_length'));
+
 		if (strlen($title) > pluginGetVariable('pm', 'title_length'))
 			return -1;
 		if (!$title)
@@ -59,23 +72,30 @@ class pm {
 		$message = secure_html($message);
 		$time = time() + ($config['date_adjust'] * 60);
 		# if all right
-		$mysql->query("INSERT INTO " . prefix . "_pm (from_id, to_id, date, subject, message, folder) 
+		$mysql->query("INSERT INTO " . prefix . "_pm (from_id, to_id, date, subject, message, folder)
 					   VALUES (" . db_squote($from_username) . ", " . db_squote($torow['id']) . ", " . db_squote($time) . ", " . db_squote($title) . ", " . db_squote($message) . ", 'inbox')");
 		$id = $mysql->result("SELECT LAST_INSERT_ID() as id");
 		# save message in outbox if needed
 		if ($saveoutbox)
-			$mysql->query("INSERT INTO " . prefix . "_pm (from_id, to_id, date, subject, message, folder) 
+			$mysql->query("INSERT INTO " . prefix . "_pm (from_id, to_id, date, subject, message, folder)
 					   VALUES (" . db_squote($from_username) . ", " . db_squote($torow['id']) . ", " . db_squote($time) . ", " . db_squote($title) . ", " . db_squote($message) . ", 'outbox')");
 		# update pm counters
 		$mysql->query("UPDATE " . uprefix . "_users SET `pm_all` = `pm_all` + 1, `pm_unread` = `pm_unread` + 1 WHERE `id` = " . db_squote($torow['id']));
+
+		// Log PM sending
+		logger('pm', 'PM sent: from=' . $from_username . ', to=' . $torow['id'] . ' (' . $torow['name'] . '), saveoutbox=' . ($saveoutbox ? 'yes' : 'no') . ', IP=' . get_ip());
+
 		# send email if needed
 		if ($torow['pm_email'] && $torow['mail']) {
 			$msg_link = generatePluginLink('pm', null, array('pmid' => $id, 'action' => 'read'), array(), false, true);
 			$set_link = generatePluginLink('pm', null, array('action' => 'set'), array(), false, true);
-			sendEmailMessage($torow['mail'],
+			sendEmailMessage(
+				$torow['mail'],
 				$lang['pm:email_subject'],
 				str_replace(array('{message}', '{url}', '{url-2}'), array($message, $msg_link, $set_link), $lang['pm:email_body']),
-				false, $mail_from);
+				false,
+				$mail_from
+			);
 		}
 
 		return 0;

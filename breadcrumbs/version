@@ -1,16 +1,15 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: breadcrumbs
 Name: «Хлебные крошки»
-Version: 1.2
+Version: 1.3
 Acts: index
 File: breadcrumbs.php
 Config: config.php
 Type: plugin
 Description: Показывает посетителю его местонахождение на сайте
-Author: Alexey N. Zhukov (Wolverine)
+Author: Alexey N. Zhukov (Wolverine),irbees2008,copliot
 Author_URI: http://digitalplace.ru/
 Preinstall: no
 MinEngineBuild: 23b3116

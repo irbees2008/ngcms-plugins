@@ -1,21 +1,35 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
+
+// Modified with ng-helpers v0.2.0 functions (2026)
+// - Added get_ip for improved IP detection
+// - Added is_ajax for AJAX detection
+// - Added percentage for vote calculations
+// - Added logger for vote tracking
+// - Added cache_get/cache_put for vote caching
+
+// Import ng-helpers functions
+use function Plugins\{get_ip, is_ajax, percentage, logger, cache_get, cache_put, cache_forget};
+
 add_act('index', 'plugin_voting');
 register_plugin_page('voting', 'panel', 'plugin_voting_panel', 0);
 register_plugin_page('voting', '', 'plugin_voting_page', 0);
 loadPluginLang('voting', 'main', '', '', ':');
-function plugin_voting_panel() {
+function plugin_voting_panel()
+{
 
 	plugin_voting_screen(true);
 }
 
-function plugin_voting_page() {
+function plugin_voting_page()
+{
 
 	plugin_voting_screen(false);
 }
 
-function plugin_voting() {
+function plugin_voting()
+{
 
 	global $mysql, $tpl, $template, $REQUEST_URI;
 	$voteid = intval(pluginGetVariable('voting', 'active'));
@@ -25,7 +39,25 @@ function plugin_voting() {
 	if ((!is_dir(extras_dir . '/voting/tpl/skins/' . $skin)) || (!$skin)) {
 		$skin = 'basic';
 	}
-	$template['vars']['voting'] = plugin_showvote($skin, 4, $voteid, $rand, $voted);
+
+	// Cache voting block
+	$cacheExpire = intval(pluginGetVariable('voting', 'cache_expire') ?? 0);
+	$cacheKey = 'voting:block:' . $voteid . ':' . $skin . ':' . ($rand ? 'rand' : 'fixed') . ':' . md5(implode(',', $voted));
+
+	if ($cacheExpire > 0) {
+		$cached = cache_get($cacheKey);
+		if ($cached !== null) {
+			$template['vars']['voting'] = $cached;
+			return;
+		}
+	}
+
+	$result = plugin_showvote($skin, 4, $voteid, $rand, $voted);
+	$template['vars']['voting'] = $result;
+
+	if ($cacheExpire > 0) {
+		cache_put($cacheKey, $result, $cacheExpire);
+	}
 }
 
 //
@@ -43,7 +75,8 @@ function plugin_voting() {
 //	3. voteid - vote id (in show one mode)
 //  4. rand - rand flag (in show one mode)
 //	5. votedList - list of voted (in show list mode)
-function plugin_showvote($tpl_skin, $mode, $voteid = 0, $rand = 0, $votedList = array()) {
+function plugin_showvote($tpl_skin, $mode, $voteid = 0, $rand = 0, $votedList = array())
+{
 
 	global $tpl, $mysql, $username, $userROW, $ip, $REQUEST_URI, $TemplateCache, $SYSTEM_FLAGS, $lang;
 	$result = '';
@@ -145,7 +178,7 @@ function plugin_showvote($tpl_skin, $mode, $voteid = 0, $rand = 0, $votedList = 
 				'name'     => $lrow['name'],
 				'num'      => $num,
 				'count'    => $lrow['cnt'],
-				'perc'     => intval($lrow['cnt'] * 100 / $cnt),
+				'perc'     => percentage($lrow['cnt'], $cnt),
 				'post_url' => $post_url,
 				'tpl_dir'  => admin_url . '/plugins/voting/tpl/skins/' . $tpl_skin
 			);
@@ -191,11 +224,14 @@ function plugin_showvote($tpl_skin, $mode, $voteid = 0, $rand = 0, $votedList = 
 
 //
 //
-function plugin_voting_screen($flagPanel = false) {
+function plugin_voting_screen($flagPanel = false)
+{
 
 	global $mysql, $tpl, $template, $SUPRESS_TEMPLATE_SHOW, $lang, $userROW, $ip;
-	// Determine calling mode
-	$is_ajax = (($_GET['style'] == 'ajax') || ($_POST['style'] == 'ajax')) ? 1 : 0;
+	// Determine calling mode using ng-helpers is_ajax
+	$is_ajax = is_ajax();
+	// Use ng-helpers get_ip
+	$ip = get_ip();
 	// Add own header for AJAX calls
 	if ($is_ajax) {
 		@header('Content-type: text/html; charset="utf-8"');
@@ -232,6 +268,11 @@ function plugin_voting_screen($flagPanel = false) {
 			} else {
 				$mysql->query("update " . prefix . "_voteline set cnt=cnt+1 where id = " . $row['id']);
 				// DONE. Vote accepted
+				logger('voting', 'Vote accepted: voteid=' . $vrow['id'] . ', line=' . $row['id'] . ', IP=' . $ip . ', user=' . ($userROW['name'] ?? 'guest'));
+
+				// Clear cache after voting
+				cache_forget('voting:block:' . $vrow['id'] . ':*');
+
 				if ($secure) {
 					$query = "insert into " . prefix . "_votestat (userid, voteid, voteline, ip, dt) values (" . (is_array($userROW) ? $userROW['id'] : '0') . "," . $vrow['id'] . "," . $row['id'] . ", '$ip', now() )";
 					$mysql->query($query);

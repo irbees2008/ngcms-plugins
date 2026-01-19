@@ -38,9 +38,65 @@ function rss_import_render_block($index)
     }
 
     $url = extra_get_param('rss_import', $vv . '_url');
-    $rss = @simplexml_load_file($url);
+
+    // Проверка наличия URL
+    if (empty($url)) {
+        return 'RSS не доступен: URL не настроен в админке';
+    }
+
+    // Загружаем содержимое с таймаутом
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 10,
+            'user_agent' => 'Mozilla/5.0 (compatible; NGCMS RSS Import)',
+            'follow_location' => true
+        ]
+    ]);
+
+    $xmlContent = @file_get_contents($url, false, $context);
+
+    if ($xmlContent === false) {
+        return 'RSS не доступен: не удается загрузить ' . htmlspecialchars($url);
+    }
+
+    // Проверяем на PHP ошибки в начале
+    $xmlContent = trim($xmlContent);
+    if (preg_match('/^(Notice|Warning|Fatal|Error|Parse error|Deprecated|Strict Standards):/i', $xmlContent)) {
+        // Извлекаем первую строку ошибки
+        $firstLine = explode("\n", $xmlContent)[0];
+        return 'RSS не доступен: сервер возвращает PHP ошибки: ' . htmlspecialchars(mb_substr($firstLine, 0, 200));
+    }
+
+    // Проверяем, что это XML, а не HTML
+    if (stripos($xmlContent, '<?xml') !== 0 && stripos($xmlContent, '<rss') !== 0) {
+        // Показываем первые 500 символов для диагностики
+        $preview = mb_substr($xmlContent, 0, 500);
+        return 'RSS не доступен: URL возвращает не RSS. Начало ответа: ' . htmlspecialchars($preview);
+    }
+
+    // Включаем отображение ошибок для диагностики
+    libxml_use_internal_errors(true);
+    $rss = simplexml_load_string($xmlContent);
+
     if (empty($rss)) {
-        return 'RSS не доступен';
+        $errors = libxml_get_errors();
+        libxml_clear_errors();
+
+        // Формируем сообщение об ошибке
+        $errorMsg = 'RSS не доступен';
+        if (!empty($errors)) {
+            $errorMsg .= ': ' . trim($errors[0]->message);
+            // Показываем проблемную строку
+            if (!empty($errors[0]->line)) {
+                $lines = explode("\n", $xmlContent);
+                $lineNum = $errors[0]->line - 1;
+                if (isset($lines[$lineNum])) {
+                    $errorMsg .= '. Строка ' . $errors[0]->line . ': ' . htmlspecialchars(mb_substr($lines[$lineNum], 0, 100));
+                }
+            }
+        }
+
+        return $errorMsg;
     }
 
     $entries = array();

@@ -1,6 +1,18 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
+// Modified with ng-helpers v0.2.0 functions (2026)
+// - Added validate_email for email field validation
+// - Added csrf_field/validate_csrf for CSRF protection
+// - Added sanitize for input cleaning
+// - Added logger for operations tracking
+// - Added get_ip for IP detection
+// - Added time_ago for relative timestamps
+
+// Import ng-helpers functions
+use function Plugins\{validate_email, csrf_field, validate_csrf, sanitize, logger, get_ip, time_ago};
+
 register_plugin_page('guestbook', '', 'guestbook_list');
 register_plugin_page('guestbook', 'edit', 'guestbook_edit');
 LoadPluginLang('guestbook', 'main', '', '', '#');
@@ -13,9 +25,22 @@ function msg_add_submit()
 
 	global $template, $tpl, $twig, $userROW, $ip, $config, $mysql, $SYSTEM_FLAGS, $TemplateCache, $lang;
 	$errors = array();
+
+	// CSRF protection
+	if (!validate_csrf($_POST['csrf_token'] ?? '')) {
+		$errors[] = $lang['guestbook']['error_csrf'] ?? 'Security token validation failed';
+		logger('guestbook', 'CSRF validation failed, IP: ' . get_ip());
+		_guestbook_clear_session();
+		$_SESSION['guestbook_errors'] = $errors;
+		return;
+	}
+
+	// Use ng-helpers get_ip
+	$ip = get_ip();
+
 	// anonymous user
 	if (!is_array($userROW)) {
-		$_POST['author'] = secure_html(trim($_POST['author']));
+		$_POST['author'] = sanitize($_POST['author'] ?? '', 'string');
 		if (!strlen($_POST['author'])) {
 			$errors[] = $lang['guestbook']['error_req_name'];
 		}
@@ -31,7 +56,7 @@ function msg_add_submit()
 			}
 		}
 	}
-	$message = secure_html(trim($_POST['content']));
+	$message = sanitize($_POST['content'] ?? '', 'string');
 	// check for links
 	preg_match("~^(?:(?:https?|ftp|telnet)://(?:[a-z0-9_-]{1,32}(?::[a-z0-9_-]{1,32})?@)?)?(?:(?:[a-z0-9-]{1,128}\.)+(?:ru|su|com|net|org|mil|edu|arpa|gov|biz|info|aero|inc|name|[a-z]{2})|(?!0)(?:(?!0[^.]|255)[0-9]{1,3}\.){3}(?!0|255)[0-9]{1,3})(?:/[a-z0-9.,_@%&?+=\~/-]*)?(?:#[^ '\"&]*)?$~i", $message, $find_url);
 	if (isset($find_url[0])) {
@@ -62,9 +87,18 @@ function msg_add_submit()
 	$fmail = array();
 	foreach ($data as $num => $value) {
 		$fields[$value['id']] = intval($value['required']);
+		$fieldValue = sanitize($_POST[$value['id']] ?? '', 'string');
+
+		// Validate email fields
+		if (stripos($value['id'], 'email') !== false || stripos($value['name'], 'email') !== false || stripos($value['name'], 'e-mail') !== false) {
+			if (!empty($fieldValue) && !validate_email($fieldValue)) {
+				$errors[] = str_replace('{field}', $value['name'], $lang['guestbook']['error_invalid_email'] ?? 'Invalid email in field {field}');
+			}
+		}
+
 		$fmail[] = array(
 			'name'  => $value['name'],
-			'value' => secure_html(trim($_POST[$value['id']]))
+			'value' => $fieldValue
 		);
 	}
 	$time = time() + ($config['date_adjust'] * 60);
@@ -77,7 +111,7 @@ function msg_add_submit()
 	);
 	foreach ($fields as $fid => $freq) {
 		if (!empty($_POST[$fid])) {
-			$_POST[$fid] = secure_html(trim($_POST[$fid]));
+			$_POST[$fid] = sanitize($_POST[$fid], 'string');
 			$new_rec[$fid] = db_squote($_POST[$fid]);
 		} elseif ($freq === 1) {
 			$errors[] = $lang['guestbook']['error_field_required'];
@@ -87,6 +121,7 @@ function msg_add_submit()
 	}
 	if (!count($errors)) {
 		$mysql->query("INSERT INTO " . prefix . "_guestbook (" . implode(', ', array_keys($new_rec)) . ") values (" . implode(', ', array_values($new_rec)) . ")");
+		logger('guestbook', 'New entry added: author=' . $author . ', IP=' . $ip . ', status=' . $status);
 		$success[] = ($status == 1) ? $lang['guestbook']['success_add_wo_approve'] : $success_msg = $lang['guestbook']['success_add'];
 		// send email
 		$tpath = locatePluginTemplates(array('mail_success'), 'guestbook', 1);
@@ -122,10 +157,10 @@ function msg_edit_submit()
 {
 
 	global $template, $tpl, $userROW, $ip, $config, $mysql, $twig, $lang;
-	$id = secure_html(trim($_REQUEST['id']));
-	$author = secure_html(trim($_REQUEST['author']));
-	$message = secure_html(trim($_REQUEST['content']));
-	$answer = secure_html(trim($_REQUEST['answer']));
+	$id = intval($_REQUEST['id'] ?? 0);
+	$author = sanitize($_REQUEST['author'] ?? '', 'string');
+	$message = sanitize($_REQUEST['content'] ?? '', 'string');
+	$answer = sanitize($_REQUEST['answer'] ?? '', 'string');
 	$message = str_replace("\r\n", "<br />", $message);
 	if (empty($author) || empty($message)) {
 		$errors[] = $lang['guestbook']['error_field_required'];
@@ -140,7 +175,7 @@ function msg_edit_submit()
 	// collect fields data
 	foreach ($fdata as $fnum => $frow) {
 		if (!empty($_REQUEST[$frow['id']])) {
-			$upd_rec[$frow['id']] = db_squote($_REQUEST[$frow['id']]);
+			$upd_rec[$frow['id']] = db_squote(sanitize($_REQUEST[$frow['id']], 'string'));
 		} elseif (intval($frow['required']) === 1) {
 			$errors[] = $lang['guestbook']['error_field_required'];
 		} else {
@@ -159,6 +194,7 @@ function msg_edit_submit()
 	}
 	if (!count($errors)) {
 		$mysql->query('UPDATE ' . prefix . '_guestbook SET ' . $upd_str . ' WHERE id = \'' . intval($id) . '\' ');
+		logger('guestbook', 'Entry edited: id=' . $id . ', author=' . $author);
 		$url = checkLinkAvailable('guestbook', '') ?
 			generatePluginLink('guestbook', '', array('act' => 'upd'), array()) :
 			generatePluginLink('core', 'plugin', array('plugin' => 'guestbook'), array('upd' => 1));
@@ -186,6 +222,7 @@ function msg_delete_submit()
 			return;
 		}
 		$mysql->query("DELETE FROM " . prefix . "_guestbook WHERE id = " . intval($_REQUEST['id']));
+		logger('guestbook', 'Entry deleted: id=' . intval($_REQUEST['id']) . ', by user: ' . ($userROW['name'] ?? 'unknown'));
 		$url = checkLinkAvailable('guestbook', '') ?
 			generatePluginLink('guestbook', '', array('act' => 'del'), array()) :
 			generateLink('core', 'plugin', array('plugin' => 'guestbook'), array('del' => 1));
@@ -270,13 +307,14 @@ function guestbook_list($params = array())
 		'perpage'     => $perpage,
 		'errors'      => $errors,
 		'success'     => $success_add,
-		'ip'          => $ip,
+		'ip'          => get_ip(),
 		'smilies'     => (pluginGetVariable('guestbook', 'usmilies')) ? InsertSmilies('', 10) : "",
 		'bbcodes'     => (pluginGetVariable('guestbook', 'ubbcodes')) ? BBCodes() : "",
 		'use_captcha' => (pluginGetVariable('guestbook', 'ecaptcha')),
 		'captcha'     => (pluginGetVariable('guestbook', 'ecaptcha') && !(is_array($userROW))) ? recaptcha_get_html($publickey) : '',
 		'use_guests'  => (!is_array($userROW) && !pluginGetVariable('guestbook', 'guests')),
-		'fields'      => $tEntries
+		'fields'      => $tEntries,
+		'csrf_field'  => csrf_field()
 	);
 	$tpath = locatePluginTemplates(array('guestbook.list'), 'guestbook', pluginGetVariable('guestbook', 'localsource'));
 	$xt = $twig->loadTemplate($tpath['guestbook.list'] . 'guestbook.list.tpl');
@@ -329,16 +367,17 @@ function _guestbook_records($order, $start, $perpage)
 			$date_format = 'j Q Y';
 		}
 		$comments[] = array(
-			'id'      => $row['id'],
-			'date'    => LangDate($date_format, $row['postdate']),
-			'message' => $row['message'],
-			'answer'  => $row['answer'],
-			'author'  => $row['author'],
-			'ip'      => $row['ip'],
-			'comnum'  => $comnum,
-			'edit'    => $editlink,
-			'del'     => $dellink,
-			'fields'  => $comment_fields
+			'id'       => $row['id'],
+			'date'     => LangDate($date_format, $row['postdate']),
+			'time_ago' => time_ago($row['postdate']),
+			'message'  => $row['message'],
+			'answer'   => $row['answer'],
+			'author'   => $row['author'],
+			'ip'       => $row['ip'],
+			'comnum'   => $comnum,
+			'edit'     => $editlink,
+			'del'      => $dellink,
+			'fields'   => $comment_fields
 		);
 	}
 

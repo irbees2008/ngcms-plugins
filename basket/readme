@@ -1,88 +1,643 @@
 # =========================================================================== #
-# NG CMS // Плагины // Корзина заказа                                         #
+# NG CMS // Плагины // Корзина заказа (Shop Basket)                          #
 # =========================================================================== #
-
- Плагин "корзина заказа" позволяет сделать из NGCMS небольшой интернет-магазин.
-В своей работе плагин использует плагины:
-* xfields - для формирования списка товаров, доступного к заказу
-* feedback - для заполнения данных о заказе и отправки самого заказа 
-  администраторам/менеджерам сайта
-
-
-Основные шаги для настройки/использования плагина:
-==== XFields ====
-1. Необходимо определить для каких записей будет отображаться ссылка "добавить в корзину"
-1.1. Для всех новостей
-1.2. Только для тех новостей в которых есть выбранное вами доп. поле и его значение отлично от нуля
-2. Создать поле в котором будет храниться стоимость 1 единицы
-
-==== Feedback ====
-1. Создать форму, которая будет использоваться при формировании заказа (режим рассылки - HTML)
-[ == текущая версия отправляет заказ только на указанные в форме email'ы, отправка копии заказа его автору - невозможна == ]
-
-==== Basket =====
-1. Настроить условия активации
-2. Выбрать форму обратной связи
-
-==== Шаблоны =====
-> Текст email нотификации:
-В шаблоне plugins/feedback/tpl/mail.html.tpl добавить в нужное место переменную {{ plugin_basket }}
-
-> Собственные шаблоны плагина лежат в templates/default/plugins/basket/
-
-> В mail.tpl доступна переменная {plugin_basket}, она заполняется из шаблона плагина total.tpl
-
-> В news.short.tpl и news.full.tpl доступно:
-/* Данный способ устарел, в данный момент используется AJAX добавление товаров в корзину, см. ниже */
-блок [basket]..[/basket] (отображается при возможности положить этот товар в конзину)
-переменная {basket_link} со ссылкой на URL добавления товара в корзину
-/* Данный способ устарел, в данный момент используется AJAX добавление товаров в корзину, см. ниже */
-
-** плагин добавляет свою js библиотеку basket.js, она позволяет добавлять товары в корзину через AJAX
-пример правильного кода для добавления:
-[basket]<a href="#" onclick="rpcBasketRequest('plugin.basket.manage', {'action': 'add', 'ds':1,'id':{news-id},'count':1}); return false;">В корзину</a>[/basket]
-
-Плагин позволяет работать в разных режимах:
-- можно использовать новость как еденицу товара, одна новость - один товар, тогда "Работа с доп. полями внутри новостей"
-- можно использовать новость как группу товаров и выбирать что добавлять в корзину будеш из таблицы "Работа с таблицами доп. полей внутри новостей"
-- работают и совместно и поодиночке даже в пределах одной новости и направляются в корзину без конфликтов
-
-Например, если новость - это еденица товара. Внутри новости можно использовать табличные данные плагина xfields - это один и тот же товар но с разной ценой, цветом, размером, то вывод различных модификаций товаров
-может выглядеть так:
-{% for xdata in p.xfields._table.data %}
-    <tr>
-        <td> ID:{{ xdata.id }}</td>
-        <td> Цвет: {{ xdata.field_color }}</td>
-        <td> Цена: {{ xdata.field_prais }}</td>
-        <td><a href="#" class="add_item_to_basket" data-tblid="{{ xdata.id }}">В корзину</a></td>
-    </tr>
-{% endfor %}
-AJAX обработчик нажатия добавления товара в корзину на JQ:
-$(".add_item_to_basket").click(function () {
-    var count = $("input[name*='count']").val();
-    var tblid = 0;
-    tblid = $(this).attr("data-tblid");
-    rpcBasketRequest('plugin.basket.manage', {'action': 'add', 'ds':51,'id':tblid,'count':count}); return false;
+# Версия: 0.08                                                                #
+# Дата: 2026-01-16                                                            #
+# =========================================================================== #
+## Описание
+Плагин "Корзина заказа" превращает NGCMS в полнофункциональный интернет-магазин
+с возможностью добавления товаров в корзину, управления заказом и отправки
+данных администратору через форму обратной связи.
+### Ключевые возможности
+✓ AJAX добавление товаров в корзину без перезагрузки страницы
+✓ Toast-уведомления через notify.js о действиях пользователя
+✓ Красивое форматирование цен с разделителями тысяч (1 234.56 руб.)
+✓ Поддержка нескольких типов товаров (новости, таблицы XFields)
+✓ Отслеживание корзины для авторизованных и гостевых пользователей
+✓ Управление количеством товаров в корзине
+✓ Интеграция с формами обратной связи для оформления заказа
+✓ Автоматическая очистка корзины после оформления заказа
+✓ Логирование всех операций через ng-helpers
+## Требования и зависимости
+**Обязательные плагины:**
+- **xfields** - для создания доп. полей товаров (цена, характеристики)
+- **feedback** - для формы оформления заказа и отправки email
+- **ng-helpers v0.2.1+** - для formatMoney(), notify(), logger()
+**Рекомендуемые:**
+- **notify.js** - для красивых toast-уведомлений (автоматический fallback на alert())
+**Системные требования:**
+- NG CMS 1.0.0+
+- PHP 8.2+
+- JavaScript с поддержкой sack AJAX library
+## Пошаговая настройка
+### Шаг 1: Настройка XFields
+1. **Создайте доп. поле для цены товара:**
+   - Тип поля: `text` (текстовый)
+   - Название: например, `price`
+   - Описание: "Цена товара"
+   - Значение по умолчанию: оставьте пустым
+2. **Определите условия отображения кнопки "В корзину":**
+   - **Вариант A**: Для всех новостей
+   - **Вариант B**: Только для новостей с заполненным полем цены (значение > 0)
+3. **Опционально: создайте дополнительные поля для характеристик:**
+   - `size` - размер (тип: `text` или `select`)
+   - `color` - цвет (тип: `text` или `select`)
+   - `stock` - остаток на складе (тип: `text`)
+   - `article` - артикул (тип: `text`)
+   - `description` - описание (тип: `textarea`)
+**Примечание:** XFields поддерживает типы полей: `text`, `textarea`, `select`, `multiselect`, `checkbox`, `images`
+### Шаг 2: Настройка Feedback
+1. **Создайте форму заказа:**
+   - Панель управления → Плагины → Feedback → Добавить форму
+   - Название: "Оформление заказа"
+   - Режим рассылки: **HTML** (обязательно!)
+   - Email получателей: адреса менеджеров/администраторов
+2. **Добавьте поля в форму:**
+   - Имя заказчика (обязательное)
+   - Телефон (обязательное)
+   - Email (необязательное)
+   - Адрес доставки
+   - Комментарий к заказу
+3. **Настройте email-шаблон:**
+   Создайте или отредактируйте файл шаблона email:
+   - Стандартный: `engine/plugins/feedback/tpl/mail.html.tpl`
+   - Пользовательский: `templates/[тема]/plugins/feedback/custom/[имя]/mail.html.tpl`
+   Добавьте переменную корзины `{{ plugin_basket }}`:
+   ```twig
+   <h2>Заказ с сайта</h2>
+   <p><strong>Имя:</strong> {{ field_name }}</p>
+   <p><strong>Телефон:</strong> {{ field_phone }}</p>
+   <p><strong>Email:</strong> {{ field_email }}</p>
+   <h3>Состав заказа:</h3>
+   {{ plugin_basket }}
+   <p><strong>Комментарий:</strong> {{ field_comment }}</p>
+   ```
+   **Важно:** Переменная `{{ plugin_basket }}` автоматически заполняется плагином basket через фильтр `BasketFeedbackFilter`.
+### Шаг 3: Настройка плагина Basket
+1. **Активируйте плагин:**
+   - Панель управления → Плагины → Basket → Активировать
+2. **Откройте настройки плагина:**
+   - Панель управления → Плагины → Basket → Настройки
+3. **Работа с новостями:**
+   - ☑ Активировать для новостей
+   - Выберите поле XFields с ценой (например, `price`)
+   - Шаблон названия товара: `{title}` или `{title} ({x:article})`
+4. **Работа с таблицами XFields (опционально):**
+   - ☑ Активировать для таблиц
+   - Выберите поле с ценой в таблице
+   - Шаблон названия: `{title} - {xt:color} / {xt:size}`
+5. **Выберите форму обратной связи:**
+   - Укажите ID формы, созданной на Шаге 2
+   - Корзина будет отображаться **только** в этой форме
+6. **Сохраните настройки**
+**Как это работает:**
+- При открытии формы feedback вызывается метод `BasketFeedbackFilter::onShow()` - отображает корзину в форме
+- При отправке формы вызывается метод `BasketFeedbackFilter::onProcess()` - вставляет данные корзины в email
+- После успешной отправки вызывается метод `BasketFeedbackFilter::onProcessNotify()` - очищает корзину
+## Интеграция в шаблоны
+### 1. Отображение счетчика корзины (main.tpl)
+Добавьте в шапку сайта блок с информацией о корзине:
+```twig
+{% if pluginIsActive('basket') %}
+    <div id="basket-counter">
+        {{ callPlugin('basket.total') }}
+    </div>
+{% endif %}
+```
+Это выведет содержимое шаблона `total.tpl` с количеством товаров и общей суммой.
+### 2. Кнопка "В корзину" в списке новостей (news.short.tpl)
+```twig
+{% if news.flags.basket_allow %}
+    <button
+        class="btn-add-to-basket"
+        data-news-id="{{ news.id }}"
+        onclick="rpcBasketRequest('plugin.basket.manage', {
+            'action': 'add',
+            'ds': 1,
+            'id': {{ news.id }},
+            'count': 1
+        }); return false;">
+        <i class="icon-cart"></i> В корзину
+    </button>
+{% endif %}
+```
+### 3. Полная страница товара (news.full.tpl)
+```twig
+{% if news.flags.basket_allow %}
+    <div class="product-price">
+        <span class="price">{{ news.xfields.price|formatMoney }} ₽</span>
+    </div>
+    <div class="product-order">
+        <label>Количество:</label>
+        <input type="number" id="product-count" value="1" min="1" max="99" />
+        <button
+            class="btn btn-primary btn-add-to-basket"
+            onclick="addToBasket({{ news.id }}, document.getElementById('product-count').value)">
+            Добавить в корзину
+        </button>
+    </div>
+    <script>
+    function addToBasket(newsId, count) {
+        rpcBasketRequest('plugin.basket.manage', {
+            'action': 'add',
+            'ds': 1,
+            'id': newsId,
+            'count': parseInt(count) || 1
+        });
+        return false;
+    }
+    </script>
+{% endif %}
+```
+### 4. Товары с вариантами (таблицы XFields)
+Если у товара есть варианты (размеры, цвета) в таблице XFields:
+```twig
+{% if news.flags.basket_allow and p.xfields._table.data %}
+    <h3>Выберите вариант:</h3>
+    <table class="product-variants">
+        <thead>
+            <tr>
+                <th>Размер</th>
+                <th>Цвет</th>
+                <th>Цена</th>
+                <th>Наличие</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for variant in p.xfields._table.data %}
+            <tr>
+                <td>{{ variant.field_size }}</td>
+                <td>{{ variant.field_color }}</td>
+                <td class="price">{{ variant.field_price|formatMoney }} ₽</td>
+                <td>
+                    {% if variant.field_stock > 0 %}
+                        <span class="in-stock">В наличии</span>
+                    {% else %}
+                        <span class="out-of-stock">Нет в наличии</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if variant.field_stock > 0 %}
+                        <button
+                            class="btn-add-variant"
+                            data-variant-id="{{ variant.id }}"
+                            onclick="rpcBasketRequest('plugin.basket.manage', {
+                                'action': 'add',
+                                'ds': 51,
+                                'id': {{ variant.id }},
+                                'count': 1
+                            }); return false;">
+                            В корзину
+                        </button>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
+```
+### 5. Страница корзины
+Создайте отдельную страницу `/plugin/basket/` которая отобразит содержимое
+корзины из шаблона `list.tpl`.
+## Шаблоны плагина
+### total.tpl - Счетчик корзины
+**Расположение:** `templates/[тема]/plugins/basket/total.tpl`
+**Доступные переменные:**
+```twig
+{{ count }}             - количество позиций в корзине (число)
+{{ price }}             - общая сумма (число, например 1234.56)
+{{ price_formatted }}   - форматированная сумма (строка, например "1 234.56")
+{{ ajaxUpdate }}        - флаг AJAX обновления (булево)
+```
+**Пример шаблона:**
+```twig
+{% if ajaxUpdate is not defined %}
+<div id="basketTotalDisplay">
+{% endif %}
+    <div class="basket-widget">
+        {% if count > 0 %}
+            <a href="/plugin/basket/" class="basket-link">
+                <i class="icon-cart"></i>
+                <span class="basket-count">{{ count }}</span>
+                <span class="basket-total">{{ price_formatted }} ₽</span>
+            </a>
+        {% else %}
+            <span class="basket-empty">
+                <i class="icon-cart"></i> Корзина пуста
+            </span>
+        {% endif %}
+    </div>
+{% if ajaxUpdate is not defined %}
+</div>
+{% endif %}
+```
+### list.tpl - Страница корзины
+**Расположение:** `templates/[тема]/plugins/basket/list.tpl`
+**Доступные переменные:**
+```twig
+{{ recs }}              - количество позиций (число)
+{{ entries }}           - массив товаров в корзине
+{{ total }}             - итоговая сумма (число, например 12345.67)
+{{ total_formatted }}   - форматированная итоговая сумма (строка)
+{{ form_url }}          - URL формы оформления заказа
+```
+**Для каждого элемента в entries:**
+```twig
+{{ entry.id }}                  - ID записи в корзине
+{{ entry.title }}               - название товара
+{{ entry.price }}               - цена за единицу (число)
+{{ entry.price_formatted }}     - форматированная цена (строка)
+{{ entry.count }}               - количество (число)
+{{ entry.sum }}                 - сумма за позицию (число)
+{{ entry.sum_formatted }}       - форматированная сумма (строка)
+{{ entry.xfields.news.* }}      - доп. поля новости (артикул, описание и т.д.)
+{{ entry.xfields.tdata.* }}     - доп. поля варианта из таблицы (размер, цвет)
+```
+**Пример шаблона:**
+```twig
+{% if recs > 0 %}
+    <div class="basket-page">
+        <h1>Ваша корзина</h1>
+        <form method="post" action="/plugin/basket/update/">
+            <table class="basket-table">
+                <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>Товар</th>
+                        <th>Цена</th>
+                        <th>Количество</th>
+                        <th>Сумма</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for entry in entries %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <strong>{{ entry.title }}</strong>
+                            {% if entry.xfields.tdata.size %}
+                                <br><small>Размер: {{ entry.xfields.tdata.size }}</small>
+                            {% endif %}
+                            {% if entry.xfields.tdata.color %}
+                                <br><small>Цвет: {{ entry.xfields.tdata.color }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="price">{{ entry.price_formatted }} ₽</td>
+                        <td>
+                            <input
+                                type="number"
+                                name="count_{{ entry.id }}"
+                                value="{{ entry.count }}"
+                                min="0"
+                                max="99"
+                                class="form-control"
+                                style="width: 60px;" />
+                        </td>
+                        <td class="price"><strong>{{ entry.sum_formatted }} ₽</strong></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td colspan="4" align="right"><strong>Итого:</strong></td>
+                        <td class="price"><strong>{{ total_formatted }} ₽</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div class="basket-actions">
+                <button type="submit" class="btn btn-secondary">
+                    <i class="icon-refresh"></i> Пересчитать
+                </button>
+                <a href="{{ form_url }}" class="btn btn-primary">
+                    <i class="icon-check"></i> Оформить заказ
+                </a>
+            </div>
+        </form>
+    </div>
+{% else %}
+    <div class="basket-empty-state">
+        <i class="icon-cart icon-large"></i>
+        <h2>Ваша корзина пуста</h2>
+        <p>Добавьте товары из <a href="/">каталога</a></p>
+    </div>
+{% endif %}
+```
+### lfeedback.tpl - Корзина в форме заказа
+**Расположение:** `templates/[тема]/plugins/basket/lfeedback.tpl`
+Отображается при оформлении заказа в форме feedback. Переменные аналогичны `list.tpl`,
+но без возможности редактирования количества.
+**Пример шаблона:**
+```twig
+{% if recs > 0 %}
+    <div class="order-basket">
+        <h3>Состав заказа</h3>
+        <table class="order-table">
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>Наименование</th>
+                    <th>Цена</th>
+                    <th>Кол-во</th>
+                    <th>Сумма</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for entry in entries %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ entry.title }}</td>
+                    <td>{{ entry.price_formatted }} ₽</td>
+                    <td>{{ entry.count }}</td>
+                    <td><strong>{{ entry.sum_formatted }} ₽</strong></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="total">
+                    <td colspan="4" align="right"><strong>Итого к оплате:</strong></td>
+                    <td><strong class="total-price">{{ total_formatted }} ₽</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+{% endif %}
+```
+## JavaScript API
+### Функция rpcBasketRequest()
+**Назначение:** Отправка AJAX запроса для добавления товара в корзину
+**Синтаксис:**
+```javascript
+rpcBasketRequest(method, params)
+```
+**Параметры:**
+- `method` (string) - всегда `'plugin.basket.manage'`
+- `params` (object) - параметры запроса:
+  - `action` (string) - действие, всегда `'add'`
+  - `ds` (number) - тип источника данных:
+    - `1` - новость (news)
+    - `51` - запись из таблицы XFields (tdata)
+  - `id` (number) - ID новости или записи таблицы
+  - `count` (number) - количество товара (по умолчанию 1)
+**Примеры использования:**
+```javascript
+// Добавление новости с ID 123 в корзину
+rpcBasketRequest('plugin.basket.manage', {
+    'action': 'add',
+    'ds': 1,
+    'id': 123,
+    'count': 1
 });
-
-> total.tpl - Общий вывод по заказам в корзине, работает в main.tpl
-Переменные:
-{{ count }} - кол-во записей
-{{ price }} - общая стоимость
-...
-
-> list.tpl - Корзина заказа (с возможностью обновлять кол-во заказанных товаров)
-{{ recs }} - кол-во записей
-{{ entries }} - массив со всеми записями корзины
-	{{ entry.title }} - наименование товара
-	{{ entry.count }} - кол-во товара
-	{{ etry.sum }}	  - общая стоимость товара
-	{{ entry.xfields.news.NAME }} - содержимое доп. поля NAME в новости из которой делался заказ
-	{{ entry.xfields.tdata.NAME }} - содержимое доп. поля при заказе из таблицы внутри новости
-...
-
-Более подробная информация о возможностях плагина:
-http://ngcms.ru/forum/viewtopic.php?id=2705
-http://ngcms.ru/forum/viewtopic.php?id=2746
-http://ngcms.ru/forum/viewtopic.php?pid=30259#p30259
-http://ngcms.ru/forum/viewtopic.php?id=3743
+// Добавление варианта товара из таблицы с ID 456, количество 2
+rpcBasketRequest('plugin.basket.manage', {
+    'action': 'add',
+    'ds': 51,
+    'id': 456,
+    'count': 2
+});
+```
+**Обработка результата:**
+Плагин автоматически:
+1. Показывает уведомление через `notify('success', 'Товар добавлен в корзину')`
+2. Обновляет счетчик корзины (элемент с id `basketTotalDisplay`)
+3. Обрабатывает ошибки с выводом `notify('error', текст_ошибки)`
+**Обработка в коде:**
+```javascript
+// jQuery обработчик для кнопок с классом .add-to-basket
+$('.add-to-basket').on('click', function(e) {
+    e.preventDefault();
+    var newsId = $(this).data('news-id');
+    var count = $('#quantity-' + newsId).val() || 1;
+    rpcBasketRequest('plugin.basket.manage', {
+        'action': 'add',
+        'ds': 1,
+        'id': newsId,
+        'count': parseInt(count)
+    });
+});
+// Добавление вариантов из таблицы
+$('.add-variant-to-basket').on('click', function(e) {
+    e.preventDefault();
+    var variantId = $(this).data('variant-id');
+    var count = $(this).closest('tr').find('.variant-quantity').val() || 1;
+    rpcBasketRequest('plugin.basket.manage', {
+        'action': 'add',
+        'ds': 51,
+        'id': variantId,
+        'count': parseInt(count)
+    });
+});
+```
+## Уведомления
+Плагин использует современную систему уведомлений через **notify.js**.
+### Типы уведомлений:
+- `success` - успешное добавление товара (зеленый)
+- `error` - ошибка (товар не найден, нет в наличии и т.д.) (красный)
+- `warning` - предупреждение (некорректное количество) (желтый)
+### Автоматический fallback:
+Если `notify.js` не загружен, плагин автоматически использует стандартный `alert()`.
+### Примеры сообщений:
+```
+✓ Товар добавлен в корзину
+✗ Товар не найден
+⚠ Количество должно быть положительным числом
+✗ Корзина работает только с новостями
+```
+## Логирование
+Плагин логирует все операции через `ng-helpers`:
+```
+[basket] Total: count=3, price=1234.56, IP=127.0.0.1
+[basket] Item added: id=123, price=500.00, count=2
+[basket] List: count=3, total=1234.56, IP=127.0.0.1
+[basket] Update: updated=1, deleted=0, IP=127.0.0.1
+[basket] Feedback show: formID=5, count=3, total=1234.56, IP=127.0.0.1
+[basket] Feedback notify: formID=5, cleared=3 items, IP=127.0.0.1
+```
+Для просмотра логов активируйте логирование в настройках ng-helpers.
+## Примеры использования
+### Пример 1: Простой интернет-магазин одежды
+**Структура товара (новость):**
+- Доп. поля: `price`, `article`, `brand`, `description`
+**В news.full.tpl:**
+```twig
+<div class="product-card">
+    <h1>{{ news.title }}</h1>
+    <div class="product-info">
+        <p><strong>Артикул:</strong> {{ news.xfields.article }}</p>
+        <p><strong>Бренд:</strong> {{ news.xfields.brand }}</p>
+        <p class="price">{{ news.xfields.price|formatMoney }} ₽</p>
+    </div>
+    <div class="product-description">
+        {{ news.xfields.description|raw }}
+    </div>
+    {% if news.flags.basket_allow %}
+        <div class="add-to-cart-block">
+            <input type="number" id="qty" value="1" min="1" />
+            <button onclick="addToBasket({{ news.id }}, document.getElementById('qty').value)">
+                Купить
+            </button>
+        </div>
+    {% endif %}
+</div>
+```
+### Пример 2: Товар с вариантами (размеры)
+**Структура:**
+- Новость: общее описание товара
+- Таблица XFields: варианты с полями `size`, `color`, `price`, `stock`
+**В news.full.tpl:**
+```twig
+<div class="product-variants">
+    <h3>Выберите размер и цвет:</h3>
+    {% for variant in p.xfields._table.data %}
+        <div class="variant-option {% if variant.field_stock < 1 %}out-of-stock{% endif %}">
+            <div class="variant-info">
+                <span class="size">{{ variant.field_size }}</span>
+                <span class="color">{{ variant.field_color }}</span>
+                <span class="price">{{ variant.field_price|formatMoney }} ₽</span>
+                <span class="stock">
+                    {% if variant.field_stock > 0 %}
+                        Осталось: {{ variant.field_stock }}
+                    {% else %}
+                        Нет в наличии
+                    {% endif %}
+                </span>
+            </div>
+            {% if variant.field_stock > 0 %}
+                <button
+                    class="btn-buy"
+                    onclick="rpcBasketRequest('plugin.basket.manage', {
+                        'action': 'add',
+                        'ds': 51,
+                        'id': {{ variant.id }},
+                        'count': 1
+                    }); return false;">
+                    В корзину
+                </button>
+            {% endif %}
+        </div>
+    {% endfor %}
+</div>
+```
+### Пример 3: Быстрая покупка в каталоге
+**В news.short.tpl:**
+```twig
+<div class="product-item">
+    <a href="{{ news.url.full }}">
+        {% if news.embed.images[0] %}
+            <img src="{{ news.embed.images[0].url }}" alt="{{ news.title }}" />
+        {% endif %}
+        <h3>{{ news.title }}</h3>
+    </a>
+    <div class="product-footer">
+        <span class="price">{{ news.xfields.price|formatMoney }} ₽</span>
+        {% if news.flags.basket_allow %}
+            <button
+                class="quick-buy"
+                data-news-id="{{ news.id }}"
+                title="Быстрая покупка">
+                <i class="icon-cart"></i>
+            </button>
+        {% endif %}
+    </div>
+</div>
+<script>
+// Обработчик быстрой покупки
+$('.quick-buy').on('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var newsId = $(this).data('news-id');
+    rpcBasketRequest('plugin.basket.manage', {
+        'action': 'add',
+        'ds': 1,
+        'id': newsId,
+        'count': 1
+    });
+});
+</script>
+```
+## Режимы работы
+### Режим 1: Новость = Товар
+Каждая новость — это отдельный товар со своей ценой.
+**Настройки в Basket:**
+- ☑ Активировать для новостей
+- Поле с ценой: `price`
+- Название товара: `{title}`
+**Применение:**
+- Простой каталог товаров
+- Товары без вариантов
+- Электронные товары (курсы, книги)
+### Режим 2: Новость = Группа товаров
+Новость содержит описание товара, а варианты (размеры, цвета) хранятся в таблице XFields.
+**Настройки в Basket:**
+- ☑ Активировать для таблиц
+- Поле с ценой: `price` (в таблице)
+- Название товара: `{title} - {xt:color} / {xt:size}`
+**Применение:**
+- Одежда с размерами
+- Товары с цветами
+- Товары с комплектациями
+### Режим 3: Смешанный
+Можно использовать оба режима одновременно в рамках одного сайта.
+**Пример:**
+- Новость "Футболка" → таблица с размерами S, M, L, XL
+- Новость "Подарочный сертификат" → единый товар без вариантов
+## Типичные проблемы и решения
+### Проблема: Не появляется кнопка "В корзину"
+**Решение:**
+1. Проверьте активацию плагина Basket
+2. Убедитесь, что в настройках включена работа с новостями/таблицами
+3. Проверьте условия отображения (поле цены должно быть > 0)
+4. Проверьте шаблон на наличие `{% if news.flags.basket_allow %}`
+### Проблема: Ошибка "Call to undefined function formatMoney()"
+**Решение:**
+Установите и активируйте плагин **ng-helpers v0.2.1+**
+### Проблема: Товар не добавляется в корзину (нет реакции)
+**Решение:**
+1. Проверьте консоль браузера на ошибки JavaScript
+2. Убедитесь, что подключен `basket.js`
+3. Проверьте, что загружен `ajax.js` и библиотека sack
+4. Убедитесь, что JavaScript не блокируется
+### Проблема: Двойные уведомления при добавлении
+**Решение:**
+Удалите дублирующие обработчики событий в шаблоне (onclick + addEventListener)
+### Проблема: Корзина не очищается после заказа
+**Решение:**
+1. Убедитесь, что в настройках Basket выбрана правильная форма Feedback
+2. Проверьте, что форма имеет режим рассылки HTML
+3. Проверьте логи плагина для диагностики
+## Совместимость
+**Протестировано с:**
+- NG CMS 0.9.2, 0.9.3+
+- XFields 0.42+
+- Feedback 0.42+
+- ng-helpers 0.2.1+
+**Браузеры:**
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+- Opera 76+
+**Не поддерживается:**
+- IE 11 и ниже (нет поддержки современного JavaScript)
+## История изменений
+См. файл `history` для подробной информации о версиях.
+**Актуальная версия: 0.08 (2026-01-16)**
+- Модернизация синтаксиса Twig
+- Интеграция с notify.js
+- Использование formatMoney() для красивых цен
+- Улучшенные сообщения об ошибках
+- Расширенное логирование
+## Поддержка и документация
+**Официальный форум:**
+- https://forum.ngcms.org/viewtopic.php?id=2705
+- https://forum.ngcms.org/viewtopic.php?id=2746
+- https://forum.ngcms.org/viewtopic.php?pid=30259#p30259
+- https://forum.ngcms.org/viewtopic.php?id=3743
+**Документация NGCMS:**
+- https://ngcms.org/
+**Разработчик:**
+- Vitaly A. Ponomarev
+- http://ngcms.org
+---
+© 2007-2026 NG CMS Development Team

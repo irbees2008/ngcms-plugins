@@ -3,14 +3,14 @@
 ;
 ID: autokeys
 Name: Auto Keywords
-Version: 0.4
+Version: 0.5
 Acts: admin:mod:news
 Actions: rpc;lib/librpc.php
 File: autokeys.php
 Config:config.php
 Type: plugin
 Description: Автоматическое добавление поля keywords
-Author: Maxym A. Dogadaylo
+Author: Maxym A. Dogadaylo, NGCMS Development Team,irbbes2008,copliot
 Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-key fa-3x" aria-hidden="true"></i>

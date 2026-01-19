@@ -3,8 +3,8 @@
 </style>
 
 <script type="text/javascript">
-	$(document).ready(function () {
-		$("#maincb").click(function () { // при клике по главному чекбоксу
+	$(document).ready(function() {
+		$("#maincb").click(function() { // при клике по главному чекбоксу
 			if ($('#maincb').attr('checked')) { // проверяем его значение
 				$('.check:enabled').attr('checked', true); // если чекбокс отмечен, отмечаем все чекбоксы
 			} else {
@@ -12,14 +12,20 @@
 			}
 		});
 	});
-
 </script>
 
 
 <?php
-function show_comments() {
+
+use function Plugins\{logger, sanitize, get_ip, benchmark, str_limit, truncate_html, is_post};
+
+function show_comments()
+{
 
 	global $mysql, $config, $parse;
+
+	$startTime = benchmark();
+
 	$perpage = extra_get_param('show_comments', 'perpage');
 	if ($perpage == '') {
 		$perpage = "5";
@@ -40,6 +46,8 @@ function show_comments() {
 	$query = "SELECT COUNT(*) as cnt FROM " . prefix . "_comments";
 	$res = $mysql->record($query, 1);
 	$total = $res['cnt'];
+
+	logger('show_comments', 'Loading comments list: total=' . $total . ', perpage=' . $perpage . ', order=' . $order);
 	// Проверяем передан ли номер текущей страницы
 	if (isset($_GET['page'])) {
 		$page = (int)$_GET['page'];
@@ -84,7 +92,7 @@ function show_comments() {
 			$text = $parse->smilies($text);
 		}
 		if (strlen($text) > $comm_length) {
-			$text = $parse->truncateHTML($text, $comm_length);
+			$text = truncate_html($text, $comm_length);
 		}
 		if ($prd['author_id'] && getPluginStatusActive('uprofile')) {
 			$author_link = checkLinkAvailable('uprofile', 'show') ?
@@ -95,21 +103,25 @@ function show_comments() {
 			$author_link = '';
 		}
 		echo '<tr>';
-		echo '<th>' . langdate('d.m.Y H:i:s', $prd['postdate']) . ' [<a href="/engine/admin.php?mod=editcomments&newsid=' . $prd['nid'] . '&comid=' . $prd['id'] . '" target="_blank">#</a>] [<a href="/engine/admin.php?mod=editcomments&subaction=deletecomment&newsid=' . $prd['nid'] . '&comid=' . $prd['id'] . '&poster=' . $prd['author'] . '" target="_blank">X</a>]</th>';
+		echo '<th>' . langdate('d.m.Y H:i:s', $prd['postdate']) . ' [<a href="/engine/admin.php?mod=editcomments&newsid=' . $prd['nid'] . '&comid=' . $prd['id'] . '" target="_blank">#</a>] [<a href="/engine/admin.php?mod=editcomments&subaction=deletecomment&newsid=' . $prd['nid'] . '&comid=' . $prd['id'] . '&poster=' . sanitize($prd['author']) . '" target="_blank">X</a>]</th>';
 		echo '<th>' . $text . '</th>';
-		echo '<th><a href="' . newsGenerateLink(array('id' => $prd['nid'], 'alt_name' => $prd['alt_name'], 'catid' => $prd['catid'], 'postdate' => $prd['npostdate'])) . '" target="_blank">' . str_replace('<', '&lt;', $prd['title']) . '</a> [<a href="/engine/admin.php?mod=news&action=edit&id=' . $prd['nid'] . '" target="_blank">E</a>]</th>';
+		echo '<th><a href="' . newsGenerateLink(array('id' => $prd['nid'], 'alt_name' => $prd['alt_name'], 'catid' => $prd['catid'], 'postdate' => $prd['npostdate'])) . '" target="_blank">' . sanitize($prd['title']) . '</a> [<a href="/engine/admin.php?mod=news&action=edit&id=' . $prd['nid'] . '" target="_blank">E</a>]</th>';
 		if ($prd['author_id']) {
-			echo '<th><a href="/engine/admin.php?mod=users&action=editForm&id=' . $prd['author_id'] . '" target="_blank">' . str_replace('<', '&lt;', $prd['author']) . '</a><br/><small><a href="mailto:' . $prd['mail'] . '">' . $prd['mail'] . '</a></small></th>';
+			echo '<th><a href="/engine/admin.php?mod=users&action=editForm&id=' . $prd['author_id'] . '" target="_blank">' . sanitize($prd['author']) . '</a><br/><small><a href="mailto:' . sanitize($prd['mail']) . '">' . sanitize($prd['mail']) . '</a></small></th>';
 		} else {
-			echo '<th>' . str_replace('<', '&lt;', $prd['author']) . '<br/><small><a href="mailto:' . $prd['mail'] . '">' . $prd['mail'] . '</a></small></th>';
+			echo '<th>' . sanitize($prd['author']) . '<br/><small><a href="mailto:' . sanitize($prd['mail']) . '">' . sanitize($prd['mail']) . '</a></small></th>';
 		}
-		echo '<th>[<a href="/engine/admin.php?mod=ipban&iplock=' . $prd['ip'] . '" target="_blank">' . $prd['ip'] . '</a>] [<a href="http://www.nic.ru/whois/?ip=' . $prd['ip'] . '" target="_blank">W</a>]</th>';
+		echo '<th>[<a href="/engine/admin.php?mod=ipban&iplock=' . sanitize($prd['ip']) . '" target="_blank">' . sanitize($prd['ip']) . '</a>] [<a href="http://www.nic.ru/whois/?ip=' . sanitize($prd['ip']) . '" target="_blank">W</a>]</th>';
 		echo '<th><input type="checkbox" name="type[]" value="' . $prd['id'] . '"></th>';
 		echo '</tr>';
 	}
 	echo '</tbody></table></div>';
 	echo '<script>$("tr:odd").css("background-color", "#f7fbff");</script>';
-	$type = $_POST['type'];
+
+	$elapsed = benchmark($startTime);
+	logger('show_comments', 'Comments list rendered: items=' . count($result) . ', elapsed=' . round($elapsed, 2) . 'ms');
+
+	$type = is_post() ? $_POST['type'] : null;
 	if (!empty($type)) {
 		// Начинаем формировать переменную, содержащую список
 		// в формате "(3,5,6,7)"
@@ -138,6 +150,8 @@ function show_comments() {
 			foreach ($mysql->select("select author_id, count(*) as cnt from " . prefix . "_comments group by author_id") as $row) {
 				$mysql->query("update " . uprefix . "_users set com=" . $row['cnt'] . " where id = " . $row['author_id']);
 			}
+
+			logger('show_comments', 'Comments deleted: count=' . count($type) . ', ip=' . get_ip());
 			echo "<META HTTP-EQUIV='Refresh' Content='0'>";
 		}
 	}
@@ -202,7 +216,3 @@ if ($_REQUEST['action'] == 'commit') {
 	show_comments();
 	generate_config_page('show_comments', $cfg);
 }
-
-	
-
-

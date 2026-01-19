@@ -2,6 +2,8 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
+use function Plugins\{logger, cache_get, cache_put};
+
 // Плагин подсветки кода: подключает локальные файлы SyntaxHighlighter из папки плагина
 // и активирует их на полной новости. Если в конфиге включён CDN — можно быстро
 // переключиться на внешние ресурсы.
@@ -132,6 +134,17 @@ function code_highlight_build_assets_html()
     if (!$theme) {
         $theme = 'Default';
     }
+
+    // Cache key based on configuration
+    $cacheKey = 'code_highlight_assets_' . ($useCDN ? 'cdn' : 'local') . '_' . $theme;
+
+    // Try to get from cache
+    $cached = cache_get($cacheKey);
+    if ($cached !== null) {
+        return $cached;
+    }
+
+    logger('code_highlight', 'Building assets HTML: mode=' . ($useCDN ? 'CDN' : 'local') . ', theme=' . $theme);
 
     $html = [];
 
@@ -266,7 +279,22 @@ function code_highlight_build_assets_html()
         '});' .
         '</script>';
 
-    return implode("\n", $html);
+    $result = implode("\n", $html);
+
+    // Cache for 24 hours (configuration doesn't change often)
+    cache_put($cacheKey, $result, 86400);
+
+    // Count enabled brushes for logging
+    $enabledCount = 0;
+    $brushKeys = ['jscript', 'php', 'sql', 'xml', 'css', 'plain', 'bash', 'python', 'java', 'csharp', 'cpp', 'delphi', 'diff', 'ruby', 'perl', 'vb', 'powershell', 'scala', 'groovy'];
+    foreach ($brushKeys as $k) {
+        if ($enabled($k)) {
+            $enabledCount++;
+        }
+    }
+    logger('code_highlight', 'Assets cached: ' . $enabledCount . ' brushes enabled');
+
+    return $result;
 }
 
 // Фильтр новостей: подключаем подсветку только на полной новости
@@ -277,6 +305,7 @@ class CodeHighlightNewsFilter extends NewsFilter
         if ($mode['style'] != 'full') {
             return 1;
         }
+        logger('code_highlight', 'Syntax highlighting attached for news: id=' . $newsID);
         if (function_exists('register_htmlvar')) {
             register_htmlvar('plain', code_highlight_build_assets_html());
         }

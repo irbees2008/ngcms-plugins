@@ -8,6 +8,9 @@
 if (!defined('NGCMS')) {
     die('HAL');
 }
+
+// Modernized with ng-helpers v0.2.1 (18 января 2026)
+use function Plugins\{notify, sanitize, logger, get_ip, cache_get, cache_put, cache_forget};
 // Load lang files
 LoadPluginLang('xfields', 'config');
 LoadPluginLibrary('xfields', 'common');
@@ -157,7 +160,7 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                     }
                     // Now write info about image into DB
                     if (is_array($sz = $imanager->get_size($config['attach_dir'] . $up[2] . '/' . $up[1]))) {
-                        $fmanager->get_limits($type);
+                        $fmanager->get_limits('image');
                         // Gather filesize for thumbinals
                         $thumb_size_x = 0;
                         $thumb_size_y = 0;
@@ -165,7 +168,7 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                             $thumb_size_x = $szt[1];
                             $thumb_size_y = $szt[2];
                         }
-                        $mysql->query('update ' . prefix . '_' . $fmanager->tname . ' set width=' . db_squote($sz[1]) . ', height=' . db_squote($sz[2]) . ', preview=' . db_squote(is_array($thumb) ? 1 : 0) . ', p_width=' . db_squote($thumb_size_x) . ', p_height=' . db_squote($thumb_size_y) . ', stamp=' . db_squote(is_array($stamp) ? 1 : 0) . ' where id = ' . db_squote($up[0]));
+                        $mysql->query('update ' . prefix . '_images set width=' . db_squote($sz[1]) . ', height=' . db_squote($sz[2]) . ', preview=' . db_squote(is_array($thumb) ? 1 : 0) . ', p_width=' . db_squote($thumb_size_x) . ', p_height=' . db_squote($thumb_size_y) . ', stamp=' . db_squote(is_array($stamp) ? 1 : 0) . ' where id = ' . db_squote($up[0]));
                     }
                 }
             }
@@ -186,6 +189,7 @@ class XFieldsNewsFilter extends NewsFilter
         $output = '';
         $xfEntries = [];
         $xfList = [];
+        $xdata = []; // Initialize xdata array
         if (is_array($xf['news'])) {
             foreach ($xf['news'] as $id => $data) {
                 if ($data['disabled']) {
@@ -194,8 +198,8 @@ class XFieldsNewsFilter extends NewsFilter
                 $xfEntry = [
                     'title'        => $data['title'],
                     'id'           => $id,
-                    'value'        => $xdata[$id],
-                    'secure_value' => secure_html($xdata[$id]),
+                    'value'        => $xdata[$id] ?? '',
+                    'secure_value' => secure_html($xdata[$id] ?? ''),
                     'data'         => $data,
                     'required'     => $lang['xfields_fld_' . ($data['required'] ? 'required' : 'optional')],
                     'flags'        => [
@@ -359,9 +363,10 @@ class XFieldsNewsFilter extends NewsFilter
             }
             // Fill xfields. Check that all required fields are filled
             if ($rcall[$id] != '') {
-                $xdata[$id] = $rcall[$id];
+                $xdata[$id] = sanitize($rcall[$id]);
             } elseif ($data['required']) {
-                msg(['type' => 'error', 'text' => str_replace('{field}', $id, $lang['xfields_msge_emptyrequired'])]);
+                notify('error', str_replace('{field}', $id, $lang['xfields_msge_emptyrequired']));
+                logger("Required field empty: {$id}, IP: " . get_ip(), 'warning');
                 return 0;
             }
             // Check if we should save data into separate SQL field
@@ -501,7 +506,6 @@ class XFieldsNewsFilter extends NewsFilter
                     }
                     if (is_array($data['options'])) {
                         foreach ($data['options'] as $k => $v) {
-                            var_dump();
                             $val .= '<option value="' . secure_html(($data['storekeys']) ? $k : $v) . '"' . ((($data['storekeys'] && (in_array($k, $xdata[$id]))) || (!$data['storekeys'] && (in_array($v, $xdata[$id])))) ? ' selected' : '') . '>' . $v . '</option>';
                         }
                     }
@@ -707,9 +711,10 @@ class XFieldsNewsFilter extends NewsFilter
                 continue;
             }
             if ($rcall[$id] != '') {
-                $xdata[$id] = $rcall[$id];
+                $xdata[$id] = sanitize($rcall[$id]);
             } elseif ($data['required']) {
-                msg(['type' => 'error', 'text' => str_replace('{field}', $id, $lang['xfields_msge_emptyrequired'])]);
+                notify('error', str_replace('{field}', $id, $lang['xfields_msge_emptyrequired']));
+                logger("Required field empty on edit: {$id}, IP: " . get_ip(), 'warning');
                 return 0;
             }
             // Check if we should save data into separate SQL field
@@ -819,6 +824,7 @@ class XFieldsNewsFilter extends NewsFilter
                 if ($v['type'] == 'images') {
                     // Yes, we have it!
                     $conversionParams = [];
+                    $conversionConfig = [];
                     $imagesTemplateFileName = 'plugins/xfields/tpl/news.show.images.tpl';
                     $twigLoader->setConversion($imagesTemplateFileName, $conversionConfig);
                     $xtImages = $twig->loadTemplate($imagesTemplateFileName);
@@ -1210,6 +1216,7 @@ if (getPluginStatusActive('uprofile')) {
                     if ($v['type'] == 'images') {
                         // Yes, we have it!
                         $conversionParams = [];
+                        $conversionConfig = [];
                         $imagesTemplateFileName = 'plugins/xfields/tpl/profile.show.images.tpl';
                         $twigLoader->setConversion($imagesTemplateFileName, $conversionConfig);
                         $xtImages = $twig->loadTemplate($imagesTemplateFileName);
@@ -1234,14 +1241,15 @@ if (getPluginStatusActive('uprofile')) {
                             $iname = ($imgInfo['storage'] ? $config['attach_url'] : $config['files_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'];
                             $tvars['vars']['[xvalue_' . $k . ']'] = $iname;
                             // Scan for images and prepare data for template show
+                            $mode = $mode ?? ['style' => '', 'plugin' => ''];
                             $tiVars = [
                                 'fieldName'    => $k,
                                 'fieldTitle'   => secure_html($v['title']),
                                 'fieldType'    => $v['type'],
                                 'entriesCount' => count($imglist),
                                 'entries'      => [],
-                                'execStyle'    => $mode['style'],
-                                'execPlugin'   => $mode['plugin'],
+                                'execStyle'    => $mode['style'] ?? '',
+                                'execPlugin'   => $mode['plugin'] ?? '',
                             ];
                             foreach ($imglist as $imgInfo) {
                                 $tiEntry = [

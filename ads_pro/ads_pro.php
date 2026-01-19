@@ -1,35 +1,32 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
+use function Plugins\{cache_get, cache_put, logger, sanitize};
 // Classes for traffic handling
 // - static pages
-class ADSProStaticFilter extends StaticFilter {
-
-	function showStatic($staticID, $SQLstatic, &$tvars, $mode) {
-
+class ADSProStaticFilter extends StaticFilter
+{
+	function showStatic($staticID, $SQLstatic, &$tvars, $mode)
+	{
 		global $adsPRO_cache;
 		$adsPRO_cache['flag.static'] = true;
 		$adsPRO_cache['static.id'] = $staticID;
-
 		return 1;
 	}
 }
-
 // - news
-class ADSProNewsFilter extends NewsFilter {
-
-    public function showNews($newsID, $SQLnews, &$tvars, $mode = []) {
-
+class ADSProNewsFilter extends NewsFilter
+{
+	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
+	{
 		global $adsPRO_cache;
 		if ($mode['style'] == 'full') {
 			$adsPRO_cache['flag.news'] = true;
 			$adsPRO_cache['news.id'] = $newsID;
 		}
-
 		return 1;
 	}
 }
-
 // Initiate interceptors
 // - for common pages [ process page, generate output ]
 add_act('index_post', 'plugin_ads_pro');
@@ -50,12 +47,11 @@ $adsPRO_cache = array(
 	'flag.main'     => false
 );
 // Main function of plugin
-function plugin_ads_pro() {
-
+function plugin_ads_pro()
+{
 	global $template, $config, $CurrentHandler, $catmap, $mysql, $adsPRO_cache;
 	$dataConfig = pluginGetVariable('ads_pro', 'data');
 	if (!is_array($dataConfig)) return;
-	
 	// Синхронизация с базой данных при переносе сайта
 	$dataConfig = ads_pro_sync_with_database($dataConfig);
 	if ($CurrentHandler['params'][0] == '/') $adsPRO_cache['flag.main'] = true;
@@ -75,8 +71,13 @@ function plugin_ads_pro() {
 	$t_time = time();
 	foreach ($dataConfig as $blockID => $blockRecords) {
 		if (!$blockID) continue;
+		// Обеспечиваем совместимость с Twig: добавляем префикс к числовым ID
+		$tplVarName = $blockID;
+		if (is_numeric($blockID)) {
+			$tplVarName = 'block_' . $blockID;
+		}
 		// Initiate block output if it's not filled yet
-		if (!isset($template['vars'][$blockID])) $template['vars'][$blockID] = '';
+		if (!isset($template['vars'][$tplVarName])) $template['vars'][$tplVarName] = '';
 		// Scan all records of this block
 		foreach ($blockRecords as $blockIndexNum => $blockInfo) {
 			//print "<pre>ADS_PRO_DATA [$blockID][$blockIndexNum]:".var_export($blockInfo, true)."</pre>";
@@ -197,12 +198,17 @@ function plugin_ads_pro() {
 				if (!$blockIsVisible) continue;
 			}
 			// Fine, block is visible, add it into display list
-			$blockDisplayList[$blockID] [] = $blockIndexNum;
+			$blockDisplayList[$blockID][] = $blockIndexNum;
 		}
 	}
 	//print "<pre>ADS INDEXING:".var_export($blockDisplayList, true)."</pre>";
 	// Scan blocks, marked to be displayed
 	foreach ($blockDisplayList as $blockID => $blockRecList) {
+		// Обеспечиваем совместимость с Twig: добавляем префикс к числовым ID
+		$tplVarName = $blockID;
+		if (is_numeric($blockID)) {
+			$tplVarName = 'block_' . $blockID;
+		}
 		// Process multidisplay mode
 		if ((count($blockRecList) > 1) && (($mdm = pluginGetVariable('ads_pro', 'multidisplay_mode')) > 0)) {
 			// - First active
@@ -220,43 +226,42 @@ function plugin_ads_pro() {
 			//print "<pre>BID:".var_export($blockInfo, true)."</pre>";
 			// Cache non-PHP ads blocks
 			if ($blockInfo['type'] != 1) {
-				$cacheFileName = md5('ads_pro' . $blockID . '.' . $blockIndexNum . '.' . $blockInfo['type']) . '.txt';
-				$cacheData = cacheRetrieveFile($cacheFileName, 30000, 'ads_pro');
-				if ($cacheData != false) {
-					$template['vars'][$blockID] .= $cacheData;
+				$cacheKey = 'ads_pro:' . $blockID . ':' . $blockIndexNum . ':' . $blockInfo['type'];
+				$cacheData = cache_get($cacheKey);
+				if ($cacheData !== null) {
+					$template['vars'][$tplVarName] .= $cacheData;
 					continue;
 				}
 				$description = '';
 				if (is_array($row = $mysql->record('select ads_blok from ' . prefix . '_ads_pro where id=' . db_squote($blockIndexNum)))) {
-					$description = $blockInfo['type'] ? nl2br(htmlspecialchars($row['ads_blok'])) : $row['ads_blok'];
+					$description = $blockInfo['type'] ? nl2br(htmlspecialchars($row['ads_blok'])) : sanitize($row['ads_blok'], 'html');
 				}
-				$template['vars'][$blockID] .= $description;
-				cacheStoreFile($cacheFileName, $description, 'ads_pro');
+				$template['vars'][$tplVarName] .= $description;
+				cache_put($cacheKey, $description, 30000);
 			} else {
 				$description = '';
 				if (is_array($row = $mysql->record('select ads_blok from ' . prefix . '_ads_pro where id=' . db_squote($blockIndexNum)))) {
 					$description = $row['ads_blok'];
 				}
+				logger('ads_pro', 'Executing PHP block: id=' . $blockIndexNum . ', block=' . $blockID);
 				ob_start();
 				@eval($description);
 				$out2 = ob_get_contents();
 				ob_end_clean();
-				$template['vars'][$blockID] .= $out2;
+				$template['vars'][$tplVarName] .= $out2;
 			}
 		}
 	}
 }
-
 // Функция синхронизации данных плагина с базой данных
-function ads_pro_sync_with_database($dataConfig) {
+function ads_pro_sync_with_database($dataConfig)
+{
 	global $mysql;
-	
 	// Получаем все ID из базы данных
 	$dbIds = array();
 	foreach ($mysql->select('SELECT id FROM ' . prefix . '_ads_pro') as $row) {
 		$dbIds[] = intval($row['id']);
 	}
-	
 	// Получаем все ID из конфигурации
 	$configIds = array();
 	foreach ($dataConfig as $blockName => $blocks) {
@@ -264,13 +269,12 @@ function ads_pro_sync_with_database($dataConfig) {
 			$configIds[] = intval($blockId);
 		}
 	}
-	
 	// Проверяем, есть ли расхождения
 	$missingInDb = array_diff($configIds, $dbIds);
 	$missingInConfig = array_diff($dbIds, $configIds);
-	
 	// Если есть ID в конфиге, которых нет в БД - удаляем их из конфига
 	if (!empty($missingInDb)) {
+		logger('ads_pro', 'Sync: removing from config, IDs=' . implode(',', $missingInDb));
 		foreach ($dataConfig as $blockName => &$blocks) {
 			foreach ($blocks as $blockId => $blockData) {
 				if (in_array(intval($blockId), $missingInDb)) {
@@ -283,13 +287,11 @@ function ads_pro_sync_with_database($dataConfig) {
 			}
 		}
 	}
-	
 	// Если есть ID в БД, которых нет в конфиге - пытаемся найти их в исходных данных
 	if (!empty($missingInConfig)) {
 		// Сначала ищем в исходной конфигурации
 		$originalConfig = pluginGetVariable('ads_pro', 'data');
 		$foundInOriginal = array();
-		
 		foreach ($missingInConfig as $dbId) {
 			// Ищем этот ID в исходной конфигурации
 			foreach ($originalConfig as $blockName => $blocks) {
@@ -303,15 +305,17 @@ function ads_pro_sync_with_database($dataConfig) {
 				}
 			}
 		}
-		
 		// Для ID, которых нет в исходной конфигурации, создаем базовую структуру
 		$notFoundInOriginal = array_diff($missingInConfig, $foundInOriginal);
+		if (!empty($notFoundInOriginal)) {
+			logger('ads_pro', 'Sync: restoring blocks from DB, IDs=' . implode(',', $notFoundInOriginal));
+		}
 		foreach ($notFoundInOriginal as $dbId) {
 			$row = $mysql->record('SELECT * FROM ' . prefix . '_ads_pro WHERE id = ' . intval($dbId));
 			if ($row) {
 				$blockName = 'fase';
 				$dataConfig[$blockName][$dbId] = array(
-					'description' => $row['description'] ? $row['description'] : 'Восстановленный блок',
+					'description' => $row['description'] ? sanitize($row['description'], 'string') : 'Восстановленный блок',
 					'type' => intval($row['type']),
 					'state' => intval($row['state']),
 					'start_view' => $row['start_view'] ? intval($row['start_view']) : null,
@@ -320,11 +324,9 @@ function ads_pro_sync_with_database($dataConfig) {
 				);
 			}
 		}
-		
 		// Сохраняем обновленную конфигурацию
 		pluginSetVariable('ads_pro', 'data', $dataConfig);
 		pluginsSaveConfig();
 	}
-	
 	return $dataConfig;
 }
