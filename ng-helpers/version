@@ -1,0 +1,19 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: ng-helpers
+Type: plugin
+Version: 0.2.1
+Permanent: yes
+Preinstall: default_yes
+File: src/helpers.php
+Acts: core
+Library: renderable; src/Traits/Renderable.php
+Title: Хелперы NGCMS (Extended)
+Name: Хелперы NGCMS (Extended)
+Description: Расширенная коллекция вспомогательных функций для плагинов NGCMS (60+ функций).
+Information: Коллекция включает 60+ функций: валидация, работа с массивами, строками, датами, HTTP, безопасность, кэширование, debug и многое другое.
+Author: rusiq
+Author_URI: https://github.com/russsiq
+MinEngineBuild: 23b3116
+Icons:<i class="fa fa-terminal fa-3x" aria-hidden="true"></i>
