@@ -8,7 +8,6 @@
 if (!defined('NGCMS')) {
     die('HAL');
 }
-
 // Modernized with ng-helpers v0.2.1 (18 января 2026)
 use function Plugins\{notify, sanitize, logger, get_ip, cache_get, cache_put, cache_forget};
 // Load lang files
@@ -172,8 +171,128 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                     }
                 }
             }
+            // NEW: Handle selection from existing xfields images
+            if (isset($_POST['xfields_' . $id . '_existing']) && is_array($_POST['xfields_' . $id . '_existing'])) {
+                foreach ($_POST['xfields_' . $id . '_existing'] as $eIndex => $eImageId) {
+                    if (empty($eImageId) || !is_numeric($eImageId)) {
+                        continue;
+                    }
+                    // Check limits
+                    $currCount = $mysql->record('select count(*) as cnt from ' . prefix . '_images where (linked_ds = ' . intval($dsID) . ') and (linked_id = ' . intval($newsID) . ") and (plugin = 'xfields') and (pidentity=" . db_squote($id) . ')');
+                    if ($currCount['cnt'] >= $data['maxCount']) {
+                        continue;
+                    }
+                    // Get source image info
+                    $sourceImage = $mysql->record('select * from ' . prefix . "_images where id = " . intval($eImageId) . " and plugin = 'xfields'");
+                    if (!$sourceImage) {
+                        continue;
+                    }
+                    // Source file paths
+                    $sourcePath = $config['attach_dir'] . $sourceImage['folder'] . '/' . $sourceImage['name'];
+                    $sourceThumbPath = $config['attach_dir'] . $sourceImage['folder'] . '/thumb/' . $sourceImage['name'];
+                    if (!file_exists($sourcePath)) {
+                        continue;
+                    }
+                    // Target DSN path
+                    $dsnPath = sprintf('%04d/%02d', floor($newsID / 1000) * 1000, floor($newsID / 100) * 100);
+                    $targetDir = $config['attach_dir'] . $dsnPath;
+                    if (!is_dir($targetDir)) {
+                        @mkdir($targetDir, 0777, true);
+                    }
+                    if (!is_dir($targetDir . '/thumb')) {
+                        @mkdir($targetDir . '/thumb', 0777);
+                    }
+                    // Copy main file
+                    $targetPath = $targetDir . '/' . $sourceImage['name'];
+                    if (!copy($sourcePath, $targetPath)) {
+                        continue;
+                    }
+                    // Copy thumbnail if exists
+                    if ($sourceImage['preview'] && file_exists($sourceThumbPath)) {
+                        @copy($sourceThumbPath, $targetDir . '/thumb/' . $sourceImage['name']);
+                    }
+                    // Get description from form
+                    $description = '';
+                    if (isset($_REQUEST['xfields_' . $id . '_adscr']) && is_array($_REQUEST['xfields_' . $id . '_adscr']) && isset($_REQUEST['xfields_' . $id . '_adscr'][$eIndex])) {
+                        $description = $_REQUEST['xfields_' . $id . '_adscr'][$eIndex];
+                    }
+                    // Insert new record
+                    $mysql->query('insert into ' . prefix . '_images (name, orig_name, folder, date, user, category, linked_ds, linked_id, plugin, pidentity, description, width, height, preview, p_width, p_height, stamp) values ' .
+                        '(' . db_squote($sourceImage['name']) . ', ' .
+                        db_squote($sourceImage['orig_name']) . ', ' .
+                        db_squote($dsnPath) . ', ' .
+                        db_squote(time()) . ', ' .
+                        db_squote($sourceImage['user']) . ', ' .
+                        db_squote($sourceImage['category']) . ', ' .
+                        intval($dsID) . ', ' .
+                        intval($newsID) . ', ' .
+                        db_squote('xfields') . ', ' .
+                        db_squote($id) . ', ' .
+                        db_squote($description) . ', ' .
+                        intval($sourceImage['width']) . ', ' .
+                        intval($sourceImage['height']) . ', ' .
+                        intval($sourceImage['preview']) . ', ' .
+                        intval($sourceImage['p_width']) . ', ' .
+                        intval($sourceImage['p_height']) . ', ' .
+                        intval($sourceImage['stamp']) . ')');
+                }
+            }
         }
     }
+}
+//
+// AJAX handler for getting xfields images list
+//
+if (
+    isset($_REQUEST['handler']) && $_REQUEST['handler'] == 'get_xfields_images' &&
+    isset($_REQUEST['plugin']) && $_REQUEST['plugin'] == 'xfields'
+) {
+    @header('Content-Type: application/json');
+    global $mysql, $config;
+    $search = isset($_REQUEST['search']) ? trim($_REQUEST['search']) : '';
+    $fieldFilter = isset($_REQUEST['field']) ? $_REQUEST['field'] : '';
+    // Build query for images uploaded via xfields
+    $filter = ["plugin = 'xfields'"];
+    if ($fieldFilter && $fieldFilter != '') {
+        $filter[] = 'pidentity = ' . db_squote($fieldFilter);
+    }
+    if ($search && $search != '') {
+        $filter[] = "(description LIKE " . db_squote('%' . $search . '%') . " OR orig_name LIKE " . db_squote('%' . $search . '%') . " OR name LIKE " . db_squote('%' . $search . '%') . ")";
+    }
+    $where = count($filter) ? 'where ' . implode(' and ', $filter) : '';
+    // Get images with news info
+    $images = [];
+    foreach ($mysql->select('select i.*, n.title as news_title from ' . prefix . '_images i left join ' . prefix . '_news n on (i.linked_ds = 1 and i.linked_id = n.id) ' . $where . ' order by i.date desc limit 200') as $row) {
+        $images[] = [
+            'id' => $row['id'],
+            'name' => $row['name'],
+            'orig_name' => $row['orig_name'],
+            'description' => $row['description'],
+            'width' => $row['width'],
+            'height' => $row['height'],
+            'preview' => $row['preview'] ? true : false,
+            'url' => $config['attach_url'] . '/' . $row['folder'] . '/' . $row['name'],
+            'thumb_url' => $config['attach_url'] . '/' . $row['folder'] . '/thumb/' . $row['name'],
+            'news_title' => $row['news_title'] ? $row['news_title'] : 'Новость #' . $row['linked_id'],
+            'field_id' => $row['pidentity']
+        ];
+    }
+    // Get list of xfields image fields
+    $xf = xf_configLoad();
+    $fields = [];
+    if (is_array($xf) && isset($xf['news']) && is_array($xf['news'])) {
+        foreach ($xf['news'] as $fId => $fData) {
+            if ($fData['type'] == 'images' && !$fData['disabled']) {
+                $fields[$fId] = $fData['title'];
+            }
+        }
+    }
+    echo json_encode([
+        'status' => 'ok',
+        'images' => $images,
+        'fields' => $fields
+    ]);
+    exit;
 }
 // Perform replacements while showing news
 class XFieldsNewsFilter extends NewsFilter
@@ -246,9 +365,10 @@ class XFieldsNewsFilter extends NewsFilter
                         $xfEntry['input'] = $val;
                         break;
                     case 'images':
+                        global $PHP_SELF;
                         $iCount = 0;
                         $input = '';
-                        $tVars = ['images' => []];
+                        $tVars = ['images' => [], 'php_self' => $PHP_SELF];
                         // Show entries for allowed number of attaches
                         for ($i = $iCount + 1; $i <= intval($data['maxCount']); $i++) {
                             $tImage = [
@@ -519,10 +639,11 @@ class XFieldsNewsFilter extends NewsFilter
                     $xfEntries[intval($data['area'])][] = $xfEntry;
                     break;
                 case 'images':
+                    global $PHP_SELF;
                     // First - show already attached images
                     $iCount = 0;
                     $input = '';
-                    $tVars = ['images' => []];
+                    $tVars = ['images' => [], 'php_self' => $PHP_SELF];
                     //$tpl -> template('ed_entry.image', extras_dir.'/xfields/tpl');
                     if (is_array($SQLold['#images'])) {
                         foreach ($SQLold['#images'] as $irow) {
