@@ -228,11 +228,9 @@ class CommentsNewsFilter extends NewsFilter
 			$navigations = $TemplateCache['site']['#variables']['navigation'];
 			// Используем значение навигаций из конфига новости (newsNavigationsCount) если существует
 			$navCount = isset($config['newsNavigationsCount']) && $config['newsNavigationsCount'] > 2 ? intval($config['newsNavigationsCount']) : 8;
-			$tcvars['vars']['more_comments'] = generatePagination(1, 1, $pageCount, $navCount, $paginationParams, $navigations, true);
 			$tcvars['vars']['pagination'] = comments_buildPaginationStructure(1, $pageCount, $navCount, $paginationParams, $navigations, true);
 		} else {
-			$tcvars['vars']['more_comments'] = '';
-			$tcvars['regx']['#\[more_comments\](.*?)\[\/more_comments\]#is'] = '';
+			$tcvars['vars']['pagination'] = null;
 		}
 		// Show form for adding comments
 		if ($allowCom && (!pluginGetVariable('comments', 'regonly') || is_array($userROW))) {
@@ -428,11 +426,9 @@ function plugin_comments_show()
 		templateLoadVariables(true);
 		$navigations = $TemplateCache['site']['#variables']['navigation'];
 		$navCount = isset($config['newsNavigationsCount']) && $config['newsNavigationsCount'] > 2 ? intval($config['newsNavigationsCount']) : 8;
-		$tcvars['vars']['more_comments'] = generatePagination($page, 1, $pageCount, $navCount, $paginationParams, $navigations, true);
 		$tcvars['vars']['pagination'] = comments_buildPaginationStructure($page ? $page : 1, $pageCount, $navCount, $paginationParams, $navigations, true);
 	} else {
-		$tcvars['vars']['more_comments'] = '';
-		$tcvars['regx']['#\[more_comments\](.*?)\[\/more_comments\]#is'] = '';
+		$tcvars['vars']['pagination'] = null;
 	}
 	if (isset($_REQUEST['ajax']) && $_REQUEST['ajax'] && isset($_REQUEST['embedded'])) {
 		$SUPRESS_TEMPLATE_SHOW = 1;
@@ -443,9 +439,30 @@ function plugin_comments_show()
 		if (file_exists($themePaginationFile) || file_exists($pluginPaginationFile)) {
 			$templateContent = file_get_contents(file_exists($themePaginationFile) ? $themePaginationFile : $pluginPaginationFile);
 			$twigTemplate = $twig->createTemplate($templateContent);
-			$paginationHtml = $twigTemplate->render(array('more_comments' => $tcvars['vars']['more_comments'], 'pagination' => isset($tcvars['vars']['pagination']) ? $tcvars['vars']['pagination'] : null));
+			$paginationHtml = $twigTemplate->render(array('pagination' => isset($tcvars['vars']['pagination']) ? $tcvars['vars']['pagination'] : null));
 		} else {
-			$paginationHtml = $tcvars['vars']['more_comments'];
+			// Встроенный шаблон если файл не найден
+			$paginationHtml = '';
+			if (isset($tcvars['vars']['pagination']) && $tcvars['vars']['pagination']) {
+				$p = $tcvars['vars']['pagination'];
+				$paginationHtml = '<div class="pagination" id="comments_pagination"><ul>';
+				if ($p['prev']['exists']) {
+					$paginationHtml .= '<li class="page-prev"><a href="' . htmlspecialchars($p['prev']['url']) . '" rel="prev" data-page="' . $p['prev']['num'] . '">‹</a></li>';
+				}
+				foreach ($p['pages'] as $page) {
+					if ($page['type'] == 'dots') {
+						$paginationHtml .= '<li class="page-dots"><span>...</span></li>';
+					} elseif ($page['type'] == 'current') {
+						$paginationHtml .= '<li class="page-current active"><span data-page="' . $page['num'] . '">' . $page['num'] . '</span></li>';
+					} elseif ($page['type'] == 'link') {
+						$paginationHtml .= '<li class="page-item"><a href="' . htmlspecialchars($page['url']) . '" data-page="' . $page['num'] . '">' . $page['num'] . '</a></li>';
+					}
+				}
+				if ($p['next']['exists']) {
+					$paginationHtml .= '<li class="page-next"><a href="' . htmlspecialchars($p['next']['url']) . '" rel="next" data-page="' . $p['next']['num'] . '">›</a></li>';
+				}
+				$paginationHtml .= '</ul></div>';
+			}
 		}
 		header('Content-Type: application/json; charset=utf-8');
 		echo json_encode(array('status' => 1, 'entries' => $tcvars['vars']['entries'], 'pagination' => $paginationHtml));

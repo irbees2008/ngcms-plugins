@@ -2,11 +2,6 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 use function Plugins\{logger, cache_get, cache_put};
-// Очищаем все возможные буферы вывода
-while (ob_get_level()) ob_end_clean();
-// Устанавливаем заголовок XML ДО любого вывода
-// Устанавливаем заголовок RSS ДО любого вывода
-header('Content-Type: application/rss+xml; charset=utf-8');
 include_once root . "/includes/news.php";
 register_plugin_page('rss_export', '', 'plugin_rss_export', 0);
 register_plugin_page('rss_export', 'category', 'plugin_rss_export_category', 0);
@@ -52,6 +47,14 @@ function plugin_rss_export_category($params)
 function plugin_rss_export_generate($catname = '')
 {
 	global $lang, $PFILTERS, $template, $config, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $mysql, $catz, $parse, $userROW;
+	// Агрессивная очистка буферов перед выводом XML
+	while (ob_get_level()) {
+		ob_end_clean();
+	}
+	// Отключаем вывод ошибок в XML
+	@ini_set('display_errors', '0');
+	// Устанавливаем заголовок Content-Type
+	header('Content-Type: application/rss+xml; charset=utf-8');
 	actionDisable('index');
 	$SUPRESS_TEMPLATE_SHOW = 1;
 	$SUPRESS_MAINBLOCK_SHOW = 1;
@@ -67,13 +70,13 @@ function plugin_rss_export_generate($catname = '')
 		$cached = cache_get('rss_export_' . $cacheFileName);
 		if ($cached !== null) {
 			logger('rss_export', 'RSS feed served from cache: category=' . ($catname ?: 'all'));
+			// Убираем возможный BOM из кеша
+			$cached = preg_replace('/^\xEF\xBB\xBF/', '', $cached);
 			echo $cached;
 			exit;
 		}
 	}
 	logger('rss_export', 'Generating RSS feed: category=' . ($catname ?: 'all'));
-	// Буферизация для корректного кеширования
-	ob_start();
 	// Нормализация URL (коллапс двойных слешей в пути)
 	if (!function_exists('rss_export_normalize_url')) {
 		function rss_export_normalize_url($url)
@@ -95,7 +98,8 @@ function plugin_rss_export_generate($catname = '')
 			return $scheme . $auth . $host . $port . $path . $query . $fragment;
 		}
 	}
-	// Канонический self URL ленты: используем фактический URL запроса, чтобы совпадал с документом
+	// Канонический self URL ленты
+	// Пытаемся использовать реальный URL запроса, если он совпадает с настройками сайта
 	$scheme = 'http';
 	if (
 		(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
@@ -104,22 +108,37 @@ function plugin_rss_export_generate($catname = '')
 	) {
 		$scheme = 'https';
 	}
-	$host = isset($_SERVER['HTTP_X_FORWARDED_HOST']) && $_SERVER['HTTP_X_FORWARDED_HOST'] ? $_SERVER['HTTP_X_FORWARDED_HOST'] : (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '');
-	$reqUri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '/';
-	$selfUrl = rss_export_normalize_url($scheme . '://' . $host . $reqUri);
+	$host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
+	$reqUri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+	// Проверяем что домен совпадает с настройками сайта
+	$configHost = parse_url($config['home_url'], PHP_URL_HOST);
+	if ($host && $configHost && $host === $configHost && $reqUri) {
+		$selfUrl = rss_export_normalize_url($scheme . '://' . $host . $reqUri);
+	} else {
+		// Используем URL из конфигурации
+		if ($catname) {
+			$selfUrl = rtrim($config['home_url'], '/') . '/' . $catname . '.xml';
+		} else {
+			$selfUrl = rtrim($config['home_url'], '/') . '/rss.xml';
+		}
+	}
+	// Начинаем буферизацию XML вывода
+	ob_start();
 	// Генерация XML заголовков и канала
 	echo '<?xml version="1.0" encoding="utf-8"?>' . "\n";
 	echo '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:wfw="http://wellformedweb.org/CommentAPI/">' . "\n";
 	echo "<channel>\n";
-	echo '<atom:link href="' . htmlspecialchars($selfUrl, ENT_QUOTES, 'UTF-8') . '" rel="self" type="application/rss+xml" />' . "\n";
-	// Заголовок канала
+	echo '<atom:link rel="self" href="' . htmlspecialchars($selfUrl, ENT_QUOTES, 'UTF-8') . '" type="application/rss+xml" />' . "\n";
+	// Заголовок канала (CDATA не требует htmlspecialchars)
 	if (pluginGetVariable('rss_export', 'feed_title_format') == 'handy') {
-		echo "<title><![CDATA[" . htmlspecialchars(pluginGetVariable('rss_export', 'feed_title_value'), ENT_QUOTES, 'UTF-8') . "]]></title>\n";
+		echo "<title>" . pluginGetVariable('rss_export', 'feed_title_value') . "</title>\n";
 	} else if ((pluginGetVariable('rss_export', 'feed_title_format') == 'site_title') && is_array($xcat)) {
-		echo "<title><![CDATA[" . htmlspecialchars($config['home_title'] . (is_array($xcat) ? ' :: ' . $xcat['name'] : ''), ENT_QUOTES, 'UTF-8') . "]]></title>\n";
+		echo "<title>" . $config['home_title'] . (is_array($xcat) ? ' :: ' . $xcat['name'] : '') . "</title>\n";
 	} else {
-		echo "<title><![CDATA[" . htmlspecialchars($config['home_title'], ENT_QUOTES, 'UTF-8') . "]]></title>\n";
+		echo "<title>" . $config['home_title'] . "</title>\n";
 	}
+	// Обязательный элемент link - ссылка на главную страницу сайта
+	echo "<link>" . htmlspecialchars($config['home_url'], ENT_QUOTES, 'UTF-8') . "</link>\n";
 	// Определяем язык ленты: приоритет для ручной настройки, иначе авто из системного языка
 	$rssLang = 'ru';
 	$mode = pluginGetVariable('rss_export', 'feed_lang_mode');
@@ -128,14 +147,14 @@ function plugin_rss_export_generate($catname = '')
 		$__rawLang = strtolower($manual);
 		$__rawLang = str_replace('_', '-', $__rawLang);
 		$parts = explode('-', $__rawLang);
-		$lang = isset($parts[0]) ? $parts[0] : '';
-		if ($lang === 'ua') {
-			$lang = 'uk';
+		$langCode = isset($parts[0]) ? $parts[0] : '';
+		if ($langCode === 'ua') {
+			$langCode = 'uk';
 		}
-		if (preg_match('/^[a-z]{2,3}$/', $lang)) {
-			$rssLang = $lang;
+		if (preg_match('/^[a-z]{2,3}$/', $langCode)) {
+			$rssLang = $langCode;
 			if (isset($parts[1]) && preg_match('/^[a-z]{2}$/', $parts[1])) {
-				$rssLang = $lang . '-' . strtoupper($parts[1]);
+				$rssLang = $langCode . '-' . strtoupper($parts[1]);
 			}
 		}
 	} else {
@@ -143,24 +162,41 @@ function plugin_rss_export_generate($catname = '')
 		$__rawLang = strtolower(strval($config['default_lang']));
 		$__rawLang = str_replace('_', '-', $__rawLang);
 		$parts = explode('-', $__rawLang);
-		$lang = isset($parts[0]) ? $parts[0] : '';
-		if ($lang === 'ua') {
-			$lang = 'uk';
+		$langCode = isset($parts[0]) ? $parts[0] : '';
+		if ($langCode === 'ua') {
+			$langCode = 'uk';
 		}
-		if (preg_match('/^[a-z]{2,3}$/', $lang)) {
-			$rssLang = $lang;
+		// Преобразуем длинные названия в ISO-639 коды
+		$langMap = array(
+			'russian' => 'ru',
+			'english' => 'en',
+			'ukrainian' => 'uk',
+			'deutsch' => 'de',
+			'german' => 'de',
+			'french' => 'fr',
+			'spanish' => 'es',
+			'italian' => 'it',
+			'polish' => 'pl',
+			'czech' => 'cs',
+			'portuguese' => 'pt',
+			'chinese' => 'zh',
+			'japanese' => 'ja',
+			'korean' => 'ko',
+			'turkish' => 'tr',
+			'arabic' => 'ar'
+		);
+		if (isset($langMap[$langCode])) {
+			$langCode = $langMap[$langCode];
+		}
+		if (preg_match('/^[a-z]{2,3}$/', $langCode)) {
+			$rssLang = $langCode;
 			if (isset($parts[1]) && preg_match('/^[a-z]{2}$/', $parts[1])) {
-				$rssLang = $lang . '-' . strtoupper($parts[1]);
+				$rssLang = $langCode . '-' . strtoupper($parts[1]);
 			}
 		}
 	}
-	$rssLang = $lang ?: 'ru';
-	// Регион (опционально): вторая часть из 2 латинских букв -> верхний регистр
-	if ($lang && isset($parts[1]) && preg_match('/^[a-z]{2}$/', $parts[1])) {
-		$rssLang = $lang . '-' . strtoupper($parts[1]);
-	}
 	echo "<language>" . $rssLang . "</language>\n";
-	echo "<description><![CDATA[" . htmlspecialchars($config['description'], ENT_QUOTES, 'UTF-8') . "]]></description>\n";
+	echo "<description>" . $config['description'] . "</description>\n";
 	echo "<generator><![CDATA[Plugin RSS_EXPORT (0.07) // Next Generation CMS (" . engineVersion . ")]]></generator>\n";
 	// Инициализация xfields
 	$xFList = array();
@@ -223,9 +259,9 @@ function plugin_rss_export_generate($catname = '')
 		// Удаляем нежелательные теги
 		$content = preg_replace('/<iframe[^>]*>.*?<\/iframe>/is', '', $content);
 		$content = preg_replace('/<script[^>]*>.*?<\/script>/is', '', $content);
-		// Удаляем потенциально опасные атрибуты: style и on*
-		$content = preg_replace('/\sstyle=("|\").*?\1/si', '', $content);
-		$content = preg_replace('/\son[a-z]+=("|\").*?\1/si', '', $content);
+		// Удаляем битые короткие закрывающие теги
+		$content = preg_replace('/<\/[a-zA-Zа-яА-ЯёЁ]{1,2}>/u', '', $content);
+		$content = preg_replace('/<\/\s*>/', '', $content);
 		// Превращаем относительные ссылки и источники в абсолютные
 		$base = rtrim($config['home_url'], '/');
 		$content = preg_replace_callback('/\b(?:src|href)=([\"\'])([^\"\']+)\1/i', function ($m) use ($base) {
@@ -247,6 +283,8 @@ function plugin_rss_export_generate($catname = '')
 		$content = preg_replace_callback('/&(?!amp;|lt;|gt;|quot;|apos;)/', function ($m) {
 			return '&amp;';
 		}, $content);
+		// Экранируем HTML-теги в спецсимволы для безопасного отображения
+		$content = htmlspecialchars($content, ENT_NOQUOTES, 'UTF-8');
 		// Обработка enclosure
 		$enclosure = '';
 		if (pluginGetVariable('rss_export', 'xfEnclosureEnabled') && getPluginStatusActive('xfields')) {
@@ -262,7 +300,7 @@ function plugin_rss_export_generate($catname = '')
 			}
 		}
 		echo "  <item>\n";
-		echo "   <title><![CDATA[" . ((pluginGetVariable('rss_export', 'news_title') == 1) && GetCategories($row['catid'], true) ? htmlspecialchars(GetCategories($row['catid'], true) . ' :: ', ENT_QUOTES, 'UTF-8') : '') . htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8') . "]]></title>\n";
+		echo "   <title><![CDATA[" . ((pluginGetVariable('rss_export', 'news_title') == 1) && GetCategories($row['catid'], true) ? GetCategories($row['catid'], true) . ' :: ' : '') . $row['title'] . "]]></title>\n";
 		echo "   <link>" . htmlspecialchars(newsGenerateLink($row, false, 0, true), ENT_QUOTES, 'UTF-8') . "</link>\n";
 		echo "   <description><![CDATA[" . $content . "]]></description>\n";
 		if ($enclosure != '') {
@@ -282,6 +320,9 @@ function plugin_rss_export_generate($catname = '')
 	echo " </channel>\n</rss>\n";
 	// Сохраняем и отдаём буфер
 	$output = ob_get_clean();
+	// Убираем BOM и лишние пробелы в начале
+	$output = preg_replace('/^\xEF\xBB\xBF/', '', $output);
+	$output = ltrim($output);
 	$itemCount = count($sqlData);
 	$elapsed = round((microtime(true) - $startTime) * 1000, 2);
 	if (pluginGetVariable('rss_export', 'cache')) {

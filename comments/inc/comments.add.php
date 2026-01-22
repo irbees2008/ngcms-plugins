@@ -54,7 +54,8 @@ function comments_add()
 		msg(array("type" => "error", "text" => $lang['comments:err.regonly']));
 		return;
 	}
-	$SQL['text'] = sanitize(trim($_POST['content']));
+	// Обрабатываем текст комментария - используем sanitize с отключением strip_tags
+	$SQL['text'] = sanitize(trim($_POST['content']), false);
 	// If user is not logged, make some additional tests
 	if (!$is_member) {
 		// Check if unreg are allowed to make comments

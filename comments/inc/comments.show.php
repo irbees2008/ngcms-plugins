@@ -131,6 +131,7 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 			$tvars['regx']["'\[comment_full\](.*?)\[/comment_full\]'si"] = '$1';
 		} else {
 		*/
+		$tvars['vars']['text'] = $text;
 		$tvars['vars']['comment-short'] = $text;
 		$tvars['vars']['comment_preview'] = excerpt($text, 150);
 		$tvars['regx']["'\[comment_full\](.*?)\[/comment_full\]'si"] = '';
