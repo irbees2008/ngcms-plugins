@@ -1920,3 +1920,248 @@ if (! function_exists(__NAMESPACE__ . '\formatMoney')) {
         return number_format($amount, $decimals, $decPoint, $thousandsSep);
     }
 }
+
+// ============================================================
+// Совместимость с предыдущими версиями ng-helpers
+// Legacy compatibility functions for ng-helpers v0.1.x
+// ============================================================
+
+if (! function_exists(__NAMESPACE__ . '\cache_get')) {
+    /**
+     * Получить данные из кэша (псевдоним для cacheRetrieveFile).
+     * @param  string  $filename
+     * @param  int|null  $expire
+     * @param  string  $prefix
+     * @return mixed
+     */
+    function cache_get(string $filename, ?int $expire = null, string $prefix = 'generic')
+    {
+        if (!function_exists('cacheRetrieveFile')) {
+            return false;
+        }
+
+        $expire = $expire ?? 3600; // По умолчанию 1 час
+        $data = cacheRetrieveFile($filename, $expire, $prefix);
+
+        if ($data === false || $data === '') {
+            return false;
+        }
+
+        // Попытка десериализации
+        $unserialized = @unserialize($data);
+        return $unserialized !== false ? $unserialized : $data;
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\cache_put')) {
+    /**
+     * Сохранить данные в кэш (псевдоним для cacheStoreFile).
+     * @param  string  $filename
+     * @param  mixed  $data
+     * @param  string  $prefix
+     * @return bool
+     */
+    function cache_put(string $filename, $data, string $prefix = 'generic'): bool
+    {
+        if (!function_exists('cacheStoreFile')) {
+            return false;
+        }
+
+        // Сериализуем данные, если это не строка
+        $serialized = is_string($data) ? $data : serialize($data);
+
+        return cacheStoreFile($filename, $serialized, $prefix);
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\logger')) {
+    /**
+     * Логировать сообщение в файл или консоль.
+     * @param  string  $message
+     * @param  string  $level
+     * @param  string  $context
+     * @return bool
+     */
+    function logger(string $message, string $level = 'info', string $context = 'plugin'): bool
+    {
+        // Простая реализация логирования
+        $logFile = __DIR__ . '/../../logs/' . date('Y-m-d') . '.log';
+        $logDir = dirname($logFile);
+
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0755, true);
+        }
+
+        $timestamp = date('Y-m-d H:i:s');
+        $logEntry = "[{$timestamp}] [{$level}] [{$context}] {$message}" . PHP_EOL;
+
+        return @file_put_contents($logFile, $logEntry, FILE_APPEND) !== false;
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\time_ago')) {
+    /**
+     * Преобразовать timestamp в формат "время назад".
+     * @param  int|string  $time
+     * @param  string  $lang
+     * @return string
+     */
+    function time_ago($time, string $lang = 'ru'): string
+    {
+        $time = is_numeric($time) ? (int) $time : strtotime($time);
+        $diff = time() - $time;
+
+        if ($diff < 60) {
+            return $diff . ' сек. назад';
+        } elseif ($diff < 3600) {
+            $minutes = floor($diff / 60);
+            return $minutes . ' мин. назад';
+        } elseif ($diff < 86400) {
+            $hours = floor($diff / 3600);
+            return $hours . ' ч. назад';
+        } elseif ($diff < 2592000) {
+            $days = floor($diff / 86400);
+            return $days . ' дн. назад';
+        } elseif ($diff < 31536000) {
+            $months = floor($diff / 2592000);
+            return $months . ' мес. назад';
+        } else {
+            $years = floor($diff / 31536000);
+            return $years . ' г. назад';
+        }
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\excerpt')) {
+    /**
+     * Создать отрывок из текста с сохранением HTML тегов.
+     * @param  string  $text
+     * @param  int  $length
+     * @param  string  $suffix
+     * @return string
+     */
+    function excerpt(string $text, int $length = 150, string $suffix = '...'): string
+    {
+        // Удаляем лишние пробелы
+        $text = preg_replace('/\s+/', ' ', trim($text));
+
+        // Если текст короче указанной длины, возвращаем как есть
+        if (mb_strlen(strip_tags($text)) <= $length) {
+            return $text;
+        }
+
+        // Удаляем HTML теги для подсчета длины
+        $plainText = strip_tags($text);
+
+        // Обрезаем текст
+        if (mb_strlen($plainText) > $length) {
+            $plainText = mb_substr($plainText, 0, $length);
+
+            // Обрезаем по последнему пробелу
+            $lastSpace = mb_strrpos($plainText, ' ');
+            if ($lastSpace !== false) {
+                $plainText = mb_substr($plainText, 0, $lastSpace);
+            }
+
+            $plainText .= $suffix;
+        }
+
+        return $plainText;
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\str_limit')) {
+    /**
+     * Ограничить длину строки.
+     * @param  string  $value
+     * @param  int  $limit
+     * @param  string  $end
+     * @return string
+     */
+    function str_limit(string $value, int $limit = 100, string $end = '...'): string
+    {
+        if (mb_strlen($value) <= $limit) {
+            return $value;
+        }
+
+        return rtrim(mb_substr($value, 0, $limit)) . $end;
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\clamp')) {
+    /**
+     * Ограничить число в заданном диапазоне.
+     * @param  int|float  $value
+     * @param  int|float  $min
+     * @param  int|float  $max
+     * @return int|float
+     */
+    function clamp($value, $min, $max)
+    {
+        return max($min, min($max, $value));
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\sanitize')) {
+    /**
+     * Очистить строку от опасных символов для логирования.
+     * @param  string  $value
+     * @return string
+     */
+    function sanitize(string $value): string
+    {
+        // Удаляем управляющие символы и экранируем спецсимволы
+        $value = preg_replace('/[\x00-\x1F\x7F]/u', '', $value);
+        return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\get_ip')) {
+    /**
+     * Получить IP-адрес клиента.
+     * @return string
+     */
+    function get_ip(): string
+    {
+        global $ip;
+
+        if (isset($ip) && $ip) {
+            return $ip;
+        }
+
+        // Проверяем различные заголовки
+        $headers = [
+            'HTTP_CF_CONNECTING_IP', // Cloudflare
+            'HTTP_X_REAL_IP',
+            'HTTP_X_FORWARDED_FOR',
+            'HTTP_CLIENT_IP',
+            'REMOTE_ADDR'
+        ];
+
+        foreach ($headers as $header) {
+            if (!empty($_SERVER[$header])) {
+                $ip_list = explode(',', $_SERVER[$header]);
+                $ip = trim($ip_list[0]);
+
+                // Валидация IP
+                if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                    return $ip;
+                }
+            }
+        }
+
+        return '0.0.0.0';
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\validate_email')) {
+    /**
+     * Проверить корректность email-адреса.
+     * @param  string  $email
+     * @return bool
+     */
+    function validate_email(string $email): bool
+    {
+        return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+    }
+}
