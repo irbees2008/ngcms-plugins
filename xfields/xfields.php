@@ -187,9 +187,10 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                     if (!$sourceImage) {
                         continue;
                     }
-                    // Source file paths
-                    $sourcePath = $config['attach_dir'] . $sourceImage['folder'] . '/' . $sourceImage['name'];
-                    $sourceThumbPath = $config['attach_dir'] . $sourceImage['folder'] . '/thumb/' . $sourceImage['name'];
+                    // Source file paths - use correct directory based on storage flag
+                    $sourceBaseDir = $sourceImage['storage'] ? $config['files_dir'] . '/dsn' : $config['attach_dir'];
+                    $sourcePath = $sourceBaseDir . '/' . $sourceImage['folder'] . '/' . $sourceImage['name'];
+                    $sourceThumbPath = $sourceBaseDir . '/' . $sourceImage['folder'] . '/thumb/' . $sourceImage['name'];
                     if (!file_exists($sourcePath)) {
                         continue;
                     }
@@ -217,7 +218,7 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                         $description = $_REQUEST['xfields_' . $id . '_adscr'][$eIndex];
                     }
                     // Insert new record
-                    $mysql->query('insert into ' . prefix . '_images (name, orig_name, folder, date, user, category, linked_ds, linked_id, plugin, pidentity, description, width, height, preview, p_width, p_height, stamp) values ' .
+                    $mysql->query('insert into ' . prefix . '_images (name, orig_name, folder, date, user, category, linked_ds, linked_id, plugin, pidentity, description, width, height, preview, p_width, p_height, stamp, storage) values ' .
                         '(' . db_squote($sourceImage['name']) . ', ' .
                         db_squote($sourceImage['orig_name']) . ', ' .
                         db_squote($dsnPath) . ', ' .
@@ -234,7 +235,7 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                         intval($sourceImage['preview']) . ', ' .
                         intval($sourceImage['p_width']) . ', ' .
                         intval($sourceImage['p_height']) . ', ' .
-                        intval($sourceImage['stamp']) . ')');
+                        intval($sourceImage['stamp']) . ', 1)');
                 }
             }
         }
@@ -271,8 +272,8 @@ if (
             'width' => $row['width'],
             'height' => $row['height'],
             'preview' => $row['preview'] ? true : false,
-            'url' => $config['attach_url'] . '/' . $row['folder'] . '/' . $row['name'],
-            'thumb_url' => $config['attach_url'] . '/' . $row['folder'] . '/thumb/' . $row['name'],
+            'url' => '/uploads/dsn/' . $row['folder'] . '/' . $row['name'],
+            'thumb_url' => '/uploads/dsn/' . $row['folder'] . '/thumb/' . $row['name'],
             'news_title' => $row['news_title'] ? $row['news_title'] : 'Новость #' . $row['linked_id'],
             'field_id' => $row['pidentity']
         ];
@@ -659,12 +660,12 @@ class XFieldsNewsFilter extends NewsFilter
                                 'preview'     => [
                                     'width'  => $irow['p_width'],
                                     'height' => $irow['p_height'],
-                                    'url'    => $config['attach_url'] . '/' . $irow['folder'] . '/thumb/' . $irow['name'],
+                                    'url'    => '/uploads/dsn/' . $irow['folder'] . '/thumb/' . $irow['name'],
                                 ],
                                 'image'       => [
                                     'id'     => $irow['id'],
                                     'number' => $iCount,
-                                    'url'    => $config['attach_url'] . '/' . $irow['folder'] . '/' . $irow['name'],
+                                    'url'    => '/uploads/dsn/' . $irow['folder'] . '/' . $irow['name'],
                                     'width'  => $irow['width'],
                                     'height' => $irow['height'],
                                 ],
@@ -998,7 +999,7 @@ class XFieldsNewsFilter extends NewsFilter
                         ];
                         foreach ($imglist as $imgInfo) {
                             $tiEntry = [
-                                'url'         => ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'],
+                                'url'         => ($imgInfo['storage'] ? '/uploads/dsn' : $config['images_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'],
                                 'width'       => $imgInfo['width'],
                                 'height'      => $imgInfo['height'],
                                 'pwidth'      => $imgInfo['p_width'],
@@ -1011,7 +1012,7 @@ class XFieldsNewsFilter extends NewsFilter
                                 ],
                             ];
                             if ($imgInfo['preview']) {
-                                $tiEntry['purl'] = ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']) . '/' . $imgInfo['folder'] . '/thumb/' . $imgInfo['name'];
+                                $tiEntry['purl'] = ($imgInfo['storage'] ? '/uploads/dsn' : $config['images_url']) . '/' . $imgInfo['folder'] . '/thumb/' . $imgInfo['name'];
                             }
                             $tiVars['entries'][] = $tiEntry;
                         }
@@ -1185,12 +1186,12 @@ if (getPluginStatusActive('uprofile')) {
                                     'preview' => [
                                         'width'  => $irow['p_width'],
                                         'height' => $irow['p_height'],
-                                        'url'    => $config['attach_url'] . '/' . $irow['folder'] . '/thumb/' . $irow['name'],
+                                        'url'    => '/uploads/dsn/' . $irow['folder'] . '/thumb/' . $irow['name'],
                                     ],
                                     'image'   => [
                                         'id'     => $irow['id'],
                                         'number' => $iCount,
-                                        'url'    => $config['attach_url'] . '/' . $irow['folder'] . '/' . $irow['name'],
+                                        'url'    => '/uploads/dsn/' . $irow['folder'] . '/' . $irow['name'],
                                         'width'  => $irow['width'],
                                         'height' => $irow['height'],
                                     ],
@@ -1359,7 +1360,7 @@ if (getPluginStatusActive('uprofile')) {
                             $imgInfo = $imglist[0];
                             $tvars['regx']["#\[xfield_" . $kp . "\](.*?)\[/xfield_" . $kp . "\]#is"] = '$1';
                             $tvars['regx']["#\[nxfield_" . $kp . "\](.*?)\[/nxfield_" . $kp . "\]#is"] = '';
-                            $iname = ($imgInfo['storage'] ? $config['attach_url'] : $config['files_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'];
+                            $iname = ($imgInfo['storage'] ? '/uploads/dsn' : $config['files_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'];
                             $tvars['vars']['[xvalue_' . $k . ']'] = $iname;
                             // Scan for images and prepare data for template show
                             $mode = $mode ?? ['style' => '', 'plugin' => ''];
@@ -1374,7 +1375,7 @@ if (getPluginStatusActive('uprofile')) {
                             ];
                             foreach ($imglist as $imgInfo) {
                                 $tiEntry = [
-                                    'url'         => ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'],
+                                    'url'         => ($imgInfo['storage'] ? '/uploads/dsn' : $config['images_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'],
                                     'width'       => $imgInfo['width'],
                                     'height'      => $imgInfo['height'],
                                     'pwidth'      => $imgInfo['p_width'],
@@ -1387,7 +1388,7 @@ if (getPluginStatusActive('uprofile')) {
                                     ],
                                 ];
                                 if ($imgInfo['preview']) {
-                                    $tiEntry['purl'] = ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']) . '/' . $imgInfo['folder'] . '/thumb/' . $imgInfo['name'];
+                                    $tiEntry['purl'] = ($imgInfo['storage'] ? '/uploads/dsn' : $config['images_url']) . '/' . $imgInfo['folder'] . '/thumb/' . $imgInfo['name'];
                                 }
                                 $tiVars['entries'][] = $tiEntry;
                             }

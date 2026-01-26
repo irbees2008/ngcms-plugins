@@ -1,9 +1,16 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
+
+// Проверяем, включен ли плагин комментариев
+if (!getPluginStatusActive('comments')) {
+	return;
+}
+
 loadPluginLang('subscribe_comments', 'main', '', '', ':');
 loadPluginLibrary('comments', 'lib');
-function plugin_subscribe_comments_cron() {
+function plugin_subscribe_comments_cron()
+{
 
 	global $tpl, $cron, $mysql, $config, $lang, $parse, $PFILTERS;
 	//var_dump($newsRec);
@@ -49,9 +56,11 @@ function plugin_subscribe_comments_cron() {
 	$mysql->query("DELETE FROM " . prefix . "_subscribe_comments_temp");
 }
 
-class ShowSubscribeForm extends NewsFilter {
+class ShowSubscribeForm extends NewsFilter
+{
 
-    public function showNews($newsID, $SQLnews, &$tvars, $mode = []) {
+	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
+	{
 
 		global $mysql, $tpl, $config;
 		//plugin_subscribe_comments_cron();
@@ -60,9 +69,11 @@ class ShowSubscribeForm extends NewsFilter {
 	}
 }
 
-class SubscribeComments extends FilterComments {
+class SubscribeComments extends FilterComments
+{
 
-	function addCommentsForm($newsID, &$tvars) {
+	function addCommentsForm($newsID, &$tvars)
+	{
 
 		global $mysql;
 		if ($nrow = $mysql->record("select * from " . prefix . "_subscribe_comments where news_id='" . $newsID . "' and user_email='" . secure_html(urldecode($_COOKIE['com_usermail'])) . "'")) {
@@ -77,7 +88,8 @@ class SubscribeComments extends FilterComments {
 		$tvars['vars']['test_var'] = 'tested';
 	}
 
-	function addCommentsNotify($userRec, $newsRec, &$tvars, $SQL, $commID) {
+	function addCommentsNotify($userRec, $newsRec, &$tvars, $SQL, $commID)
+	{
 
 		global $mysql, $lang;
 		//var_dump($newsRec);
@@ -86,7 +98,7 @@ class SubscribeComments extends FilterComments {
 				$mysql->query("insert into " . prefix . "_subscribe_comments (user_email, news_id, news_altname) values ('" . $SQL['mail'] . "', '" . $newsRec['id'] . "', '" . $newsRec['alt_name'] . "')");
 			}
 		} elseif ($_REQUEST['subscribe_checked'] == 'false') {
-			//var_dump($_REQUEST); 
+			//var_dump($_REQUEST);
 			if ($nrow = $mysql->record("select * from " . prefix . "_subscribe_comments where news_id='" . $newsRec['id'] . "' and news_altname='" . $newsRec['alt_name'] . "' and user_email='" . $SQL['mail'] . "'")) {
 				$mysql->query("delete from " . prefix . "_subscribe_comments where user_email='" . $SQL['mail'] . "' and news_id='" . $newsRec['id'] . "' and news_altname='" . $newsRec['alt_name'] . "'");
 				$mysql->query("delete from " . prefix . "_subscribe_comments_temp where user_email='" . $SQL['mail'] . "' and news_id='" . $newsRec['id'] . "' and news_altname='" . $newsRec['alt_name'] . "'");
@@ -138,7 +150,8 @@ class SubscribeComments extends FilterComments {
 	}
 }
 
-function plugin_subscribe_comments() {
+function plugin_subscribe_comments()
+{
 
 	global $template, $config, $mysql, $tpl, $lang, $CurrentHandler;
 	global $catmap, $catz, $config, $userROW, $template, $lang, $tpl;

@@ -1,0 +1,21 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: helloworld
+Name: Пример HelloWorld
+Name_EN: HelloWorld Example
+Version: 0.1.0
+Acts: index, news_short, news_full
+File: helloworld.php
+Config: config.php
+Install: install.php
+Deinstall: uninstall.php
+Type: plugin
+Description: Демонстрационный плагин: страница + суффикс заголовков новостей + счётчик посещений.
+Description_EN: Demo plugin: page + news title suffix + visit counter.
+Author: Demo Author
+Title: HelloWorld
+Information: Показывает базовые приёмы создания плагинов.
+Preinstall: no
+MinEngineBuild: 23b3116
+Icons: <i class="fa fa-smile-o fa-3x" aria-hidden="true"></i>

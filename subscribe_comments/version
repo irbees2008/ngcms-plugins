@@ -3,17 +3,17 @@
 ;
 ID: subscribe_comments
 Name: Подписка на комментарии
-Version: 0.1
-Acts: ppages, comments, news_short, news_full
+Version: 0.2
+Acts: ppages, comments, news_short, news_full, twig
 File: subscribe_comments.php
 Config: config.php
 Type: plugin
 Install: install.php
 Deinstall: uninstall.php
 Title: Подписка на комментарии
-Description: Позволяет подписываться на комментарии
+Description: Позволяет подписываться на комментарии с отложенной рассылкой
 Author: Rostunov Sergey
 Author_URI: http://rostunov.com
 Preinstall: no
-MinEngineBuild: 23b3116
+MinEngineBuild: 2020731
 Icons: <i class="fa fa-comment fa-3x" aria-hidden="true"></i>

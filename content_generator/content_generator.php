@@ -97,3 +97,8 @@ function plugin_content_generator()
 		]);
 	} catch (Exception $e) {
 		logger('content_generator', 'ERROR: ' . $e->getMessage() . ', ip=' . get_ip());
+		echo json_encode([
+			'error' => 'Exception: ' . $e->getMessage()
+		]);
+	}
+}

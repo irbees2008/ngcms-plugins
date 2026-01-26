@@ -159,7 +159,8 @@ function plugin_nsched_cron()
 {
     global $mysql, $config;
     // Start benchmark
-    $benchmarkId = benchmark('nsched_cron');
+    $startTime = microtime(true);
+    $startMemory = memory_get_usage();
     logger('nsched', 'CRON execution started at ' . date('Y-m-d H:i:s'));
     // 1. Установка часового пояса для MySQL
     $timezone = $config['timezone'] ?? 'Asia/Almaty';
@@ -224,6 +225,7 @@ function plugin_nsched_cron()
         logger('nsched', 'No news to deactivate');
     }
     // 5. Финализация с benchmark
-    $elapsed = benchmark($benchmarkId);
-    logger('nsched', 'CRON finished: elapsed=' . $elapsed . 'ms, memory=' . memory_get_usage() . ' bytes');
+    $elapsed = round((microtime(true) - $startTime) * 1000, 2);
+    $memoryUsed = round((memory_get_usage() - $startMemory) / 1024, 2);
+    logger('nsched', 'CRON finished: elapsed=' . $elapsed . 'ms, memory=' . $memoryUsed . 'KB');
 }

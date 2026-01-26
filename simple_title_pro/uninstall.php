@@ -1,9 +1,15 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
+
 pluginsLoadConfig();
+
+$db_update = [];
+
 if ($_REQUEST['action'] == 'commit') {
-	plugin_mark_deinstalled($plugin);
+	if (fixdb_plugin_install($plugin, $db_update, 'deinstall')) {
+		plugin_mark_deinstalled($plugin);
+	}
 } else {
 	generate_install_page($plugin, 'Удаление плагина', 'deinstall');
 }

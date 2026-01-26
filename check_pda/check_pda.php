@@ -14,5 +14,12 @@ function check_pda()
 
 	logger('check_pda', 'Initializing Mobile Detect extension');
 	require_once 'MobileDetect.php';
-	$twig->addExtension(new Twig_Extension_MobileDetect());
+
+	// Проверяем, не добавлено ли уже расширение
+	try {
+		$twig->addExtension(new Twig_Extension_MobileDetect());
+	} catch (Exception $e) {
+		// Расширение уже добавлено, игнорируем ошибку
+		logger('check_pda', 'Mobile Detect extension already initialized');
+	}
 }

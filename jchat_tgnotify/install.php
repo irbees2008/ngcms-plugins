@@ -21,7 +21,11 @@ function plugin_jchat_tgnotify_install($action)
 
             extra_commit_changes();
             plugin_mark_installed('jchat_tgnotify');
-            break;
+
+            $url = home . "/engine/admin.php?mod=extras";
+            header("HTTP/1.1 301 Moved Permanently");
+            header("Location: {$url}");
+            exit();
     }
     return true;
 }

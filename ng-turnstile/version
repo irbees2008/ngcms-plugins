@@ -1,0 +1,17 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: ng-turnstile
+Name: Cloudflare Turnstile
+Version: 1.0.0
+Acts: core, comments, comments:add, action.ppages.feedback, feedback, feedback:post
+File: ng-turnstile.php
+Config: config.php
+Preinstall: no
+Type: plugin
+Library: autoload; autoload.php
+Description: Невидимая защита от ботов с Cloudflare Turnstile. Современная альтернатива CAPTCHA без головоломок.
+Information: Современная альтернатива CAPTCHA от Cloudflare. Невидимая для пользователей, без головоломок, с максимальной защитой конфиденциальности. Бесплатная и простая в интеграции.
+Author: NGCMS Team
+Author_URI: https://ngcms.ru
+Icons: <i class="fa fa-cloud fa-3x" aria-hidden="true"></i>

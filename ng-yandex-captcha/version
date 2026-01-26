@@ -1,0 +1,17 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: ng-yandex-captcha
+Name: Yandex SmartCaptcha
+Version: 1.0.0
+Acts: core, comments, comments:add, action.ppages.feedback, feedback, feedback:post
+File: ng-yandex-captcha.php
+Config: config.php
+Preinstall: no
+Type: plugin
+Library: autoload; autoload.php
+Description: Защита форм сайта от интернет-ботов с Яндекс SmartCaptcha. Предназначен для плагинов comments, feedback и регистрационной формы.
+Information: Интеграция Яндекс SmartCaptcha для защиты форм сайта от ботов. Поддерживает формы регистрации, комментариев и обратной связи.
+Author: NGCMS Team
+Author_URI: https://ngcms.ru
+Icons: <i class="fa fa-shield fa-3x" aria-hidden="true"></i>

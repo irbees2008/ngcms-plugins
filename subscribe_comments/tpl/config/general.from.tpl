@@ -1,36 +1,23 @@
-<form method="post" action="">
-	<tr>
-		<td colspan=2>
-			<fieldset class="admGroup">
-				<legend class="title">Настройки</legend>
-				<table width="100%" border="0" class="content">
-					<tr>
-						<td class="contentEntry1" valign=top>Включить отложенную рассылку?<br/></td>
-						<td class="contentEntry2" valign=top><select name="delayed_send">{delayed_send}</select></td>
-					</tr>
-				</table>
-			</fieldset>
-			<fieldset class="admGroup">
-				<legend class="title">Настройки админки</legend>
-				<table width="100%" border="0" class="content">
-					<tr>
-						<td class="contentEntry1" valign=top>Количество объектов на странице<br/></td>
-						<td class="contentEntry2" valign=top>
-							<input name="admin_count" type="text" title="Количество объектов на странице" size="4" value="{admin_count}"/>
-						</td>
-					</tr>
-				</table>
-			</fieldset>
-		</td>
-	</tr>
-	<table border="0" width="100%" cellspacing="0" cellpadding="0">
-		<tr>
-			<td width="100%" colspan="2">&nbsp;</td>
-		</tr>
-		<tr>
-			<td width="100%" colspan="2" class="contentEdit" align="center">
-				<input name="submit" type="submit" value="Сохранить" class="button"/>
-			</td>
-		</tr>
-	</table>
+<form method="post" action="admin.php?mod=extra-config&plugin=subscribe_comments">
+	<div class="card">
+		<div class="card-body">
+			<div class="mb-3 row">
+				<label class="col-sm-6 col-form-label">Включить отложенную рассылку?</label>
+				<div class="col-sm-6">
+					<select name="delayed_send" class="form-control">
+						{{ delayed_send|raw }}
+					</select>
+				</div>
+			</div>
+			<div class="mb-3 row">
+				<label class="col-sm-6 col-form-label">Количество объектов на странице</label>
+				<div class="col-sm-6">
+					<input name="admin_count" type="number" class="form-control" value="{{ admin_count }}" min="1"/>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="mt-3">
+		<button type="submit" name="submit" class="btn btn-success">Сохранить</button>
+	</div>
 </form>

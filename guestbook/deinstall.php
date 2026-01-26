@@ -1,6 +1,6 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 //
 // Configuration file for plugin
 //
@@ -20,6 +20,5 @@ if ($_REQUEST['action'] == 'commit') {
 		plugin_mark_deinstalled($plugin);
 	}
 } else {
-	generate_install_page($plugin, '', 'deinstall');
+	generate_install_page($plugin, 'Будут удалены таблицы: guestbook, guestbook_fields', 'deinstall');
 }
-?>

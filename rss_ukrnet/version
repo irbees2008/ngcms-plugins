@@ -1,0 +1,21 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: rss_ukrnet
+Name: rss_ukrnet
+Name_EN: RSS news exporter
+Version: 0.19
+Acts: ppages
+File: rss_ukrnet.php
+Config: config.php
+Type: plugin
+Description: Экспорт новостей в формате RSS
+Description_EN: News export in RSS format
+Author: Vitaly A. Ponomarev Stanislav+ИИ
+Author_URI: http://ngcms.org/
+Preinstall_vars: feed_title_format="site_title"; news_title="1"; news_count="30"; use_hide="1"
+Title: rss_ukrnet новостей
+Preinstall:no
+Information: Генератор RSS новостной ленты
+MinEngineBuild: 23b3116
+Icons: <i class="fa fa-rss fa-3x" aria-hidden="true"></i>

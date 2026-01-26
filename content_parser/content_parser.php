@@ -83,7 +83,7 @@ function downloadMediaToServer($url, $type = 'image')
  */
 function parseRssFeed($rssUrl, $count)
 {
-	$startTime = benchmark();
+	$startTime = microtime(true);
 
 	// Загружаем RSS-канал через cURL (throws Exception on error)
 	try {
@@ -127,8 +127,8 @@ function parseRssFeed($rssUrl, $count)
 		$parsedCount++;
 	}
 
-	$elapsed = benchmark($startTime);
-	logger('content_parser', 'RSS parsed: url=' . sanitize($rssUrl) . ', items=' . $parsedCount . ', elapsed=' . round($elapsed, 2) . 'ms');
+	$elapsed = round((microtime(true) - $startTime) * 1000, 2);
+	logger('content_parser', 'RSS parsed: url=' . sanitize($rssUrl) . ', items=' . $parsedCount . ', elapsed=' . $elapsed . 'ms');
 
 	return $items;
 }
