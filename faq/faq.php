@@ -8,7 +8,7 @@ if (!defined('NGCMS')) die('HAL');
 // - Added logging support
 
 // Import ng-helpers functions
-use function Plugins\{cache_get, cache_put, truncate_html, logger};
+use function Plugins\{cache_get, cache_put, truncate_html, logger, array_get};
 
 register_plugin_page('faq', '', 'plugin_faq');
 function plugin_faq()
@@ -76,7 +76,7 @@ function plug_faq($maxnum, $overrideTemplateName, $order, $cacheExpire)
 	$output = $xt->render($tVars);
 	if ($cacheExpire > 0) {
 		cache_put($cacheKey, $output, $cacheExpire);
-		logger('faq', 'FAQ block cached: ' . count($tEntries) . ' entries, order: ' . $order . ', expire: ' . $cacheExpire . 's');
+		logger('FAQ block cached: ' . count($tEntries) . ' entries, order: ' . $order . ', expire: ' . $cacheExpire . 's', 'info', 'faq.log');
 	}
 
 	return $output;

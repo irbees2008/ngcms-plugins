@@ -3,7 +3,7 @@
 ;
 ID: ublog
 Name: Users blog
-Version: 0.03
+Version: 0.04
 Acts: ppages, action.ppages.uprofile
 File: ublog.php
 Config: config.php
@@ -13,6 +13,7 @@ Type: plugin
 Description: Показывает все новости пользователя на отдельной странице
 Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru
+MinPHPVer: 8.0
 Title: Новости пользователя
 Information: Позволяет отобразить все новости конкретного пользователя
 Preinstall: no

@@ -3,15 +3,15 @@
 ;
 ID: bb_media
 Name: MEDIA bb code
-Version: 0.12
+Version: 0.13
 Acts: static, index, news_short, news_full
 Config: config.php
 File: bb_media.php
 Install: install.php
 Type: plugin
-Title: BB код [MEDIA]
+Title:BB код [MEDIA]
 Description: BB код [MEDIA]
 Author: Vitaly A. Ponomarev
 Preinstall: no
 MinEngineBuild: 23b3116
-Icons: <i class="fa fa-television fa-3x" aria-hidden="true"></i>
+Icons:<i class="fa fa-television fa-3x" aria-hidden="true"></i>

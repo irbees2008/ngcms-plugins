@@ -2,7 +2,7 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
-use function Plugins\{logger, get_ip, validate_email, is_post, sanitize};
+use function Plugins\{logger, get_ip, validate_email, is_post, sanitize, array_get};
 //
 // Params for filtering and processing
 //
@@ -16,9 +16,9 @@ function comments_add()
 	}
 	// Check membership
 	// If login/pass is entered (either logged or not)
-	if ($_POST['name'] && $_POST['password']) {
+	if (array_get($_POST, 'name', '') && array_get($_POST, 'password', '')) {
 		$auth = $AUTH_METHOD[$config['auth_module']];
-		$user = $auth->login(0, $_POST['name'], $_POST['password']);
+		$user = $auth->login(0, array_get($_POST, 'name', ''), array_get($_POST, 'password', ''));
 		if (!is_array($user)) {
 			msg(array("type" => "error", "text" => $lang['comments:err.password']));
 			return;
@@ -39,34 +39,48 @@ function comments_add()
 		$is_member = 1;
 		$memberRec = $userROW;
 	} else {
-		$SQL['author'] = secure_html(trim($_POST['name']));
+		$SQL['author'] = secure_html(trim(array_get($_POST, 'name', '')));
 		$SQL['author_id'] = 0;
-		$SQL['mail'] = secure_html(trim($_POST['mail']));
+		$SQL['mail'] = secure_html(trim(array_get($_POST, 'mail', '')));
 		$is_member = 0;
 	}
 	// CSRF protection variables
 	$sValue = '';
-	if (preg_match('#^(\d+)\#(.+)$#', $_POST['newsid'], $m)) {
-		$SQL['post'] = $m[1];
+	$SQL['post'] = 0;
+	$newsidValue = array_get($_POST, 'newsid', '');
+	logger('Comment add attempt: newsid=' . $newsidValue . ', module=' . array_get($_POST, 'module', ''), 'info', 'comments.log');
+	if (preg_match('#^(\d+)\#(.+)$#', $newsidValue, $m)) {
+		$SQL['post'] = intval($m[1]);
 		$sValue = $m[2];
+		$expectedToken = genUToken('comment.add.' . $SQL['post']);
+		logger('CSRF check: post_id=' . $SQL['post'] . ', token_match=' . ($sValue == $expectedToken ? 'yes' : 'no'), 'info', 'comments.log');
+	} else {
+		logger('Failed to parse newsid value: ' . $newsidValue, 'warning', 'comments.log');
 	}
-	if ($sValue != genUToken('comment.add.' . $SQL['post'])) {
+	if (!$SQL['post'] || $sValue != genUToken('comment.add.' . $SQL['post'])) {
+		logger('Comment rejected: post_id=' . $SQL['post'] . ', IP=' . get_ip(), 'warning', 'comments.log');
 		msg(array("type" => "error", "text" => $lang['comments:err.regonly']));
 		return;
 	}
+	// Determine module (for gallery images, news, etc.)
+	$module = array_get($_POST, 'module', '');
+	logger('Comment processing: post_id=' . $SQL['post'] . ', module=' . $module, 'info', 'comments.log');
 	// Обрабатываем текст комментария - используем sanitize с отключением strip_tags
-	$SQL['text'] = sanitize(trim($_POST['content']), false);
+	$SQL['text'] = sanitize(trim(array_get($_POST, 'content', '')), false);
+	logger('After sanitize, text length: ' . strlen($SQL['text']), 'info', 'comments.log');
 	// If user is not logged, make some additional tests
 	if (!$is_member) {
+		logger('User not logged, checking regonly', 'info', 'comments.log');
 		// Check if unreg are allowed to make comments
 		if (pluginGetVariable('comments', 'regonly')) {
+			logger('Regonly enabled, rejecting', 'warning', 'comments.log');
 			msg(array("type" => "error", "text" => $lang['comments:err.regonly']));
 			return;
 		}
 		// Check captcha for unregistered visitors
 		if ($config['use_captcha']) {
-			$vcode = $_POST['vcode'];
-			if ($vcode != $_SESSION['captcha']) {
+			$vcode = array_get($_POST, 'vcode', '');
+			if ($vcode != array_get($_SESSION, 'captcha', '')) {
 				msg(array("type" => "error", "text" => $lang['comments:err.vcode']));
 				return;
 			}
@@ -88,7 +102,7 @@ function comments_add()
 		}
 		if (!validate_email($SQL['mail'])) {
 			msg(array("type" => "error", "text" => $lang['comments:err.badmail']));
-			logger('comments', 'Invalid email attempt: ' . $SQL['mail'] . ' from IP: ' . get_ip(), 'warning');
+			logger('Invalid email attempt: ' . $SQL['mail'] . ' from IP: ' . get_ip(), 'warning', 'comments.log');
 			return;
 		}
 		// Check if guest wants to use email of already registered user
@@ -119,28 +133,43 @@ function comments_add()
 		}
 		return;
 	}
-	// Locate news
-	if ($news_row = $mysql->record("select * from " . prefix . "_news where id = " . db_squote($SQL['post']))) {
-		// Determine if comments are allowed in  this specific news
-		$allowCom = $news_row['allow_com'];
-		if ($allowCom == 2) {
-			// `Use default` - check master category
-			$masterCat = intval(array_shift(explode(',', $news_row['catid'])));
-			if ($masterCat && isset($catmap[$masterCat])) {
-				$allowCom = intval($catz[$catmap[$masterCat]]['allow_com']);
-			}
-			// If we still have 2 (no master category or master category also have 'default' - fetch plugin's config
-			if ($allowCom == 2) {
-				$allowCom = pluginGetVariable('comments', 'global_default');
-			}
-		}
-		if (!$allowCom) {
-			msg(array("type" => "error", "text" => $lang['comments:err.forbidden']));
+	// Locate item (news or other module item like gallery image)
+	if ($module == 'images') {
+		// For gallery images - look in images table
+		logger('Looking for image in _images with id=' . $SQL['post'], 'info', 'comments.log');
+		if ($news_row = $mysql->record("select * from " . prefix . "_images where id = " . db_squote($SQL['post']))) {
+			// Gallery images always allow comments if they are shown
+			$allowCom = 1;
+			logger('Image found: ' . ($news_row['title'] ?? 'no title'), 'info', 'comments.log');
+		} else {
+			logger('Image NOT found in _images, id=' . $SQL['post'], 'warning', 'comments.log');
+			msg(array("type" => "error", "text" => $lang['comments:err.notfound']));
 			return;
 		}
 	} else {
-		msg(array("type" => "error", "text" => $lang['comments:err.notfound']));
-		return;
+		// Default: news comments
+		if ($news_row = $mysql->record("select * from " . prefix . "_news where id = " . db_squote($SQL['post']))) {
+			// Determine if comments are allowed in  this specific news
+			$allowCom = $news_row['allow_com'];
+			if ($allowCom == 2) {
+				// `Use default` - check master category
+				$masterCat = intval(array_shift(explode(',', $news_row['catid'])));
+				if ($masterCat && isset($catmap[$masterCat])) {
+					$allowCom = intval($catz[$catmap[$masterCat]]['allow_com']);
+				}
+				// If we still have 2 (no master category or master category also have 'default' - fetch plugin's config
+				if ($allowCom == 2) {
+					$allowCom = pluginGetVariable('comments', 'global_default');
+				}
+			}
+			if (!$allowCom) {
+				msg(array("type" => "error", "text" => $lang['comments:err.forbidden']));
+				return;
+			}
+		} else {
+			msg(array("type" => "error", "text" => $lang['comments:err.notfound']));
+			return;
+		}
 	}
 	// Check for multiple comments block [!!! ADMINS CAN DO IT IN ANY CASE !!!]
 	$multiCheck = 0;
@@ -183,6 +212,7 @@ function comments_add()
 	$SQL['text'] = str_replace("\r\n", "<br />", $SQL['text']);
 	$SQL['ip'] = $ip;
 	$SQL['reg'] = ($is_member) ? '1' : '0';
+	$SQL['module'] = $module; // Save module type (images/news)
 	// Модерация: проверяем группы пользователей
 	$needModeration = false;
 	if (pluginGetVariable('comments', 'moderation')) {
@@ -218,18 +248,25 @@ function comments_add()
 	// Retrieve comment ID
 	$comment_id = $mysql->result("select LAST_INSERT_ID() as id");
 	// Логирование добавления комментария
-	logger('comments', sprintf(
-		'New comment #%d by %s (ID: %d, IP: %s) for news #%d%s',
+	logger(sprintf(
+		'New comment #%d by %s (ID: %d, IP: %s) for %s #%d%s',
 		$comment_id,
 		$SQL['author'],
 		$SQL['author_id'],
 		get_ip(),
+		$module == 'images' ? 'image' : 'news',
 		$SQL['post'],
 		$SQL['moderated'] == 0 ? ' [MODERATION]' : ''
-	));
-	// Update comment counter in news (only if comment is approved)
+	), 'info', 'comments.log');
+	// Update comment counter (only if comment is approved)
 	if ($SQL['moderated'] == 1) {
-		$mysql->query("update " . prefix . "_news set com=com+1 where id=" . db_squote($SQL['post']));
+		if ($module == 'images') {
+			// Update counter in _images table
+			$mysql->query("update " . prefix . "_images set com=com+1 where id=" . db_squote($SQL['post']));
+		} else {
+			// Update counter in news table
+			$mysql->query("update " . prefix . "_news set com=com+1 where id=" . db_squote($SQL['post']));
+		}
 	}
 	// Update counter for user
 	if ($SQL['author_id']) {
@@ -241,8 +278,24 @@ function comments_add()
 	if (is_array($PFILTERS['comments']))
 		foreach ($PFILTERS['comments'] as $k => $v)
 			$v->addCommentsNotify($memberRec, $news_row, $tvars, $SQL, $comment_id);
-	// Email informer
-	if (pluginGetVariable('comments', 'inform_author') || pluginGetVariable('comments', 'inform_admin')) {
+
+	// Telegram notification (only for approved comments)
+	if ($SQL['moderated'] == 1 && getPluginStatusActive('jchat_tgnotify')) {
+		@include_once(root . 'plugins/jchat_tgnotify/jchat_tgnotify.php');
+		if (function_exists('ngcms_tg_notify')) {
+			$newsTitle = $news_row['title'] ?? 'Новость #' . $SQL['post'];
+			ngcms_tg_notify('comment', [
+				'title'    => 'Комментарий к: ' . $newsTitle,
+				'author'   => $SQL['author'],
+				'text'     => strip_tags(str_replace("<br />", "\n", $SQL['text'])),
+				'url'      => home . newsGenerateLink($news_row),
+				'datetime' => date('Y-m-d H:i:s', $SQL['postdate']),
+			]);
+		}
+	}
+
+	// Email informer (only for news)
+	if (($module != 'images') && (pluginGetVariable('comments', 'inform_author') || pluginGetVariable('comments', 'inform_admin'))) {
 		$alink = ($SQL['author_id']) ? generatePluginLink('uprofile', 'show', array('name' => $SQL['author'], 'id' => $SQL['author_id']), array(), false, true) : '';
 		$body = str_replace(
 			array(

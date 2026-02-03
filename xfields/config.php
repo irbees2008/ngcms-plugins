@@ -4,8 +4,8 @@ if (!defined('NGCMS')) {
     die('HAL');
 }
 
-// Modernized with ng-helpers v0.2.1 (18 января 2026)
-use function Plugins\{notify, sanitize, logger};
+// Modernized with ng-helpers v0.2.2 (31 января 2026)
+use function Plugins\{notify, sanitize, logger, array_get};
 
 // Load lang files
 LoadPluginLang('xfields', 'config');
@@ -16,11 +16,11 @@ if (!is_array($xf = xf_configLoad())) {
 }
 //
 // Управление необходимыми действиями
-$sectionID = $_REQUEST['section'];
+$sectionID = array_get($_REQUEST, 'section', 'news');
 if (!in_array($sectionID, ['news', 'grp.news', 'users', 'grp.users', 'tdata'])) {
     $sectionID = 'news';
 }
-switch ($_REQUEST['action']) {
+switch (array_get($_REQUEST, 'action', '')) {
     case 'add':
         showAddEditForm();
         break;
@@ -133,7 +133,7 @@ function showFieldList()
 function showAddEditForm($xdata = '', $eMode = null, $efield = null)
 {
     global $xf, $lang, $sectionID, $twig;
-    $field = ($efield == null) ? $_REQUEST['field'] : $efield;
+    $field = ($efield == null) ? array_get($_REQUEST, 'field', '') : $efield;
     if ($eMode == null) {
         $editMode = (isset($xf[$sectionID][$field]) && is_array($xf[$sectionID][$field])) ? 1 : 0;
     } else {
@@ -252,8 +252,8 @@ function doAddEdit()
     global $xf, $XF, $lang, $tpl, $twig, $mysql, $sectionID;
     //print "<pre>".var_export($_POST, true)."</pre>";
     $error = 0;
-    $field = $_REQUEST['id'];
-    $editMode = $_REQUEST['edit'] ? 1 : 0;
+    $field = array_get($_REQUEST, 'id', '');
+    $editMode = array_get($_REQUEST, 'edit', 0) ? 1 : 0;
     // Check if field exists or not [depends on mode]
     if ($editMode && (!isset($xf[$sectionID][$field]) || !is_array($xf[$sectionID][$field]))) {
         notify('error', $lang['xfields_msge_noexists']);
@@ -273,41 +273,42 @@ function doAddEdit()
         }
     }
     // Let's fill parameters
-    $data['title'] = $_REQUEST['title'];
-    $data['required'] = intval($_REQUEST['required']);
-    $data['disabled'] = intval($_REQUEST['disabled']);
-    $data['area'] = intval($_REQUEST['area']);
-    $data['type'] = $_REQUEST['type'];
-    $data['bb_support'] = $_REQUEST['bb_support'] ? 1 : 0;
+    $data['title'] = array_get($_REQUEST, 'title', '');
+    $data['required'] = intval(array_get($_REQUEST, 'required', 0));
+    $data['disabled'] = intval(array_get($_REQUEST, 'disabled', 0));
+    $data['area'] = intval(array_get($_REQUEST, 'area', 0));
+    $data['type'] = array_get($_REQUEST, 'type', 'text');
+    $data['bb_support'] = array_get($_REQUEST, 'bb_support', 0) ? 1 : 0;
     $data['default'] = '';
     if (($sectionID == 'users') && ($data['type'] != 'images')) {
-        $data['regpage'] = intval($_REQUEST['regpage']);
+        $data['regpage'] = intval(array_get($_REQUEST, 'regpage', 0));
     }
     switch ($data['type']) {
         case 'checkbox':
-            $data['default'] = $_REQUEST['checkbox_default'] ? 1 : 0;
+            $data['default'] = array_get($_REQUEST, 'checkbox_default', 0) ? 1 : 0;
             break;
         case 'text':
-            if ($_REQUEST['text_default'] != '') {
-                $data['default'] = $_REQUEST['text_default'];
+            if (array_get($_REQUEST, 'text_default', '') != '') {
+                $data['default'] = array_get($_REQUEST, 'text_default', '');
             }
-            $data['bb_support'] = $_REQUEST['text_bb_support'] ? 1 : 0;
-            $data['html_support'] = $_REQUEST['text_html_support'] ? 1 : 0;
+            $data['bb_support'] = array_get($_REQUEST, 'text_bb_support', 0) ? 1 : 0;
+            $data['html_support'] = array_get($_REQUEST, 'text_html_support', 0) ? 1 : 0;
             break;
         case 'textarea':
-            if ($_REQUEST['textarea_default'] != '') {
-                $data['default'] = $_REQUEST['textarea_default'];
+            if (array_get($_REQUEST, 'textarea_default', '') != '') {
+                $data['default'] = array_get($_REQUEST, 'textarea_default', '');
             }
-            $data['bb_support'] = $_REQUEST['textarea_bb_support'] ? 1 : 0;
-            $data['html_support'] = $_REQUEST['textarea_html_support'] ? 1 : 0;
-            $data['noformat'] = $_REQUEST['textarea_noformat'] ? 1 : 0;
+            $data['bb_support'] = array_get($_REQUEST, 'textarea_bb_support', 0) ? 1 : 0;
+            $data['html_support'] = array_get($_REQUEST, 'textarea_html_support', 0) ? 1 : 0;
+            $data['noformat'] = array_get($_REQUEST, 'textarea_noformat', 0) ? 1 : 0;
             break;
         case 'select':
             // Check options
             $optlist = [];
             $optvals = [];
-            if (isset($_REQUEST['so_data']) && is_array($_REQUEST['so_data'])) {
-                foreach ($_REQUEST['so_data'] as $k => $v) {
+            $so_data = array_get($_REQUEST, 'so_data', []);
+            if (is_array($so_data)) {
+                foreach ($so_data as $k => $v) {
                     if (is_array($v) && isset($v[0]) && isset($v[1]) && (($v[0] != '') || ($v[1] != ''))) {
                         if ($v[0] != '') {
                             $optlist[$v[0]] = $v[1];
@@ -334,10 +335,10 @@ function doAddEdit()
                 }
             }
             */
-            $data['storekeys'] = intval($_REQUEST['select_storekeys']) ? 1 : 0;
+            $data['storekeys'] = intval(array_get($_REQUEST, 'select_storekeys', 0)) ? 1 : 0;
             $data['options'] = $optlist;
-            if (trim($_REQUEST['select_default'])) {
-                $data['default'] = trim($_REQUEST['select_default']);
+            if (trim(array_get($_REQUEST, 'select_default', ''))) {
+                $data['default'] = trim(array_get($_REQUEST, 'select_default', ''));
                 if (
                     (($data['storekeys']) && (!array_key_exists($data['default'], $optlist))) ||
                     ((!$data['storekeys']) && (!in_array($data['default'], $optlist)))
@@ -351,8 +352,9 @@ function doAddEdit()
             // Check options
             $optlist = [];
             $optvals = [];
-            if (isset($_REQUEST['mso_data']) && is_array($_REQUEST['mso_data'])) {
-                foreach ($_REQUEST['mso_data'] as $k => $v) {
+            $mso_data = array_get($_REQUEST, 'mso_data', []);
+            if (is_array($mso_data)) {
+                foreach ($mso_data as $k => $v) {
                     if (is_array($v) && isset($v[0]) && isset($v[1]) && (($v[0] != '') || ($v[1] != ''))) {
                         if ($v[0] != '') {
                             $optlist[$v[0]] = $v[1];
@@ -379,10 +381,10 @@ function doAddEdit()
                 }
             }
             */
-            $data['storekeys'] = intval($_REQUEST['select_storekeys_multi']) ? 1 : 0;
+            $data['storekeys'] = intval(array_get($_REQUEST, 'select_storekeys_multi', 0)) ? 1 : 0;
             $data['options'] = $optlist;
-            if (trim($_REQUEST['select_default_multi'])) {
-                $data['default'] = trim($_REQUEST['select_default_multi']);
+            if (trim(array_get($_REQUEST, 'select_default_multi', ''))) {
+                $data['default'] = trim(array_get($_REQUEST, 'select_default_multi', ''));
                 if (
                     (($data['storekeys']) && (!array_key_exists($data['default'], $optlist))) ||
                     ((!$data['storekeys']) && (!in_array($data['default'], $optlist)))
@@ -394,14 +396,14 @@ function doAddEdit()
             }
             break;
         case 'images':
-            $data['maxCount'] = intval($_REQUEST['images_maxCount']);
-            $data['imgShadow'] = intval($_REQUEST['images_imgShadow']) ? 1 : 0;
-            $data['imgStamp'] = intval($_REQUEST['images_imgStamp']) ? 1 : 0;
-            $data['imgThumb'] = intval($_REQUEST['images_imgThumb']) ? 1 : 0;
-            $data['thumbWidth'] = intval($_REQUEST['images_thumbWidth']);
-            $data['thumbHeight'] = intval($_REQUEST['images_thumbHeight']);
-            $data['thumbStamp'] = intval($_REQUEST['images_thumbStamp']) ? 1 : 0;
-            $data['thumbShadow'] = intval($_REQUEST['images_thumbShadow']) ? 1 : 0;
+            $data['maxCount'] = intval(array_get($_REQUEST, 'images_maxCount', 1));
+            $data['imgShadow'] = intval(array_get($_REQUEST, 'images_imgShadow', 0)) ? 1 : 0;
+            $data['imgStamp'] = intval(array_get($_REQUEST, 'images_imgStamp', 0)) ? 1 : 0;
+            $data['imgThumb'] = intval(array_get($_REQUEST, 'images_imgThumb', 0)) ? 1 : 0;
+            $data['thumbWidth'] = intval(array_get($_REQUEST, 'images_thumbWidth', 150));
+            $data['thumbHeight'] = intval(array_get($_REQUEST, 'images_thumbHeight', 150));
+            $data['thumbStamp'] = intval(array_get($_REQUEST, 'images_thumbStamp', 0)) ? 1 : 0;
+            $data['thumbShadow'] = intval(array_get($_REQUEST, 'images_thumbShadow', 0)) ? 1 : 0;
             break;
         default:
             $data['type'] = '';
@@ -418,9 +420,9 @@ function doAddEdit()
         $error = 1;
     }
     // Check for storage params
-    $data['storage'] = $_REQUEST['storage'];
-    $data['db.type'] = $_REQUEST['db_type'];
-    $data['db.len'] = intval($_REQUEST['db_len']);
+    $data['storage'] = array_get($_REQUEST, 'storage', 0);
+    $data['db.type'] = array_get($_REQUEST, 'db_type', '');
+    $data['db.len'] = intval(array_get($_REQUEST, 'db_len', 0));
     if ($data['storage']) {
         // Check for correct DB type
         if (!in_array($data['db.type'], ['int', 'decimal', 'char', 'datetime', 'text'])) {
@@ -544,7 +546,7 @@ function doUpdate()
 {
     global $xf, $XF, $lang, $tpl, $mysql, $sectionID;
     $error = 0;
-    $field = $_REQUEST['field'];
+    $field = array_get($_REQUEST, 'field', '');
     // Check if field exists or not [depends on mode]
     if (!isset($xf[$sectionID][$field]) || !is_array($xf[$sectionID][$field])) {
         notify('error', $lang['xfields_msge_noexists'] . '(' . $sectionID . ': ' . $field . ')');
@@ -552,7 +554,8 @@ function doUpdate()
         $error = 1;
     }
     $notif = '';
-    switch ($_REQUEST['subaction']) {
+    $subaction = array_get($_REQUEST, 'subaction', '');
+    switch ($subaction) {
         case 'del':        // Delete field from SQL table if required
             if (($XF[$sectionID][$field]['storage']) && ($tableName = xf_getTableBySectionID($sectionID))) {
                 // Check if field really exist
@@ -583,7 +586,7 @@ function doUpdate()
     }
     if (!xf_configSave()) {
         notify('error', $lang['xfields_msge_errcsave']);
-        logger("Failed to save config after update: {$field}, section: {$sectionID}, action: {$_REQUEST['subaction']}", 'error');
+        logger("Failed to save config after update: {$field}, section: {$sectionID}, action: {$subaction}", 'error');
         return;
     }
     $xf = $XF;

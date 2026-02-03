@@ -2,7 +2,7 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
-use function Plugins\{logger, cache_get, cache_put};
+use function Plugins\{logger, cache_get, cache_put, cache_forget, array_get, sanitize, get_ip, clamp};
 
 // Плагин подсветки кода: подключает локальные файлы SyntaxHighlighter из папки плагина
 // и активирует их на полной новости. Если в конфиге включён CDN — можно быстро
@@ -15,7 +15,8 @@ pluginsLoadConfig();
 if (!function_exists('code_highlight_twig_brushEnabled')) {
     function code_highlight_twig_brushEnabled($params)
     {
-        $name = isset($params['name']) ? mb_strtolower(trim($params['name'])) : '';
+        $name = array_get($params, 'name', '');
+        $name = mb_strtolower(trim($name));
         // Сопоставление алиасов к ключам настроек плагина
         $aliases = [
             'js' => 'jscript',
@@ -136,15 +137,14 @@ function code_highlight_build_assets_html()
     }
 
     // Cache key based on configuration
-    $cacheKey = 'code_highlight_assets_' . ($useCDN ? 'cdn' : 'local') . '_' . $theme;
+    $cacheKey = 'code_highlight:assets:' . ($useCDN ? 'cdn' : 'local') . ':' . sanitize($theme, 'string');
 
-    // Try to get from cache
+    // Try to get from cache (24 hours = 1440 minutes)
     $cached = cache_get($cacheKey);
     if ($cached !== null) {
+        logger('Code highlight assets served from cache: ' . ($useCDN ? 'CDN' : 'local') . ', theme=' . sanitize($theme, 'string'), 'debug', 'code_highlight.log');
         return $cached;
     }
-
-    logger('code_highlight', 'Building assets HTML: mode=' . ($useCDN ? 'CDN' : 'local') . ', theme=' . $theme);
 
     $html = [];
 
@@ -259,7 +259,12 @@ function code_highlight_build_assets_html()
         '      copyBtn.addEventListener("click", function(e){' .
         '        e.preventDefault();' .
         '        try {' .
-        '          var code = block.querySelector(".container").textContent;' .
+        '          var container = block.querySelector(".container");' .
+        '          if (!container) {' .
+        '            var overview = block.querySelector(".overview");' .
+        '            if (overview) { container = overview.querySelector(".container"); }' .
+        '          }' .
+        '          var code = container ? container.textContent : "";' .
         '          if (navigator.clipboard && navigator.clipboard.writeText) {' .
         '            navigator.clipboard.writeText(code).then(function(){' .
         '              var original = copyBtn.innerHTML; copyBtn.innerHTML = "<img src=\"' . $iconTick . '\" alt=\"Copied!\" style=\"vertical-align:middle\">";' .
@@ -281,18 +286,9 @@ function code_highlight_build_assets_html()
 
     $result = implode("\n", $html);
 
-    // Cache for 24 hours (configuration doesn't change often)
-    cache_put($cacheKey, $result, 86400);
-
-    // Count enabled brushes for logging
-    $enabledCount = 0;
-    $brushKeys = ['jscript', 'php', 'sql', 'xml', 'css', 'plain', 'bash', 'python', 'java', 'csharp', 'cpp', 'delphi', 'diff', 'ruby', 'perl', 'vb', 'powershell', 'scala', 'groovy'];
-    foreach ($brushKeys as $k) {
-        if ($enabled($k)) {
-            $enabledCount++;
-        }
-    }
-    logger('code_highlight', 'Assets cached: ' . $enabledCount . ' brushes enabled');
+    // Cache for 24 hours (1440 minutes)
+    cache_put($cacheKey, $result, 1440);
+    logger('Code highlight assets generated and cached: ' . ($useCDN ? 'CDN' : 'local') . ', theme=' . sanitize($theme, 'string') . ', scripts=' . count($html), 'info', 'code_highlight.log');
 
     return $result;
 }
@@ -302,12 +298,12 @@ class CodeHighlightNewsFilter extends NewsFilter
 {
     public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
     {
-        if ($mode['style'] != 'full') {
+        if (array_get($mode, 'style', '') != 'full') {
             return 1;
         }
-        logger('code_highlight', 'Syntax highlighting attached for news: id=' . $newsID);
         if (function_exists('register_htmlvar')) {
             register_htmlvar('plain', code_highlight_build_assets_html());
+            logger('Code highlight activated for news: ' . intval($newsID) . ', IP=' . get_ip(), 'debug', 'code_highlight.log');
         }
         return 1;
     }

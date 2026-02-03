@@ -1,6 +1,13 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
+// Modernized with ng-helpers v0.2.2 (2026)
+// - Added logger for profile deletion tracking
+// - Requires PHP 8.0+
+
+use function Plugins\{logger};
+
 LoadPluginLang('uprofile_del', 'main', '', '', '#');
 add_act('index', 'del_profile_user');
 register_plugin_page('uprofile_del', 'user_id', 'del_profile');

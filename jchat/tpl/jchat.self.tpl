@@ -269,6 +269,92 @@ body {
 	text-align: right;
 	margin-top: 4px;
 }
+
+/* Emoji picker styles */
+.jchat_emoji_picker {
+	position: relative;
+	display: inline-block;
+	margin-top: 8px;
+}
+
+.jchat_emoji_btn {
+	background: #f5f7fa;
+	border: 1px solid #e0e0e0;
+	border-radius: 50%;
+	width: 36px;
+	height: 36px;
+	font-size: 20px;
+	cursor: pointer;
+	transition: all 0.2s;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.jchat_emoji_btn:hover {
+	background: #e8ecf1;
+	transform: scale(1.05);
+}
+
+.jchat_emoji_panel {
+	display: none;
+	position: absolute;
+	bottom: 45px;
+	left: 0;
+	background: white;
+	border: 1px solid #e0e0e0;
+	border-radius: 12px;
+	padding: 8px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	z-index: 1000;
+	min-width: 280px;
+}
+
+.jchat_emoji_panel.show {
+	display: block;
+	animation: emojiSlide 0.2s ease-out;
+}
+
+@keyframes emojiSlide {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.jchat_emoji_grid {
+	display: grid;
+	grid-template-columns: repeat(8, 1fr);
+	gap: 4px;
+	max-height: 200px;
+	overflow-y: auto;
+}
+
+.jchat_emoji_item {
+	font-size: 24px;
+	cursor: pointer;
+	padding: 4px;
+	text-align: center;
+	border-radius: 6px;
+	transition: all 0.2s;
+	user-select: none;
+}
+
+.jchat_emoji_item:hover {
+	background: #f5f7fa;
+	transform: scale(1.2);
+}
+
+.jchat_bottom_controls {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: 8px;
+}
 	</style>
 		<!-- STYLE DEFINITION END ((( YOU CAN CHANGE IT ))) -->
 	</head>
@@ -276,39 +362,112 @@ body {
 		<!-- SCRIPTS INTERNALS BEGIN ((( DO NOT CHANGE ))) -->
 		{% include 'plugins/jchat/jchat.script.header.tpl' %}
 		 <script language="javascript">
-										// Override chatSubmitForm to handle both logged and not logged users
-										function chatSubmitForm() {
-											var formID = document.getElementById('jChatForm');
-											{% if logged %}
-											CHATTER.postMessage('', formID.text.value);
-											{% else %}
-											CHATTER.postMessage(formID.name.value, formID.text.value);
-											{% endif %}
-											return false;
-										}
-										// Function to calculate remaining characters
-										function jchatCalculateMaxLen(oId, tName, maxLen) {
-											var delta = maxLen - oId.value.length;
-											var tId = document.getElementById(tName);
-											if (tId) {
-												tId.innerHTML = delta;
-												tId.style.color = (delta > 0) ? '#999' : 'red';
-											}
-										}
-										// Function to insert username when clicking on it
-										function jchatProcessAreaClick(event) {
-											var evt = event ? event : window.event;
-											if (!evt) return;
-											var trg = evt.target ? evt.target : evt.srcElement;
-											if (!trg) return;
-											if (trg.className != 'jchat_userName') return;
-											var mText = document.getElementById('jChatText');
-											if (mText) {
-												mText.value += '@' + trg.innerHTML + ': ';
-												mText.focus();
-											}
-										}
-										</script>
+		var jChatInputUsernameDefault = 0;
+		
+		var jchatEmojis = [
+			'😀','😃','😄','😁','😆','😅','🤣','😂',
+			'🙂','🙃','😉','😊','😇','🥰','😍','🤩',
+			'😘','😗','😚','😙','😋','😛','😜','🤪',
+			'😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨',
+			'😐','😑','😶','😏','😒','🙄','😬','🤥',
+			'😌','😔','😪','🤤','😴','😷','🤒','🤕',
+			'🤢','🤮','🤧','🥵','🥶','🥴','😵','🤯',
+			'🤠','🥳','😎','🤓','🧐','😕','😟','🙁',
+			'☹️','😮','😯','😲','😳','🥺','😦','😧',
+			'😨','😰','😥','😢','😭','😱','😖','😣',
+			'😞','😓','😩','😫','🥱','😤','😡','😠',
+			'🤬','😈','👿','💀','☠️','💩','🤡','👹',
+			'👺','👻','👽','👾','🤖','😺','😸','😹',
+			'😻','😼','😽','🙀','😿','😾','❤️','🧡',
+			'💛','💚','💙','💜','🖤','🤍','🤎','💔',
+			'❣️','💕','💞','💓','💗','💖','💘','💝',
+			'👍','👎','👌','✌️','🤞','🤟','🤘','🤙',
+			'👈','👉','👆','👇','☝️','✋','🤚','🖐️',
+			'🖖','👋','🤙','💪','🦾','🖕','✍️','🙏',
+			'💋','👄','🦷','👅','👂','🦻','👃','👣',
+			'👁️','👀','🧠','🦴','👤','👥','🗣️','👶',
+			'🎉','🎊','🎈','🎁','🏆','🥇','🥈','🥉',
+			'⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱',
+			'🔥','💧','⭐','✨','🌟','💫','⚡','☄️'
+		];
+		
+		function jchatToggleEmojiPanel() {
+			var panel = document.getElementById('jchatEmojiPanel');
+			if (panel) {
+				panel.classList.toggle('show');
+			}
+		}
+		
+		function jchatInsertEmoji(emoji) {
+			var textArea = document.getElementById('jChatText');
+			if (textArea) {
+				var start = textArea.selectionStart;
+				var end = textArea.selectionEnd;
+				var text = textArea.value;
+				textArea.value = text.substring(0, start) + emoji + text.substring(end);
+				textArea.selectionStart = textArea.selectionEnd = start + emoji.length;
+				textArea.focus();
+				jchatCalculateMaxLen(textArea, 'jchatWLen', {{ maxlen }});
+			}
+			jchatToggleEmojiPanel();
+		}
+		
+		function jchatInitEmojiPicker() {
+			var grid = document.getElementById('jchatEmojiGrid');
+			if (!grid) return;
+			grid.innerHTML = '';
+			for (var i = 0; i < jchatEmojis.length; i++) {
+				var item = document.createElement('div');
+				item.className = 'jchat_emoji_item';
+				item.textContent = jchatEmojis[i];
+				item.onclick = (function(emoji) {
+					return function() { jchatInsertEmoji(emoji); };
+				})(jchatEmojis[i]);
+				grid.appendChild(item);
+			}
+		}
+		
+		document.addEventListener('click', function(e) {
+			var panel = document.getElementById('jchatEmojiPanel');
+			var btn = document.getElementById('jchatEmojiBtn');
+			if (panel && btn && !panel.contains(e.target) && !btn.contains(e.target)) {
+				panel.classList.remove('show');
+			}
+		});
+		
+		// Override chatSubmitForm to handle both logged and not logged users
+		function chatSubmitForm() {
+			var formID = document.getElementById('jChatForm');
+			{% if logged %}
+			CHATTER.postMessage('', formID.text.value);
+			{% else %}
+			CHATTER.postMessage(formID.name.value, formID.text.value);
+			{% endif %}
+			return false;
+		}
+												// Function to calculate remaining characters
+												function jchatCalculateMaxLen(oId, tName, maxLen) {
+													var delta = maxLen - oId.value.length;
+													var tId = document.getElementById(tName);
+													if (tId) {
+														tId.innerHTML = delta;
+														tId.style.color = (delta > 0) ? '#999' : 'red';
+													}
+												}
+												// Function to insert username when clicking on it
+												function jchatProcessAreaClick(event) {
+													var evt = event ? event : window.event;
+													if (!evt) return;
+													var trg = evt.target ? evt.target : evt.srcElement;
+													if (!trg) return;
+													if (trg.className != 'jchat_userName') return;
+													var mText = document.getElementById('jChatText');
+													if (mText) {
+														mText.value += '@' + trg.innerHTML + ': ';
+														mText.focus();
+													}
+												}
+												</script>
 		<!-- SCRIPTS INTERNALS END -->
 		<!-- Display data definition (( YOU CAN CHANGE IT )) -->
 			<div class="jchat_container"> <div class="jchat_header">
@@ -330,10 +489,18 @@ body {
 							<input type="text" name="name" maxlength="20" style="margin-bottom: 8px;" placeholder="{{ lang.jchat.input.username }}" value="{{ lang.jchat.input.username }}" onfocus="if(!jChatInputUsernameDefault){this.value='';jChatInputUsernameDefault=1;}"/>
 						{% endif %}
 						<textarea id="jChatText" name="text" rows="3" placeholder="Введите сообщение..." onfocus="jchatCalculateMaxLen(this,'jchatWLen', {{ maxlen }});" onkeyup="jchatCalculateMaxLen(this,'jchatWLen', {{ maxlen }});"></textarea>
-						<div class="jchat_char_count">
-							<span id="jchatWLen">{{ maxlen }}</span>
-							/
-							{{ maxlen }}
+						<div class="jchat_bottom_controls">
+							<div class="jchat_emoji_picker">
+								<button type="button" id="jchatEmojiBtn" class="jchat_emoji_btn" onclick="jchatToggleEmojiPanel(); return false;">😊</button>
+								<div id="jchatEmojiPanel" class="jchat_emoji_panel">
+									<div id="jchatEmojiGrid" class="jchat_emoji_grid"></div>
+								</div>
+							</div>
+							<div class="jchat_char_count">
+								<span id="jchatWLen">{{ maxlen }}</span>
+								/
+								{{ maxlen }}
+							</div>
 						</div>
 						<input id="jChatSubmit" type="submit" value="{{ lang.jchat.button.post }}"/>
 					</form>

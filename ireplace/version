@@ -3,7 +3,7 @@
 ;
 ID: ireplace
 Name: Search and Replace
-Version: 0.01
+Version: 0.02
 Config: config.php
 Type: maintanance
 Description: Замена подстрок в БД

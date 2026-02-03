@@ -7,24 +7,21 @@ if (!defined('NGCMS')) die('HAL');
 // - Added logging support for cache operations
 
 // Import ng-helpers functions
-use function Plugins\{cache_get, cache_put, logger};
+use function Plugins\{cache_get, cache_put, logger, array_get, sanitize, clamp, get_ip};
 
 function plugin_calendar()
 {
     global $CurrentHandler, $template;
 
     // Determine MONTH and YEAR for current show process
-    if (($CurrentHandler['pluginName'] == 'news') &&
-        (in_array($CurrentHandler['handlerName'], array('by.day', 'by.month', 'by.year')))
+    if ((array_get($CurrentHandler, 'pluginName', '') == 'news') &&
+        (in_array(array_get($CurrentHandler, 'handlerName', ''), array('by.day', 'by.month', 'by.year')))
     ) {
-        $year = isset($CurrentHandler['params']['year']) ? $CurrentHandler['params']['year'] : $_REQUEST['year'];
-        $month = isset($CurrentHandler['params']['month']) ? $CurrentHandler['params']['month'] : $_REQUEST['month'];
-        if (($month < 1) || ($month > 12))
-            $month = 1;
-        if (($year < 1970) || ($year > 2100)) {
-            $tm = localtime();
-            $year = $tm[5];
-        }
+        $params = array_get($CurrentHandler, 'params', []);
+        $year = isset($params['year']) ? $params['year'] : array_get($_REQUEST, 'year', date('Y'));
+        $month = isset($params['month']) ? $params['month'] : array_get($_REQUEST, 'month', date('m'));
+        $month = clamp(intval($month), 1, 12);
+        $year = clamp(intval($year), 1970, 2100);
     } else {
         $lt = time();
         $month = date('m', $lt);
@@ -45,6 +42,7 @@ function plug_calgen($month, $year, $overrideTemplateName = false, $categoryList
         $cacheData = cache_get($cacheKey);
         if ($cacheData !== null) {
             // We got data from cache. Return it and stop
+            logger('Calendar served from cache: ' . $year . '-' . $month . ', categories: ' . join(',', $categoryList) . ', IP=' . get_ip(), 'debug', 'calendar.log');
             return $cacheData;
         }
     }
@@ -202,8 +200,8 @@ function plug_calgen($month, $year, $overrideTemplateName = false, $categoryList
     $xt = $twig->loadTemplate($tpath['calendar'] . 'calendar.tpl');
     $output = $xt->render($tVars);
     if ($cacheExpire > 0) {
-        cache_put($cacheKey, $output, $cacheExpire);
-        logger('calendar', 'Calendar cached: ' . $year . '-' . $month . ', categories: ' . join(',', $categoryList) . ', expire: ' . $cacheExpire . 's');
+        cache_put($cacheKey, $output, $cacheExpire / 60);
+        logger('Calendar cached: ' . $year . '-' . $month . ', categories: ' . join(',', $categoryList) . ', expire: ' . $cacheExpire . 's, IP=' . get_ip(), 'info', 'calendar.log');
     }
 
     return $output;
@@ -230,21 +228,18 @@ function plugin_calendar_showTwig($params)
 
     // Check if month/year are set
     if (isset($params['year']) && isset($params['month'])) {
-        $month = intval($params['month']);
-        $year = intval($params['year']);
+        $month = clamp(intval(array_get($params, 'month', 1)), 1, 12);
+        $year = clamp(intval(array_get($params, 'year', date('Y'))), 1970, 2100);
     } else {
         // Month/year is not set. Try to check current month/year from URL
-        if (($CurrentHandler['pluginName'] == 'news') &&
-            (in_array($CurrentHandler['handlerName'], array('by.day', 'by.month', 'by.year')))
+        if ((array_get($CurrentHandler, 'pluginName', '') == 'news') &&
+            (in_array(array_get($CurrentHandler, 'handlerName', ''), array('by.day', 'by.month', 'by.year')))
         ) {
-            $year = isset($CurrentHandler['params']['year']) ? $CurrentHandler['params']['year'] : $_REQUEST['year'];
-            $month = isset($CurrentHandler['params']['month']) ? $CurrentHandler['params']['month'] : $_REQUEST['month'];
-            if (($month < 1) || ($month > 12))
-                $month = 1;
-            if (($year < 1970) || ($year > 2100)) {
-                $tm = localtime();
-                $year = $tm[5];
-            }
+            $chParams = array_get($CurrentHandler, 'params', []);
+            $year = isset($chParams['year']) ? $chParams['year'] : array_get($_REQUEST, 'year', date('Y'));
+            $month = isset($chParams['month']) ? $chParams['month'] : array_get($_REQUEST, 'month', date('m'));
+            $month = clamp(intval($month), 1, 12);
+            $year = clamp(intval($year), 1970, 2100);
         }
     }
 

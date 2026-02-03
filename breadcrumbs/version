@@ -3,7 +3,7 @@
 ;
 ID: breadcrumbs
 Name: «Хлебные крошки»
-Version: 1.3
+Version: 1.4
 Acts: index
 File: breadcrumbs.php
 Config: config.php

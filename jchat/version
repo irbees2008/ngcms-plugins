@@ -3,7 +3,7 @@
 ;
 ID: jchat
 Name: AJAX chat
-Version: 0.10
+Version: 0.12
 Acts: index, ppages
 File: jchat.php
 Config: config.php

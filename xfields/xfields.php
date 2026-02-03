@@ -8,8 +8,8 @@
 if (!defined('NGCMS')) {
     die('HAL');
 }
-// Modernized with ng-helpers v0.2.1 (18 января 2026)
-use function Plugins\{notify, sanitize, logger, get_ip, cache_get, cache_put, cache_forget};
+// Modernized with ng-helpers v0.2.2 (31 января 2026)
+use function Plugins\{notify, sanitize, logger, get_ip, cache_get, cache_put, cache_forget, array_get};
 // Load lang files
 LoadPluginLang('xfields', 'config');
 LoadPluginLibrary('xfields', 'common');

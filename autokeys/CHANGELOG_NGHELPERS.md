@@ -1,7 +1,7 @@
 # Changelog: AutoKeys Plugin - ng-helpers Integration
 
-**Дата обновления:** 15 января 2026 г.
-**Версия ng-helpers:** v0.2.0
+**Дата обновления:** 29 января 2026 г.
+**Версия ng-helpers:** v0.2.2
 **PHP совместимость:** 7.0+
 
 ---
@@ -39,19 +39,19 @@
 
   ```php
   // При добавлении новости
-  logger('autokeys', 'Add news: generated ' . count(explode(', ', $keywords)) . ' keywords');
+  logger('Add news: generated ' . count(explode(', ', $keywords)) . ' keywords', 'info', 'autokeys.log');
 
   // При редактировании новости
-  logger('autokeys', 'Edit news: newsID=' . $newsID . ', generated ' . count(explode(', ', $keywords)) . ' keywords');
+  logger('Edit news: newsID=' . $newsID . ', generated ' . count(explode(', ', $keywords)) . ' keywords', 'info', 'autokeys.log');
 
   // Инициализация класса
-  logger('autokeys', 'AutoKeyword init: length=' . mb_strlen($this->contents) . ' chars, minLen=' . $this->wordLengthMin . ', maxLen=' . $this->wordLengthMax);
+  logger('AutoKeyword init: length=' . mb_strlen($this->contents) . ' chars, minLen=' . $this->wordLengthMin . ', maxLen=' . $this->wordLengthMax, 'info', 'autokeys.log');
 
   // Парсинг слов
-  logger('autokeys', 'parse_words: extracted ' . count($occur_filtered) . ' keywords, time=' . $duration . 'ms');
+  logger('parse_words: extracted ' . count($occur_filtered) . ' keywords, time=' . $duration . 'ms', 'info', 'autokeys.log');
 
   // Финальный результат
-  logger('autokeys', 'akeysGetKeys: result=' . count(explode(', ', $words)) . ' keywords, length=' . mb_strlen($words) . ' chars');
+  logger('akeysGetKeys: result=' . count(explode(', ', $words)) . ' keywords, length=' . mb_strlen($words) . ' chars', 'info', 'autokeys.log');
   ```
 
 - **Преимущества:**
@@ -84,16 +84,18 @@
 ### Записи в логах:
 
 ```
-[2026-01-12 16:30:10] AutoKeyword init: length=2500 chars, minLen=5, maxLen=100
-[2026-01-12 16:30:11] parse_words: extracted 15 keywords, time=120ms
-[2026-01-12 16:30:11] akeysGetKeys: result=10 keywords, length=85 chars
-[2026-01-12 16:30:11] Add news: generated 10 keywords
+[2026-01-29 16:30:10] [INFO] AutoKeyword init: length=2500 chars, minLen=5, maxLen=100
+[2026-01-29 16:30:11] [INFO] parse_words: extracted 15 keywords, time=120ms
+[2026-01-29 16:30:11] [INFO] akeysGetKeys: result=10 keywords, length=85 chars
+[2026-01-29 16:30:11] [INFO] Add news: generated 10 keywords
 
-[2026-01-12 16:35:20] AutoKeyword init: length=3500 chars, minLen=5, maxLen=100
-[2026-01-12 16:35:21] parse_words: extracted 22 keywords, time=180ms
-[2026-01-12 16:35:21] akeysGetKeys: result=15 keywords, length=120 chars
-[2026-01-12 16:35:21] Edit news: newsID=42, generated 15 keywords
+[2026-01-29 16:35:20] [INFO] AutoKeyword init: length=3500 chars, minLen=5, maxLen=100
+[2026-01-29 16:35:21] [INFO] parse_words: extracted 22 keywords, time=180ms
+[2026-01-29 16:35:21] [INFO] akeysGetKeys: result=15 keywords, length=120 chars
+[2026-01-29 16:35:21] [INFO] Edit news: newsID=42, generated 15 keywords
 ```
+
+**Путь к логам:** engine/cache/logs/autokeys.log
 
 ### Что отслеживается:
 

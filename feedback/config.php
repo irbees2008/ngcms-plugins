@@ -4,13 +4,17 @@
 if (!defined('NGCMS')) {
     die('HAL');
 }
+
+// Import ng-helpers functions
+use function Plugins\{array_get};
+
 // Load langs
 loadPluginLang('feedback', 'config', '', '', ':');
 loadPluginLang('feedback', 'main', '', '', ':');
 // Load library
-include_once root.'/plugins/feedback/lib/common.php';
+include_once root . '/plugins/feedback/lib/common.php';
 // Switch action
-switch ($_REQUEST['action']) {
+switch (array_get($_REQUEST, 'action', '')) {
     case 'addform':
         addForm();
         showList();
@@ -43,16 +47,16 @@ switch ($_REQUEST['action']) {
 function addForm()
 {
     global $mysql, $lang;
-    $mysql->query('insert into '.prefix."_feedback (name, title) values ('newform', 'New form')");
+    $mysql->query('insert into ' . prefix . "_feedback (name, title) values ('newform', 'New form')");
 }
 
 // Save form params
 function saveForm()
 {
     global $mysql, $lang;
-    $id = intval($_REQUEST['id']);
+    $id = intval(array_get($_REQUEST, 'id', 0));
     // First - try to fetch form
-    if (!is_array($recF = $mysql->record('select * from '.prefix.'_feedback where id = '.$id))) {
+    if (!is_array($recF = $mysql->record('select * from ' . prefix . '_feedback where id = ' . $id))) {
         msg(['type' => 'error', 'text' => 'Указанная вами форма не существует']);
         showForm(1);
 
@@ -60,8 +64,8 @@ function saveForm()
     }
     // Готовим список email адресов пользователей
     $emails = '';
-    if (is_array($_POST['elist'])) {
-        $elist = $_POST['elist'];
+    if (is_array(array_get($_POST, 'elist', []))) {
+        $elist = array_get($_POST, 'elist', []);
         $eok = [];
         $num = 1;
         foreach ($elist as $erec) {
@@ -74,7 +78,7 @@ function saveForm()
         }
         $emails = serialize($eok);
     }
-    $name = trim($_REQUEST['name']);
+    $name = trim(array_get($_REQUEST, 'name', ''));
     // Проверяем ввод наименования
     if ($name == '') {
         msg(['type' => 'error', 'text' => 'Необходимо заполнить ID формы']);
@@ -83,34 +87,34 @@ function saveForm()
         return;
     }
     // Проверяем дубляж
-    if (is_array($mysql->record('select * from '.prefix.'_feedback where id <> '.$id.' and name ='.db_squote($name)))) {
+    if (is_array($mysql->record('select * from ' . prefix . '_feedback where id <> ' . $id . ' and name =' . db_squote($name)))) {
         msg(['type' => 'error', 'text' => 'Форма с таким ID уже существует. Нельзя использовать одинаковый ID для разных форм']);
         showForm(1);
 
         return;
     }
     // Сохраняем изменения
-    $flags = ($_REQUEST['jcheck'] ? '1' : '0').
-        ($_REQUEST['captcha'] ? '1' : '0').
-        ($_REQUEST['html'] ? '1' : '0').
-        (((intval($_REQUEST['link_news']) >= 0) && (intval($_REQUEST['link_news']) <= 2)) ? intval($_REQUEST['link_news']) : 0).
-        ($_REQUEST['isSubj'] ? '1' : '0').
-        ($_REQUEST['utf8'] ? '1' : '0');
+    $flags = (array_get($_REQUEST, 'jcheck', '') ? '1' : '0') .
+        (array_get($_REQUEST, 'captcha', '') ? '1' : '0') .
+        (array_get($_REQUEST, 'html', '') ? '1' : '0') .
+        (((intval(array_get($_REQUEST, 'link_news', 0)) >= 0) && (intval(array_get($_REQUEST, 'link_news', 0)) <= 2)) ? intval(array_get($_REQUEST, 'link_news', 0)) : 0) .
+        (array_get($_REQUEST, 'isSubj', '') ? '1' : '0') .
+        (array_get($_REQUEST, 'utf8', '') ? '1' : '0');
     $params = [
         'name'        => $name,
-        'title'       => $_REQUEST['title'],
-        'template'    => $_REQUEST['template'],
+        'title'       => array_get($_REQUEST, 'title', ''),
+        'template'    => array_get($_REQUEST, 'template', ''),
         'emails'      => $emails,
-        'description' => $_REQUEST['description'],
-        'active' => intval($_REQUEST['active'] ?? 0),
+        'description' => array_get($_REQUEST, 'description', ''),
+        'active' => intval(array_get($_REQUEST, 'active', 0)),
         'flags'       => $flags,
-        'subj'        => $_REQUEST['subj'],
+        'subj'        => array_get($_REQUEST, 'subj', ''),
     ];
     $sqlParams = [];
     foreach ($params as $k => $v) {
-        $sqlParams[] = $k.'='.db_squote($v);
+        $sqlParams[] = $k . '=' . db_squote($v);
     }
-    $mysql->query('update '.prefix.'_feedback set '.implode(', ', $sqlParams).' where id = '.$id);
+    $mysql->query('update ' . prefix . '_feedback set ' . implode(', ', $sqlParams) . ' where id = ' . $id);
     //$mysql->query("update ".prefix."_feedback set name=".db_squote($name).", title=".db_squote($_REQUEST['title']).", template=".db_squote($_REQUEST['template']).", emails=".db_squote($emails).", description=".db_squote($_REQUEST['description']).", active=".intval($_REQUEST['active']).", flags=".db_squote($flags)." where id = ".$id);
     showForm(1);
 }
@@ -120,7 +124,7 @@ function showList()
     global $mysql, $lang, $twig;
     $tVars = [];
     $tForms = [];
-    foreach ($mysql->select('select * from '.prefix.'_feedback order by name') as $frow) {
+    foreach ($mysql->select('select * from ' . prefix . '_feedback order by name') as $frow) {
         $tForm = [
             'id'        => $frow['id'],
             'name'      => $frow['name'],
@@ -129,8 +133,8 @@ function showList()
             'flags'     => [
                 'active' => $frow['active'],
             ],
-            'linkEdit'  => '?mod=extra-config&plugin=feedback&action=form&id='.$frow['id'],
-            'linkDel'   => '?mod=extra-config&plugin=feedback&action=delform&id='.$frow['id'],
+            'linkEdit'  => '?mod=extra-config&plugin=feedback&action=form&id=' . $frow['id'],
+            'linkDel'   => '?mod=extra-config&plugin=feedback&action=delform&id=' . $frow['id'],
         ];
         $tForms[] = $tForm;
     }
@@ -145,10 +149,10 @@ function showForm(bool $edMode = false)
     global $mysql, $lang, $twig;
     $tVars = [];
     // Load form
-    $id = intval($_REQUEST['id']);
+    $id = intval(array_get($_REQUEST, 'id', 0));
     $tvars = [];
-    if (!is_array($frow = $mysql->record('select * from '.prefix.'_feedback where id = '.$id))) {
-        $tVars['content'] = 'Указанная форма ['.$id.'] не существует!';
+    if (!is_array($frow = $mysql->record('select * from ' . prefix . '_feedback where id = ' . $id))) {
+        $tVars['content'] = 'Указанная форма [' . $id . '] не существует!';
         $xt = $twig->loadTemplate('plugins/feedback/tpl/conf.notify.tpl');
         echo $xt->render($tVars);
 
@@ -189,9 +193,9 @@ function showForm(bool $edMode = false)
     }
     $tEGroups[] = [$num, '', ''];
     $tVars['id'] = $frow['id'];
-    $tVars['name'] = $edMode ? $_REQUEST['name'] : $frow['name'];
-    $tVars['title'] = $edMode ? $_REQUEST['title'] : $frow['title'];
-    $tVars['description'] = $edMode ? $_REQUEST['description'] : $frow['description'];
+    $tVars['name'] = $edMode ? array_get($_REQUEST, 'name', '') : $frow['name'];
+    $tVars['title'] = $edMode ? array_get($_REQUEST, 'title', '') : $frow['title'];
+    $tVars['description'] = $edMode ? array_get($_REQUEST, 'description', '') : $frow['description'];
     $tVars['subj'] = $frow['subj'];
     $tVars['url'] = generateLink('core', 'plugin', ['plugin' => 'feedback'], ['id' => $frow['id']], true, true);
     $tVars['egroups'] = $tEGroups;
@@ -200,26 +204,26 @@ function showForm(bool $edMode = false)
         'value'   => intval(substr($frow['flags'], 3, 1)),
     ];
     $tVars['flags'] = [
-        'active'   => intval($edMode ? $_REQUEST['active'] : $frow['active']),
-        'jcheck'   => intval($edMode ? $_REQUEST['jcheck'] : intval(substr($frow['flags'], 0, 1))),
-        'captcha'  => intval($edMode ? $_REQUEST['captcha'] : intval(substr($frow['flags'], 1, 1))),
-        'html'     => intval($edMode ? $_REQUEST['html'] : intval(substr($frow['flags'], 2, 1))),
+        'active'   => intval($edMode ? array_get($_REQUEST, 'active', 0) : $frow['active']),
+        'jcheck'   => intval($edMode ? array_get($_REQUEST, 'jcheck', 0) : intval(substr($frow['flags'], 0, 1))),
+        'captcha'  => intval($edMode ? array_get($_REQUEST, 'captcha', 0) : intval(substr($frow['flags'], 1, 1))),
+        'html'     => intval($edMode ? array_get($_REQUEST, 'html', 0) : intval(substr($frow['flags'], 2, 1))),
         'subj'     => intval(substr($frow['flags'], 4, 1)),
-        'utf8'     => intval($edMode ? $_REQUEST['utf8'] : intval(substr($frow['flags'], 5, 1))),
+        'utf8'     => intval($edMode ? array_get($_REQUEST, 'utf8', 0) : intval(substr($frow['flags'], 5, 1))),
         'haveForm' => 1,
     ];
     // Generate list of templates
     $lf = ['' => '<автоматически>'];
     foreach (feedback_listTemplates() as $k) {
         if (substr($k, 0, 1) == ':') {
-            $lf[$k] = 'сайт: '.$k;
+            $lf[$k] = 'сайт: ' . $k;
         } else {
-            $lf[$k] = 'плагин: '.$k;
+            $lf[$k] = 'плагин: ' . $k;
         }
     }
     $lout = '';
     foreach ($lf as $k => $v) {
-        $lout .= '<option value="'.$k.'"'.($frow['template'] == $k ? ' selected="selected"' : '').'>'.$v.'</option>';
+        $lout .= '<option value="' . $k . '"' . ($frow['template'] == $k ? ' selected="selected"' : '') . '>' . $v . '</option>';
     }
     $tVars['template_options'] = $lout;
     $tVars['entries'] = $tEntries;
@@ -234,13 +238,13 @@ function showFormRow()
     global $mysql, $lang, $twig;
     $tVars = [];
     // Load form
-    $id = intval($_REQUEST['form_id']);
-    $fRowId = $_REQUEST['row'];
+    $id = intval(array_get($_REQUEST, 'form_id', 0));
+    $fRowId = array_get($_REQUEST, 'row', '');
     $recordFound = 0;
     do {
         // Check if form exists
-        if (!is_array($frow = $mysql->record('select * from '.prefix.'_feedback where id = '.$id))) {
-            $tVars['content'] = 'Указанная форма ['.$id.'] не существует!';
+        if (!is_array($frow = $mysql->record('select * from ' . prefix . '_feedback where id = ' . $id))) {
+            $tVars['content'] = 'Указанная форма [' . $id . '] не существует!';
             break;
         }
         $tVars['flags']['haveForm'] = 1;
@@ -253,7 +257,7 @@ function showFormRow()
         }
         // Check if form's row exists
         if ($fRowId && !isset($fData[$fRowId])) {
-            $tVars['content'] = 'Указанное поле ['.$id.']['.$fRowId.'] не существует!';
+            $tVars['content'] = 'Указанное поле [' . $id . '][' . $fRowId . '] не существует!';
             break;
         }
         $editMode = ($fRowId) ? 1 : 0;
@@ -281,8 +285,8 @@ function showFormRow()
         }
         $xsel = '';
         foreach (['text', 'email', 'date', 'textarea', 'select'] as $ts) {
-            $tVars['field'][$ts.'_default'] = ($xRow['type'] == $ts) ? secure_html($xRow['default']) : '';
-            $xsel .= '<option value="'.$ts.'"'.(($xRow['type'] == $ts) ? ' selected' : '').'>'.$lang['feedback:field_type_'.$ts];
+            $tVars['field'][$ts . '_default'] = ($xRow['type'] == $ts) ? secure_html($xRow['default']) : '';
+            $xsel .= '<option value="' . $ts . '"' . (($xRow['type'] == $ts) ? ' selected' : '') . '>' . $lang['feedback:field_type_' . $ts];
         }
         $tVars['field']['type']['options'] = $xsel;
         $options = is_array($xRow['options']) ? $xRow['options'] : explode("\n", $xRow['options']);
@@ -295,15 +299,15 @@ function showFormRow()
         $lf = ['' => '<не отправлять>'];
         foreach (feedback_listTemplates() as $k) {
             if (substr($k, 0, 1) == ':') {
-                $lf[$k] = 'сайт: '.$k;
+                $lf[$k] = 'сайт: ' . $k;
             } else {
-                $lf[$k] = 'плагин: '.$k;
+                $lf[$k] = 'плагин: ' . $k;
             }
         }
         $tVars['field']['email_template']['options'] = $lf;
         $recordFound = 1;
     } while (0);
-    $templateName = 'plugins/feedback/tpl/'.($recordFound ? 'conf.form.editrow' : 'conf.notify').'.tpl';
+    $templateName = 'plugins/feedback/tpl/' . ($recordFound ? 'conf.form.editrow' : 'conf.notify') . '.tpl';
     $xt = $twig->loadTemplate($templateName);
     echo $xt->render($tVars);
 }
@@ -312,15 +316,15 @@ function editFormRow()
 {
     global $mysql, $lang, $twig;
     // Check params
-    $id = intval($_REQUEST['form_id']);
-    $fRowId = $_REQUEST['name'];
-    $editMode = intval($_REQUEST['edit']);
+    $id = intval(array_get($_REQUEST, 'form_id', 0));
+    $fRowId = array_get($_REQUEST, 'name', '');
+    $editMode = intval(array_get($_REQUEST, 'edit', 0));
     $tVars = [];
     $enabled = 0;
     do {
         // Check if form exists
-        if (!is_array($frow = $mysql->record('select * from '.prefix.'_feedback where id = '.$id))) {
-            $tVars['content'] = 'Указанная форма ['.$id.'] не существует!';
+        if (!is_array($frow = $mysql->record('select * from ' . prefix . '_feedback where id = ' . $id))) {
+            $tVars['content'] = 'Указанная форма [' . $id . '] не существует!';
             break;
         }
         // Check if row id is not valid
@@ -338,12 +342,12 @@ function editFormRow()
         }
         // Check if form's row exists
         if ($editMode && !isset($fData[$fRowId])) {
-            $tVars['content'] = 'Указанное поле ['.$id.']['.$fRowId.'] не существует!';
+            $tVars['content'] = 'Указанное поле [' . $id . '][' . $fRowId . '] не существует!';
             break;
         }
         // For "add" mode - check if field already exists
         if (!$editMode && isset($fData[$fRowId])) {
-            $tVars['content'] = 'Указанное поле ['.$id.']['.$fRowId.'] уже существует!';
+            $tVars['content'] = 'Указанное поле [' . $id . '][' . $fRowId . '] уже существует!';
             break;
         }
         // Проверка корректности символов в имени [ только латница и цифры ]
@@ -356,11 +360,11 @@ function editFormRow()
         //
         $enabled = 1;
         // Fill field's params
-        $fld = ['name' => $fRowId, 'title' => $_REQUEST['title'], 'auto' => intval($_REQUEST['auto']), 'block' => intval($_REQUEST['block'])];
-        if (intval($_REQUEST['required'])) {
+        $fld = ['name' => $fRowId, 'title' => array_get($_REQUEST, 'title', ''), 'auto' => intval(array_get($_REQUEST, 'auto', 0)), 'block' => intval(array_get($_REQUEST, 'block', 0))];
+        if (intval(array_get($_REQUEST, 'required', 0))) {
             $fld['required'] = 1;
         }
-        switch ($_REQUEST['type']) {
+        switch (array_get($_REQUEST, 'type', '')) {
             case 'text':
                 $fld['type'] = 'text';
                 $fld['default'] = $_REQUEST['text_default'];
@@ -368,10 +372,11 @@ function editFormRow()
             case 'date':
                 $fld['type'] = 'date';
                 // Check default date
-                if (preg_match('#^ *(\d{1,2})\.(\d{1,2})\.(\d{4}) *$#', $_REQUEST['date_default'], $match) &&
+                if (
+                    preg_match('#^ *(\d{1,2})\.(\d{1,2})\.(\d{4}) *$#', array_get($_REQUEST, 'date_default', ''), $match) &&
                     ($match[1] >= 1) && ($match[1] <= 31) && ($match[2] >= 1) && ($match[2] <= 12) && ($match[3] >= 1970) && ($match[3] <= 2099)
                 ) {
-                    $fld['default'] = $match[1].'.'.$match[2].'.'.$match[3];
+                    $fld['default'] = $match[1] . '.' . $match[2] . '.' . $match[3];
                     $fld['default:vars']['day'] = $match[1];
                     $fld['default:vars']['month'] = $match[2];
                     $fld['default:vars']['year'] = $match[3];
@@ -379,20 +384,20 @@ function editFormRow()
                 break;
             case 'textarea':
                 $fld['type'] = 'textarea';
-                $fld['default'] = $_REQUEST['textarea_default'];
+                $fld['default'] = array_get($_REQUEST, 'textarea_default', '');
                 break;
             case 'email':
                 $fld['type'] = 'email';
                 $fld['default'] = '';
-                $fld['template'] = $_REQUEST['email_template'];
+                $fld['template'] = array_get($_REQUEST, 'email_template', '');
                 break;
             case 'select':
                 $fld['type'] = 'select';
                 $fld['options'] = [];
-                if ($_REQUEST['select_storekeys']) {
+                if (array_get($_REQUEST, 'select_storekeys', '')) {
                     $fld['storekeys'] = 1;
                 }
-                foreach (explode("\n", $_REQUEST['select_options']) as $row) {
+                foreach (explode("\n", array_get($_REQUEST, 'select_options', '')) as $row) {
                     if (!strlen(trim($row))) {
                         continue;
                     }
@@ -408,7 +413,7 @@ function editFormRow()
         }
         // Everything is correct. Let's update field data
         $fData[$fRowId] = $fld;
-        $mysql->query('update '.prefix.'_feedback set struct = '.db_squote(serialize($fData)).' where id = '.$frow['id']);
+        $mysql->query('update ' . prefix . '_feedback set struct = ' . db_squote(serialize($fData)) . ' where id = ' . $frow['id']);
         $tVars['content'] = 'Поле изменено';
     } while (0);
     // Show template
@@ -422,14 +427,14 @@ function doUpdate()
 {
     global $mysql, $twig;
     // Check params
-    $id = intval($_REQUEST['id']);
-    $fRowId = $_REQUEST['name'];
+    $id = intval(array_get($_REQUEST, 'id', 0));
+    $fRowId = array_get($_REQUEST, 'name', '');
     $enabled = 0;
     $tVars = [];
     do {
         // Check if form exists
-        if (!is_array($frow = $mysql->record('select * from '.prefix.'_feedback where id = '.$id))) {
-            $tVars['content'] = 'Указанная форма ['.$id.'] не существует!';
+        if (!is_array($frow = $mysql->record('select * from ' . prefix . '_feedback where id = ' . $id))) {
+            $tVars['content'] = 'Указанная форма [' . $id . '] не существует!';
             break;
         }
         $tVars['flags']['haveForm'] = 1;
@@ -442,7 +447,7 @@ function doUpdate()
         }
         // Check if form's row exists
         if (!isset($fData[$fRowId])) {
-            $tVars['content'] = 'Указанное поле ['.$id.']['.$fRowId.'] не существует!';
+            $tVars['content'] = 'Указанное поле [' . $id . '][' . $fRowId . '] не существует!';
             break;
         }
         $enabled = 1;
@@ -455,7 +460,7 @@ function doUpdate()
         return false;
     }
     // Now make an action
-    switch ($_REQUEST['subaction']) {
+    switch (array_get($_REQUEST, 'subaction', '')) {
         case 'del':
             unset($fData[$fRowId]);
             break;
@@ -466,7 +471,7 @@ function doUpdate()
             array_key_move($fData, $fRowId, 1);
             break;
     }
-    $mysql->query('update '.prefix.'_feedback set struct = '.db_squote(serialize($fData)).' where id = '.$frow['id']);
+    $mysql->query('update ' . prefix . '_feedback set struct = ' . db_squote(serialize($fData)) . ' where id = ' . $frow['id']);
 
     return true;
 }
@@ -475,7 +480,7 @@ function doUpdate()
 function delForm()
 {
     global $mysql, $lang;
-    $mysql->query('delete from '.prefix.'_feedback where id = '.intval($_REQUEST['id']));
+    $mysql->query('delete from ' . prefix . '_feedback where id = ' . intval(array_get($_REQUEST, 'id', 0)));
 }
 
 function array_key_move(&$arr, $key, $offset)

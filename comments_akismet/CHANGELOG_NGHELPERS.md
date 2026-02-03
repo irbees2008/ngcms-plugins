@@ -1,13 +1,74 @@
-# CHANGELOG: ng-helpers v0.2.0 Integration - comments_akismet Plugin
+# CHANGELOG: ng-helpers v0.2.2 Integration - comments_akismet Plugin
 
 ## 📋 Общая информация
 
 **Плагин:** comments_akismet
-**Версия ng-helpers:** v0.2.0
-**Дата модернизации:** 14 января 2026 г.
+**Версия плагина:** 0.03
+**Версия ng-helpers:** v0.2.2
+**Дата последней модернизации:** 30 января 2026 г.
 **Назначение:** Антиспам-фильтр для комментариев на основе Akismet API
 
-## 🎯 Описание плагина
+---
+
+## 🆕 Версия 0.03 - Дополнительная модернизация (30 января 2026)
+
+### Обновленные функции
+
+#### logger() - Правильный формат ng-helpers v0.2.2
+
+**Исправлено в antispam.php:**
+
+- Старый формат: `logger('comments_akismet', 'message')` (2 параметра)
+- Новый формат: `logger('message', 'level', 'comments_akismet.log')` (3 параметра)
+
+**Все точки логирования:**
+
+1. Блокировка спама: `logger('SPAM BLOCKED...', 'warning', 'comments_akismet.log')`
+2. Одобрение комментария: `logger('Comment approved...', 'debug', 'comments_akismet.log')`
+3. Ошибка API ключа: `logger('ERROR: Invalid API key...', 'error', 'comments_akismet.log')`
+
+#### sanitize() - Уточнение типов
+
+**Улучшено в antispam.php:**
+
+- `sanitize($SQL['author'])` → `sanitize($SQL['author'], 'string')`
+- `sanitize($SQL['mail'])` → `sanitize($SQL['mail'], 'email')`
+
+**Преимущества:**
+
+- Явное указание типа очистки данных
+- Корректная обработка email-адресов
+
+#### array_get() - Безопасный доступ к массивам
+
+**Замены в config.php:**
+
+- `$_REQUEST['action']` → `array_get($_REQUEST, 'action', '')`
+
+**Преимущества:**
+
+- Устранение undefined index notices
+- Безопасная проверка действий в конфигурации
+
+#### Логирование конфигурации
+
+**Добавлено в config.php:**
+
+```php
+logger('Akismet config saved, IP=' . get_ip(), 'info', 'comments_akismet.log');
+```
+
+**Итого изменений v0.03:**
+
+- ✅ 3 замены logger() на правильный формат (3 параметра)
+- ✅ 2 улучшения sanitize() с явными типами
+- ✅ 1 замена `$_REQUEST` на `array_get()`
+- ✅ 1 новая точка логирования конфигурации
+- ✅ Все функции ng-helpers v0.2.2 используют правильный формат
+
+---
+
+## 📊 Версия 0.02 - Начальная модернизация (14 января 2026)
 
 comments_akismet — плагин защиты от спама в комментариях NGCMS:
 
@@ -114,13 +175,11 @@ logger('comments_akismet', 'SPAM BLOCKED: author=' . sanitize($SQL['author']) . 
 ### Факторы производительности
 
 1. **Akismet API**
-
    - Легитимный комментарий: 50-150 мс
    - Спам: 100-200 мс (более глубокая проверка)
    - Таймаут: 3-5 секунд (настраивается)
 
 2. **Сетевая задержка**
-
    - WordPress.com Akismet: 50-100 мс (US/EU)
    - Альтернативные серверы: 100-300 мс
    - Локальные серверы: 10-50 мс

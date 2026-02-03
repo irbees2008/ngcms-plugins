@@ -1,33 +1,110 @@
 # Changelog: Complain Plugin - ng-helpers Integration
 
 **Дата обновления:** 12 января 2026 г.
-**Версия ng-helpers:** v0.2.0
+**Версия плагина:** 0.08
+**Версия ng-helpers:** v0.2.2
 **PHP совместимость:** 7.0+
+
+---
+
+## Версия 0.08 (12.01.2026)
+
+### Обновления модернизации
+
+**Применённые изменения:**
+
+- ✅ Добавлена функция `array_get()` для безопасного доступа к суперглобальным массивам
+- ✅ Исправлен формат `logger()` на 3-параметровый: `logger($message, $level, $file)`
+- ✅ Добавлены явные типы в `sanitize()` для улучшения читаемости кода
+- ✅ Обновлены use statements в complain.php и config.php
+
+**Статистика замен:**
+
+- **config.php:** 1 замена `$_REQUEST['action']` → `array_get($_REQUEST, 'action', '')`
+- **complain.php:** 16 замен суперглобальных переменных
+  - 4 замены `isset($_REQUEST['ajax'])` → `array_get($_REQUEST, 'ajax', 0)`
+  - 4 замены `$_REQUEST['ds_id']` → `array_get($_REQUEST, 'ds_id', 0)`
+  - 2 замены `$_REQUEST['entry_id']` → `array_get($_REQUEST, 'entry_id', 0)`
+  - 1 замена `$_REQUEST['error']` → `array_get($_REQUEST, 'error', 0)`
+  - 1 замена `$_REQUEST['notify']` → `array_get($_REQUEST, 'notify', 0)`
+  - 3 замены `$_REQUEST['mail']` → `array_get($_REQUEST, 'mail', '')`
+  - 1 замена `$_REQUEST['error_text']` → `array_get($_REQUEST, 'error_text', '')`
+  - 1 замена `$_REQUEST['setowner']` → `array_get($_REQUEST, 'setowner', '')`
+  - 1 замена `$_REQUEST['setstatus']` → `array_get($_REQUEST, 'setstatus', '')`
+  - 1 замена `$_REQUEST['newstatus']` → `array_get($_REQUEST, 'newstatus', 0)`
+  - 1 замена `foreach ($_REQUEST as ...)` → безопасный `foreach` с `array_get()`
+
+**Улучшения логирования:**
+
+- ✅ Исправлены все вызовы `logger()` на формат: `logger($message, $level, $file)`
+  - Уровни: 'info', 'warning', 'debug'
+  - Файл лога: 'complain.log'
+- ✅ Добавлено логирование в config.php при сохранении настроек
+- ✅ Все logger() вызовы включают IP-адрес через `get_ip()`
+
+**Улучшения sanitize():**
+
+- ✅ Добавлены явные типы: `sanitize($data, 'string')`
+- Применено в: `$_REQUEST['error_text']`, `$_REQUEST['mail']`
 
 ---
 
 ## Применённые функции ng-helpers
 
-### 1. logger (Категория: Debugging)
+### 1. array_get (Категория: Array Operations) 🆕
+
+- **Назначение:** Безопасное получение значений из массивов с защитой от undefined index
+- **Использование:**
+
+  ```php
+  // Замена прямого доступа к $_REQUEST
+  $action = array_get($_REQUEST, 'action', '');
+  $ajax = array_get($_REQUEST, 'ajax', 0);
+  $dsId = intval(array_get($_REQUEST, 'ds_id', 0));
+  $entryId = intval(array_get($_REQUEST, 'entry_id', 0));
+  $errorId = intval(array_get($_REQUEST, 'error', 0));
+  $mail = array_get($_REQUEST, 'mail', '');
+  $errorText = array_get($_REQUEST, 'error_text', '');
+
+  // Безопасный foreach
+  $requestData = array_get($_REQUEST, null, array());
+  if (is_array($requestData)) {
+      foreach ($requestData as $k => $v) {
+          // обработка
+      }
+  }
+  ```
+
+- **Преимущества:**
+  - Устранение PHP Notice при отсутствии ключа
+  - Типобезопасные значения по умолчанию
+  - Чистый и понятный код
+  - Единообразная обработка входных данных
+
+### 2. logger (Категория: Debugging)
 
 - **Назначение:** Логирование всех действий с жалобами (создание, изменение статуса, назначение владельца)
+- **Формат:** `logger($message, $level, $file)` (3 параметра)
 - **Использование:**
 
   ```php
   // При создании новой жалобы
-  logger('complain', 'New complaint: error=' . $errid . ', entry=' . $cdata['id'] . ', user=' . $userInfo . ', IP=' . get_ip());
+  logger('New complaint: error=' . $errid . ', entry=' . $cdata['id'] . ', user=' . $userInfo . ', IP=' . get_ip(), 'info', 'complain.log');
 
   // При изменении владельца
-  logger('complain', 'Owner changed for incidents: ' . join(',', $ilist) . ', new_owner=' . $userROW['name'] . ', IP=' . get_ip());
+  logger('Owner changed for incidents: ' . join(',', $ilist) . ', new_owner=' . $userROW['name'] . ', IP=' . get_ip(), 'info', 'complain.log');
 
   // При изменении статуса
-  logger('complain', 'Status changed: id=' . $irow['id'] . ', old_status=' . $irow['status'] . ', new_status=' . $newstatus . ', user=' . $userROW['name'] . ', IP=' . get_ip());
+  logger('Status changed: id=' . $irow['id'] . ', old_status=' . $irow['status'] . ', new_status=' . $newstatus . ', user=' . $userROW['name'] . ', IP=' . get_ip(), 'info', 'complain.log');
 
   // При отправке email
-  logger('complain', 'Email sent to author: ' . $cdata['author'] . ', email=' . $cdata['author_mail']);
+  logger('Email sent to author: ' . $cdata['author'] . ', email=' . $cdata['author_mail'], 'debug', 'complain.log');
 
   // При невалидном email
-  logger('complain', 'Invalid email provided: ' . sanitize($_REQUEST['mail']) . ', IP=' . get_ip());
+  logger('Invalid email provided: ' . sanitize(array_get($_REQUEST, 'mail', ''), 'string') . ', IP=' . get_ip(), 'warning', 'complain.log');
+
+  // При сохранении конфигурации
+  logger('Complain plugin config saved, IP=' . get_ip(), 'info', 'complain.log');
   ```
 
 - **Преимущества:**
@@ -36,8 +113,9 @@
   - Мониторинг назначения владельцев
   - Контроль отправки email уведомлений
   - Выявление попыток с невалидными email
+  - Аудит изменений конфигурации
 
-### 2. get_ip (Категория: Network)
+### 3. get_ip (Категория: Network)
 
 - **Назначение:** Получение IP адреса для всех действий с жалобами
 - **Использование:**

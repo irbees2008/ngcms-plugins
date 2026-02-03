@@ -1,6 +1,13 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+// Modernized with ng-helpers v0.2.2 (2026)
+// - Added array_get for safe REQUEST access
+// - Added sanitize for input cleaning
+// - Added logger for operations tracking
+// - Added get_ip for IP detection
+use function Plugins\{array_get, sanitize, logger, get_ip};
+
 //
 // Show current chat state
 //
@@ -30,9 +37,9 @@ function jchat_show($lastEventID, $maxLoadedID, $commands = array())
 	// Prepare data bundle
 	$bundle = array(array(), array());
 	// Check if chat work in WINDOW mode
-	$winMode = intval(isset($_REQUEST['win']) ? $_REQUEST['win'] : 0);
+	$winMode = intval(array_get($_REQUEST, 'win', 0));
 	$conf_maxidle = intval(pluginGetVariable('jchat', ($winMode ? 'win.' : '') . 'maxidle'));
-	if (isset($_REQUEST['idle']) && ($conf_maxidle > 0) && (intval($_REQUEST['idle']) > $conf_maxidle)) {
+	if (isset($_REQUEST['idle']) && ($conf_maxidle > 0) && (intval(array_get($_REQUEST, 'idle', 0)) > $conf_maxidle)) {
 		$bundle[0][] = array('stop');
 	}
 	// Check if we have new events
@@ -71,7 +78,7 @@ function jchat_show($lastEventID, $maxLoadedID, $commands = array())
 	if (intval($newEvents['type']) < 1) {
 		return $bundle;
 	}
-	$mysql->query("set names utf8");
+	$mysql->query("set names utf8mb4");
 	foreach (array_reverse($mysql->select($query, 1)) as $row) {
 		$maxID = max($maxID, $row['id']);
 		$row['text'] = preg_replace('#^\@(.+?)\:#', '<i>$1</i>:', $row['text']);
@@ -116,11 +123,18 @@ function jchat_show($lastEventID, $maxLoadedID, $commands = array())
 
 function plugin_jchat_show()
 {
+	// Clear any output buffer to prevent HTML/errors before JSON
+	$iterations = 0;
+	while (ob_get_level() > 0 && $iterations++ < 10) {
+		ob_end_clean();
+	}
 
-	global $template, $SUPRESS_TEMPLATE_SHOW, $mysql;
-	$SUPRESS_TEMPLATE_SHOW = 1;
-	//	$template['vars']['mainblock'] = json_encode(jchat_show(intval($_REQUEST['lastEvent']), intval($_REQUEST['start'])));
-	print json_encode(jchat_show(intval($_REQUEST['lastEvent']), intval($_REQUEST['start'])));
+	// Set JSON header immediately
+	@header('Content-Type: application/json; charset=utf-8');
+	$lastEvent = intval(array_get($_REQUEST, 'lastEvent', 0));
+	$start = intval(array_get($_REQUEST, 'start', 0));
+	logger('jchat', 'Show: lastEvent=' . $lastEvent . ', start=' . $start);
+	print json_encode(jchat_show($lastEvent, $start), JSON_UNESCAPED_UNICODE);
 	// Terminate execution of script
 	coreNormalTerminate(2);
 	exit;
@@ -147,7 +161,7 @@ function plugin_jchat_index()
 	// Determine paths for all template files
 	$tpath = locatePluginTemplates(array('jchat'), 'jchat', pluginGetVariable('jchat', 'localsource'));
 	$tvars = array();
-	$start = isset($_REQUEST['start']) ? intval($_REQUEST['start']) : 0;
+	$start = intval(array_get($_REQUEST, 'start', 0));
 	$tvars['vars']['data'] = json_encode(jchat_show(0, 0));
 	$history = intval(pluginGetVariable('jchat', 'history'));
 	if (($history < 1) || ($history > 500)) $history = 30;
@@ -186,32 +200,52 @@ function plugin_jchat_index()
 
 function plugin_jchat_add()
 {
+	// Clear any output buffer to prevent HTML/errors before JSON
+	$iterations = 0;
+	while (ob_get_level() > 0 && $iterations++ < 10) {
+		ob_end_clean();
+	}
 
-	global $userROW, $template, $mysql, $SUPRESS_TEMPLATE_SHOW, $ip;
+	// Set JSON header immediately
+	@header('Content-Type: application/json; charset=utf-8');
+
+	global $userROW, $template, $mysql, $SUPRESS_TEMPLATE_SHOW;
 	$SUPRESS_TEMPLATE_SHOW = 1;
+
+	try {
+		$ip = get_ip();
+	} catch (Exception $e) {
+		print json_encode(array('status' => 0, 'error' => 'Internal error: ' . $e->getMessage()), JSON_UNESCAPED_UNICODE);
+		exit;
+	}
 	//
 	if (is_array($userROW)) {
 		$SQL['author'] = $userROW['name'];
 		$SQL['author_id'] = $userROW['id'];
 	} else {
-		if (!trim($_REQUEST['name'])) {
-			print json_encode(array('status' => 0, 'error' => 'No name specified'));
+		$name = sanitize(array_get($_REQUEST, 'name', ''), 'string');
+		if (!trim($name)) {
+			logger('jchat', 'Add failed: No name specified, IP=' . $ip);
+			print json_encode(array('status' => 0, 'error' => 'No name specified'), JSON_UNESCAPED_UNICODE);
 			// Terminate execution of script
 			coreNormalTerminate(2);
 			exit;
 		}
-		$SQL['author'] = secure_html(substr(trim($_REQUEST['name']), 0, 30));
+		$SQL['author'] = sanitize(substr(trim($name), 0, 30), 'string');
 		$SQL['author_id'] = 0;
 	}
-	if (!trim($_REQUEST['text'])) {
-		print json_encode(array('status' => 0, 'error' => 'No text specified'));
+	$text = sanitize(array_get($_REQUEST, 'text', ''), 'string');
+	if (!trim($text)) {
+		logger('jchat', 'Add failed: No text specified, author=' . ($SQL['author'] ?? 'unknown'));
+		print json_encode(array('status' => 0, 'error' => 'No text specified'), JSON_UNESCAPED_UNICODE);
 		// Terminate execution of script
 		coreNormalTerminate(2);
 		exit;
 	}
 	// If we're guest - check if we can make posts
 	if (!is_array($userROW) && (pluginGetVariable('jchat', 'access') < 2)) {
-		print json_encode(array('status' => 0, 'error' => 'Guests are not allowed to post'));
+		logger('jchat', 'Add failed: Guest not allowed, IP=' . $ip);
+		print json_encode(array('status' => 0, 'error' => 'Guests are not allowed to post'), JSON_UNESCAPED_UNICODE);
 		// Terminate execution of script
 		coreNormalTerminate(2);
 		exit;
@@ -220,7 +254,8 @@ function plugin_jchat_add()
 	$rate_limit = intval(pluginGetVariable('jchat', 'rate_limit'));
 	if ($rate_limit < 0) $rate_limit = 0;
 	if (is_array($mysql->record("select id from " . prefix . "_jchat where (ip = " . db_squote($ip) . ") and (postdate + " . $rate_limit . ') > ' . time()))) {
-		print json_encode(array('status' => 0, 'error' => 'Rate limit. Only 1 message per ' . $rate_limit . ' sec is allowed'));
+		logger('jchat', 'Add failed: Rate limit exceeded, IP=' . $ip);
+		print json_encode(array('status' => 0, 'error' => 'Rate limit. Only 1 message per ' . $rate_limit . ' sec is allowed'), JSON_UNESCAPED_UNICODE);
 		// Terminate execution of script
 		coreNormalTerminate(2);
 		exit;
@@ -230,7 +265,7 @@ function plugin_jchat_add()
 	$maxwlen = intval(pluginGetVariable('jchat', 'maxwlen'));
 	if (($maxwlen < 1) || ($maxlen > 5000)) $maxwlen = 500;
 	// Load text & strip it to maxlen
-	$postText = substr(secure_html(trim($_REQUEST['text'])), 0, $maxlen);
+	$postText = substr(trim($text), 0, $maxlen);
 
 	$ptb = array();
 	foreach (preg_split('#(\s|^)(http\:\/\/[A-Za-z\-\.0-9]+\/\S*)(\s|$)#', $postText, -1, PREG_SPLIT_DELIM_CAPTURE) as $cx) {
@@ -254,9 +289,12 @@ function plugin_jchat_add()
 		$vparams[] = db_squote($v);
 	}
 	// Add new message to chat
-	$mysql->query("set names utf8");
+	$mysql->query("set names utf8mb4");
 	$mysql->query("insert into " . prefix . "_jchat (" . implode(",", $vnames) . ") values (" . implode(",", $vparams) . ")");
-	$mysql->query("set names utf8");
+	$mysql->query("set names utf8mb4");
+
+	logger('jchat', 'Message added: author=' . $SQL['author'] . ', author_id=' . ($SQL['author_id'] ?? 0) . ', IP=' . $ip);
+
 	// Update LastEventNotification
 	$mysql->query("insert into " . prefix . "_jchat_events (chatid, postdate, type) values (" . $SQL['chatid'] . ", " . db_squote($SQL['postdate']) . ", 1)");
 	$lid = $mysql->result("select LAST_INSERT_ID()");
@@ -284,7 +322,7 @@ function plugin_jchat_add()
 		}
 	}
 
-	print json_encode(array('status' => 1, 'bundle' => jchat_show(intval($_REQUEST['lastEvent']), intval($_REQUEST['start']))));
+	print json_encode(array('status' => 1, 'bundle' => jchat_show(intval($_REQUEST['lastEvent']), intval($_REQUEST['start']))), JSON_UNESCAPED_UNICODE);
 	// Terminate execution of script
 	coreNormalTerminate(2);
 	exit;
@@ -292,32 +330,43 @@ function plugin_jchat_add()
 
 function plugin_jchat_del()
 {
+	// Clear any output buffer to prevent HTML/errors before JSON
+	$iterations = 0;
+	while (ob_get_level() > 0 && $iterations++ < 10) {
+		ob_end_clean();
+	}
 
-	global $userROW, $template, $mysql, $SUPRESS_TEMPLATE_SHOW, $ip;
-	$SUPRESS_TEMPLATE_SHOW = 1;
+	// Set JSON header immediately
+	@header('Content-Type: application/json; charset=utf-8');
+	$ip = get_ip();
 	// Only ADMINS can delete items from chat
 	if (!is_array($userROW) || ($userROW['status'] > 1)) {
-		print json_encode(array('status' => 0, 'error' => 'Permission denied'));
+		logger('jchat', 'Delete failed: Permission denied, IP=' . $ip);
+		print json_encode(array('status' => 0, 'error' => 'Permission denied'), JSON_UNESCAPED_UNICODE);
 		// Terminate execution of script
 		coreNormalTerminate(2);
 		exit;
 	}
 	// Try to load chat message
-	$id = intval($_REQUEST['id']);
+	$id = intval(array_get($_REQUEST, 'id', 0));
 	if (!($crow = $mysql->record("select * from " . prefix . "_jchat where id = " . db_squote($id)))) {
-		print json_encode(array('status' => 0, 'error' => 'Item not found (ID: ' . $id . ')'));
+		logger('jchat', 'Delete failed: Item not found, id=' . $id . ', admin=' . ($userROW['name'] ?? 'unknown'));
+		print json_encode(array('status' => 0, 'error' => 'Item not found (ID: ' . $id . ')'), JSON_UNESCAPED_UNICODE);
 		// Terminate execution of script
 		coreNormalTerminate(2);
 		exit;
 	}
 	// Delete item
 	$mysql->query("delete from " . prefix . "_jchat where id = " . $id);
+	logger('jchat', 'Message deleted: id=' . $id . ', admin=' . ($userROW['name'] ?? 'unknown'));
 	// Update LastEventNotification
 	$mysql->query("insert into " . prefix . "_jchat_events (chatid, postdate, type) values (1, unix_timestamp(now()), 2)");
 	$lid = $mysql->result("select LAST_INSERT_ID()");
 	$mysql->query("delete from " . prefix . "_jchat_events where type=2 and id <> " . db_squote($lid));
 	// Return updated list of items from chat
-	print json_encode(array('status' => 1, 'bundle' => jchat_show(intval($_REQUEST['lastEvent']), intval($_REQUEST['start']))));
+	$lastEvent = intval(array_get($_REQUEST, 'lastEvent', 0));
+	$start = intval(array_get($_REQUEST, 'start', 0));
+	print json_encode(array('status' => 1, 'bundle' => jchat_show($lastEvent, $start)), JSON_UNESCAPED_UNICODE);
 	// Terminate execution of script
 	coreNormalTerminate(2);
 	exit;

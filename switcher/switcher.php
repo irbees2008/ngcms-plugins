@@ -1,10 +1,18 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
+
+// Modernized with ng-helpers v0.2.2 (2026)
+// - Added logger for template switching tracking
+// - Requires PHP 8.0+
+
+use function Plugins\{logger};
+
 add_act('core', 'plugin_switcher');
 add_act('index', 'plugin_switcher_menu');
 register_plugin_page('switcher', '', 'switcher_redirector', 0);
-function plugin_switcher() {
+function plugin_switcher()
+{
 
 	global $config;
 	// Get chosen template
@@ -45,7 +53,8 @@ function plugin_switcher() {
 	}
 }
 
-function plugin_switcher_menu() {
+function plugin_switcher_menu()
+{
 
 	global $template, $tpl, $lang;
 	$list = '';
@@ -66,7 +75,8 @@ function plugin_switcher_menu() {
 	$template['vars']['switcher'] = $tpl->show('switcher');
 }
 
-function switcher_redirector() {
+function switcher_redirector()
+{
 
 	$templateID = $_REQUEST['profile'];
 	// Scan for template with this ID

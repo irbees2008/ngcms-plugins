@@ -3,7 +3,7 @@
 ;
 ID: xmenu
 Name: eXtended menus
-Version: 0.3
+Version: 0.4
 Type: plugin
 File: xmenu.php
 Config: config.php
@@ -13,6 +13,7 @@ Description: Плагин для управления меню на сайте
 Information: Позволяет создавать до 9 независимых меню с разными настройками, добавленно поддержка статических страниц
 Author: Vitaly A. Ponomarev
 Author_URI: http://2lib.ru/
+MinPHPVer: 8.0
 Actions: admin:mod:categories; xmenu_adm.php
 Actions: index; xmenu.php
 Preinstall: no

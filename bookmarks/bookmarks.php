@@ -24,7 +24,7 @@
 # protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
-use function Plugins\{cache_get, cache_put, logger, sanitize, get_ip, str_limit};
+use function Plugins\{cache_get, cache_put, logger, sanitize, get_ip, str_limit, array_get, clamp};
 
 add_act('index', 'bookmarks_view');
 register_plugin_page('bookmarks', 'modify', 'bookmarks_t', 0);
@@ -179,7 +179,7 @@ function bookmarks_view()
 		}
 	}
 	$tpath = locatePluginTemplates(array('entries', 'bookmarks'), 'bookmarks', pluginGetVariable('bookmarks', 'localsource'));
-	$maxlength = intval(pluginGetVariable('bookmarks', 'maxlength')) ?: 100;
+	$maxlength = clamp(intval(pluginGetVariable('bookmarks', 'maxlength')), 10, 500) ?: 100;
 	if (!$bookmarksLoaded && pluginGetVariable('bookmarks', 'sidebar'))
 		bookmarks_sql();
 	$result = array();
@@ -223,7 +223,7 @@ function bookmarks_view()
 	if (pluginGetVariable('bookmarks', 'cache')) {
 		cache_put($cacheKey, $output, pluginGetVariable('bookmarks', 'cacheExpire'));
 	}
-	logger('bookmarks', 'View sidebar: userID=' . $userROW['id'] . ', count=' . $count . ', IP=' . get_ip());
+	logger('View sidebar: userID=' . $userROW['id'] . ', count=' . $count . ', IP=' . get_ip(), 'info', 'bookmarks.log');
 	$template['vars']['plugin_bookmarks'] = $output;
 }
 # personal plugin pages for add/remove bookmarks
@@ -231,10 +231,10 @@ function bookmarks_t()
 {
 	global $mysql, $config, $userROW, $HTTP_REFERER, $SUPRESS_TEMPLATE_SHOW, $tpl, $lang, $bookmarksList, $bookmarksLoaded, $template, $twig, $handler;
 	# news ID
-	$newsID = intval(sanitize($_GET['news'] ?? 0, 'int'));
-	$ajax = $_GET['ajax'] ?? false;
+	$newsID = clamp(intval(sanitize(array_get($_GET, 'news', 0), 'int')), 0, 999999999);
+	$ajax = array_get($_GET, 'ajax', false);
 	# при определении $isFullNews используйте:
-	$isFullNews = isset($_GET['isFullNews']) ? intval($_GET['isFullNews']) : 0;
+	$isFullNews = intval(array_get($_GET, 'isFullNews', 0));
 	# process bookmarks only for logged in users
 	if (!is_array($userROW)) {
 		if ($ajax) die('notlogged');
@@ -272,13 +272,13 @@ function bookmarks_t()
 			# ok, bookmark it
 			$mysql->query("INSERT INTO `" . prefix . "_bookmarks` (`user_id`,`news_id`) VALUES (" . db_squote($userROW['id']) . "," . db_squote($newsID) . ")");
 			$action = 'delete';
-			logger('bookmarks', 'Add bookmark: userID=' . $userROW['id'] . ', newsID=' . $newsID . ', IP=' . get_ip());
+			logger('Add bookmark: userID=' . $userROW['id'] . ', newsID=' . $newsID . ', IP=' . get_ip(), 'info', 'bookmarks.log');
 		} else die('err_add');
 		# delete action
 	} elseif ($_GET['action'] == 'delete') {
 		$mysql->query("DELETE FROM `" . prefix . "_bookmarks` WHERE `user_id`=" . db_squote($userROW['id']) . " AND `news_id`=" . db_squote($newsID));
 		$action = 'add';
-		logger('bookmarks', 'Delete bookmark: userID=' . $userROW['id'] . ', newsID=' . $newsID . ', IP=' . get_ip());
+		logger('Delete bookmark: userID=' . $userROW['id'] . ', newsID=' . $newsID . ', IP=' . get_ip(), 'info', 'bookmarks.log');
 	}
 	# if cache is activated - truncate cache file [ to clear cache ]
 	if (pluginGetVariable('bookmarks', 'cache')) {
@@ -380,7 +380,7 @@ function bookmarksPage()
 		'count' => count($bookmarksList),
 		'tpl_url' => tpl_url
 	);
-	logger('bookmarks', 'View page: userID=' . $userROW['id'] . ', count=' . count($bookmarksList) . ', IP=' . get_ip());
+	logger('View page: userID=' . $userROW['id'] . ', count=' . count($bookmarksList) . ', IP=' . get_ip(), 'info', 'bookmarks.log');
 	$xt = $twig->loadTemplate($tpath['bookmarks.page'] . 'bookmarks.page.tpl');
 	$template['vars']['mainblock'] = $xt->render($tVars);
 }

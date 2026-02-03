@@ -21,17 +21,16 @@
  */
 if (!defined('NGCMS')) die('Galaxy in danger');
 
-// Modified with ng-helpers v0.2.0 functions (2026)
-// - Replaced cacheRetrieveFile/cacheStoreFile with cache_get/cache_put
-// - Added logging support for sitemap generation
+// Modernized with ng-helpers v0.2.2 (2026)
+// - Added logger() for enhanced logging
+// - Requires PHP 8.0+
 
-// Import ng-helpers functions
-use function Plugins\{cache_get, cache_put, logger};
+use function Plugins\{logger};
 
 register_plugin_page('sitemap', '', 'generateSitemap', 0);
-function generateSitemap()
+register_plugin_page('sitemap', 'page', 'generateSitemap', 0);
+function generateSitemap($params = array())
 {
-
 	global $template, $twig, $tpl, $lang, $mysql, $config, $parse, $catz, $SYSTEM_FLAGS, $TemplateCache;
 	$tpath = locatePluginTemplates(array('sitemap', 'sitemap'), 'sitemap', intval(pluginGetVariable('sitemap', 'localsource')));
 	$xt = $twig->loadTemplate($tpath['sitemap'] . 'sitemap.tpl');
@@ -43,14 +42,16 @@ function generateSitemap()
 	}
 	*/
 	loadPluginLang('sitemap', 'main', '', '', ':');
-	$page = 1;
-	if (isset($_GET['page'])) $page = intval($_GET['page']);
-	if (pluginGetVariable('sitemap', 's_cache')) {
-		$cacheData = cacheRetrieveFile('sitemap_' . $page . '.txt', pluginGetVariable('sitemap', 's_cacheExpire'), 'sitemap');
-		if ($cacheData != false) {
-			# we got data from cache. Return it and stop
-			$template['vars']['mainblock'] = $cacheData;
-
+	$page = isset($params['page']) ? intval($params['page']) : (isset($_GET['page']) ? intval($_GET['page']) : 1);
+	$cacheExpire = pluginGetVariable('sitemap', 's_cache') ? intval(pluginGetVariable('sitemap', 's_cacheExpire')) * 60 : 0;
+	if ($cacheExpire > 0) {
+		$cacheKey = 'sitemap_page_' . $page;
+		$cached = cache($cacheKey, function () {
+			return null;
+		}, $cacheExpire);
+		if ($cached !== null) {
+			logger('[sitemap] Cache hit: page=' . $page, 'debug', 'sitemap.log');
+			$template['vars']['mainblock'] = $cached;
 			return 0;
 		}
 	}
@@ -112,7 +113,7 @@ function generateSitemap()
 			$tEntry['static_' . $row['id']]['static_link'] = $link;
 		}
 	}
-	$paginationParams = array('pluginName' => 'sitemap', 'params' => array(), 'xparams' => array(), 'paginator' => array('page', 0, false));
+	$paginationParams = array('pluginName' => 'sitemap', 'params' => array('page'), 'xparams' => array(), 'paginator' => array('page', 0, true));
 	unset($tVars);
 	# generate pagination if count of pages > 1
 	if ($pages_count > 1) {
@@ -136,10 +137,12 @@ function generateSitemap()
 	$tVars['pages_count'] = $pages_count;
 	$tVars['page'] = $page;
 	$result = $xt->render($tVars);
-	if (pluginGetVariable('sitemap', 's_cache')) {
-		$cacheKey = 'sitemap:page:' . $page;
-		cache_put($cacheKey, $result, pluginGetVariable('sitemap', 's_cacheExpire'));
-		logger('sitemap', 'Sitemap cached: page=' . $page . ', news=' . count($news) . ', static=' . $countStatic . ', categories=' . $countCatz);
+	if ($cacheExpire > 0) {
+		$cacheKey = 'sitemap_page_' . $page;
+		cache($cacheKey, function () use ($result) {
+			return $result;
+		}, $cacheExpire);
+		logger('[sitemap] Cached: page=' . $page . ', news=' . count($news) . ', static=' . $countStatic . ', catz=' . $countCatz . ', size=' . strlen($result), 'info', 'sitemap.log');
 	}
 	$template['vars']['mainblock'] = $result;
 }

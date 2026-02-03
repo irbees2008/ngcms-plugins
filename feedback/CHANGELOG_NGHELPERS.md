@@ -1,6 +1,103 @@
-# Модернизация плагина feedback с ng-helpers v0.2.0
+# Модернизация плагина feedback с ng-helpers v0.2.2
 
-## Дата: 11 января 2026
+## [v0.31][31 января 2026] - Обновление до ng-helpers v0.2.2
+
+### Основные изменения
+
+#### 1. array_get() - Безопасный доступ к массивам (NEW)
+
+- **Назначение:** Безопасное получение данных из глобальных массивов $_REQUEST/$\_POST с защитой от undefined index
+- **Импорт:**
+  - `use function Plugins\{array_get};` в config.php
+  - Добавлен в импорт feedback.php
+- **Замены в feedback.php (~20 замен):**
+
+  ```php
+  // Было: $_REQUEST['id']
+  // Стало: array_get($_REQUEST, 'id', 0)
+
+  // Было: $_REQUEST['linked_id']
+  // Стало: array_get($_REQUEST, 'linked_id', 0)
+
+  // Было: $_REQUEST['vcode']
+  // Стало: array_get($_REQUEST, 'vcode', '')
+
+  // Было: $_REQUEST['fld_' . $fInfo['name']]
+  // Стало: array_get($_REQUEST, 'fld_' . $fInfo['name'], '')
+
+  // Было: $_REQUEST['v_' . $fInfo['name']]
+  // Стало: array_get($_REQUEST, 'v_' . $fInfo['name'], '')
+
+  // Было: $_POST['recipient']
+  // Стало: array_get($_POST, 'recipient', 0)
+  ```
+
+- **Замены в config.php (~30 замен):**
+
+  ```php
+  // Было: $_REQUEST['action']
+  // Стало: array_get($_REQUEST, 'action', '')
+
+  // Было: $_REQUEST['id'], $_REQUEST['form_id']
+  // Стало: array_get($_REQUEST, 'id', 0), array_get($_REQUEST, 'form_id', 0)
+
+  // Было: $_POST['elist']
+  // Стало: array_get($_POST, 'elist', [])
+
+  // Было: $_REQUEST['name'], $_REQUEST['title'], $_REQUEST['description']
+  // Стало: array_get($_REQUEST, 'name', ''), array_get($_REQUEST, 'title', ''), ...
+
+  // Было: $_REQUEST['jcheck'], $_REQUEST['captcha'], $_REQUEST['html']
+  // Стало: array_get($_REQUEST, 'jcheck', ''), array_get($_REQUEST, 'captcha', ''), ...
+
+  // Было: $_REQUEST['type'], $_REQUEST['required'], $_REQUEST['auto'], $_REQUEST['block']
+  // Стало: array_get($_REQUEST, 'type', ''), array_get($_REQUEST, 'required', 0), ...
+
+  // Было: $_REQUEST['text_default'], $_REQUEST['date_default'], $_REQUEST['textarea_default']
+  // Стало: array_get($_REQUEST, 'text_default', ''), array_get($_REQUEST, 'date_default', ''), ...
+
+  // Было: $_REQUEST['email_template'], $_REQUEST['select_options'], $_REQUEST['select_storekeys']
+  // Стало: array_get($_REQUEST, 'email_template', ''), array_get($_REQUEST, 'select_options', ''), ...
+
+  // Было: $_REQUEST['subaction']
+  // Стало: array_get($_REQUEST, 'subaction', '')
+  ```
+
+- **Защищённые параметры:**
+  - action (switch routing)
+  - id, form_id (идентификаторы формы)
+  - linked_id (связь с новостью)
+  - name, title, description, template (параметры формы)
+  - jcheck, captcha, html, utf8, isSubj (флаги формы)
+  - vcode (код капчи)
+  - recipient (выбор получателя)
+  - fld\_\* (все динамические поля формы)
+  - v\_\* (параметры из GET)
+  - type, required, auto, block (параметры полей)
+  - \*\_default (значения по умолчанию)
+  - email_template, select_options, select_storekeys (настройки полей)
+  - subaction (действия update/delete)
+  - elist (массив email адресов)
+
+### Улучшения безопасности
+
+- Все прямые обращения к $\_REQUEST и $\_POST защищены через array_get()
+- Установлены корректные значения по умолчанию (0 для чисел, '' для строк, [] для массивов)
+- Предотвращены "Undefined index" предупреждения
+- Улучшена валидация входных данных в 50+ точках кода
+
+### Уже присутствующие функции (v0.2.0)
+
+- ✅ logger() - формат уже соответствует (message, level, file)
+- ✅ CSRF защита через validate_csrf() и csrf_field()
+- ✅ Валидация email через validate_email()
+- ✅ Санитизация данных через sanitize()
+- ✅ Получение IP через get_ip()
+- ✅ Проверка POST запроса через is_post()
+
+---
+
+## [v0.30][11 января 2026] - Первая модернизация с ng-helpers v0.2.0
 
 ## Внесенные изменения
 

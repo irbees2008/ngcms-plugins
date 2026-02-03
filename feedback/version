@@ -2,15 +2,15 @@
 ; Version description file for plugin @@ Next Generation CMS
 ;
 ID: feedback
-Name: Feedback forms
-Version: 0.30
+Name: Feedback forms (modernized with ng-helpers v0.2.2)
+Version: 0.31
 Acts: ppages
 File: feedback.php
 Config: config.php
 Install: install.php
 Deinstall: uninstall.php
 Type: plugin
-Description: Генератор форм обратной связи
+Description: Генератор форм обратной связи с поддержкой ng-helpers v0.2.2: безопасный доступ к массивам через array_get(), защита от CSRF, валидация email/телефона, санитизация данных, логирование в формате logger(message, level, file)
 Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru
 Title: Формы обратной связи

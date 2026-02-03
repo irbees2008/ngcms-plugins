@@ -3,6 +3,8 @@
 if (!defined('NGCMS')) {
     exit('HAL');
 }
+
+use function Plugins\{array_get, logger, get_ip};
 // Подключаем конфигурацию плагина
 pluginsLoadConfig();
 // Основная функция для отображения интерфейса автоматизации
@@ -10,19 +12,29 @@ function automation()
 {
     global $twig, $PHP_SELF;
     // Обработка сохранения настроек
-    if (isset($_POST['save']) && $_POST['save'] == '1') {
-        // Значения из формы
-        $newsCount   = max(1, intval($_POST['news_count'] ?? 50));
-        $staticCount = max(1, intval($_POST['static_count'] ?? 20));
-        $maxAllowed  = max($newsCount, $staticCount, intval($_POST['max_allowed'] ?? 1000));
-        pluginSetVariable('content_generator', 'news_count', $newsCount);
-        pluginSetVariable('content_generator', 'static_count', $staticCount);
-        pluginSetVariable('content_generator', 'max_allowed', $maxAllowed);
+    if (array_get($_POST, 'save', '') == '1') {
+        // Значения из формы БЕЗ дефолтов
+        $newsCount   = max(1, intval(array_get($_POST, 'news_count', 0)));
+        $staticCount = max(1, intval(array_get($_POST, 'static_count', 0)));
+        $maxAllowed  = max(1, intval(array_get($_POST, 'max_allowed', 0)));
+        // Логируем что пришло из формы
+        logger('POST data: news_count=' . $_POST['news_count'] . ', result=' . $newsCount, 'info', 'content_generator.log');
+        pluginSetVariable('content_generator', 'news_count', strval($newsCount));
+        pluginSetVariable('content_generator', 'static_count', strval($staticCount));
+        pluginSetVariable('content_generator', 'max_allowed', strval($maxAllowed));
+
+        // ВАЖНО: Сохраняем в базу данных!
+        pluginsSaveConfig();
+
+        logger('Content Generator config saved: news=' . $newsCount . ', static=' . $staticCount . ', max=' . $maxAllowed . ', ip=' . get_ip(), 'info', 'content_generator.log');
     }
     // Чтение сохранённых значений / дефолты
-    $newsCount   = intval(pluginGetVariable('content_generator', 'news_count')) ?: 50;
-    $staticCount = intval(pluginGetVariable('content_generator', 'static_count')) ?: 20;
-    $maxAllowed  = intval(pluginGetVariable('content_generator', 'max_allowed')) ?: 1000;
+    $newsCountRaw = pluginGetVariable('content_generator', 'news_count');
+    $staticCountRaw = pluginGetVariable('content_generator', 'static_count');
+    $maxAllowedRaw = pluginGetVariable('content_generator', 'max_allowed');
+    $newsCount   = ($newsCountRaw !== null && $newsCountRaw !== '') ? intval($newsCountRaw) : 10;
+    $staticCount = ($staticCountRaw !== null && $staticCountRaw !== '') ? intval($staticCountRaw) : 5;
+    $maxAllowed  = ($maxAllowedRaw !== null && $maxAllowedRaw !== '') ? intval($maxAllowedRaw) : 100;
     // Определяем пути к шаблонам
     $tpath = locatePluginTemplates(
         ['config/main', 'config/automation'],
@@ -65,7 +77,7 @@ function automation()
     }
 }
 // Основной обработчик запросов
-switch ($_REQUEST['action'] ?? '') {
+switch (array_get($_REQUEST, 'action', '')) {
     default:
         automation();
         break;

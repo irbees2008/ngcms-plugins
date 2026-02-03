@@ -1,12 +1,77 @@
 # Changelog: Calendar Plugin - ng-helpers Integration
 
-**Дата обновления:** 11 января 2026 г.
-**Версия ng-helpers:** v0.2.0
+**Дата последнего обновления:** 11 января 2026 г.
+**Версия ng-helpers:** v0.2.2
+**Версия плагина:** 0.14
 **PHP совместимость:** 7.0+
 
 ---
 
-## Применённые функции ng-helpers
+## Версия 0.14 - Расширенная интеграция (ng-helpers v0.2.2)
+
+### Добавленные функции
+
+#### 1. array_get() - Безопасный доступ к массивам
+
+- **Локации:**
+  - Строки 18-19: `$_REQUEST['year']` → `array_get($_REQUEST, 'year', date('Y'))`
+  - Строки 18-19: `$_REQUEST['month']` → `array_get($_REQUEST, 'month', date('m'))`
+  - Строки 14, 242: `$CurrentHandler['pluginName']` → `array_get($CurrentHandler, 'pluginName', '')`
+  - Строка 18: `$CurrentHandler['params']` → `array_get($CurrentHandler, 'params', [])`
+  - Функция `plugin_calendar_showTwig()`: множественные безопасные обращения к `$params`
+
+- **Преимущества:**
+  - Устранены undefined index notices при отсутствии параметров
+  - Безопасная обработка отсутствующих ключей с default значениями
+  - Улучшенная стабильность при некорректных запросах
+
+#### 2. clamp() - Валидация диапазонов
+
+- **Использование:**
+  ```php
+  $month = clamp(intval($month), 1, 12);
+  $year = clamp(intval($year), 1970, 2100);
+  ```
+- **Локации:** Строки 20-21, 248-249
+- **Преимущества:**
+  - Замена громоздких `if ((\\$month < 1) || (\\$month > 12))` на короткий вызов
+  - Гарантированные допустимые значения месяцев (1-12)
+  - Ограничение годов диапазоном 1970-2100
+  - Более читаемый и безопасный код
+
+#### 3. get_ip() - Логирование IP-адресов
+
+- **Использование:**
+  ```php
+  logger('Calendar served from cache: ... IP=' . get_ip(), 'debug', 'calendar.log');
+  logger('Calendar cached: ... IP=' . get_ip(), 'info', 'calendar.log');
+  ```
+- **Локации:** Строки 37, 211
+- **Преимущества:**
+  - Аудит обращений к календарю с записью IP
+  - Отслеживание источника запросов для аналитики
+  - Поддержка прокси (HTTP_X_FORWARDED_FOR)
+
+### Исправленные функции
+
+#### logger() - Правильный формат вызова
+
+- **Было:** `logger('calendar', 'Calendar cached: ...')`
+- **Стало:** `logger('Calendar cached: ...', 'info', 'calendar.log')`
+- **Изменения:**
+  - Формат: message, level, file (3 параметра вместо 2)
+  - Уровень логирования: 'debug' для cache hit, 'info' для cache generation
+  - Добавлен лог при cache hit (ранее не логировался)
+
+#### cache_put() - Корректная единица времени
+
+- **Было:** `cache_put($cacheKey, $output, $cacheExpire)` (секунды)
+- **Стало:** `cache_put($cacheKey, $output, $cacheExpire / 60)` (минуты)
+- **Причина:** API cache_put ожидает минуты, не секунды
+
+---
+
+## Версия 0.13 - Первичная интеграция
 
 ### 1. cache_get / cache_put (Категория: Cache)
 

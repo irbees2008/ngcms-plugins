@@ -1,2 +1,8 @@
+[0.2][2026-02-03]
+* Модернизация с ng-helpers v0.2.2
+* Заменено cacheRetrieveFile/cacheStoreFile на cache_get/cache_put
+* Добавлено логирование операций кеша (other_user_news.log)
+* Требуется PHP 8.0+
+
 [0.1][2015-11-13]
 [x] Выпуск версии

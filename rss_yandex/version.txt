@@ -1,0 +1,8 @@
+ID: rss_yandex
+Name: RSS экспорт (Яндекс формат)
+Version: 0.04
+Acts: index
+File: rss_yandex.php
+Type: plugin
+Author: NGCMS Team
+Description: Генерация RSS-ленты в формате для Яндекс.Новостей

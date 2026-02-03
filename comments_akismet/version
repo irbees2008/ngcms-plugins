@@ -4,7 +4,7 @@
 
 ID: comments_akismet
 Name: Антиспам на основе Akismet
-Version: 0.02
+Version: 0.03
 Acts: comments:add
 File: antispam.php
 Config: config.php

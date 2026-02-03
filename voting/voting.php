@@ -178,7 +178,7 @@ function plugin_showvote($tpl_skin, $mode, $voteid = 0, $rand = 0, $votedList = 
 				'name'     => $lrow['name'],
 				'num'      => $num,
 				'count'    => $lrow['cnt'],
-				'perc'     => percentage($lrow['cnt'], $cnt),
+				'perc'     => $cnt > 0 ? round(($lrow['cnt'] / $cnt) * 100, 2) : 0,
 				'post_url' => $post_url,
 				'tpl_dir'  => admin_url . '/plugins/voting/tpl/skins/' . $tpl_skin
 			);

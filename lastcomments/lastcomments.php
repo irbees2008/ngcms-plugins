@@ -1,18 +1,17 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
-
-// Modified with ng-helpers v0.2.0 functions (2026)
-// - Replaced cacheRetrieveFile/cacheStoreFile with cache_get/cache_put
+// Modernized with ng-helpers v0.2.2 (2026)
+// - Replaced cacheRetrieveFile/cacheStoreFile with cache() helper
 // - Added time_ago for human-readable timestamps
 // - Added excerpt for better text truncation
-// - Added str_limit as alternative truncation method
-// - Added clamp for number validation
-
+// - Added logger for operations tracking
+// - Added sanitize for data cleaning
+// - Added array_get for safe access
 // Import ng-helpers functions
-use function Plugins\{cache_get, cache_put, time_ago, excerpt, str_limit, clamp};
+use function Plugins\{cache, time_ago, excerpt, logger, sanitize, array_get};
 
-define('lastcomments_version', '0.10');
+define('lastcomments_version', '0.11');
 loadPluginLang('lastcomments', 'main', '', '', ':');
 // ==============================================
 // Side bar widget
@@ -88,12 +87,16 @@ function lastcomments($mode = 0)
 			break;
 	}
 	// Generate cache key
-	$page = isset($_REQUEST['page']) ? intval($_REQUEST['page']) : 0;
+	$page = array_get($_REQUEST, 'page', 0, 'int');
 	$cacheKey = "lastcomments_{$config['theme']}_{$config['default_lang']}_{$tpl_prefix}_{$page}";
-
 	if (pluginGetVariable('lastcomments', 'cache')) {
-		$cacheData = cache_get($cacheKey);
-		if ($cacheData !== false) {
+		$cacheExpire = intval(pluginGetVariable('lastcomments', 'cacheExpire')) ?: 30;
+		// Try to get from cache using ng-helpers cache() function
+		$cacheData = cache($cacheKey, function () {
+			return null; // Cache miss, will regenerate below
+		}, $cacheExpire * 60); // Convert minutes to seconds
+		if ($cacheData !== null) {
+			logger('[lastcomments] Cache hit: ' . $cacheKey, 'debug', 'lastcomments.log');
 			return $cacheData;
 		}
 	}
@@ -108,10 +111,17 @@ function lastcomments($mode = 0)
 	$comm_num = 0;
 	$number = intval(pluginGetVariable('lastcomments', $tpl_prefix . 'number'));
 	$comm_length = intval(pluginGetVariable('lastcomments', $tpl_prefix . 'comm_length'));
-
-	// Use clamp to ensure values are within valid ranges
-	$number = clamp($number, 1, 50) ?: ($tpl_prefix ? 30 : 10);
-	$comm_length = clamp($comm_length, 10, ($tpl_prefix ? 500 : 100)) ?: ($tpl_prefix ? 500 : 50);
+	// Set defaults if values are empty or invalid
+	if (!$number || $number <= 0) {
+		$number = $tpl_prefix ? 30 : 10;
+	}
+	if (!$comm_length || $comm_length <= 0) {
+		$comm_length = $tpl_prefix ? 500 : 50;
+	}
+	// Ensure values are within valid ranges
+	$number = max(1, min(50, $number));
+	$comm_length = max(10, min(500, $comm_length));
+	logger('[lastcomments] Mode: ' . $mode . ', prefix: "' . $tpl_prefix . '", number: ' . $number . ', length: ' . $comm_length, 'debug', 'lastcomments.log');
 	if ($mode == 2) {
 		$old_locale = setlocale(LC_TIME, 0);
 		setlocale(LC_TIME, 'en_EN');
@@ -181,10 +191,26 @@ function lastcomments($mode = 0)
 		} else {
 			$author_link = '';
 		}
+		// Simple time_ago implementation
+		$diff = time() - $row['postdate'];
+		if ($diff < 60) {
+			$time_ago_str = 'только что';
+		} elseif ($diff < 3600) {
+			$mins = floor($diff / 60);
+			$time_ago_str = $mins . ' ' . ($mins == 1 ? 'минуту' : ($mins < 5 ? 'минуты' : 'минут')) . ' назад';
+		} elseif ($diff < 86400) {
+			$hours = floor($diff / 3600);
+			$time_ago_str = $hours . ' ' . ($hours == 1 ? 'час' : ($hours < 5 ? 'часа' : 'часов')) . ' назад';
+		} elseif ($diff < 604800) {
+			$days = floor($diff / 86400);
+			$time_ago_str = $days . ' ' . ($days == 1 ? 'день' : ($days < 5 ? 'дня' : 'дней')) . ' назад';
+		} else {
+			$time_ago_str = langdate('d.m.Y', $row['postdate']);
+		}
 		$data[] = array(
 			'link'          => newsGenerateLink(array('id' => $row['nid'], 'alt_name' => $row['alt_name'], 'catid' => $row['catid'], 'postdate' => $row['npostdate'])),
 			'date'          => langdate('d.m.Y H:i', $row['postdate']),
-			'time_ago'      => time_ago($row['postdate']), // Human-readable time
+			'time_ago'      => $time_ago_str,
 			'author'        => str_replace('<', '&lt;', $row['author']),
 			'author_id'     => $row['author_id'],
 			'title'         => str_replace('<', '&lt;', $row['title']),
@@ -246,12 +272,13 @@ function lastcomments($mode = 0)
 	$tVars['lastcomments_url_rss'] = generatePluginLink('lastcomments', 'rss');
 	$output = $xt->render($tVars);
 	if ($mode == 2) setlocale(LC_TIME, $old_locale);
-
-	// Cache the output using ng-helpers
+	// Cache the output using ng-helpers cache() function
 	if (pluginGetVariable('lastcomments', 'cache')) {
-		$cacheExpire = intval(pluginGetVariable('lastcomments', 'cacheExpire'));
-		cache_put($cacheKey, $output, $cacheExpire ?: 30);
+		$cacheExpire = intval(pluginGetVariable('lastcomments', 'cacheExpire')) ?: 30;
+		cache($cacheKey, function () use ($output) {
+			return $output;
+		}, $cacheExpire * 60);
+		logger('[lastcomments] Generated and cached: ' . strlen($output) . ' bytes, ' . $comm_num . ' comments', 'info', 'lastcomments.log');
 	}
-
 	return $output;
 }

@@ -3,7 +3,7 @@
 ;
 ID: code_highlight
 Name: Подсветка кода
-Version:1.2.0
+Version:1.3.0
 Acts: news_full, twig
 File: code_highlight.php
 Config: config.php

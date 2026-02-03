@@ -1,6 +1,9 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
+use function Plugins\{logger, array_get, sanitize, get_ip};
+
 // Конфигурация плагина code_highlight
 pluginsLoadConfig();
 $cfg = array();
@@ -55,8 +58,9 @@ foreach ($brushes as $key => $title) {
     );
 }
 array_push($cfg, array('mode' => 'group', 'title' => '<b>Кисти</b>', 'entries' => $cfgX));
-if ($_REQUEST['action'] == 'commit') {
+if (array_get($_REQUEST, 'action', '') == 'commit') {
     commit_plugin_config_changes($plugin, $cfg);
+    logger('Code highlight config saved, IP=' . get_ip(), 'info', 'code_highlight.log');
     print_commit_complete($plugin);
 } else {
     generate_config_page($plugin, $cfg);

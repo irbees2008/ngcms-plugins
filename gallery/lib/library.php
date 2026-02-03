@@ -40,7 +40,7 @@ function gallery_delete_comments($imageIds)
     $deletedCount = $mysql->affected_rows($stmt);
 
     if (function_exists('Plugins\logger')) {
-        \Plugins\logger('gallery', 'Deleted ' . $deletedCount . ' comments for images: ' . implode(',', $imageIds));
+        \Plugins\logger('Deleted ' . $deletedCount . ' comments for images: ' . implode(',', $imageIds), 'info', 'gallery.log');
     }
 
     return $deletedCount;

@@ -3,7 +3,7 @@
 ;
 ID: ng-helpers
 Type: plugin
-Version: 0.2.1
+Version: 0.2.2
 Permanent: yes
 Preinstall: default_yes
 File: src/helpers.php

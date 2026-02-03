@@ -12,7 +12,7 @@ if (!defined('NGCMS')) {
 // - Added IP tracking
 
 // Import ng-helpers functions
-use function Plugins\{validate_email, validate_phone, sanitize, csrf_field, validate_csrf, logger, get_ip, is_post};
+use function Plugins\{validate_email, validate_phone, sanitize, csrf_field, validate_csrf, logger, get_ip, is_post, array_get};
 
 register_plugin_page('feedback', '', 'plugin_feedback_screen', 0);
 register_plugin_page('feedback', 'post', 'plugin_feedback_post', 0);
@@ -30,7 +30,8 @@ function plugin_feedback_screen()
 // Mode:
 // * 0 - initial show
 // * 1 - show filled earlier values (error filling some fields)
-function plugin_feedback_showScreen($mode = 0, $errorText = '')
+// * 2 - show with success notification (after form submission)
+function plugin_feedback_showScreen($mode = 0, $errorText = '', $successText = '')
 {
     global $template, $lang, $mysql, $userROW, $PFILTERS, $twig, $SYSTEM_FLAGS;
     $output = '';
@@ -39,7 +40,7 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '')
     // Determine paths for all template files
     $tpath = locatePluginTemplates(['site.form', 'site.notify'], 'feedback', pluginGetVariable('feedback', 'localsource'));
     $SYSTEM_FLAGS['info']['title']['group'] = $lang['feedback:header.title'];
-    $form_id = intval($_REQUEST['id']);
+    $form_id = intval(array_get($_REQUEST, 'id', 0));
     $xt = $twig->loadTemplate($tpath['site.notify'] . 'site.notify.tpl', $conversionConfig);
     // Get form data
     if (!is_array($frow = $mysql->record('select * from ' . prefix . '_feedback where active = 1 and id = ' . $form_id))) {
@@ -141,13 +142,13 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '')
         $setValue = '';
         if ($mode && (!$fInfo['block'])) {
             // FILLED EARLIER
-            $setValue = secure_html(($isUTF && $flagsUTF) ?  $_REQUEST['fld_' . $fInfo['name']] : $_REQUEST['fld_' . $fInfo['name']]);
+            $setValue = secure_html(($isUTF && $flagsUTF) ?  array_get($_REQUEST, 'fld_' . $fInfo['name'], '') : array_get($_REQUEST, 'fld_' . $fInfo['name'], ''));
         } else {
             // INITIAL SHOW
             $setValue = secure_html($fInfo['default']);
             // If 'by parameter' mode is set, check if this variable was passed in GET
             if (($fInfo['auto'] == 1) && isset($_REQUEST['v_' . $fInfo['name']])) {
-                $setValue = secure_html(($isUTF && $flagsUTF) ? $_REQUEST['v_' . $fInfo['name']] : $_REQUEST['v_' . $fInfo['name']]);
+                $setValue = secure_html(($isUTF && $flagsUTF) ? array_get($_REQUEST, 'v_' . $fInfo['name'], '') : array_get($_REQUEST, 'v_' . $fInfo['name'], ''));
             } elseif ($fInfo['auto'] == 2) {
                 $setValue = secure_html($xfValues[$fInfo['name']]);
             } elseif ($fInfo['auto'] == 3) {
@@ -166,16 +167,16 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '')
                 $setValueMonth = $fInfo['default:vars']['month'];
                 $setValueYear = $fInfo['default:vars']['year'];
                 if ($mode) {
-                    if ((intval($_REQUEST['fld_' . $fInfo['name'] . ':day']) >= 1) &&
-                        (intval($_REQUEST['fld_' . $fInfo['name'] . ':day']) <= 31) &&
-                        (intval($_REQUEST['fld_' . $fInfo['name'] . ':month']) >= 1) &&
-                        (intval($_REQUEST['fld_' . $fInfo['name'] . ':month']) <= 12) &&
-                        (intval($_REQUEST['fld_' . $fInfo['name'] . ':year']) >= 1970) &&
-                        (intval($_REQUEST['fld_' . $fInfo['name'] . ':year']) <= 2020)
+                    if ((intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':day', 0)) >= 1) &&
+                        (intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':day', 0)) <= 31) &&
+                        (intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':month', 0)) >= 1) &&
+                        (intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':month', 0)) <= 12) &&
+                        (intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':year', 0)) >= 1970) &&
+                        (intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':year', 0)) <= 2020)
                     ) {
-                        $setValueDay = intval($_REQUEST['fld_' . $fInfo['name'] . ':day']);
-                        $setValueMonth = intval($_REQUEST['fld_' . $fInfo['name'] . ':month']);
-                        $setValueYear = intval($_REQUEST['fld_' . $fInfo['name'] . ':year']);
+                        $setValueDay = intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':day', 0));
+                        $setValueMonth = intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':month', 0));
+                        $setValueYear = intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':year', 0));
                     }
                 }
                 $opts = $fInfo['required'] ? '' : '<option value="">--</option>';
@@ -244,16 +245,30 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '')
     $hF = '';
     foreach ($hiddenFields as $k => $v) {
         $hF .= '<input type="hidden" name="' . $k . '" value="' . secure_html($v) . '"/>' . "\n";
-    }    // Add CSRF protection
-    $hF .= csrf_field();
+    }
+    // Add CSRF protection
+    $hF .= csrf_field() . "\n";
     $tVars['hidden_fields'] = $hF;
     // Process filters (if any)
     if (is_array($PFILTERS['feedback'])) {
         foreach ($PFILTERS['feedback'] as $k => $v) {
-            $v->onShow($form_id, $frow, $fData, $tVars);
+            if (method_exists($v, 'onShow')) {
+                $v->onShow($form_id, $frow, $fData, $tVars);
+            }
         }
     }
     $template['vars']['mainblock'] = $xt->render($tVars);
+
+    // Show success notification if provided
+    if ($successText) {
+        $template['vars']['mainblock'] .= "\n<script>
+        (function() {
+            if (typeof showToast !== 'undefined') {
+                showToast(" . json_encode($successText) . ", { type: 'success', duration: 5000 });
+            }
+        })();
+        </script>";
+    }
 }
 //
 // Post feedback message
@@ -276,7 +291,7 @@ function plugin_feedback_post()
     // Determine paths for all template files
     $tpath = locatePluginTemplates(['site.form', 'site.notify', 'mail.html', 'mail.text'], 'feedback', pluginGetVariable('feedback', 'localsource'));
     $ptpl_url = admin_url . '/plugins/feedback/tpl';
-    $form_id = intval($_REQUEST['id']);
+    $form_id = intval(array_get($_REQUEST, 'id', 0));
     $SYSTEM_FLAGS['info']['title']['group'] = $lang['feedback:header.title'];
     $xt = $twig->loadTemplate($tpath['site.notify'] . 'site.notify.tpl');
     // Get form data
@@ -321,7 +336,7 @@ function plugin_feedback_post()
     }
     // Check if captcha check if needed
     if (substr($frow['flags'], 1, 1)) {
-        $vcode = $_REQUEST['vcode'];
+        $vcode = array_get($_REQUEST, 'vcode', '');
         if ((!$vcode) || ($vcode != $_SESSION['captcha.feedback'])) {
             // Wrong CAPTCHA code (!!!)
             plugin_feedback_showScreen(1, $lang['feedback:sform.captcha.badcode']);
@@ -368,13 +383,13 @@ function plugin_feedback_post()
         $fieldValue = '';
         switch ($fInfo['type']) {
             case 'date':
-                $fieldValue = $_REQUEST['fld_' . $fName . ':day'] . '.' . $_REQUEST['fld_' . $fName . ':month'] . '.' . $_REQUEST['fld_' . $fName . ':year'];
+                $fieldValue = array_get($_REQUEST, 'fld_' . $fName . ':day', '') . '.' . array_get($_REQUEST, 'fld_' . $fName . ':month', '') . '.' . array_get($_REQUEST, 'fld_' . $fName . ':year', '');
                 break;
             default:
                 if ($isUTF && $flagsUTF) {
-                    $fieldValue = $_REQUEST['fld_' . $fName];
+                    $fieldValue = array_get($_REQUEST, 'fld_' . $fName, '');
                 } else {
-                    $fieldValue = $_REQUEST['fld_' . $fName];
+                    $fieldValue = array_get($_REQUEST, 'fld_' . $fName, '');
                 }
         }
         // Check if required field is filled
@@ -422,8 +437,8 @@ function plugin_feedback_post()
     if ($em === false) {
         $em[1] = [1, '', preg_split("# *(\r\n|\n) *#", $frow['emails'])];
     }
-    $elist = (isset($em[intval($_POST['recipient'])])) ? $em[intval($_POST['recipient'])][2] : $em[1][2];
-    $eGroupName = (isset($em[intval($_POST['recipient'])])) ? $em[intval($_POST['recipient'])][1] : $em[1][1];
+    $elist = (isset($em[intval(array_get($_POST, 'recipient', 0))])) ? $em[intval(array_get($_POST, 'recipient', 0))][2] : $em[1][2];
+    $eGroupName = (isset($em[intval(array_get($_POST, 'recipient', 0))])) ? $em[intval(array_get($_POST, 'recipient', 0))][1] : $em[1][1];
     // Prepare EMAIL content
     $mailSubject = str_replace(['{name}', '{title}'], [$frow['name'], $frow['title']], $flagSubj ? $frow['subj'] : $lang['feedback:mail.subj']);
     // Load template for ADMIN notification
@@ -464,6 +479,26 @@ function plugin_feedback_post()
         $userIP = get_ip();
         $userName = $userROW['name'] ?? 'Guest';
         logger("Feedback form #{$form_id} '{$frow['title']}' submitted by {$userName} from IP: {$userIP}. Sent to {$mailCount} recipients.", 'info', 'feedback.log');
+
+        // Telegram notification
+        if (getPluginStatusActive('jchat_tgnotify')) {
+            @include_once(root . 'plugins/jchat_tgnotify/jchat_tgnotify.php');
+            if (function_exists('ngcms_tg_notify')) {
+                // Собираем текст из всех полей формы
+                $feedbackText = '';
+                foreach ($tEntries as $entry) {
+                    $feedbackText .= $entry['title'] . ': ' . strip_tags($entry['value']) . "\n";
+                }
+
+                ngcms_tg_notify('feedback', [
+                    'title'    => 'Форма: ' . $frow['title'],
+                    'author'   => $userName,
+                    'text'     => trim($feedbackText),
+                    'url'      => home . '/admin.php?mod=extra-config&plugin=feedback',
+                    'datetime' => date('Y-m-d H:i:s'),
+                ]);
+            }
+        }
 
         // Check if we need to send notification to user
         foreach ($fData as $fName => $fInfo) {
@@ -515,16 +550,7 @@ function plugin_feedback_post()
         }
     }
     $notifyMessage = ($isSentViaPlugin && $tResult['notify.msg']) ? $tResult['notify.msg'] : str_replace('{ecount}', $mailCount, $lang['feedback:confirm.message']);
-    // Prepare user's notification
-    $xt = $twig->loadTemplate($tpath['site.notify'] . 'site.notify.tpl');
-    $tVars = [
-        'title'    => $frow['title'],
-        'ptpl_url' => $ptpl_url,
-        'entries'  => $notifyMessage,
-        'usermail' => [
-            'count' => count($eSendList),
-            'list'  => $eSendList,
-        ],
-    ];
-    $template['vars']['mainblock'] = $xt->render($tVars);
+
+    // Show success notification via toast and display empty form again
+    plugin_feedback_showScreen(2, '', $notifyMessage);
 }

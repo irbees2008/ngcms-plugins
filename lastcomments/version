@@ -3,7 +3,7 @@
 ;
 ID: lastcomments
 Name: Последние комментарии
-Version: 0.13
+Version: 0.14
 Acts: index, ppages
 File: lastcomments.php
 Config: config.php

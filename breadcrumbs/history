@@ -1,3 +1,12 @@
+[1.4][29.01.2026]
+[+] Modernized with ng-helpers v0.2.2: logger(), array_get(), sanitize(), get_ip()
+[*] Replaced cacheRetrieveFile/cacheStoreFile with cache_get/cache_put
+[*] Added logger for cache hits and generation
+[*] Added array_get() for safe params access
+[*] Added sanitize() for URL cleaning in logs
+[*] Improved cache key format (removed .txt extension)
+[*] All logs now written to breadcrumbs.log
+
 [1.3][2026-01-16]
 + добавлена настройка "Скрывать на главной странице"
 * исправлено дублирование "Главная страница" на главной

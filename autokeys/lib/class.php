@@ -61,7 +61,7 @@ class AutoKeyword
 		}
 
 		$this->contents = $this->replace_chars($params['content'] ?? '');
-		logger('autokeys', 'AutoKeyword init: length=' . mb_strlen($this->contents) . ' chars, minLen=' . $this->wordLengthMin . ', maxLen=' . $this->wordLengthMax);
+		logger('AutoKeyword init: length=' . mb_strlen($this->contents) . ' chars, minLen=' . $this->wordLengthMin . ', maxLen=' . $this->wordLengthMax, 'info', 'autokeys.log');
 	}
 
 	public function replace_chars($content)
@@ -190,7 +190,7 @@ class AutoKeyword
 		unset($s);
 
 		$duration = round((microtime(true) - $startTime) * 1000, 2);
-		logger('autokeys', 'parse_words: extracted ' . count($occur_filtered) . ' keywords, time=' . $duration . 'ms');
+		logger('parse_words: extracted ' . count($occur_filtered) . ' keywords, time=' . $duration . 'ms', 'info', 'autokeys.log');
 
 		return $imploded;
 	}
@@ -245,7 +245,7 @@ function akeysGetKeys($params)
 		$words = rtrim($words, ', ');
 	}
 
-	logger('autokeys', 'akeysGetKeys: result=' . count(explode(', ', $words)) . ' keywords, length=' . mb_strlen($words) . ' chars');
+	logger('akeysGetKeys: result=' . count(explode(', ', $words)) . ' keywords, length=' . mb_strlen($words) . ' chars', 'info', 'autokeys.log');
 
 	return $words;
 }

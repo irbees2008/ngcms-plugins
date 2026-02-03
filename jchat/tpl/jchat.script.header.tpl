@@ -28,10 +28,14 @@ function jChat(maxRows, refresh, tableID, msgOrder) {
 			if (this.responseStatus[0] != "200")
 				return;
 
-			var data = eval(this.response);
+			try {
+				var data = JSON.parse(this.response);
 
-			if (typeof(data) == 'object')
-				thisObject.loadData(data);
+				if (typeof(data) == 'object')
+					thisObject.loadData(data);
+			} catch (e) {
+				console.error('Error parsing jchat response:', e);
+			}
 		}
 		if (!this.fatalError) {
 			while (this.tableRef.rows.length) this.tableRef.deleteRow(-1);
@@ -206,22 +210,41 @@ function jChat(maxRows, refresh, tableID, msgOrder) {
 		TX.setVar('text', text);
 		TX.method = 'POST';
 		TX.onComplete = function () {
-			var data = eval('(' + this.response + ')');
+			try {
+				// Debug: always log response
+				console.log('jChat response:', this.response.substring(0, 500));
 
-			if (typeof(data) == 'object') {
-				if (data['status']) {
-					thisObject.addMessage('<i>message posted</i>', 'jchat_INFO');
-					var sText = document.getElementById('jChatText');
-					if (sText != null)
-						sText.value = '';
+				// Check if response looks like JSON
+				var response = this.response.trim();
+				if (!response.startsWith('{') && !response.startsWith('[')) {
+					console.error('Invalid JSON response (full):', response);
+					thisObject.addMessage('<i><b>Server error. Check console for details.</b></i>', 'jchat_INFO');
+					var sButton = document.getElementById('jChatSubmit');
+					if (sButton != null) sButton.disabled = false;
+					return;
+				}
+
+				var data = JSON.parse(response);
+
+				if (typeof(data) == 'object') {
+					if (data['status']) {
+						thisObject.addMessage('<i>message posted</i>', 'jchat_INFO');
+						var sText = document.getElementById('jChatText');
+						if (sText != null)
+							sText.value = '';
+					} else {
+						thisObject.addMessage('<i>ERROR: <b>' + data['error'] + '</b></i>', 'jchat_INFO');
+					}
+					if (typeof(data['bundle']) == 'object') {
+						thisObject.loadData(data['bundle']);
+					}
 				} else {
-					thisObject.addMessage('<i>ERROR: <b>' + data['error'] + '</b></i>', 'jchat_INFO');
+					thisObject.addMessage('<i><b>Bad reply from server</b></i>', 'jchat_INFO');
 				}
-				if (typeof(data['bundle']) == 'object') {
-					thisObject.loadData(data['bundle']);
-				}
-			} else {
-				thisObject.addMessage('<i><b>Bad reply from server</b></i>', 'jchat_INFO');
+			} catch (e) {
+				console.error('Error parsing jchat response:', e);
+				console.error('Response text:', this.response);
+				thisObject.addMessage('<i><b>Error parsing response: ' + e.message + '</b></i>', 'jchat_INFO');
 			}
 			var sButton = document.getElementById('jChatSubmit');
 			if (sButton != null)

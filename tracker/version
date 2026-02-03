@@ -4,7 +4,7 @@
 
 ID: tracker
 Name: BitTorrent tracker
-Version: 0.03
+Version: 0.04
 Acts: ppages, news_full, news:show:one, admin:mod:news
 File: announce.php
 Config: config.php
@@ -13,6 +13,7 @@ Deinstall: deinstall.php
 Type: plugin
 Description: BitTorrent треккер
 Author: Vitaly A. Ponomarev
+MinPHPVer: 8.0
 Author_URI: http://ngcms.ru/
 URI: http://no_url.com/
 Title: BitTorrent трекер

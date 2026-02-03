@@ -1,3 +1,11 @@
+[2.8][29.01.2026]
+[+] Modernized with ng-helpers v0.2.2: logger(), array_get(), clamp()
+[*] Fixed logger calls to use correct 3-parameter format (message, level, file)
+[*] Replaced $_GET access with array_get() for safety
+[*] Added clamp() for maxlength validation (10-500 range)
+[*] Added clamp() for newsID validation
+[*] All logs now written to bookmarks.log
+
 [2.7] [2026-01-16]
 * исправлена проблема двойных уведомлений (удален дублирующий addEventListener в шаблоне)
 * переход на стандартную систему уведомлений showToast() из notify.js вместо futu_alert

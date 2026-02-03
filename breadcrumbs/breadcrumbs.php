@@ -28,7 +28,7 @@
 if (!defined('NGCMS')) die('Galaxy in danger');
 
 // Import ng-helpers functions
-use function Plugins\{cache_get, cache_put, array_pluck};
+use function Plugins\{cache_get, cache_put, array_pluck, logger, sanitize, array_get, get_ip};
 
 add_act('index', 'breadcrumbs');
 LoadPluginLang('breadcrumbs', 'main', '', 'bc', ':');
@@ -45,11 +45,13 @@ function breadcrumbs()
 	}
 
 	// Generate cache key based on current URL and language
-	$cacheKey = 'breadcrumbs_' . md5($systemAccessURL . $lang['locale'] . serialize($CurrentHandler));
+	$cacheKey = 'breadcrumbs:' . md5($systemAccessURL . array_get($lang, 'locale', 'en') . serialize($CurrentHandler));
 
-	// Try to get from cache (5 minutes)
-	if ($cached = cache_get($cacheKey)) {
+	// Try to get from cache (5 minutes TTL)
+	$cached = cache_get($cacheKey);
+	if ($cached !== null) {
 		$template['vars']['breadcrumbs'] = $cached;
+		logger('Breadcrumbs served from cache: url=' . sanitize($systemAccessURL, 'string') . ', IP=' . get_ip(), 'debug', 'breadcrumbs.log');
 		return;
 	}
 	$tpath = locatePluginTemplates(
@@ -80,8 +82,8 @@ function breadcrumbs()
 		$location_last = $lang['404.title'];
 	} else {
 		if ($CurrentHandler) {
-			$params = $CurrentHandler['params'];
-			$pluginName = $CurrentHandler['pluginName'];
+			$params = array_get($CurrentHandler, 'params', []);
+			$pluginName = array_get($CurrentHandler, 'pluginName', '');
 		}
 		# generate main page with or without link
 		if ($systemAccessURL != '/') {
@@ -264,8 +266,10 @@ function breadcrumbs()
 	$xt = $twig->loadTemplate($tpath['breadcrumbs'] . 'breadcrumbs.tpl');
 	$result = $xt->render($tVars);
 
-	// Cache the result for 5 minutes
+	// Cache the result for 5 minutes (300 seconds / 60 = 5 minutes)
 	cache_put($cacheKey, $result, 5);
+
+	logger('Breadcrumbs generated: url=' . sanitize($systemAccessURL, 'string') . ', items=' . count($location) . ', IP=' . get_ip(), 'info', 'breadcrumbs.log');
 
 	$template['vars']['breadcrumbs'] = $result;
 }

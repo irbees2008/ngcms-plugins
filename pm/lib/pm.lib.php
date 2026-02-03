@@ -85,6 +85,24 @@ class pm
 		// Log PM sending
 		logger('pm', 'PM sent: from=' . $from_username . ', to=' . $torow['id'] . ' (' . $torow['name'] . '), saveoutbox=' . ($saveoutbox ? 'yes' : 'no') . ', IP=' . get_ip());
 
+		// Telegram notification
+		if (getPluginStatusActive('jchat_tgnotify')) {
+			@include_once(root . 'plugins/jchat_tgnotify/jchat_tgnotify.php');
+			if (function_exists('ngcms_tg_notify')) {
+				// Получаем имя отправителя
+				$fromUser = $mysql->record("SELECT name FROM " . uprefix . "_users WHERE id = " . db_squote($from_username));
+				$fromName = $fromUser ? $fromUser['name'] : 'User #' . $from_username;
+
+				ngcms_tg_notify('pm', [
+					'title'    => 'Личное сообщение: ' . $title,
+					'author'   => $fromName . ' → ' . $torow['name'],
+					'text'     => strip_tags($message),
+					'url'      => generatePluginLink('pm', null, ['pmid' => $id, 'action' => 'read'], [], false, true),
+					'datetime' => date('Y-m-d H:i:s', $time),
+				]);
+			}
+		}
+
 		# send email if needed
 		if ($torow['pm_email'] && $torow['mail']) {
 			$msg_link = generatePluginLink('pm', null, array('pmid' => $id, 'action' => 'read'), array(), false, true);

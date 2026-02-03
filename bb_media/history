@@ -1,4 +1,11 @@
 
+[0.13][29.01.2026]
+[+] Modernized with ng-helpers v0.2.2: logger(), array_get(), sanitize()
+[*] Fixed logger calls to use correct 3-parameter format (message, level, file)
+[*] Replaced direct array access with array_get() for safety (6 locations)
+[*] Added sanitize() for title output in logs
+[*] All logs now written to bb_media.log
+
 KachalkinGeorg
 [0.11][29.11.2024]
 % Измененна административная часть плагина config

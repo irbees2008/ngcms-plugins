@@ -60,8 +60,8 @@ class SimilarNewsfilter extends NewsFilter
 		// Show similar news only in full mode
 		if ($mode['style'] == 'full') {
 			// Try to get from cache first (5 minutes)
-			$cacheKey = "similar_news_{$newsID}";
-			if ($cached = cache_get($cacheKey)) {
+			$cacheKey = "similar_news_{$newsID}.txt";
+			if ($cached = cacheRetrieveFile($cacheKey, 300, 'similar')) {
 				$tvars['vars']['plugin_similar_tags'] = $cached;
 				return 1;
 			}
@@ -136,12 +136,12 @@ class SimilarNewsfilter extends NewsFilter
 				$tpl->vars('similar', array('vars' => array('entries' => $result[0])));
 				$tvars['vars']['plugin_similar_tags'] = $tpl->show('similar');
 				// Cache the result for 5 minutes
-				cache_put($cacheKey, $tvars['vars']['plugin_similar_tags'], 5);
+				cacheStoreFile($cacheKey, $tvars['vars']['plugin_similar_tags'], 'similar');
 			} else {
 				$tvars['vars']['plugin_similar_tags'] = '';
 				$tvars['vars']['plugin_similar_categ'] = '';
 				// Cache empty result too (1 minute)
-				cache_put($cacheKey, '', 1);
+				cacheStoreFile($cacheKey, '', 'similar');
 			}
 		}
 

@@ -1,6 +1,9 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
+use function Plugins\{array_get, logger, get_ip};
+
 //
 // Configuration file for plugin
 //
@@ -27,9 +30,10 @@ $cfgX = array();
 array_push($cfgX, array('name' => 'cache', 'title' => "Разрешить кеширование формы<br />", 'descr' => '<b>Да</b> - кеширование разрешено<br /><b>Нет</b> - кеширование запрещено', 'type' => 'select', 'values' => array('1' => 'Да', '0' => 'Нет'), 'value' => intval(pluginGetVariable($plugin, 'cache'))));
 array_push($cfg, array('mode' => 'group', 'title' => '<b>Настройки кеширования</b>', 'entries' => $cfgX));
 // RUN
-if ($_REQUEST['action'] == 'commit') {
+if (array_get($_REQUEST, 'action', '') == 'commit') {
 	// If submit requested, do config save
 	commit_plugin_config_changes($plugin, $cfg);
+	logger('Complain plugin config saved, IP=' . get_ip(), 'info', 'complain.log');
 	print_commit_complete($plugin);
 } else {
 	generate_config_page($plugin, $cfg);

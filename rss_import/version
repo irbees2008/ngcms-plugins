@@ -3,16 +3,17 @@
 ;
 ID: rss_import
 Name: RSS news importer
-Version: 0.03
+Version: 0.04
 Acts: index, ppages
 File: rss_import.php
 Config: config.php
 Type: plugin
-Description: Импорт новостей через RSS
-Author:  Dzmitry Khadorkin,irbees2008
+Description: Импорт новостей через RSS (ng-helpers v0.2.2, PHP 8.0+)
+Author: Dzmitry Khadorkin, irbees2008, NGCMS Team
 Title: RSS news importer
 Information: Импорт новостей через RSS
 Preinstall:no
 Preinstall_vars: cache="1"; cacheExpire="3600";
 MinEngineBuild: 23b3116
+MinPHPVer: 8.0
 Icons: <i class="fa fa-rss fa-3x" aria-hidden="true"></i>

@@ -3,7 +3,7 @@
 ;
 ID: comments
 Name: User comments
-Version: 0.15
+Version: 0.17
 Acts: news_short, news_full, ppages, editnews, editnews_form, news, admin:mod:news, admin:mod:categories
 File: comments.php
 Config: config.php
@@ -14,7 +14,7 @@ Description: Комментарии пользователей
 Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru/
 Title: Комментарии пользователей
-Information: Реализует функционал работы с комментариями
+Information: Универсальная система комментариев с поддержкой модулей (новости, галерея, статические страницы)
 Preinstall:no
 Preinstall_vars: cache="1"; cacheExpire="3600";
 Library: lib; inc/comments.lib.php

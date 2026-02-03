@@ -2,7 +2,7 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
-use function Plugins\{logger, sanitize, get_ip, formatMoney};
+use function Plugins\{logger, sanitize, get_ip, formatMoney, clamp, cache_get, cache_put, cache_forget, benchmark, array_get};
 
 LoadPluginLibrary('xfields', 'common');
 LoadPluginLibrary('feedback', 'common');
@@ -13,22 +13,44 @@ function plugin_basket_total()
 {
 
 	global $mysql, $twig, $userROW, $template;
+
+	$startTime = microtime(true);
+
 	// Определяем условия выборки
 	$filter = array();
 	if (is_array($userROW)) {
 		$filter[] = '(user_id = ' . db_squote($userROW['id']) . ')';
 	}
-	if (isset($_COOKIE['ngTrackID']) && ($_COOKIE['ngTrackID'] != '')) {
-		$filter[] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
+	$cookieID = array_get($_COOKIE, 'ngTrackID', '');
+	if ($cookieID !== '') {
+		$filter[] = '(cookie = ' . db_squote($cookieID) . ')';
 	}
-	// Считаем итоги
-	$tCount = 0;
-	$tPrice = 0;
-	if (count($filter) && is_array($res = $mysql->record("select count(*) as count, sum(price*count) as price from " . prefix . "_basket where " . join(" or ", $filter), 1))) {
-		$tCount = $res['count'];
-		$tPrice = $res['price'];
-		logger('basket', 'Total: count=' . $tCount . ', price=' . $tPrice . ', IP=' . get_ip());
+
+	// Генерируем ключ кеша на основе фильтров
+	$cacheKey = 'basket_total_' . md5(implode('_', $filter));
+
+	// Пытаемся получить из кеша
+	$cached = cache_get($cacheKey, false);
+	if ($cached !== false) {
+		$tCount = $cached['count'];
+		$tPrice = $cached['price'];
+		logger('Total: count=' . $tCount . ', price=' . $tPrice . ', IP=' . get_ip() . ' (from cache)', 'info', 'basket.log');
+	} else {
+		// Считаем итоги из базы
+		$tCount = 0;
+		$tPrice = 0;
+		if (count($filter) && is_array($res = $mysql->record("select count(*) as count, sum(price*count) as price from " . prefix . "_basket where " . join(" or ", $filter), 1))) {
+			$tCount = $res['count'];
+			$tPrice = $res['price'];
+			// Кешируем на 30 секунд
+			cache_put($cacheKey, ['count' => $tCount, 'price' => $tPrice], 0.5);
+			logger('Total: count=' . $tCount . ', price=' . $tPrice . ', IP=' . get_ip() . ' (cached)', 'info', 'basket.log');
+		}
 	}
+
+	$duration = round((microtime(true) - $startTime) * 1000, 2);
+	logger('Total completed in ' . $duration . 'ms', 'debug', 'basket.log');
+
 	// Готовим переменные
 	$tVars = array(
 		'count' => $tCount,
@@ -47,39 +69,45 @@ function plugin_basket_list()
 {
 
 	global $mysql, $twig, $userROW, $template;
-	// Определяем условия выборки
-	$filter = array();
-	if (is_array($userROW)) {
-		$filter[] = '(user_id = ' . db_squote($userROW['id']) . ')';
-	}
-	if (isset($_COOKIE['ngTrackID']) && ($_COOKIE['ngTrackID'] != '')) {
-		$filter[] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
-	}
-	// Выполняем выборку
-	$recs = array();
-	$total = 0;
-	if (count($filter)) {
-		foreach ($mysql->select("select * from " . prefix . "_basket where " . join(" or ", $filter), 1) as $rec) {
-			$total += round($rec['price'] * $rec['count'], 2);
-			$rec['sum'] = sprintf('%9.2f', round($rec['price'] * $rec['count'], 2));
-			$rec['sum_formatted'] = formatMoney(round($rec['price'] * $rec['count'], 2));
-			$rec['price_formatted'] = formatMoney($rec['price']);
-			$rec['xfields'] = unserialize($rec['linked_fld']);
-			unset($rec['linked_fld']);
-			$recs[] = $rec;
+
+	$result = benchmark(function () use ($mysql, $twig, $userROW, &$template) {
+		// Определяем условия выборки
+		$filter = array();
+		if (is_array($userROW)) {
+			$filter[] = '(user_id = ' . db_squote($userROW['id']) . ')';
 		}
-		logger('basket', 'List: count=' . count($recs) . ', total=' . $total . ', IP=' . get_ip());
-	}
-	$tVars = array(
-		'recs'     => count($recs),
-		'entries'  => $recs,
-		'total'    => sprintf('%9.2f', $total),
-		'total_formatted' => formatMoney($total),
-		'form_url' => generatePluginLink('feedback', null, array(), array('id' => intval(pluginGetVariable('basket', 'feedback_form')))),
-	);
-	// Выводим шаблон
-	$xt = $twig->loadTemplate('plugins/basket/list.tpl');
-	$template['vars']['mainblock'] = $xt->render($tVars);
+		$cookieID = array_get($_COOKIE, 'ngTrackID', '');
+		if ($cookieID !== '') {
+			$filter[] = '(cookie = ' . db_squote($cookieID) . ')';
+		}
+		// Выполняем выборку
+		$recs = array();
+		$total = 0;
+		if (count($filter)) {
+			foreach ($mysql->select("select * from " . prefix . "_basket where " . join(" or ", $filter), 1) as $rec) {
+				$total += round($rec['price'] * $rec['count'], 2);
+				$rec['sum'] = sprintf('%9.2f', round($rec['price'] * $rec['count'], 2));
+				$rec['sum_formatted'] = formatMoney(round($rec['price'] * $rec['count'], 2));
+				$rec['price_formatted'] = formatMoney($rec['price']);
+				$rec['xfields'] = unserialize($rec['linked_fld']);
+				unset($rec['linked_fld']);
+				$recs[] = $rec;
+			}
+			logger('List: count=' . count($recs) . ', total=' . $total . ', IP=' . get_ip(), 'info', 'basket.log');
+		}
+		$tVars = array(
+			'recs'     => count($recs),
+			'entries'  => $recs,
+			'total'    => sprintf('%9.2f', $total),
+			'total_formatted' => formatMoney($total),
+			'form_url' => generatePluginLink('feedback', null, array(), array('id' => intval(pluginGetVariable('basket', 'feedback_form')))),
+		);
+		// Выводим шаблон
+		$xt = $twig->loadTemplate('plugins/basket/list.tpl');
+		$template['vars']['mainblock'] = $xt->render($tVars);
+	});
+
+	logger('List completed in ' . round($result['time'] * 1000, 2) . 'ms', 'debug', 'basket.log');
 }
 
 // Update basket content/counters
@@ -92,8 +120,9 @@ function plugin_basket_update()
 	if (is_array($userROW)) {
 		$filter[] = '(user_id = ' . db_squote($userROW['id']) . ')';
 	}
-	if (isset($_COOKIE['ngTrackID']) && ($_COOKIE['ngTrackID'] != '')) {
-		$filter[] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
+	$cookieID = array_get($_COOKIE, 'ngTrackID', '');
+	if ($cookieID !== '') {
+		$filter[] = '(cookie = ' . db_squote($cookieID) . ')';
 	}
 	// Scan POST params
 	if (count($filter)) {
@@ -102,7 +131,8 @@ function plugin_basket_update()
 		foreach ($_POST as $k => $v) {
 			if (preg_match('#^count_(\d+)$#', $k, $m)) {
 				$itemId = intval($m[1]);
-				$newCount = intval(sanitize($v, 'int'));
+				// Используем clamp для ограничения количества (1-999)
+				$newCount = clamp(intval(sanitize($v, 'int')), 0, 999);
 				if ($newCount < 1) {
 					$mysql->query("delete from " . prefix . "_basket where (id = " . db_squote($itemId) . ") and (" . join(" or ", $filter) . ")");
 					$deletedCount++;
@@ -112,15 +142,17 @@ function plugin_basket_update()
 				}
 			}
 		}
-		logger('basket', 'Update: updated=' . $updatedCount . ', deleted=' . $deletedCount . ', IP=' . get_ip());
+		logger('Update: updated=' . $updatedCount . ', deleted=' . $deletedCount . ', IP=' . get_ip(), 'info', 'basket.log');
+
+		// Сбрасываем кеш итогов после изменений
+		$cacheKey = 'basket_total_' . md5(implode('_', $filter));
+		cache_forget($cacheKey);
 	}
-	// Redirect to basket page
-	$SUPRESS_TEMPLATE_SHOW = true;
-	@header("Location: " . generatePluginLink('basket', null, array(), array(), false, true));
 }
 
-// XFields filter
-if (class_exists('XFieldsFilter') && class_exists('FeedbackFilter')) {
+// Plugin definition
+if (pluginGetVariable('basket', 'feedback_form')) {
+	// News tables management filter
 	class BasketXFieldsFilter extends XFieldsFilter
 	{
 
@@ -160,8 +192,9 @@ if (class_exists('XFieldsFilter') && class_exists('FeedbackFilter')) {
 			if (is_array($userROW)) {
 				$filter[] = '(user_id = ' . db_squote($userROW['id']) . ')';
 			}
-			if (isset($_COOKIE['ngTrackID']) && ($_COOKIE['ngTrackID'] != '')) {
-				$filter[] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
+			$cookieID = array_get($_COOKIE, 'ngTrackID', '');
+			if ($cookieID !== '') {
+				$filter[] = '(cookie = ' . db_squote($cookieID) . ')';
 			}
 			// Выполняем выборку
 			$recs = array();
@@ -176,7 +209,7 @@ if (class_exists('XFieldsFilter') && class_exists('FeedbackFilter')) {
 					unset($rec['linked_fld']);
 					$recs[] = $rec;
 				}
-				logger('basket', 'Feedback show: formID=' . $formID . ', count=' . count($recs) . ', total=' . $total . ', IP=' . get_ip());
+				logger('Feedback show: formID=' . $formID . ', count=' . count($recs) . ', total=' . $total . ', IP=' . get_ip(), 'info', 'basket.log');
 			}
 			$tVars = array(
 				'recs'    => count($recs),
@@ -201,8 +234,9 @@ if (class_exists('XFieldsFilter') && class_exists('FeedbackFilter')) {
 			if (is_array($userROW)) {
 				$filter[] = '(user_id = ' . db_squote($userROW['id']) . ')';
 			}
-			if (isset($_COOKIE['ngTrackID']) && ($_COOKIE['ngTrackID'] != '')) {
-				$filter[] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
+			$cookieID = array_get($_COOKIE, 'ngTrackID', '');
+			if ($cookieID !== '') {
+				$filter[] = '(cookie = ' . db_squote($cookieID) . ')';
 			}
 			// Выполняем выборку
 			$recs = array();
@@ -217,7 +251,7 @@ if (class_exists('XFieldsFilter') && class_exists('FeedbackFilter')) {
 					unset($rec['linked_fld']);
 					$recs[] = $rec;
 				}
-				logger('basket', 'Feedback process: formID=' . $formID . ', count=' . count($recs) . ', total=' . $total . ', IP=' . get_ip());
+				logger('Feedback process: formID=' . $formID . ', count=' . count($recs) . ', total=' . $total . ', IP=' . get_ip(), 'info', 'basket.log');
 			}
 			$bVars = array(
 				'recs'    => count($recs),
@@ -240,14 +274,19 @@ if (class_exists('XFieldsFilter') && class_exists('FeedbackFilter')) {
 			if (is_array($userROW)) {
 				$filter[] = '(user_id = ' . db_squote($userROW['id']) . ')';
 			}
-			if (isset($_COOKIE['ngTrackID']) && ($_COOKIE['ngTrackID'] != '')) {
-				$filter[] = '(cookie = ' . db_squote($_COOKIE['ngTrackID']) . ')';
+			$cookieID = array_get($_COOKIE, 'ngTrackID', '');
+			if ($cookieID !== '') {
+				$filter[] = '(cookie = ' . db_squote($cookieID) . ')';
 			}
 			// Выполняем выборку
 			if (count($filter)) {
 				$stmt = $mysql->query("delete from " . prefix . "_basket where " . join(" or ", $filter));
 				$deletedCount = $mysql->affected_rows($stmt);
-				logger('basket', 'Feedback notify: formID=' . $formID . ', cleared=' . $deletedCount . ' items, IP=' . get_ip());
+				logger('Feedback notify: formID=' . $formID . ', cleared=' . $deletedCount . ' items, IP=' . get_ip(), 'info', 'basket.log');
+
+				// Сбрасываем кеш после очистки корзины
+				$cacheKey = 'basket_total_' . md5(implode('_', $filter));
+				cache_forget($cacheKey);
 			}
 		}
 	}

@@ -1,5 +1,31 @@
 # Changelog - Gallery Plugin with ng-helpers
 
+## Version 0.2.1 (31 января 2026) - Модернизация с ng-helpers v0.2.2
+
+### Интеграция ng-helpers v0.2.2
+
+- ✅ **array_get()** - безопасный доступ к массивам (NEW)
+  - Добавлен импорт в config.php: `use function Plugins\{array_get};`
+  - 30+ замен $_REQUEST/$\_POST на array_get()
+  - Защищены все параметры: section, id, title, description, keywords, skin, icon, if_active, if_rand, images_count, name, gallery
+  - Установлены корректные значения по умолчанию (0 для чисел, '' для строк)
+  - Предотвращены "Undefined index" предупреждения
+
+- ✅ **logger()** - обновлен формат логирования
+  - Файл: lib/library.php
+  - Было: `logger('gallery', 'Deleted X comments...')`
+  - Стало: `logger('Deleted X comments...', 'info', 'gallery.log')`
+  - Новый 3-параметровый формат: logger(message, level, file)
+
+### Улучшения безопасности
+
+- ✅ Все прямые обращения к $\_REQUEST и $\_POST защищены через array_get()
+- ✅ Улучшена валидация входных данных в 30+ точках кода
+- ✅ Защита параметров галерей и виджетов от некорректного доступа
+- ✅ Более явные проверки существования параметров
+
+---
+
 ## Version 0.2.0 (18 января 2026)
 
 ### Интеграция ng-helpers v0.2.1

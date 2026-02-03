@@ -3,7 +3,7 @@
 ;
 ID: calendar
 Name: Show news calendar
-Version: 0.13
+Version: 0.14
 Acts: index, twig, rpc
 File: calendar.php
 Config: config.php

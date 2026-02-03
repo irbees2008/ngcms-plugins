@@ -1,3 +1,16 @@
+[0.8][2026-01-29]
++ Интеграция ng-helpers v0.2.2: validate_email, random_string, logger, get_ip
++ Исправлены все вызовы logger() на правильный формат: logger(message, level, file)
++ Добавлена валидация email от OAuth провайдеров
++ Улучшено логирование: инициация OAuth, успешные авторизации, создание пользователей
++ Логи теперь в engine/cache/logs/auth_social.log
++ Обновлена документация (CHANGELOG_NGHELPERS.md)
+
+[0.7][2024-2026]
++ Добавлена поддержка VK ID (новый SDK с PKCE)
++ Добавлена поддержка GitHub OAuth
++ Множественные улучшения безопасности и стабильности
+
 [0.6][2015-10-24]
 + Исправление Call to undefined function mime_content_type() в новых версиях PHP
 

@@ -19,7 +19,7 @@ class autoKeysNewsFilter extends NewsFilter
 			$title = sanitize($SQL['title'] ?? '', 'string');
 			$keywords = akeysGetKeys(array('content' => $content, 'title' => $title));
 			$SQL['keywords'] = $keywords;
-			logger('autokeys', 'Add news: generated ' . count(explode(', ', $keywords)) . ' keywords');
+			logger('Add news: generated ' . count(explode(', ', $keywords)) . ' keywords', 'info', 'autokeys.log');
 		}
 
 		return 1;
@@ -33,7 +33,7 @@ class autoKeysNewsFilter extends NewsFilter
 			$title = sanitize($SQLnew['title'] ?? '', 'string');
 			$keywords = akeysGetKeys(array('content' => $content, 'title' => $title));
 			$SQLnew['keywords'] = $keywords;
-			logger('autokeys', 'Edit news: newsID=' . $newsID . ', generated ' . count(explode(', ', $keywords)) . ' keywords');
+			logger('Edit news: newsID=' . $newsID . ', generated ' . count(explode(', ', $keywords)) . ' keywords', 'info', 'autokeys.log');
 		}
 
 		return 1;

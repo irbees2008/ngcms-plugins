@@ -1,8 +1,64 @@
 # Changelog: FAQ Plugin - ng-helpers Integration
 
 **Дата обновления:** 2026
-**Версия ng-helpers:** v0.2.0
+**Версия ng-helpers:** v0.2.2
 **PHP совместимость:** 7.0+
+
+---
+
+## [v0.2][31 января 2026] - Модернизация с ng-helpers v0.2.2
+
+### Основные изменения
+
+#### 1. array_get() - Безопасный доступ к массивам (NEW)
+
+- **Назначение:** Безопасное получение данных из глобальных массивов $_REQUEST/$\_POST с защитой от undefined index
+- **Импорт:** `use function Plugins\{array_get, notify};` в config.php
+- **Замены в config.php (13 замен):**
+
+  ```php
+  // Было: $_REQUEST['action']
+  // Стало: array_get($_REQUEST, 'action', '')
+
+  // Было: $_REQUEST['question'] и $_REQUEST['answer']
+  // Стало: array_get($_REQUEST, 'question', '') и array_get($_REQUEST, 'answer', '')
+
+  // Было: $_REQUEST['id']
+  // Стало: array_get($_REQUEST, 'id', 0)
+
+  // Было: $_REQUEST['selected_faq'] и $_REQUEST['subaction']
+  // Стало: array_get($_REQUEST, 'selected_faq', []) и array_get($_REQUEST, 'subaction', '')
+
+  // Было: $_REQUEST['page']
+  // Стало: array_get($_REQUEST, 'page', 0)
+  ```
+
+- **Защищённые параметры:**
+  - action (switch routing)
+  - question, answer (добавление/редактирование FAQ)
+  - id (идентификатор записи)
+  - selected_faq (массовые операции)
+  - subaction (тип массовой операции)
+  - page (пагинация)
+
+#### 2. logger() - Обновлён формат логирования
+
+- **Было:** `logger('faq', 'FAQ block cached: ...')`
+- **Стало:** `logger('FAQ block cached: ...', 'info', 'faq.log')`
+- **Формат:** logger(message, level, file) - новый 3-параметровый формат
+- **Преимущества:** структурированное логирование с указанием уровня важности
+
+#### 3. Обновлены импорты
+
+- **faq.php:** Добавлен `array_get` в импорт функций
+- **config.php:** Добавлены `array_get, notify` для безопасной работы с запросами
+
+### Улучшения безопасности
+
+- Все прямые обращения к $\_REQUEST защищены через array_get()
+- Установлены корректные значения по умолчанию ('' для строк, 0 для чисел, [] для массивов)
+- Предотвращены "Undefined index" предупреждения
+- Улучшена валидация входных данных
 
 ---
 

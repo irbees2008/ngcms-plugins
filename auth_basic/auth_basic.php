@@ -31,11 +31,11 @@ class auth_basic extends CoreAuthPlugin
 		}
 		// Проверка пароля. Все типы регистрации сохраняют пароль либо сразу, либо после активации.
 		if ($row['pass'] != EncodePassword($password)) {
-			logger('auth_basic', 'Failed login attempt: user=' . sanitize($username) . ', ip=' . get_ip());
+			logger('Failed login attempt: user=' . sanitize($username) . ', ip=' . get_ip(), 'warning', 'auth_basic.log');
 			return 'ERR:NOT_ENTERED';
 		}
 
-		logger('auth_basic', 'Successful login: user=' . sanitize($username) . ', id=' . $row['id'] . ', ip=' . get_ip());
+		logger('Successful login: user=' . sanitize($username) . ', id=' . $row['id'] . ', ip=' . get_ip(), 'info', 'auth_basic.log');
 		return $row;
 	}
 
@@ -67,7 +67,7 @@ class auth_basic extends CoreAuthPlugin
 		// На всякий случай кладём в сессию ID пользователя
 		$_SESSION['auth_user_id'] = $dbrow['id'];
 
-		logger('auth_basic', 'Auth session saved: user_id=' . $dbrow['id'] . ', ip=' . get_ip() . ', remember=' . ($config['remember'] ? 'yes' : 'no'));
+		logger('Auth session saved: user_id=' . $dbrow['id'] . ', ip=' . get_ip() . ', remember=' . ($config['remember'] ? 'yes' : 'no'), 'info', 'auth_basic.log');
 		return true;
 	}
 
@@ -117,7 +117,7 @@ class auth_basic extends CoreAuthPlugin
 		}
 		unset($_SESSION['auth_user_id']);
 
-		logger('auth_basic', 'User logged out: user_id=' . ($userROW['id'] ?? 'unknown') . ', ip=' . get_ip());
+		logger('User logged out: user_id=' . ($userROW['id'] ?? 'unknown') . ', ip=' . get_ip(), 'info', 'auth_basic.log');
 		return true;
 	}
 	// Вернуть массив параметров для формы регистрации
@@ -448,7 +448,7 @@ class auth_basic extends CoreAuthPlugin
 		}
 
 		if ($userid > 0) {
-			logger('auth_basic', 'User registered: login=' . sanitize($values['login']) . ', email=' . sanitize($values['email']) . ', id=' . $userid . ', type=' . $config['register_type'] . ', ip=' . get_ip());
+			logger('User registered: login=' . sanitize($values['login']) . ', email=' . sanitize($values['email']) . ', id=' . $userid . ', type=' . $config['register_type'] . ', ip=' . get_ip(), 'info', 'auth_basic.log');
 		}
 
 		return ($userid > 0) ? $userid : 1;
@@ -541,7 +541,7 @@ class auth_basic extends CoreAuthPlugin
 			);
 			@file_put_contents($logFile, date('Y-m-d H:i:s') . "\tSENT_TO=" . $row['mail'] . "\n", FILE_APPEND);
 
-			logger('auth_basic', 'Password restore sent: user=' . sanitize($row['name']) . ', email=' . sanitize($row['mail']) . ', ip=' . get_ip());
+			logger('Password restore sent: user=' . sanitize($row['name']) . ', email=' . sanitize($row['mail']) . ', ip=' . get_ip(), 'info', 'auth_basic.log');
 			return 1;
 		} else {
 			$msg = $lang['auth_nouser'];

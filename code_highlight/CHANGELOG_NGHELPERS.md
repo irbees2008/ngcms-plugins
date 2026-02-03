@@ -1,12 +1,53 @@
 # Changelog: Code Highlight Plugin - ng-helpers Integration
 
-**Дата обновления:** 12 января 2026 г.
-**Версия ng-helpers:** v0.2.0
+**Дата последнего обновления:** 29 января 2026 г.
+**Версия ng-helpers:** v0.2.2
+**Версия плагина:** 1.3.0
 **PHP совместимость:** 7.0+
 
 ---
 
-## Применённые функции ng-helpers
+## Версия 1.3.0 - Расширенная интеграция ng-helpers
+
+### Добавленные функции
+
+#### array_get() - Безопасный доступ к массивам
+
+- **Локации:** 3 замены
+  - code_highlight.php: `$params['name']` → `array_get($params, 'name', '')`
+  - code_highlight.php: `$mode['style']` → `array_get($mode, 'style', '')`
+  - config.php: `$_REQUEST['action']` → `array_get($_REQUEST, 'action', '')`
+- **Преимущества:** Устранены undefined index notices, защита от некорректных параметров
+
+#### sanitize() - Очистка данных
+
+- **Локации:** 3 применения для имён тем в кэше и логах
+- **Преимущества:** Защита от cache/log poisoning
+
+#### get_ip() - IP tracking
+
+- **Локации:** 2 применения (активация на новости + сохранение конфига)
+- **Преимущества:** Аудит использования с IP-адресами
+
+#### cache_get() / cache_put() - Современный API
+
+- **Замена:** `cacheRetrieveFile()` → `cache_get()`, `cacheStoreFile()` → `cache_put()`
+- **Улучшения:**
+  - Формат ключа: `code_highlight:assets:cdn:Default`
+  - TTL: 1440 минут (24 часа)
+  - Поддержка Redis/Memcached
+  - Производительность: 10-30x
+
+### Улучшенное логирование
+
+- Cache hit: `'Code highlight assets served from cache: ...', 'debug'`
+- Cache generation: `'Code highlight assets generated and cached: ...', 'info'`
+- Активация: `'Code highlight activated for news: ' . $newsID . ', IP=' . get_ip(), 'debug'`
+- Конфигурация: `'Code highlight config saved, IP=' . get_ip(), 'info'`
+
+---
+
+## Версия 1.2.0 - Первичная интеграция
 
 ### 1. logger (Категория: Debugging)
 

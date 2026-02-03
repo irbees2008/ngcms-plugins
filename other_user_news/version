@@ -3,7 +3,7 @@
 ;
 ID: other_user_news
 Name: Other user news
-Version: 0.1
+Version: 0.2
 Acts: twig,index
 File: other_user_news.php
 Config: config.php
@@ -13,5 +13,6 @@ Author: Rostunov Sergey
 Author_URI: http://rostunov.com
 Preinstall: no
 MinEngineBuild: 23b3116
+MinPHPVer: 8.0
 Icons: <i class="fa fa-user-plus fa-3x" aria-hidden="true"></i>
 Information: Выводит другие новости от автора текущей новости

@@ -502,15 +502,15 @@ class PluginGallery
                     ob_start();
 
                     // Show comments list
-                    comments_show($row['id'], 0, 0, $callingCommentsParams);
+                    echo comments_show($row['id'], 0, 0, $callingCommentsParams);
 
                     echo "\n";
 
                     // Show comment form (check if user can add comments)
                     if (!pluginGetVariable('comments', 'regonly') || is_array($userROW)) {
                         // Call comments_showform with proper parameters
-                        $formParams = ['module' => 'images'];
-                        comments_showform($row['id'], $formParams);
+                        $formParams = ['module' => 'images', 'outprint' => true];
+                        echo comments_showform($row['id'], $formParams);
                     } else {
                         echo '<div class="alert alert-info">Для добавления комментариев необходимо авторизоваться.</div>';
                     }
@@ -519,7 +519,7 @@ class PluginGallery
 
                     // Log for debugging
                     if (function_exists('Plugins\logger')) {
-                        logger('gallery', 'Comments output for image #' . $row['id'] . ', length: ' . strlen($commentsOutput));
+                        \Plugins\logger('Comments output for image #' . $row['id'] . ', length: ' . strlen($commentsOutput), 'info', 'gallery.log');
                     }
                 } else {
                     $commentsOutput = '<!-- Comments functions not found -->';

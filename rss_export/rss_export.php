@@ -1,7 +1,9 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
 use function Plugins\{logger, cache_get, cache_put};
+
 include_once root . "/includes/news.php";
 register_plugin_page('rss_export', '', 'plugin_rss_export', 0);
 register_plugin_page('rss_export', 'category', 'plugin_rss_export_category', 0);
@@ -67,16 +69,15 @@ function plugin_rss_export_generate($catname = '')
 	// Start benchmark
 	$startTime = microtime(true);
 	if (pluginGetVariable('rss_export', 'cache')) {
-		$cached = cache_get('rss_export_' . $cacheFileName);
-		if ($cached !== null) {
-			logger('rss_export', 'RSS feed served from cache: category=' . ($catname ?: 'all'));
+		$cacheExpire = intval(pluginGetVariable('rss_export', 'cacheExpire'));
+		$cached = cacheRetrieveFile($cacheFileName, $cacheExpire > 0 ? $cacheExpire * 60 : 3600, 'rss_export');
+		if ($cached !== false) {
 			// Убираем возможный BOM из кеша
 			$cached = preg_replace('/^\xEF\xBB\xBF/', '', $cached);
 			echo $cached;
 			exit;
 		}
 	}
-	logger('rss_export', 'Generating RSS feed: category=' . ($catname ?: 'all'));
 	// Нормализация URL (коллапс двойных слешей в пути)
 	if (!function_exists('rss_export_normalize_url')) {
 		function rss_export_normalize_url($url)
@@ -326,11 +327,7 @@ function plugin_rss_export_generate($catname = '')
 	$itemCount = count($sqlData);
 	$elapsed = round((microtime(true) - $startTime) * 1000, 2);
 	if (pluginGetVariable('rss_export', 'cache')) {
-		$cacheExpire = intval(pluginGetVariable('rss_export', 'cacheExpire'));
-		cache_put('rss_export_' . $cacheFileName, $output, $cacheExpire > 0 ? $cacheExpire * 60 : 3600);
-		logger('rss_export', 'RSS feed cached: items=' . $itemCount . ', category=' . ($catname ?: 'all') . ', elapsed=' . $elapsed . 'ms');
-	} else {
-		logger('rss_export', 'RSS feed generated (no cache): items=' . $itemCount . ', category=' . ($catname ?: 'all') . ', elapsed=' . $elapsed . 'ms');
+		cacheStoreFile($cacheFileName, $output, 'rss_export');
 	}
 	echo $output;
 	exit;

@@ -1,6 +1,6 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 //
 // Install script for plugin.
 // $action: possible action modes
@@ -9,7 +9,8 @@ if (!defined('NGCMS')) die ('HAL');
 //	autoapply       - apply installation in automatic mode [INSTALL script]
 //
 pluginsLoadConfig();
-function plugin_jchat_install($action) {
+function plugin_jchat_install($action)
+{
 
 	global $lang;
 	if ($action != 'autoapply')
@@ -18,7 +19,8 @@ function plugin_jchat_install($action) {
 		array(
 			'table'   => 'jchat',
 			'action'  => 'cmodify',
-			'charset' => 'UTF8',
+			'charset' => 'utf8mb4',
+			'collate' => 'utf8mb4_unicode_ci',
 			'key'     => 'primary key(id)',
 			'fields'  => array(
 				array('action' => 'cmodify', 'name' => 'id', 'type' => 'int', 'params' => 'not null auto_increment'),
@@ -34,6 +36,8 @@ function plugin_jchat_install($action) {
 		array(
 			'table'  => 'jchat_events',
 			'action' => 'cmodify',
+			'charset' => 'utf8mb4',
+			'collate' => 'utf8mb4_unicode_ci',
 			'key'    => 'primary key(id)',
 			'fields' => array(
 				array('action' => 'cmodify', 'name' => 'id', 'type' => 'int', 'params' => 'not null auto_increment'),

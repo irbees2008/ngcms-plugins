@@ -3,7 +3,7 @@
 ;
 ID: re_stat
 Name: Перенаправление статики
-Version: 0.02
+Version: 0.03
 Actions: ppages; re_stat.php
 Config: config.php
 Type: plugin
@@ -13,5 +13,6 @@ Author: Ivan Litvinenko (Amarelius)
 Author_URI: http://arnit.com.ua/
 Preinstall: no
 MinEngineBuild: 23b3116
+MinPHPVer: 8.0
 Icons: <i class="fa fa-exchange fa-3x" aria-hidden="true"></i>
 Information: Позволяет настроить перенаправление статических страниц на другие URL.

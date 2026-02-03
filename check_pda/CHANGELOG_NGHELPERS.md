@@ -1,12 +1,55 @@
 # Changelog: Check PDA Plugin - ng-helpers Integration
 
-**Дата обновления:** 12 января 2026 г.
-**Версия ng-helpers:** v0.2.0
+**Дата последнего обновления:** 29 января 2026 г.
+**Версия ng-helpers:** v0.2.2
+**Версия плагина:** 0.4
 **PHP совместимость:** 7.0+
 
 ---
 
-## Применённые функции ng-helpers
+## Версия 0.4 - Исправление формата logger (ng-helpers v0.2.2)
+
+### Исправленные функции
+
+#### logger() - Правильный 3-параметровый формат
+
+- **Было:** `logger('check_pda', 'Initializing Mobile Detect extension')`
+- **Стало:** `logger('Initializing Mobile Detect extension', 'info', 'check_pda.log')`
+
+**Изменения во всех вызовах:**
+
+1. **Инициализация расширения** (строка ~15):
+   - Формат: message, level, file
+   - Уровень: `info`
+   - Файл: `check_pda.log`
+
+2. **Повторная инициализация** (строка ~23):
+   - Было: `logger('check_pda', 'Mobile Detect extension already initialized')`
+   - Стало: `logger('Mobile Detect extension already initialized: ...', 'debug', 'check_pda.log')`
+   - Уровень: `debug` (менее критично)
+
+### Добавленные функции
+
+#### sanitize() - Безопасность сообщений об ошибках
+
+- **Использование:**
+  ```php
+  logger('Mobile Detect extension already initialized: ' . sanitize($e->getMessage(), 'string'), 'debug', 'check_pda.log');
+  ```
+- **Преимущества:**
+  - Защита от injection в логах через exception messages
+  - Безопасное логирование сообщений об ошибках
+  - Предотвращение log poisoning
+
+### Улучшения
+
+- Более точные уровни логирования: `info` для инициализации, `debug` для повторной
+- Добавлено логирование сообщения exception для отладки
+- Защита от потенциальных атак через exception messages
+
+---
+
+## Версия 0.3 - Первичная интеграция
 
 ### 1. logger (Категория: Debugging)
 

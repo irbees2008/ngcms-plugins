@@ -23,14 +23,14 @@ class AntispamFilterComments extends FilterComments
 			$akis->setCommentContent($SQL['text']);
 
 			if ($akis->isCommentSpam()) {
-				logger('comments_akismet', 'SPAM BLOCKED: author=' . sanitize($SQL['author']) . ', email=' . sanitize($SQL['mail']) . ', ip=' . get_ip() . ', news_id=' . ($newsRec['id'] ?? 'unknown'));
+				logger('SPAM BLOCKED: author=' . sanitize($SQL['author'], 'string') . ', email=' . sanitize($SQL['mail'], 'email') . ', ip=' . get_ip() . ', news_id=' . ($newsRec['id'] ?? 'unknown'), 'warning', 'comments_akismet.log');
 				return array('result' => 0, 'errorText' => 'Akismet blocked your comment!');
 			} else {
-				logger('comments_akismet', 'Comment approved: author=' . sanitize($SQL['author']) . ', ip=' . get_ip() . ', news_id=' . ($newsRec['id'] ?? 'unknown'));
+				logger('Comment approved: author=' . sanitize($SQL['author'], 'string') . ', ip=' . get_ip() . ', news_id=' . ($newsRec['id'] ?? 'unknown'), 'debug', 'comments_akismet.log');
 				return 1;
 			}
 		} else {
-			logger('comments_akismet', 'ERROR: Invalid API key - ' . pluginGetVariable('comments_akismet', 'akismet_apikey'));
+			logger('ERROR: Invalid API key - ' . pluginGetVariable('comments_akismet', 'akismet_apikey'), 'error', 'comments_akismet.log');
 			return array('result' => 0, 'errorText' => 'Akismet key is invalid! ' . pluginGetVariable('comments_akismet', 'akismet_apikey'));
 		}
 	}

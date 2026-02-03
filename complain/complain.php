@@ -2,7 +2,7 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
-use function Plugins\{logger, get_ip, sanitize, validate_email};
+use function Plugins\{array_get, logger, get_ip, sanitize, validate_email};
 // Ensure plugin assets are attached globally so links with class `complain-open` work on any page
 $home = isset($config['home_url']) ? rtrim($config['home_url'], '/') : '';
 $cssPath = $home . '/engine/plugins/complain/tpl/complain.css';
@@ -65,7 +65,7 @@ function plugin_complain_screen()
 		$GLOBALS['__complain_js_attached'] = 1;
 	}
 	// Suppress outer template only for AJAX requests
-	$SUPRESS_TEMPLATE_SHOW = (isset($_REQUEST['ajax']) && intval($_REQUEST['ajax'])) ? 1 : 0;
+	$SUPRESS_TEMPLATE_SHOW = (array_get($_REQUEST, 'ajax', 0) && intval(array_get($_REQUEST, 'ajax', 0))) ? 1 : 0;
 	// Determine paths for all template files
 	$tpath = locatePluginTemplates(array('list.entry', 'list.header', 'infoblock'), 'complain', 1);
 	// No access for unregistered users
@@ -154,7 +154,7 @@ function plugin_complain_add()
 		$EXTRA_HTML_VARS[] = ['type' => 'js', 'data' => $jsPath];
 		$GLOBALS['__complain_js_attached'] = 1;
 	}
-	$SUPRESS_TEMPLATE_SHOW = (isset($_REQUEST['ajax']) && intval($_REQUEST['ajax'])) ? 1 : 0;
+	$SUPRESS_TEMPLATE_SHOW = (array_get($_REQUEST, 'ajax', 0) && intval(array_get($_REQUEST, 'ajax', 0))) ? 1 : 0;
 	// Determine paths for all template files
 	$tpath = locatePluginTemplates(array('ext.form', 'infoblock'), 'complain', 1);
 	// Check if we shouldn't show block for unregs
@@ -172,7 +172,7 @@ function plugin_complain_add()
 		}
 	}
 	$txvars = array();
-	$txvars['vars'] = array('ds_id' => intval($_REQUEST['ds_id']), 'entry_id' => intval($_REQUEST['entry_id']), 'errorlist' => $err);
+	$txvars['vars'] = array('ds_id' => intval(array_get($_REQUEST, 'ds_id', 0)), 'entry_id' => intval(array_get($_REQUEST, 'entry_id', 0)), 'errorlist' => $err);
 	$txvars['regx']['#\[notify\](.*?)\[/notify\]#is'] = ((is_array($userROW)) && (pluginGetVariable('complain', 'inform_reporter') == 2)) ? '$1' : '';
 	$txvars['regx']['#\[email\](.*?)\[/email\]#is'] = ((!is_array($userROW)) && pluginGetVariable('complain', 'allow_unreg_inform')) ? '$1' : '';
 	$txvars['regx']['#\[text\](.*?)\[/text\]#is'] = ((is_array($userROW) && (pluginGetVariable('complain', 'allow_text') == 1)) || (pluginGetVariable('complain', 'allow_text') == 2)) ? '$1' : '';
@@ -205,10 +205,10 @@ function plugin_complain_post()
 	}
 	// Check if reference storage & entry exists, fetch entrie's params
 	$cdata = array();
-	switch (intval($_REQUEST['ds_id'])) {
+	switch (intval(array_get($_REQUEST, 'ds_id', 0))) {
 		case 1:
-			if (is_array($dse = $mysql->record("select n.*, u.mail from " . prefix . "_news n left join " . uprefix . "_users u on n.author_id = u.id where n.id = " . db_squote($_REQUEST['entry_id']) . " and n.approve=1"))) {
-				$cdata['ds_id'] = intval($_REQUEST['ds_id']);
+			if (is_array($dse = $mysql->record("select n.*, u.mail from " . prefix . "_news n left join " . uprefix . "_users u on n.author_id = u.id where n.id = " . db_squote(array_get($_REQUEST, 'entry_id', 0)) . " and n.approve=1"))) {
+				$cdata['ds_id'] = intval(array_get($_REQUEST, 'ds_id', 0));
 				$cdata['id'] = $dse['id'];
 				$cdata['title'] = $dse['title'];
 				$cdata['link'] = newsGenerateLink($dse, false, 0, true);
@@ -226,7 +226,7 @@ function plugin_complain_post()
 		$template['vars']['mainblock'] = $tpl->show('infoblock');
 		return;
 	}
-	$errid = intval($_REQUEST['error']);
+	$errid = intval(array_get($_REQUEST, 'error', 0));
 	$errtext = plugin_complain_resolve_error($errid);
 	// Do not accept unresolvable errors
 	if ($errtext === null) {
@@ -237,22 +237,22 @@ function plugin_complain_post()
 	}
 	// Check reporter notification mode
 	if (is_array($userROW)) {
-		$flagNotify = ((pluginGetVariable('complain', 'inform_reporter') == '1') || ((pluginGetVariable('complain', 'inform_reporter') == '2') && ($_REQUEST['notify']))) ? 1 : 0;
+		$flagNotify = ((pluginGetVariable('complain', 'inform_reporter') == '1') || ((pluginGetVariable('complain', 'inform_reporter') == '2') && (array_get($_REQUEST, 'notify', 0)))) ? 1 : 0;
 		$publisherMail = $userROW['mail'];
 	} else {
 		// Use validate_email for proper email validation
-		if (!empty($_REQUEST['mail']) && validate_email($_REQUEST['mail'])) {
-			$publisherMail = $_REQUEST['mail'];
+		if (!empty(array_get($_REQUEST, 'mail', '')) && validate_email(array_get($_REQUEST, 'mail', ''))) {
+			$publisherMail = array_get($_REQUEST, 'mail', '');
 		} else {
 			$publisherMail = '';
-			if (!empty($_REQUEST['mail'])) {
-				logger('complain', 'Invalid email provided: ' . sanitize($_REQUEST['mail']) . ', IP=' . get_ip());
+			if (!empty(array_get($_REQUEST, 'mail', ''))) {
+				logger('Invalid email provided: ' . sanitize(array_get($_REQUEST, 'mail', ''), 'string') . ', IP=' . get_ip(), 'warning', 'complain.log');
 			}
 		}
 		$flagNotify = (pluginGetVariable('complain', 'allow_unreg_inform') && $publisherMail) ? 1 : 0;
 	}
 	// Text error description with sanitization
-	$errorText = ((is_array($userROW) && (pluginGetVariable('complain', 'allow_text') == 1)) || (pluginGetVariable('complain', 'allow_text') == 2)) ? sanitize($_REQUEST['error_text']) : '';
+	$errorText = ((is_array($userROW) && (pluginGetVariable('complain', 'allow_text') == 1)) || (pluginGetVariable('complain', 'allow_text') == 2)) ? sanitize(array_get($_REQUEST, 'error_text', ''), 'string') : '';
 	// Fill flags variable
 	$flags = $flagNotify ? 'N' : '';
 	// Let's make a report
@@ -260,7 +260,22 @@ function plugin_complain_post()
 
 	// Log complain creation
 	$userInfo = is_array($userROW) ? $userROW['name'] : 'guest';
-	logger('complain', 'New complaint: error=' . $errid . ', entry=' . $cdata['id'] . ', user=' . $userInfo . ', IP=' . get_ip());
+	logger('New complaint: error=' . $errid . ', entry=' . $cdata['id'] . ', user=' . $userInfo . ', IP=' . get_ip(), 'info', 'complain.log');
+
+	// Telegram notification
+	if (getPluginStatusActive('jchat_tgnotify')) {
+		@include_once(root . 'plugins/jchat_tgnotify/jchat_tgnotify.php');
+		if (function_exists('ngcms_tg_notify')) {
+			ngcms_tg_notify('complain', [
+				'title'    => 'Жалоба на новость',
+				'author'   => is_array($userROW) ? $userROW['name'] : 'Гость',
+				'text'     => $errtext . ($errorText ? ': ' . $errorText : ''),
+				'url'      => home . '/admin.php?mod=extra-config&plugin=complain',
+				'datetime' => date('Y-m-d H:i:s'),
+			]);
+		}
+	}
+
 	// Write a mail (if needed)
 	if (pluginGetVariable('complain', 'inform_author') || pluginGetVariable('complain', 'inform_admin') || pluginGetVariable('complain', 'inform_admins')) {
 		$tmvars = array(
@@ -277,7 +292,7 @@ function plugin_complain_post()
 		// Inform author
 		if (pluginGetVariable('complain', 'inform_author') && strlen($cdata['author_mail'])) {
 			zzMail($cdata['author_mail'], $lang['complain:mail.open.subj'], $mail_text, 'text');
-			logger('complain', 'Email sent to author: ' . $cdata['author'] . ', email=' . $cdata['author_mail']);
+			logger('Email sent to author: ' . $cdata['author'] . ', email=' . $cdata['author_mail'], 'debug', 'complain.log');
 		}
 		// Inform site admins
 		if (pluginGetVariable('complain', 'inform_admin')) {
@@ -318,7 +333,7 @@ function plugin_complain_update()
 		$EXTRA_HTML_VARS[] = ['type' => 'js', 'data' => $jsPath];
 		$GLOBALS['__complain_js_attached'] = 1;
 	}
-	$SUPRESS_TEMPLATE_SHOW = (isset($_REQUEST['ajax']) && intval($_REQUEST['ajax'])) ? 1 : 0;
+	$SUPRESS_TEMPLATE_SHOW = (array_get($_REQUEST, 'ajax', 0) && intval(array_get($_REQUEST, 'ajax', 0))) ? 1 : 0;
 	// Determine paths for all template files
 	$tpath = locatePluginTemplates(array('infoblock'), 'complain', 1);
 	$link_admin = str_replace('{link}', generateLink('core', 'plugin', array('plugin' => 'complain')), $lang['complain:link.admin']);
@@ -331,9 +346,12 @@ function plugin_complain_update()
 	}
 	// Fetch list of affected incidents
 	$ilist = array();
-	foreach ($_REQUEST as $k => $v) {
-		if (preg_match('#^inc_(\d+)$#', $k, $m) && ($v == "1"))
-			array_push($ilist, $m[1]);
+	$requestData = array_get($_REQUEST, null, array());
+	if (is_array($requestData)) {
+		foreach ($requestData as $k => $v) {
+			if (preg_match('#^inc_(\d+)$#', $k, $m) && ($v == "1"))
+				array_push($ilist, $m[1]);
+		}
 	}
 	// Exit if no incidents are marked
 	if (!count($ilist)) {
@@ -347,17 +365,17 @@ function plugin_complain_update()
 	$isAdmin = ($userROW['status'] == 1) || in_array($userROW['name'], $admins);
 	// ** Check requested actions **
 	// Change ownership
-	if ($_REQUEST['setowner'] == '1') {
+	if (array_get($_REQUEST, 'setowner', '') == '1') {
 		// Admins can change all ownerships, users - can set ownership only for their news
 		// that are not already owned by anyone
-		$mysql->query("update " . prefix . "_complain set owner_id = " . db_squote($userROW['id']) . " where id in (" . join(",", $ilist) . ")" . (($userROW['status'] > 1 && (!in_array($userROW['name'], $admins))) ? ' and owner_id = 0 and author_id=' . db_squote($userROW['id']) : ''));
-		logger('complain', 'Owner changed for incidents: ' . join(',', $ilist) . ', new_owner=' . $userROW['name'] . ', IP=' . get_ip());
+		$mysql->query("update " . prefix . "_complain set owner_id = " . db_squote($userROW['id']) . " where id in (" . join(",", $ilist) . ")" . ((($userROW['status'] > 1 && (!in_array($userROW['name'], $admins)))) ? ' and owner_id = 0 and author_id=' . db_squote($userROW['id']) : ''));
+		logger('Owner changed for incidents: ' . join(',', $ilist) . ', new_owner=' . $userROW['name'] . ', IP=' . get_ip(), 'info', 'complain.log');
 	}
 	// Change status
-	if ($_REQUEST['setstatus'] == '1') {
+	if (array_get($_REQUEST, 'setstatus', '') == '1') {
 		$ownerCond = $isAdmin ? '' : (" and owner_id = " . db_squote($userROW['id']));
 		foreach ($mysql->select("select * from " . prefix . "_complain where id in (" . join(", ", $ilist) . ")" . $ownerCond) as $irow) {
-			$newstatus = intval($_REQUEST['newstatus']);
+			$newstatus = intval(array_get($_REQUEST, 'newstatus', 0));
 			// If 'N' flag is set in `flags` field - we should make a notification of an author
 			if (strpos($irow['flags'], 'N') !== false) {
 				// // If links found and "inform_reporter" flag is ON and status is really changed - send message
@@ -368,7 +386,7 @@ function plugin_complain_update()
 				switch (intval($irow['ds_id'])) {
 					case 1:
 						if (is_array($dse = $mysql->record("select n.*, u.mail from " . prefix . "_news n left join " . uprefix . "_users u on n.author_id = u.id where n.id = " . db_squote($irow['entry_id'])))) {
-							$cdata['ds_id'] = intval($_REQUEST['ds_id']);
+							$cdata['ds_id'] = intval(array_get($_REQUEST, 'ds_id', 0));
 							$cdata['id'] = $dse['id'];
 							$cdata['title'] = $dse['title'];
 							$cdata['link'] = newsGenerateLink($dse, false, 0, true);
@@ -388,7 +406,7 @@ function plugin_complain_update()
 			}
 			// Update report status
 			$mysql->query("update " . prefix . "_complain set status = " . db_squote($newstatus) . ((($newstatus == 3) || ($newstatus == 4)) ? ", complete = 1, rdate = now()" : '') . " where id = " . db_squote($irow['id']));
-			logger('complain', 'Status changed: id=' . $irow['id'] . ', old_status=' . $irow['status'] . ', new_status=' . $newstatus . ', user=' . $userROW['name'] . ', IP=' . get_ip());
+			logger('Status changed: id=' . $irow['id'] . ', old_status=' . $irow['status'] . ', new_status=' . $newstatus . ', user=' . $userROW['name'] . ', IP=' . get_ip(), 'info', 'complain.log');
 		}
 	}
 	$tpl->template('infoblock', $tpath['infoblock']);

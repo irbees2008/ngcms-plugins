@@ -1,11 +1,56 @@
-# CHANGELOG: ng-helpers v0.2.0 Integration - content_generator Plugin
+# CHANGELOG: ng-helpers v0.2.2 Integration - content_generator Plugin
 
 ## 📋 Общая информация
 
 **Плагин:** content_generator
-**Версия ng-helpers:** v0.2.0
-**Дата модернизации:** 14 января 2026 г.
+**Версия плагина:** 0.03
+**Версия ng-helpers:** v0.2.2
+**Дата модернизации:** 30 января 2026 г.
 **Назначение:** Генератор тестового контента для заполнения сайта (новости и статические страницы)
+
+---
+
+## Версия 0.03 (30.01.2026)
+
+### Обновления модернизации
+
+**Применённые изменения:**
+
+- ✅ Добавлена функция `array_get()` для безопасного доступа к суперглобальным массивам
+- ✅ Исправлен формат `logger()` на 3-параметровый: `logger($message, $level, $file)`
+- ✅ Добавлено логирование сохранения конфигурации с IP-адресом
+- ✅ Улучшена очистка данных: добавлен `sanitize()` для генерируемых заголовков
+- ✅ Обновлены use statements в content_generator.php и config.php
+
+**Статистика замен:**
+
+- **content_generator.php:** 3 изменения
+  - 1 добавление `array_get` в use statement
+  - 1 замена `$_REQUEST['actionName']` → `array_get($_REQUEST, 'actionName', '')`
+  - 2 исправления формата `logger()` (2 → 3 параметра)
+  - 2 добавления `sanitize($title, 'string')` для генерируемых заголовков
+
+- **config.php:** 5 изменений
+  - 1 добавление use statement для `array_get`, `logger`, `get_ip`
+  - 1 замена `isset($_POST['save']) && $_POST['save']` → `array_get($_POST, 'save', '')`
+  - 3 замены `$_POST['key'] ?? default` → `array_get($_POST, 'key', default)`
+  - 1 замена `$_REQUEST['action'] ?? ''` → `array_get($_REQUEST, 'action', '')`
+  - 1 новая точка логирования при сохранении конфигурации
+
+**Улучшения логирования:**
+
+- ✅ Исправлены все вызовы `logger()` на формат: `logger($message, $level, $file)`
+  - Уровни: 'info' для успешной генерации, 'error' для ошибок
+  - Файл лога: 'content_generator.log'
+- ✅ Добавлено логирование сохранения конфигурации в config.php
+- ✅ Все logger() вызовы включают IP-адрес через `get_ip()`
+
+**Улучшения безопасности:**
+
+- ✅ Добавлен `sanitize($title, 'string')` для генерируемых заголовков новостей и статических страниц
+- ✅ Это предотвращает возможные проблемы с некорректным контентом от Faker
+
+---
 
 ## 🎯 Описание плагина
 
@@ -19,35 +64,83 @@ content_generator — утилита для быстрого создания т
 
 ## 🔧 Использованные функции ng-helpers
 
-### 1. **logger()** — Логирование генерации контента
+### 1. **array_get()** — Безопасный доступ к массивам 🆕
+
+Защита от undefined index при работе с входными данными.
+
+**Местоположение:**
+
+- Получение action параметра в content_generator.php
+- Получение параметров формы в config.php
+- Обработка POST данных при сохранении настроек
+
+**Примеры использования:**
+
+```php
+// Получение action из запроса
+$action = array_get($_REQUEST, 'actionName', '');
+
+// Получение параметров конфигурации из формы
+$newsCount = max(1, intval(array_get($_POST, 'news_count', 50)));
+$staticCount = max(1, intval(array_get($_POST, 'static_count', 20)));
+$maxAllowed = max($newsCount, $staticCount, intval(array_get($_POST, 'max_allowed', 1000)));
+
+// Проверка сохранения формы
+if (array_get($_POST, 'save', '') == '1') {
+    // Сохранение настроек
+}
+
+// Switch с безопасным доступом
+switch (array_get($_REQUEST, 'action', '')) {
+    // Обработка действий
+}
+```
+
+**Преимущества:**
+
+- Устранение PHP Notice: Undefined index
+- Типобезопасные значения по умолчанию
+- Чистый и понятный код
+- Защита от некорректных входных данных
+
+---
+
+### 2. **logger()** — Логирование генерации контента
 
 Мониторинг всех операций генерации для аудита и диагностики.
+
+**Формат:** `logger($message, $level, $file)` (3 параметра)
 
 **Местоположение:**
 
 - Успешная генерация контента
 - Ошибки генерации
+- Сохранение конфигурации плагина 🆕
 
 **Примеры использования:**
 
 ```php
-// Успешная генерация
-logger('content_generator', 'Content generated: type=' . $type . ', count=' . $generated . ', elapsed=' . round($elapsed, 2) . 'ms, ip=' . get_ip());
+// Успешная генерация (ИСПРАВЛЕНО)
+logger('Content generated: type=' . $type . ', count=' . $generated . ', elapsed=' . round($elapsed, 2) . 'ms, ip=' . get_ip(), 'info', 'content_generator.log');
 
-// Ошибка генерации
-logger('content_generator', 'ERROR: ' . $e->getMessage() . ', ip=' . get_ip());
+// Ошибка генерации (ИСПРАВЛЕНО)
+logger('ERROR: ' . $e->getMessage() . ', ip=' . get_ip(), 'error', 'content_generator.log');
+
+// Сохранение конфигурации (НОВОЕ)
+logger('Content Generator config saved: news=' . $newsCount . ', static=' . $staticCount . ', max=' . $maxAllowed . ', ip=' . get_ip(), 'info', 'content_generator.log');
 ```
 
 **Преимущества:**
 
 - Аудит всех операций генерации
 - Отслеживание производительности
-- Идентификация пользователей
+- Идентификация пользователей через IP
 - Диагностика ошибок
+- Аудит изменений конфигурации 🆕
 
 ---
 
-### 2. **benchmark()** — Измерение производительности
+### 3. **benchmark()** — Измерение производительности
 
 Отслеживание времени генерации контента для оптимизации.
 
@@ -135,13 +228,11 @@ logger('content_generator', 'Content generated: type=' . $type . ', count=' . $g
 ### Факторы производительности
 
 1. **БД**
-
    - INSERT новости: 10-30 мс
    - UPDATE счетчиков: 5-15 мс
    - Индексы: критичны для больших таблиц
 
 2. **Faker Library**
-
    - Инициализация: 50-100 мс (один раз)
    - Генерация текста: 1-5 мс на элемент
    - Локаль ru_RU: +10-20 мс

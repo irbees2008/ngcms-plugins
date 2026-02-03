@@ -2,8 +2,8 @@
 ; Version description file for plugin @@ Next Generation CMS
 ;
 ID: faq
-Name: Вопросы и ответы
-Version: 0.1
+Name: Вопросы и ответы (modernized with ng-helpers v0.2.2)
+Version: 0.2
 Acts: ppages, index
 File: faq.php
 Config: config.php
@@ -11,7 +11,7 @@ Install: install.php
 Deinstall: uninstall.php
 Type: plugin
 Title: Вопросы и ответы
-Description: Вопросы и ответы
+Description: Плагин "Вопросы и ответы" с поддержкой ng-helpers v0.2.2: безопасный доступ к массивам через array_get(), обновленный формат логирования logger(message, level, file), улучшенная безопасность
 Author: Rostunov Sergey
 Author_URI: http://rostunov.com
 Preinstall: no

@@ -1,6 +1,19 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
+
+// Fallback for array_get if ng-helpers not available
+if (!function_exists('Plugins\\array_get')) {
+    function gsmg_array_get($array, $key, $default = null)
+    {
+        return isset($array[$key]) ? $array[$key] : $default;
+    }
+} else {
+    function gsmg_array_get($array, $key, $default = null)
+    {
+        return \Plugins\array_get($array, $key, $default);
+    }
+}
 //
 // Configuration file for plugin
 //
@@ -10,7 +23,7 @@ pluginsLoadConfig();
 $cfg = array();
 $cfgX = array();
 $pl = generatePluginLink('gsmg', null, [], [], false, true);
-array_push($cfg, array('descr' => 'Плагин генерации XML карты сайта для поисковой системы Google<br/>При включении плагина Sitemap доступно по ссылке: <a target="_blank" href="'.$pl.'">'.$pl.'</a>'));
+array_push($cfg, array('descr' => 'Плагин генерации XML карты сайта для поисковой системы Google<br/>При включении плагина Sitemap доступно по ссылке: <a target="_blank" href="' . $pl . '">' . $pl . '</a>'));
 array_push($cfgX, array('name' => 'main', 'title' => "Добавлять головную страницу в карту сайта", 'descr' => "<b>Да</b> - страница будет добавляться в карту сайта<br /><b>Нет</b> - страница не будет добавляться в карту сайта", 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => intval(extra_get_param($plugin, 'main'))));
 array_push($cfgX, array('name' => 'main_pr', 'title' => "Приоритет головной страницы", 'descr' => 'значение от <b>0.0</b> до <b>1.0</b>', 'type' => 'input', 'value' => (extra_get_param($plugin, 'main_pr') == '') ? '1.0' : extra_get_param($plugin, 'main_pr')));
 array_push($cfgX, array('name' => 'mainp', 'title' => "Добавлять постраничку головной страницы в карту сайта", 'descr' => "<b>Да</b> - страница будет добавляться в карту сайта<br /><b>Нет</b> - страница не будет добавляться в карту сайта", 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => intval(extra_get_param($plugin, 'mainp'))));
@@ -34,12 +47,11 @@ $cfgX = array();
 array_push($cfgX, array('name' => 'cache', 'title' => "Использовать кеширование карты сайта<br /><small><b>Да</b> - кеширование используется<br /><b>Нет</b> - кеширование не используется</small>", 'type' => 'select', 'values' => array('1' => 'Да', '0' => 'Нет'), 'value' => intval(extra_get_param($plugin, 'cache'))));
 array_push($cfgX, array('name' => 'cacheExpire', 'title' => 'Период обновления кеша (в секундах)<br /><small>(через сколько секунд происходит обновление кеша. Значение по умолчанию: <b>10800</b>, т.е. 3 часа)', 'type' => 'input', 'value' => intval(extra_get_param($plugin, 'cacheExpire')) ? extra_get_param($plugin, 'cacheExpire') : '10800'));
 array_push($cfg, array('mode' => 'group', 'title' => '<b>Настройки кеширования</b>', 'entries' => $cfgX));
-// RUN 
-if ($_REQUEST['action'] == 'commit') {
+// RUN
+if (gsmg_array_get($_REQUEST, 'action', '') == 'commit') {
     // If submit requested, do config save
     commit_plugin_config_changes($plugin, $cfg);
     print_commit_complete($plugin);
 } else {
     generate_config_page($plugin, $cfg);
 }
-?>

@@ -1,3 +1,9 @@
+[0.04][2026-02-03]
+* Модернизация с ng-helpers v0.2.2
+* Заменено cacheRetrieveFile/cacheStoreFile на cache()
+* Добавлено логирование (rss_import.log)
+* Требуется PHP 8.0+
+
 [0.3][2025-10-30]
 + Перевод шаблонов плагина на Twig (rss.tpl, entries.tpl), сохранена совместимость со старым синтаксисом
 + Переход на рендер через Twig и locatePluginTemplates; добавлен вызов из шаблонов: {{ callPlugin('rss_import.show', {'index': N}) }}

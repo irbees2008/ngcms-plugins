@@ -3,11 +3,11 @@
 ;
 ID: clear_config
 Name: Отчистка файлов конфигурации
-Version: 0.02
+Version: 0.04
 Config: config.php
 Type: plugin
 Title: Отчистка файла конфигурации
-Description: Удаляет настройки плагинов из файлов конфигураций
+Description: Удаляет настройки плагинов из файлов конфигураций, создание и восстановление резервных копий
 Author: Ivan Litvinenko (Amarelius)
 Author_URI: http://arnit.com.ua/
 Preinstall: no

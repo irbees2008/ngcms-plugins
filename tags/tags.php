@@ -481,10 +481,10 @@ function plugin_tags_generatecloud($ppage = 0, $catlist = '', $age = 0)
 		}
 	}
 	// Generate cache file name [ we should take into account SWITCHER plugin ]
-	$cacheKey = 'tags:cloud:' . md5($config['home_url'] . $config['theme'] . $config['default_lang'] . $masterTPL . ('page' . (isset($_REQUEST['page']) ? $_REQUEST['page'] : '')) . 'age' . $age . 'cat' . (is_array($cl) ? join(",", $cl) : $cl));
+	$cacheKey = 'tags_cloud_' . md5($config['home_url'] . $config['theme'] . $config['default_lang'] . $masterTPL . ('page' . (isset($_REQUEST['page']) ? $_REQUEST['page'] : '')) . 'age' . $age . 'cat' . (is_array($cl) ? join(",", $cl) : $cl)) . '.txt';
 	if (pluginGetVariable('tags', 'cache')) {
-		$cacheData = cache_get($cacheKey);
-		if ($cacheData !== null) {
+		$cacheData = cacheRetrieveFile($cacheKey, pluginGetVariable('tags', 'cacheExpire'), 'tags');
+		if ($cacheData !== false) {
 			// We got data from cache. Return it and stop
 			$template['vars'][$ppage ? 'mainblock' : 'plugin_tags'] = $cacheData;
 			return;
@@ -613,8 +613,7 @@ function plugin_tags_generatecloud($ppage = 0, $catlist = '', $age = 0)
 	$output = $tpl->show($masterTPL);
 	$template['vars'][$ppage ? 'mainblock' : 'plugin_tags'] = $output;
 	if (pluginGetVariable('tags', 'cache')) {
-		cache_put($cacheKey, $output, pluginGetVariable('tags', 'cacheExpire'));
-		logger('tags', 'Tags cloud cached: type=' . $masterTPL . ', tags=' . $tagCount . ', age=' . $age . ', categories=' . count($cl));
+		cacheStoreFile($cacheKey, $output, 'tags');
 	}
 }
 /**

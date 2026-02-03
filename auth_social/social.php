@@ -106,7 +106,7 @@ function socialAuth($params = [])
 				$_SESSION['vkid_state'] = $state;
 				$_SESSION['vkid_code_verifier'] = $codeVerifier;
 
-				logger('auth_social', 'VK ID OAuth redirect initiated, IP: ' . get_ip());
+				logger('VK ID OAuth redirect initiated, IP: ' . get_ip(), 'info', 'auth_social.log');
 
 				$params = [
 					'response_type' => 'code',
@@ -139,11 +139,11 @@ function socialAuth($params = [])
 			// Валидация email
 			$email = $auther->getEmail();
 			if ($email && !validate_email($email)) {
-				logger('auth_social', 'Invalid email from ' . $auther->getProvider() . ': ' . $email . ', IP: ' . get_ip(), 'warning');
+				logger('Invalid email from ' . $auther->getProvider() . ': ' . $email . ', IP: ' . get_ip(), 'warning', 'auth_social.log');
 				die('Invalid email address received from social network');
 			}
 
-			logger('auth_social', 'Successful OAuth authentication: ' . $auther->getProvider() . ' user ' . $auther->getName() . ' (' . $email . '), IP: ' . get_ip());
+			logger('Successful OAuth authentication: ' . $auther->getProvider() . ' user ' . $auther->getName() . ' (' . $email . '), IP: ' . get_ip(), 'info', 'auth_social.log');
 
 			// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] user data=" . json_encode($userData, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
 			// Check existing user
@@ -155,7 +155,7 @@ function socialAuth($params = [])
 			// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] existing user found=" . (is_array($record) ? 'yes id=' . ($record['id'] ?? 'null') : 'no') . "\n", FILE_APPEND);
 			if (!$record) {
 				// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] creating new user\n", FILE_APPEND);
-				logger('auth_social', 'Creating new user from ' . $auther->getProvider() . ': ' . $auther->getName() . ' (' . $auther->getEmail() . '), IP: ' . get_ip());
+				logger('Creating new user from ' . $auther->getProvider() . ': ' . $auther->getName() . ' (' . $auther->getEmail() . '), IP: ' . get_ip(), 'info', 'auth_social.log');
 				try {
 					$birthday_value = $auther->getBirthday();
 					// // @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] birthday raw=" . json_encode($birthday_value) . "\n", FILE_APPEND);

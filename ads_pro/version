@@ -3,7 +3,7 @@
 ;
 ID: ads_pro
 Name: ADS manager pro
-Version: 1.0.0
+Version: 1.0.1
 Actions: core; ads_pro.php
 Config: config.php
 Install: install.php

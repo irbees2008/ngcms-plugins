@@ -1,12 +1,20 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
+
+// Modernized with ng-helpers v0.2.2 (2026)
+// - Added logger for blog operations
+// - Requires PHP 8.0+
+
+use function Plugins\{logger};
 // Preload required libraries
 loadPluginLibrary('uprofile', 'lib');
 loadPluginLang('ublog', 'main', '', '', ':');
 include_once root . 'includes/news.php';
-class UblogFilter extends p_uprofileFilter {
-	function showProfile($userID, $SQLrow, &$tvars) {
+class UblogFilter extends p_uprofileFilter
+{
+	function showProfile($userID, $SQLrow, &$tvars)
+	{
 		$link = generatePluginLink('ublog', null, array('uid' => $userID, 'uname' => $SQLrow['name']));
 		if (pluginGetVariable('ublog', 'replaceCount') && ($SQLrow['news'] > 0)) {
 			$tvars['user']['news'] = '<a href="' . $link . '">' . $SQLrow['news'] . '</a>';
@@ -21,7 +29,8 @@ class UblogFilter extends p_uprofileFilter {
 // Register plugin handler
 register_filter('plugin.uprofile', 'ublog', new UblogFilter);
 register_plugin_page('ublog', '', 'plugin_ublog');
-function plugin_ublog() {
+function plugin_ublog()
+{
 	global $catz, $catmap, $mysql, $config, $userROW, $tpl, $twig, $twigLoader, $parse, $template, $lang, $PFILTERS, $SYSTEM_FLAGS, $CurrentHandler;
 	// PREPARE FILTER RULES FOR NEWS SHOWER
 	$filter = array();

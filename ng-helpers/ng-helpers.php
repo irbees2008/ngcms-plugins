@@ -7,12 +7,12 @@ if (!defined('NGCMS')) {
 
 /**
  * ng-helpers - Коллекция вспомогательных функций для плагинов NGCMS
- * @version 0.2.1
+ * @version 0.2.2
  * @author https://github.com/russsiq
  */
 
 // Define plugin version
-define('NG_HELPERS_VERSION', '0.2.1');
+define('NG_HELPERS_VERSION', '0.2.2');
 
 // Load helper functions
 $helpersFile = __DIR__ . '/src/helpers.php';

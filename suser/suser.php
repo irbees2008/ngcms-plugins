@@ -1,5 +1,12 @@
 <?php
 if (!defined('NGCMS')) die('HAL');
+
+// Modernized with ng-helpers v0.2.2 (2026)
+// - Added logger for operations tracking
+// - Requires PHP 8.0+
+
+use function Plugins\{logger};
+
 register_plugin_page('suser', '', 'suser_show', 0);
 register_plugin_page('suser', 'search', 'suser_search', 0);
 LoadPluginLang('suser', 'main', '', '', '#');
@@ -51,7 +58,7 @@ function suser_header_show()
 function get_entries($row)
 {
 
-	// fill template variables  
+	// fill template variables
 	return array(
 		'profile_link' => checkLinkAvailable('uprofile', 'show') ?
 			generateLink('uprofile', 'show', array('name' => $row['name'], 'id' => $row['author_id'])) :
@@ -72,7 +79,7 @@ function get_entries($row)
 function get_xflist()
 {
 
-	// generate xfields list for template   
+	// generate xfields list for template
 	if (!xmode()) return false;
 	$xf = xf_configLoad();
 	foreach ($xf['users'] as $id => $data) {
@@ -152,7 +159,7 @@ function suser_search($params)
 		$where[] = "where_from ='" . secure_html($_REQUEST['from'] . "'");
 	}
 	$tVars['boxlist']['from'] = $from;
-	// check if search conditions are selected  
+	// check if search conditions are selected
 	$where = (is_array($where) && $where) ? 'WHERE ' . implode(' AND ', $where) : '';
 	foreach ($mysql->select('SELECT * FROM ' . prefix . '_users ' . $where) as $row) {
 		$tEntry[] = get_entries($row);

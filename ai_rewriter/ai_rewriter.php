@@ -9,13 +9,13 @@ if (!function_exists('ai_rewriter_http_post_json')) {
     function ai_rewriter_http_post_json($url, $headers, $payload, $timeout = 20)
     {
         if (!function_exists('curl_init')) {
-            logger('ai_rewriter', 'HTTP error: cURL not available');
+            logger('HTTP error: cURL not available', 'error', 'ai_rewriter.log');
             return [false, 'PHP cURL extension is not available', 0, null];
         }
 
         // Validate URL
         if (!validate_url($url)) {
-            logger('ai_rewriter', 'HTTP error: invalid URL=' . $url);
+            logger('HTTP error: invalid URL=' . $url, 'error', 'ai_rewriter.log');
             return [false, 'Invalid URL provided', 0, null];
         }
 
@@ -39,11 +39,11 @@ if (!function_exists('ai_rewriter_http_post_json')) {
         curl_close($ch);
 
         if ($errno) {
-            logger('ai_rewriter', 'HTTP error: ' . $errmsg . ', code=' . $code . ', time=' . $duration . 'ms');
+            logger('HTTP error: ' . $errmsg . ', code=' . $code . ', time=' . $duration . 'ms', 'error', 'ai_rewriter.log');
             return [false, 'cURL error: ' . $errmsg, $code, null];
         }
 
-        logger('ai_rewriter', 'HTTP success: code=' . $code . ', time=' . $duration . 'ms, size=' . strlen($resp) . ' bytes');
+        logger('HTTP success: code=' . $code . ', time=' . $duration . 'ms, size=' . strlen($resp) . ' bytes', 'info', 'ai_rewriter.log');
         return [true, null, $code, $resp];
     }
 }
@@ -55,7 +55,7 @@ if (!function_exists('ai_rewriter_provider_openai')) {
         $base = rtrim($apiBase ?: 'https://api.openai.com/v1', '/');
         $url = $base . '/chat/completions';
 
-        logger('ai_rewriter', 'OpenAI request: model=' . $model . ', temp=' . $temperature . ', timeout=' . $timeout);
+        logger('OpenAI request: model=' . $model . ', temp=' . $temperature . ', timeout=' . $timeout, 'info', 'ai_rewriter.log');
         $payload = [
             'model' => $model ?: 'gpt-4o-mini',
             'messages' => [
@@ -69,25 +69,25 @@ if (!function_exists('ai_rewriter_provider_openai')) {
         ];
         list($ok, $err, $code, $resp) = ai_rewriter_http_post_json($url, $headers, $payload, $timeout);
         if (!$ok) {
-            logger('ai_rewriter', 'OpenAI error: ' . $err);
+            logger('OpenAI error: ' . $err, 'error', 'ai_rewriter.log');
             return [false, $err];
         }
         $data = json_decode($resp, true);
         if (!is_array($data)) {
-            logger('ai_rewriter', 'OpenAI error: invalid JSON');
+            logger('OpenAI error: invalid JSON', 'error', 'ai_rewriter.log');
             return [false, 'Invalid JSON from provider'];
         }
         if (isset($data['error'])) {
             $errorMsg = is_array($data['error']) ? ($data['error']['message'] ?? 'unknown') : $data['error'];
-            logger('ai_rewriter', 'OpenAI API error: ' . $errorMsg);
+            logger('OpenAI API error: ' . $errorMsg, 'error', 'ai_rewriter.log');
             return [false, 'API error: ' . $errorMsg];
         }
         $text = $data['choices'][0]['message']['content'] ?? '';
         if (!$text) {
-            logger('ai_rewriter', 'OpenAI error: empty response');
+            logger('OpenAI error: empty response', 'error', 'ai_rewriter.log');
             return [false, 'Empty response from provider'];
         }
-        logger('ai_rewriter', 'OpenAI success: length=' . mb_strlen($text) . ' chars');
+        logger('OpenAI success: length=' . mb_strlen($text) . ' chars', 'info', 'ai_rewriter.log');
         return [true, $text];
     }
 }
@@ -98,7 +98,7 @@ if (!function_exists('ai_rewriter_provider_anthropic')) {
     {
         $url = 'https://api.anthropic.com/v1/messages';
 
-        logger('ai_rewriter', 'Anthropic request: model=' . $model . ', temp=' . $temperature . ', timeout=' . $timeout);
+        logger('Anthropic request: model=' . $model . ', temp=' . $temperature . ', timeout=' . $timeout, 'info', 'ai_rewriter.log');
         $payload = [
             'model' => $model ?: 'claude-3-haiku-20240307',
             'max_tokens' => 4096,
@@ -119,25 +119,25 @@ if (!function_exists('ai_rewriter_provider_anthropic')) {
         ];
         list($ok, $err, $code, $resp) = ai_rewriter_http_post_json($url, $headers, $payload, $timeout);
         if (!$ok) {
-            logger('ai_rewriter', 'Anthropic error: ' . $err);
+            logger('Anthropic error: ' . $err, 'error', 'ai_rewriter.log');
             return [false, $err];
         }
         $data = json_decode($resp, true);
         if (!is_array($data)) {
-            logger('ai_rewriter', 'Anthropic error: invalid JSON');
+            logger('Anthropic error: invalid JSON', 'error', 'ai_rewriter.log');
             return [false, 'Invalid JSON from provider'];
         }
         if (isset($data['error'])) {
             $errorMsg = is_array($data['error']) ? ($data['error']['message'] ?? 'unknown') : $data['error'];
-            logger('ai_rewriter', 'Anthropic API error: ' . $errorMsg);
+            logger('Anthropic API error: ' . $errorMsg, 'error', 'ai_rewriter.log');
             return [false, 'API error: ' . $errorMsg];
         }
         $parts = $data['content'][0]['text'] ?? '';
         if (!$parts) {
-            logger('ai_rewriter', 'Anthropic error: empty response');
+            logger('Anthropic error: empty response', 'error', 'ai_rewriter.log');
             return [false, 'Empty response from provider'];
         }
-        logger('ai_rewriter', 'Anthropic success: length=' . mb_strlen($parts) . ' chars');
+        logger('Anthropic success: length=' . mb_strlen($parts) . ' chars', 'info', 'ai_rewriter.log');
         return [true, $parts];
     }
 }
@@ -167,29 +167,29 @@ if (!function_exists('ai_rewriter_rewrite')) {
         }
 
         if (!$provider) {
-            logger('ai_rewriter', 'Rewrite skipped: provider not configured');
+            logger('Rewrite skipped: provider not configured', 'info', 'ai_rewriter.log');
             return [true, $text]; // disabled
         }
         if (!$apiKey && in_array($provider, ['openai', 'openai_compat', 'anthropic'])) {
-            logger('ai_rewriter', 'Rewrite error: API key missing for provider=' . $provider);
+            logger('Rewrite error: API key missing for provider=' . $provider, 'error', 'ai_rewriter.log');
             return [false, 'AI Rewriter: API ключ не задан'];
         }
 
-        logger('ai_rewriter', 'Rewrite started: provider=' . $provider . ', length=' . mb_strlen($text) . ' chars');
+        logger('Rewrite started: provider=' . $provider . ', length=' . mb_strlen($text) . ' chars', 'info', 'ai_rewriter.log');
 
         // Basic model/provider sanity checks for clearer errors
         $m = mb_strtolower($model);
         if ($provider === 'anthropic') {
             if ((strpos($m, 'gpt') !== false) || (strpos($m, 'o1') !== false) || (strpos($m, 'o3') !== false)) {
                 $error = 'AI Rewriter: выбран провайдер Anthropic, но указана модель OpenAI (' . $model . '). Задайте модель Claude, например: claude-3-5-sonnet-20240620 или claude-3-haiku-20240307.';
-                logger('ai_rewriter', 'Config error: ' . $error);
+                logger('Config error: ' . $error, 'error', 'ai_rewriter.log');
                 return [false, $error];
             }
         }
         if (in_array($provider, ['openai', 'openai_compat'])) {
             if (strpos($m, 'claude') !== false) {
                 $error = 'AI Rewriter: выбран провайдер OpenAI, но указана модель Anthropic (' . $model . '). Укажите GPT-модель, например: gpt-4o-mini.';
-                logger('ai_rewriter', 'Config error: ' . $error);
+                logger('Config error: ' . $error, 'error', 'ai_rewriter.log');
                 return [false, $error];
             }
         }
@@ -256,9 +256,9 @@ class AIRewriterNewsFilter extends NewsFilter
         list($ok, $res) = ai_rewriter_rewrite($joined);
         if ($ok) {
             $SQL['content'] = $res;
-            logger('ai_rewriter', 'News add: rewritten successfully');
+            logger('News add: rewritten successfully', 'info', 'ai_rewriter.log');
         } else {
-            logger('ai_rewriter', 'News add: rewrite failed - ' . $res);
+            logger('News add: rewrite failed - ' . $res, 'error', 'ai_rewriter.log');
             // Non-blocking: keep original, show admin message
             if (function_exists('msg')) {
                 msg(['type' => 'error', 'text' => $res]);
@@ -285,9 +285,9 @@ class AIRewriterNewsFilter extends NewsFilter
         list($ok, $res) = ai_rewriter_rewrite($content);
         if ($ok) {
             $SQLnew['content'] = $res;
-            logger('ai_rewriter', 'News edit: newsID=' . $newsID . ', rewritten successfully');
+            logger('News edit: newsID=' . $newsID . ', rewritten successfully', 'info', 'ai_rewriter.log');
         } else {
-            logger('ai_rewriter', 'News edit: newsID=' . $newsID . ', rewrite failed - ' . $res);
+            logger('News edit: newsID=' . $newsID . ', rewrite failed - ' . $res, 'error', 'ai_rewriter.log');
             if (function_exists('msg')) {
                 msg(['type' => 'error', 'text' => $res]);
             }
@@ -302,6 +302,9 @@ register_filter('news', 'ai_rewriter', new AIRewriterNewsFilter);
 // RPC: rewrite preview (no save)
 function ai_rewriter_rpc_rewrite($params = null)
 {
+    // Security: rpcRegisterFunction(..., true) требует авторизации администратора
+    // Дополнительная проверка не требуется - встроенная защита NGCMS
+
     // Text can come as POST variable or as `$params['text']`
     $text = '';
     if (is_array($params) && isset($params['text'])) {
@@ -310,16 +313,16 @@ function ai_rewriter_rpc_rewrite($params = null)
         $text = sanitize((string)$_POST['text'], 'html');
     }
     if (!mb_strlen(trim($text))) {
-        logger('ai_rewriter', 'RPC error: empty text');
+        logger('RPC error: empty text', 'warning', 'ai_rewriter.log');
         return ['status' => 0, 'errorCode' => 100, 'errorText' => 'Пустой текст'];
     }
-    logger('ai_rewriter', 'RPC rewrite request: length=' . mb_strlen($text) . ' chars');
+    logger('RPC rewrite request: length=' . mb_strlen($text) . ' chars', 'info', 'ai_rewriter.log');
     list($ok, $res) = ai_rewriter_rewrite($text);
     if ($ok) {
-        logger('ai_rewriter', 'RPC success: result length=' . mb_strlen($res) . ' chars');
+        logger('RPC success: result length=' . mb_strlen($res) . ' chars', 'info', 'ai_rewriter.log');
         return ['status' => 1, 'errorCode' => 0, 'text' => $res];
     }
-    logger('ai_rewriter', 'RPC error: ' . $res);
+    logger('RPC error: ' . $res, 'error', 'ai_rewriter.log');
     return ['status' => 0, 'errorCode' => 101, 'errorText' => $res];
 }
 

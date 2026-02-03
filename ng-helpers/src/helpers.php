@@ -11,7 +11,7 @@ use Twig_Environment;
 /**
  * Коллекция вспомогательных функций для плагинов системы NGCMS.
  *
- * @version: 0.2.1 от 2026-01-16
+ * @version: 0.2.2 от 2026-01-29
  * @author: https://github.com/russsiq
  *
  * Базовые функции:
@@ -34,6 +34,12 @@ use Twig_Environment;
  * Расширенные функции (v0.2.0):
  * - 60+ новых функций для валидации, работы с массивами, строками, датами, HTTP, безопасности и др.
  * - См. полный список в README.md
+ *
+ * Новые функции (v0.2.2):
+ * - csrf_field, csrf_token, validate_csrf - CSRF защита форм
+ * - logger - логирование с уровнями важности
+ * - is_post, is_get, is_ajax - проверка методов запросов
+ * - validate_phone - валидация телефонных номеров
  */
 if (! function_exists(__NAMESPACE__ . '\array_dotset')) {
     /**
@@ -982,7 +988,7 @@ if (! function_exists(__NAMESPACE__ . '\cache_get')) {
     function cache_get(string $key, $default = null)
     {
         $filename = md5($key) . '.cache';
-        $filepath = root . 'cache/' . $filename;
+        $filepath = \root . 'cache/' . $filename;
         if (!file_exists($filepath)) {
             return value($default);
         }
@@ -1005,7 +1011,7 @@ if (! function_exists(__NAMESPACE__ . '\cache_put')) {
     function cache_put(string $key, $value, int $minutes = 60): bool
     {
         $filename = md5($key) . '.cache';
-        $filepath = root . 'cache/' . $filename;
+        $filepath = \root . 'cache/' . $filename;
         $data = [
             'value' => $value,
             'expires' => time() + ($minutes * 60),
@@ -1022,7 +1028,7 @@ if (! function_exists(__NAMESPACE__ . '\cache_forget')) {
     function cache_forget(string $key): bool
     {
         $filename = md5($key) . '.cache';
-        $filepath = root . 'cache/' . $filename;
+        $filepath = \root . 'cache/' . $filename;
         if (file_exists($filepath)) {
             return @unlink($filepath);
         }
@@ -1492,7 +1498,7 @@ if (! function_exists(__NAMESPACE__ . '\logger')) {
      */
     function logger(string $message, string $level = 'info', string $file = 'plugin.log'): bool
     {
-        $logPath = root . 'cache/logs/' . $file;
+        $logPath = \root . 'cache/logs/' . $file;
         $dir = dirname($logPath);
 
         if (!is_dir($dir)) {
@@ -2163,5 +2169,132 @@ if (! function_exists(__NAMESPACE__ . '\validate_email')) {
     function validate_email(string $email): bool
     {
         return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\validate_phone')) {
+    /**
+     * Проверить корректность номера телефона.
+     * @param  string  $phone
+     * @return bool
+     */
+    function validate_phone(string $phone): bool
+    {
+        // Удаляем все символы кроме цифр и +
+        $cleaned = preg_replace('/[^0-9+]/', '', $phone);
+        // Проверяем что длина от 10 до 15 цифр
+        return strlen($cleaned) >= 10 && strlen($cleaned) <= 15;
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\is_post')) {
+    /**
+     * Проверить является ли запрос POST.
+     * @return bool
+     */
+    function is_post(): bool
+    {
+        return $_SERVER['REQUEST_METHOD'] === 'POST';
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\is_get')) {
+    /**
+     * Проверить является ли запрос GET.
+     * @return bool
+     */
+    function is_get(): bool
+    {
+        return $_SERVER['REQUEST_METHOD'] === 'GET';
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\is_ajax')) {
+    /**
+     * Проверить является ли запрос AJAX.
+     * @return bool
+     */
+    function is_ajax(): bool
+    {
+        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\csrf_token')) {
+    /**
+     * Получить CSRF токен.
+     * @return string
+     */
+    function csrf_token(): string
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        if (!isset($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+
+        return $_SESSION['csrf_token'];
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\csrf_field')) {
+    /**
+     * Сгенерировать скрытое поле с CSRF токеном.
+     * @return string
+     */
+    function csrf_field(): string
+    {
+        $token = csrf_token();
+        return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">';
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\validate_csrf')) {
+    /**
+     * Проверить CSRF токен.
+     * @return bool
+     */
+    function validate_csrf(): bool
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $token = $_POST['csrf_token'] ?? $_REQUEST['csrf_token'] ?? '';
+        $sessionToken = $_SESSION['csrf_token'] ?? '';
+
+        if (empty($token) || empty($sessionToken)) {
+            return false;
+        }
+
+        return hash_equals($sessionToken, $token);
+    }
+}
+
+if (! function_exists(__NAMESPACE__ . '\logger')) {
+    /**
+     * Записать сообщение в лог.
+     * @param  string  $message
+     * @param  string  $level
+     * @param  string  $filename
+     * @return bool
+     */
+    function logger(string $message, string $level = 'info', string $filename = 'app.log'): bool
+    {
+        $logDir = root . 'engine/logs';
+
+        // Создаём директорию если не существует
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0755, true);
+        }
+
+        $logFile = $logDir . '/' . $filename;
+        $timestamp = date('Y-m-d H:i:s');
+        $logEntry = "[{$timestamp}] [{$level}] {$message}\n";
+
+        return file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX) !== false;
     }
 }

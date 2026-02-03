@@ -5,8 +5,16 @@
 // Used libraries: PEAR File::Bittorrent2
 //
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
-function plugin_tracker_announce() {
+if (!defined('NGCMS')) die('HAL');
+
+// Modernized with ng-helpers v0.2.2 (2026)
+// - Added logger for tracker operations
+// - Requires PHP 8.0+
+
+use function Plugins\{logger};
+
+function plugin_tracker_announce()
+{
 
 	global $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW;
 	$SUPRESS_TEMPLATE_SHOW = 1;
@@ -93,7 +101,8 @@ function plugin_tracker_announce() {
 }
 
 // Show tracker statistics
-function plugin_tracker_statistics() {
+function plugin_tracker_statistics()
+{
 
 	global $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW;
 	$SUPRESS_TEMPLATE_SHOW = 1;
@@ -102,7 +111,8 @@ function plugin_tracker_statistics() {
 }
 
 // Update news TORRENT status
-function plugin_tracker_updnews($newsID, $SQLnews) {
+function plugin_tracker_updnews($newsID, $SQLnews)
+{
 
 	global $config, $mysql;
 	// Don't do anything if we have MAGNET link
@@ -147,9 +157,11 @@ function plugin_tracker_updnews($newsID, $SQLnews) {
 	}
 }
 
-class TrackerNewsFilter extends NewsFilter {
+class TrackerNewsFilter extends NewsFilter
+{
 
-	function addNewsForm(&$tvars) {
+	function addNewsForm(&$tvars)
+	{
 
 		global $tpl;
 		if (!pluginGetVariable('tracker', 'smagnet')) {
@@ -165,7 +177,8 @@ class TrackerNewsFilter extends NewsFilter {
 		return 1;
 	}
 
-	function addNews(&$tvars, &$SQL) {
+	function addNews(&$tvars, &$SQL)
+	{
 
 		global $mysql;
 		if (pluginGetVariable('tracker', 'smagnet') && $_POST['tracker_magnet']) {
@@ -180,13 +193,15 @@ class TrackerNewsFilter extends NewsFilter {
 		return 1;
 	}
 
-	function addNewsNotify(&$tvars, $SQL, $newsid) {
+	function addNewsNotify(&$tvars, $SQL, $newsid)
+	{
 
 		if (pluginGetVariable('tracker', 'storrent'))
 			plugin_tracker_updnews($newsid, $SQL);
 	}
 
-	function editNewsForm($newsID, $SQLold, &$tvars) {
+	function editNewsForm($newsID, $SQLold, &$tvars)
+	{
 
 		global $tpl, $mysql;
 		if (!pluginGetVariable('tracker', 'smagnet')) {
@@ -207,7 +222,8 @@ class TrackerNewsFilter extends NewsFilter {
 		return 1;
 	}
 
-	function editNews($newsID, $SQLold, &$SQLnew, &$tvars) {
+	function editNews($newsID, $SQLold, &$SQLnew, &$tvars)
+	{
 
 		global $mysql;
 		// First - clear infohash in case of any changes. It will be inited again in this function
@@ -245,14 +261,16 @@ class TrackerNewsFilter extends NewsFilter {
 		return 1;
 	}
 
-	function editNewsNotify($newsID, $SQLnews, &$SQLnew, &$tvars) {
+	function editNewsNotify($newsID, $SQLnews, &$SQLnew, &$tvars)
+	{
 
 		$xSQL = array_merge($SQLnews, $SQLnew);
 		if (pluginGetVariable('tracker', 'storrent'))
 			plugin_tracker_updnews($newsID, $xSQL);
 	}
 
-	public function showNews($newsID, $SQLnews, &$tvars, $mode = []) {
+	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
+	{
 
 		global $tpl, $config, $mysql, $lang;
 		$tvars['vars']['plugin_tracker'] = '';

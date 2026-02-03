@@ -35,6 +35,27 @@ https://sitename.ru/plugin/auth_social/github/
 <a href="{{p.auth_social.facebook.authUrl}}" title="{{p.auth_social.facebook.title}}"><img src="/engine/plugins/auth_social/social/FB.png" alt="{{p.auth_social.facebook.title}}"/></a>
 <a href="{{p.auth_social.github.authUrl}}" title="{{p.auth_social.github.title}}"><img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="{{p.auth_social.github.title}}" style="width:32px;height:32px"/></a>
 #=====================================#
+Интеграция с ng-helpers v0.2.2
+#=====================================#
+Плагин использует функции из библиотеки ng-helpers для улучшения безопасности и логирования:
+**validate_email()** - валидация email адресов от OAuth провайдеров
+- Защита от некорректных email
+- Предотвращение регистрации с невалидными адресами
+**random_string()** - генерация безопасных случайных строк
+- Используется для PKCE токенов (state, code_verifier)
+- Криптографически стойкая генерация
+**logger()** - расширенное логирование
+- Логи OAuth операций: редиректы, аутентификации, регистрации
+- Отслеживание IP-адресов для безопасности
+- Файл логов: engine/cache/logs/auth_social.log
+**get_ip()** - получение IP-адреса пользователя
+- Используется в логах для аудита
+- Поддержка прокси и CDN
+Примеры логов:
+[2026-01-29 14:30:45] [INFO] VK ID OAuth redirect initiated, IP: 192.168.1.100
+[2026-01-29 14:30:46] [INFO] Successful OAuth authentication: vkid user Иван (ivan@example.com), IP: 192.168.1.100
+[2026-01-29 14:31:20] [WARNING] Invalid email from google: invalid-email, IP: 192.168.1.100
+#=====================================#
 Технические особенности VK ID
 #=====================================#
 - Используется OAuth 2.0 с PKCE (Proof Key for Code Exchange)
@@ -90,12 +111,21 @@ https://sitename.ru/plugin/auth_social/github/
     <input type="date" name="editbirthday" value="{{ userRec.birthday }}" class="input" />
 </div>
 #=====================================#
-Отладка
+Отладка и логирование
 #=====================================#
+**Основные логи (ng-helpers):**
+Файл: engine/cache/logs/auth_social.log
+Содержит:
+- Инициации OAuth редиректов
+- Успешные аутентификации с данными пользователя
+- Создание новых пользователей через соцсети
+- Предупреждения о невалидных email (WARNING)
+- IP-адреса для отслеживания
+**Детальная отладка (опционально):**
 Для включения отладочного режима раскомментируйте строки с // DEBUG: в файлах:
 - engine/plugins/auth_social/social.php
 - engine/plugins/auth_social/lib/SocialAuther/Adapter/Vkid.php
-Логи будут записываться в файл: engine/plugins/auth_social/log.txt
+Детальные отладочные логи: engine/plugins/auth_social/log.txt
 #=====================================#
 Известные проблемы
 #=====================================#

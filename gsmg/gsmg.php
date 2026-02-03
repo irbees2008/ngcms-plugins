@@ -1,14 +1,59 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
+// Fallback functions if ng-helpers is not available
+if (!function_exists('Plugins\\logger')) {
+    function gsmg_logger($plugin, $message, $level = 'info', $file = '')
+    {
+        // Silent fallback - do nothing if ng-helpers not available
+        return;
+    }
+} else {
+    function gsmg_logger($plugin, $message, $level = 'info', $file = '')
+    {
+        return \Plugins\logger($plugin, $message, $level, $file);
+    }
+}
+
+if (!function_exists('Plugins\\get_ip')) {
+    function gsmg_get_ip()
+    {
+        return isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
+    }
+} else {
+    function gsmg_get_ip()
+    {
+        return \Plugins\get_ip();
+    }
+}
+
+if (!function_exists('Plugins\\array_get')) {
+    function gsmg_array_get($array, $key, $default = null)
+    {
+        return isset($array[$key]) ? $array[$key] : $default;
+    }
+} else {
+    function gsmg_array_get($array, $key, $default = null)
+    {
+        return \Plugins\array_get($array, $key, $default);
+    }
+}
+
 register_plugin_page('gsmg', '', 'plugin_gsmg_screen', 0);
+
 // Load library
 include_once(root . "/plugins/gsmg/lib/common.php");
 function plugin_gsmg_screen()
 {
     global $config, $mysql, $catz, $catmap, $SUPRESS_TEMPLATE_SHOW, $SYSTEM_FLAGS, $PFILTERS;
+
     $SUPRESS_TEMPLATE_SHOW = 1;
     $SUPRESS_MAINBLOCK_SHOW = 1;
+
+    // Log sitemap generation start
+    gsmg_logger('gsmg', sprintf('Sitemap generation started from IP: %s', gsmg_get_ip()), 'info', 'gsmg.log');
+
     @header('Content-type: text/xml; charset=utf-8');
     $SYSTEM_FLAGS['http.headers'] = array(
         'content-type' => 'application/xml; charset=utf-8',
@@ -18,6 +63,7 @@ function plugin_gsmg_screen()
     if (extra_get_param('gsmg', 'cache')) {
         $cacheData = cacheRetrieveFile('sitemap_index.xml', extra_get_param('gsmg', 'cacheExpire'), 'gsmg');
         if ($cacheData != false) {
+            gsmg_logger('gsmg', 'Sitemap served from cache', 'info', 'gsmg.log');
             print $cacheData;
             return;
         }
@@ -28,8 +74,8 @@ function plugin_gsmg_screen()
     $currentPart = 0;        // Текущая часть sitemap
     $urlCount = 0;           // Счётчик URL в текущей части
     // Инициализация первой части
-    $sitemapParts[$currentPart] = '<?xml version="1.0" encoding="UTF-8"?>';
-    $sitemapParts[$currentPart] .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+    $sitemapParts[$currentPart] = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+    $sitemapParts[$currentPart] .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
     // ===== 1. Главная страница и пагинация =====
     if (extra_get_param('gsmg', 'main')) {
         $sitemapParts[$currentPart] .= "<url>";
@@ -151,23 +197,32 @@ function plugin_gsmg_screen()
     // Закрываем последний файл
     $sitemapParts[$currentPart] .= "</urlset>";
     // ===== Генерация индекса sitemap =====
-    $sitemapIndex = '<?xml version="1.0" encoding="UTF-8"?>';
-    $sitemapIndex .= '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+    $sitemapIndex = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+    $sitemapIndex .= '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
     foreach ($sitemapParts as $part => $content) {
         $fileName = "sitemap_part{$part}.xml";
         // Сохраняем в корень сайта (используем dirname(root) или $_SERVER['DOCUMENT_ROOT'])
         $filePath = dirname(root) . "/" . $fileName;
-        file_put_contents($filePath, $content);
-        $sitemapIndex .= "<sitemap>";
-        $sitemapIndex .= "<loc>" . $config['home_url'] . "/{$fileName}</loc>";
-        $sitemapIndex .= "<lastmod>" . date("Y-m-d") . "</lastmod>";
-        $sitemapIndex .= "</sitemap>";
+
+        if (file_put_contents($filePath, $content) !== false) {
+            gsmg_logger('gsmg', sprintf('Sitemap part saved: %s (URLs: %d)', $fileName, substr_count($content, '<url>')), 'info', 'gsmg.log');
+        } else {
+            gsmg_logger('gsmg', sprintf('Failed to save sitemap part: %s', $fileName), 'error', 'gsmg.log');
+        }
+        $sitemapIndex .= "  <sitemap>\n";
+        $sitemapIndex .= "    <loc>" . $config['home_url'] . "/{$fileName}</loc>\n";
+        $sitemapIndex .= "    <lastmod>" . date("Y-m-d") . "</lastmod>\n";
+        $sitemapIndex .= "  </sitemap>\n";
     }
-    $sitemapIndex .= "</sitemapindex>";
+    $sitemapIndex .= "</sitemapindex>\n";
     // Выводим индексный файл
     print $sitemapIndex;
     // Сохраняем в кэш (если включён)
     if (extra_get_param('gsmg', 'cache')) {
         cacheStoreFile('sitemap_index.xml', $sitemapIndex, 'gsmg');
+        gsmg_logger('gsmg', 'Sitemap index cached successfully', 'info', 'gsmg.log');
     }
+
+    // Log completion
+    gsmg_logger('gsmg', sprintf('Sitemap generation completed. Total parts: %d', count($sitemapParts)), 'info', 'gsmg.log');
 }

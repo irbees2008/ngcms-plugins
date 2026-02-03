@@ -2,11 +2,11 @@
 
 ## Обзор изменений
 
-Плагин `auth_social` (Социальная авторизация) был модернизирован с использованием функций из ng-helpers v0.2.0+.
+Плагин `auth_social` (Социальная авторизация) был модернизирован с использованием функций из ng-helpers v0.2.2.
 
 ## Версия файла: social.php
 
-**Дата модернизации:** 11 января 2026
+**Дата модернизации:** 29 января 2026
 
 ---
 
@@ -64,19 +64,25 @@ if ($email && !validate_email($email)) {
 **1. Инициация OAuth:**
 
 ```php
-logger('auth_social', 'VK ID OAuth redirect initiated, IP: ' . get_ip());
+logger('VK ID OAuth redirect initiated, IP: ' . get_ip(), 'info', 'auth_social.log');
 ```
 
 **2. Успешная аутентификация:**
 
 ```php
-logger('auth_social', 'Successful OAuth authentication: ' . $auther->getProvider() . ' user ' . $auther->getName() . ' (' . $email . '), IP: ' . get_ip());
+logger('Successful OAuth authentication: ' . $auther->getProvider() . ' user ' . $auther->getName() . ' (' . $email . '), IP: ' . get_ip(), 'info', 'auth_social.log');
 ```
 
 **3. Создание нового пользователя:**
 
 ```php
-logger('auth_social', 'Creating new user from ' . $auther->getProvider() . ': ' . $auther->getName() . ' (' . $auther->getEmail() . '), IP: ' . get_ip());
+logger('Creating new user from ' . $auther->getProvider() . ': ' . $auther->getName() . ' (' . $auther->getEmail() . '), IP: ' . get_ip(), 'info', 'auth_social.log');
+```
+
+**4. Невалидный email:**
+
+```php
+logger('Invalid email from ' . $auther->getProvider() . ': ' . $email . ', IP: ' . get_ip(), 'warning', 'auth_social.log');
 ```
 
 **Преимущества:**
@@ -104,19 +110,16 @@ logger('auth_social', 'Creating new user from ' . $auther->getProvider() . ': ' 
 ### Улучшения безопасности:
 
 1. **PKCE токены:**
-
    - `random_string()` для state (32 символа)
    - `random_string()` для code_verifier (64 символа)
    - Защита от CSRF и перехвата кода авторизации
 
 2. **Валидация данных:**
-
    - `validate_email()` для проверки email от провайдеров
    - Предотвращение регистрации с невалидными email
    - Защита от подделки данных OAuth
 
 3. **Аудит:**
-
    - Логирование всех OAuth операций
    - IP-адреса для отслеживания
    - История авторизаций и регистраций
@@ -223,13 +226,13 @@ logger('auth_social', 'Creating new user from ' . $auther->getProvider() . ': ' 
 ### 3. Создание нового пользователя:
 
 ```
-[2026-01-11 14:30:46] Creating new user from vkid: Иван Иванов (ivan@example.com), IP: 192.168.1.100
+[2026-01-29 14:30:46] [INFO] Creating new user from vkid: Иван Иванов (ivan@example.com), IP: 192.168.1.100
 ```
 
 ### 4. Невалидный email (warning):
 
 ```
-[2026-01-11 14:31:20] WARNING: Invalid email from google: invalid-email, IP: 192.168.1.100
+[2026-01-29 14:31:20] [WARNING] Invalid email from google: invalid-email, IP: 192.168.1.100
 ```
 
 ---
@@ -237,20 +240,17 @@ logger('auth_social', 'Creating new user from ' . $auther->getProvider() . ': ' 
 ## Рекомендации по использованию
 
 1. **Мониторинг логов:**
-
-   - Регулярно проверять `auth_social.log`
+   - Регулярно проверять `engine/cache/logs/auth_social.log`
    - Обращать внимание на warning записи
    - Анализировать популярные провайдеры
 
 2. **Безопасность:**
-
    - Отслеживать IP-адреса подозрительных авторизаций
    - Блокировать IP при массовых попытках с невалидными email
    - Проверять корректность email от провайдеров
 
 3. **Производительность:**
-
-   - Логи пишутся асинхронно, не влияют на скорость
+   - Логи пишутся быстро через ng-helpers
    - При большом объеме настроить ротацию логов
 
 4. **Отладка:**
@@ -259,26 +259,34 @@ logger('auth_social', 'Creating new user from ' . $auther->getProvider() . ': ' 
 
 ---
 
+## Файл логов
+
+**Путь к логам:** `engine/cache/logs/auth_social.log`
+
+**Формат записи:**
+
+```
+[2026-01-29 14:30:45] [INFO] VK ID OAuth redirect initiated, IP: 192.168.1.100
+[2026-01-29 14:30:46] [INFO] Successful OAuth authentication: vkid user Иван Иванов (ivan@example.com), IP: 192.168.1.100
+[2026-01-29 14:30:46] [INFO] Creating new user from vkid: Иван Иванов (ivan@example.com), IP: 192.168.1.100
+[2026-01-29 14:31:20] [WARNING] Invalid email from google: invalid-email, IP: 192.168.1.100
+```
+
+---
+
 ## Дальнейшие улучшения (опционально)
 
 Возможные будущие улучшения:
 
 1. **Кэширование:**
-
    - Использовать `cache_get/put` для данных профилей
    - Кэширование аватаров
 
-2. **Шифрование:**
-
-   - Использовать `encrypt/decrypt` для OAuth токенов
-   - Безопасное хранение refresh tokens
-
-3. **Статистика:**
-
+2. **Статистика:**
    - Анализ логов для популярности провайдеров
    - Графики регистраций по дням
 
-4. **Уведомления:**
+3. **Уведомления:**
    - Email уведомления о новых авторизациях
    - Предупреждения о подозрительной активности
 
@@ -286,7 +294,9 @@ logger('auth_social', 'Creating new user from ' . $auther->getProvider() . ': ' 
 
 ## Автор модернизации
 
-GitHub Copilot с использованием ng-helpers v0.2.0
+GitHub Copilot с использованием ng-helpers v0.2.2
+
+**Дата обновления:** 29 января 2026
 
 ---
 
@@ -295,7 +305,7 @@ GitHub Copilot с использованием ng-helpers v0.2.0
 Плагин auth_social успешно модернизирован:
 
 - ✅ **Безопасность:** улучшенная генерация токенов, валидация email
-- ✅ **Логирование:** полная история OAuth операций с IP
+- ✅ **Логирование:** полная история OAuth операций с IP (правильный формат logger)
 - ✅ **Мониторинг:** детальные логи для отладки и аудита
 - ✅ **Совместимость:** работает со всеми OAuth провайдерами
 - ✅ **Надежность:** защита от невалидных данных

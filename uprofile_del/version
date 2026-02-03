@@ -4,7 +4,7 @@
 
 ID: uprofile_del
 Name: Удаление профиля
-Version: 0.2.1
+Version: 0.3
 Acts: index, ppages, plugin.uprofile
 File: uprofile_del.php
 Config: config.php
@@ -13,6 +13,7 @@ Deinstall: deinstall.php
 Type: plugin
 Description: Возможность пользователю удалить свой аккаунт с сайта
 Author: KachalkinGeorg
+MinPHPVer: 8.0
 Author_URI:
 Title: Удаление профиля
 Information: Пользователь сайта может удалить свой профиль.

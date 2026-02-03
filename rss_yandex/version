@@ -4,18 +4,19 @@
 ID: rss_yandex
 Name: Экспорт RSS потока для Яndex
 Name_EN: RSS export for Yandex
-Version: 0.03
+Version: 0.04
 Acts: ppages
 File: rss_yandex.php
 Config: config.php
 Type: plugin
-Description: Экспорт RSS потока для Яndex
-Description_EN: News export for Yandex
-Author: Vitaly A. Ponomarev
+Description: Экспорт RSS потока для Яndex (ng-helpers v0.2.2, PHP 8.0+)
+Description_EN: News export for Yandex (ng-helpers v0.2.2, PHP 8.0+)
+Author: Vitaly A. Ponomarev, NGCMS Team
 Author_URI: http://ngcms.ru/
 Preinstall_vars: feed_title_format="site_title"; news_title="1"; news_count="30"; use_hide="1"
 Title: Экспорт RSS потока для Яndex
 Preinstall: no
 Information: Генерирует специальный RSS поток для поисковика Яndex
 MinEngineBuild: 23b3116
+MinPHPVer: 8.0
 Icons: <i class="fa fa-rss fa-3x" aria-hidden="true"></i>

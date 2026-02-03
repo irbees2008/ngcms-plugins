@@ -1,7 +1,25 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
-use function Plugins\{cache_get, cache_put, logger, sanitize};
+
+// Modified with ng-helpers v0.2.2 functions (2026-01-29)
+// - Enhanced caching with cache_get/cache_put
+// - Added sanitization for security
+// - Added comprehensive logging
+// - Added benchmark for performance monitoring
+// - Added array helpers for cleaner code
+
+use function Plugins\{
+	cache_get,
+	cache_put,
+	logger,
+	sanitize,
+	benchmark,
+	array_get,
+	array_only,
+	clamp,
+	is_ajax
+};
 // Classes for traffic handling
 // - static pages
 class ADSProStaticFilter extends StaticFilter
@@ -228,26 +246,53 @@ function plugin_ads_pro()
 			if ($blockInfo['type'] != 1) {
 				$cacheKey = 'ads_pro:' . $blockID . ':' . $blockIndexNum . ':' . $blockInfo['type'];
 				$cacheData = cache_get($cacheKey);
+
 				if ($cacheData !== null) {
 					$template['vars'][$tplVarName] .= $cacheData;
+					logger('Cache HIT for block: id=' . $blockIndexNum . ', block=' . $blockID, 'debug', 'ads_pro.log');
 					continue;
 				}
+
+				logger('Cache MISS for block: id=' . $blockIndexNum . ', block=' . $blockID, 'debug', 'ads_pro.log');
+
 				$description = '';
 				if (is_array($row = $mysql->record('select ads_blok from ' . prefix . '_ads_pro where id=' . db_squote($blockIndexNum)))) {
-					$description = $blockInfo['type'] ? nl2br(htmlspecialchars($row['ads_blok'])) : sanitize($row['ads_blok'], 'html');
+					// Sanitize based on type: 0=HTML, 2=TEXT
+					if ($blockInfo['type'] == 0) {
+						// HTML type - allow HTML but sanitize dangerous content
+						$description = sanitize($row['ads_blok'], 'html');
+					} else {
+						// TEXT type - escape all HTML and convert newlines
+						$description = nl2br(sanitize($row['ads_blok'], 'string'));
+					}
 				}
+
 				$template['vars'][$tplVarName] .= $description;
-				cache_put($cacheKey, $description, 30000);
+
+				// Cache for 8 hours (30000 seconds ≈ 8.3 hours)
+				$cacheDuration = clamp(intval(pluginGetVariable('ads_pro', 'cache_duration', 30000)), 300, 86400);
+				cache_put($cacheKey, $description, $cacheDuration);
+
+				logger('Rendered and cached block: id=' . $blockIndexNum . ', size=' . strlen($description) . ' bytes', 'info', 'ads_pro.log');
 			} else {
+				// PHP type block - execute dynamically (no caching)
 				$description = '';
 				if (is_array($row = $mysql->record('select ads_blok from ' . prefix . '_ads_pro where id=' . db_squote($blockIndexNum)))) {
 					$description = $row['ads_blok'];
 				}
-				logger('ads_pro', 'Executing PHP block: id=' . $blockIndexNum . ', block=' . $blockID);
-				ob_start();
-				@eval($description);
-				$out2 = ob_get_contents();
-				ob_end_clean();
+
+				logger('Executing PHP block: id=' . $blockIndexNum . ', block=' . $blockID, 'info', 'ads_pro.log');
+
+				// Benchmark PHP block execution
+				$result = benchmark(function () use ($description, &$out2) {
+					ob_start();
+					@eval($description);
+					$out2 = ob_get_contents();
+					ob_end_clean();
+				});
+
+				logger('PHP block executed: id=' . $blockIndexNum . ', time=' . round($result['time'] * 1000, 2) . 'ms, output=' . strlen($out2) . ' bytes', 'info', 'ads_pro.log');
+
 				$template['vars'][$tplVarName] .= $out2;
 			}
 		}
@@ -257,11 +302,15 @@ function plugin_ads_pro()
 function ads_pro_sync_with_database($dataConfig)
 {
 	global $mysql;
+
+	logger('Starting database synchronization', 'debug', 'ads_pro.log');
+
 	// Получаем все ID из базы данных
 	$dbIds = array();
 	foreach ($mysql->select('SELECT id FROM ' . prefix . '_ads_pro') as $row) {
 		$dbIds[] = intval($row['id']);
 	}
+
 	// Получаем все ID из конфигурации
 	$configIds = array();
 	foreach ($dataConfig as $blockName => $blocks) {
@@ -269,12 +318,15 @@ function ads_pro_sync_with_database($dataConfig)
 			$configIds[] = intval($blockId);
 		}
 	}
+
 	// Проверяем, есть ли расхождения
 	$missingInDb = array_diff($configIds, $dbIds);
 	$missingInConfig = array_diff($dbIds, $configIds);
+
 	// Если есть ID в конфиге, которых нет в БД - удаляем их из конфига
 	if (!empty($missingInDb)) {
-		logger('ads_pro', 'Sync: removing from config, IDs=' . implode(',', $missingInDb));
+		logger('Sync: removing ' . count($missingInDb) . ' orphaned blocks from config, IDs=' . implode(',', $missingInDb), 'warning', 'ads_pro.log');
+
 		foreach ($dataConfig as $blockName => &$blocks) {
 			foreach ($blocks as $blockId => $blockData) {
 				if (in_array(intval($blockId), $missingInDb)) {
@@ -287,11 +339,15 @@ function ads_pro_sync_with_database($dataConfig)
 			}
 		}
 	}
-	// Если есть ID в БД, которых нет в конфиге - пытаемся найти их в исходных данных
+
+	// Если есть ID в БД, которых нет в конфиге - восстанавливаем их
 	if (!empty($missingInConfig)) {
+		logger('Sync: restoring ' . count($missingInConfig) . ' blocks from database, IDs=' . implode(',', $missingInConfig), 'warning', 'ads_pro.log');
+
 		// Сначала ищем в исходной конфигурации
 		$originalConfig = pluginGetVariable('ads_pro', 'data');
 		$foundInOriginal = array();
+
 		foreach ($missingInConfig as $dbId) {
 			// Ищем этот ID в исходной конфигурации
 			foreach ($originalConfig as $blockName => $blocks) {
@@ -300,33 +356,42 @@ function ads_pro_sync_with_database($dataConfig)
 						// Найден в исходной конфигурации - восстанавливаем
 						$dataConfig[$blockName][$dbId] = $blockData;
 						$foundInOriginal[] = $dbId;
+						logger('Restored block ' . $dbId . ' from original config', 'info', 'ads_pro.log');
 						break 2;
 					}
 				}
 			}
 		}
+
 		// Для ID, которых нет в исходной конфигурации, создаем базовую структуру
 		$notFoundInOriginal = array_diff($missingInConfig, $foundInOriginal);
-		if (!empty($notFoundInOriginal)) {
-			logger('ads_pro', 'Sync: restoring blocks from DB, IDs=' . implode(',', $notFoundInOriginal));
-		}
+
 		foreach ($notFoundInOriginal as $dbId) {
 			$row = $mysql->record('SELECT * FROM ' . prefix . '_ads_pro WHERE id = ' . intval($dbId));
+
 			if ($row) {
-				$blockName = 'fase';
+				$blockName = 'fase'; // Default block name
 				$dataConfig[$blockName][$dbId] = array(
-					'description' => $row['description'] ? sanitize($row['description'], 'string') : 'Восстановленный блок',
-					'type' => intval($row['type']),
-					'state' => intval($row['state']),
+					'description' => $row['description'] ? sanitize($row['description'], 'string') : 'Восстановленный блок #' . $dbId,
+					'type' => clamp(intval($row['type']), 0, 2), // 0=HTML, 1=PHP, 2=TEXT
+					'state' => clamp(intval($row['state']), 0, 2), // 0=off, 1=on, 2=scheduled
 					'start_view' => $row['start_view'] ? intval($row['start_view']) : null,
 					'end_view' => $row['end_view'] ? intval($row['end_view']) : null,
 					'location' => $row['location'] ? unserialize($row['location']) : array(1 => array('mode' => 0, 'view' => 0))
 				);
+
+				logger('Restored block ' . $dbId . ' from database with basic structure', 'info', 'ads_pro.log');
 			}
 		}
+
 		// Сохраняем обновленную конфигурацию
 		pluginSetVariable('ads_pro', 'data', $dataConfig);
 		pluginsSaveConfig();
+
+		logger('Database synchronization completed, config saved', 'info', 'ads_pro.log');
+	} else {
+		logger('Database synchronization: no changes needed', 'debug', 'ads_pro.log');
 	}
+
 	return $dataConfig;
 }

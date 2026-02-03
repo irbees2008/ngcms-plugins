@@ -2,9 +2,13 @@
 if (!defined('NGCMS')) {
 	exit('HAL');
 }
+
+// Import ng-helpers functions
+use function Plugins\{array_get, notify};
+
 pluginsLoadConfig();
 LoadPluginLang('faq', 'config', '', '', '#');
-switch ($_REQUEST['action']) {
+switch (array_get($_REQUEST, 'action', '')) {
 	case 'list_faq':
 		show_faq();
 		break;
@@ -27,15 +31,15 @@ function show_add_faq()
 	global $tpl, $mysql, $lang, $twig;
 	$tpath = locatePluginTemplates(array('main', 'add_faq'), 'faq', 1);
 	if (isset($_REQUEST['submit'])) {
-		$question = $_REQUEST['question'];
-		$answer = $_REQUEST['answer'];
+		$question = array_get($_REQUEST, 'question', '');
+		$answer = array_get($_REQUEST, 'answer', '');
 		$active = 1;
 		if (empty($question) || empty($answer)) {
 			$error_text[] = 'Вы заполнили не все обязательные поля';
 		}
 		if (empty($error_text)) {
-			$mysql->query('INSERT INTO ' . prefix . '_faq (question, answer, active) 
-					VALUES 
+			$mysql->query('INSERT INTO ' . prefix . '_faq (question, answer, active)
+					VALUES
 					(
 						' . db_squote($question) . ',
 						' . db_squote($answer) . ',
@@ -74,17 +78,17 @@ function show_edit_faq()
 
 	global $tpl, $mysql, $lang, $twig;
 	$tpath = locatePluginTemplates(array('main', 'edit_faq'), 'faq', 1);
-	$id = intval($_REQUEST['id']);
+	$id = intval(array_get($_REQUEST, 'id', 0));
 	if (!empty($id)) {
 		$row = $mysql->record('SELECT * FROM ' . prefix . '_faq WHERE id = ' . db_squote($id) . ' LIMIT 1');
 		if (isset($_REQUEST['submit'])) {
-			$question = $_REQUEST['question'];
-			$answer = $_REQUEST['answer'];
+			$question = array_get($_REQUEST, 'question', '');
+			$answer = array_get($_REQUEST, 'answer', '');
 			if (empty($question) || empty($answer)) {
 				$error_text[] = 'Вы заполнили не все обязательные поля';
 			}
 			if (empty($error_text)) {
-				$mysql->query('UPDATE ' . prefix . '_faq SET 
+				$mysql->query('UPDATE ' . prefix . '_faq SET
 						question = ' . db_squote($question) . ',
 						answer = ' . db_squote($answer) . '
 						WHERE id = ' . intval($id) . ' ');
@@ -132,8 +136,8 @@ function modify()
 {
 
 	global $mysql;
-	$selected_faq = $_REQUEST['selected_faq'];
-	$subaction = $_REQUEST['subaction'];
+	$selected_faq = array_get($_REQUEST, 'selected_faq', []);
+	$subaction = array_get($_REQUEST, 'subaction', '');
 	if (empty($selected_faq)) {
 		return msg(array("type" => "error", "text" => "Ошибка, вы не выбрали записи"));
 	}
@@ -180,7 +184,7 @@ function show_faq()
 	$sqlQPart = "from " . prefix . "_faq" . $fSort;
 	$sqlQCount = "select count(id) " . $sqlQPart;
 	$sqlQ = "select * " . $sqlQPart;
-	$pageNo = intval($_REQUEST['page']) ? $_REQUEST['page'] : 0;
+	$pageNo = intval(array_get($_REQUEST, 'page', 0)) ? array_get($_REQUEST, 'page', 0) : 0;
 	if ($pageNo < 1) $pageNo = 1;
 	if (!$start_from) $start_from = ($pageNo - 1) * $news_per_page;
 	$count = $mysql->result($sqlQCount);

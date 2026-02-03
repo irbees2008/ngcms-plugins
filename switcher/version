@@ -4,7 +4,7 @@
 
 ID: switcher
 Name: Template/Language switcher
-Version: 0.08
+Version: 0.09
 Acts: core, index
 File: switcher.php
 Config: config.php
@@ -13,6 +13,7 @@ Description: Переключение шаблонов/языков пользо
 Author: Vitaly A. Ponomarev
 Author_URI: http://ngcms.ru/
 Title: Поддержка мульти/(языков/шаблонов)
+MinPHPVer: 8.0
 Information: Позволяет на одном сайте одновременно использовать разные шаблоны (к примеру, на разных языках), позволяет создать сайт на разных доменах с разным оформлением и использовать другие интересные комбинации.
 Preinstall: no
 MinEngineBuild: 23b3116
