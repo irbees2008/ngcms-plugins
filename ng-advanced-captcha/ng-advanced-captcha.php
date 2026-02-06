@@ -51,9 +51,6 @@ $coreFilter = new Plugins\AdvancedCaptcha\Filters\AdvancedCaptchaCoreFilter($adv
 // Регистрируем фильтр для проверки капчи при регистрации
 pluginRegisterFilter('core.registerUser', 'ng-advanced-captcha', $coreFilter);
 
-// Регистрируем фильтр для добавления виджета в форму регистрации
-pluginRegisterFilter('core.registrationForm', 'ng-advanced-captcha', $coreFilter);
-
 // Если активирован плагин комментариев.
 if (getPluginStatusActive('comments')) {
     loadPluginLibrary('comments', 'lib');

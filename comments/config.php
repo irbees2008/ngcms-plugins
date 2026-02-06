@@ -2,7 +2,14 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
-use function Plugins\{array_get};
+// Wrapper function for ng-helpers compatibility
+function cmt_cfg_array_get($array, $key, $default = null)
+{
+	if (function_exists('Plugins\\array_get')) {
+		return \Plugins\array_get($array, $key, $default);
+	}
+	return $array[$key] ?? $default;
+}
 
 //
 // Configuration file for plugin
@@ -50,7 +57,7 @@ array_push($cfgX, array('name' => 'inform_author', 'title' => "Оповещат�
 array_push($cfgX, array('name' => 'inform_admin', 'title' => "Оповещать администратора о новом комментарии", 'descr' => "<b>Да</b> - при добавлении каждого комментария администратор будет получать e-mail сообщение<br/><b>Нет</b> - администратор(ы) не будет получать e-mail нотификаций", 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => intval(pluginGetVariable($plugin, 'inform_admin'))));
 array_push($cfg, array('mode' => 'group', 'title' => '<b>Настройки оповещений</b>', 'entries' => $cfgX, 'toggle' => true, 'toggle.mode' => 'hide'));
 // RUN
-if (array_get($_REQUEST, 'action', '') == 'commit') {
+if (cmt_cfg_array_get($_REQUEST, 'action', '') == 'commit') {
 	// If submit requested, do config save
 	commit_plugin_config_changes($plugin, $cfg);
 	print_commit_complete($plugin);

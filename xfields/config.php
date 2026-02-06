@@ -5,7 +5,8 @@ if (!defined('NGCMS')) {
 }
 
 // Modernized with ng-helpers v0.2.2 (31 января 2026)
-use function Plugins\{notify, sanitize, logger, array_get};
+// Note: Using native PHP ?? operator for early loading compatibility
+use function Plugins\{notify, sanitize, logger};
 
 // Load lang files
 LoadPluginLang('xfields', 'config');
@@ -16,11 +17,11 @@ if (!is_array($xf = xf_configLoad())) {
 }
 //
 // Управление необходимыми действиями
-$sectionID = array_get($_REQUEST, 'section', 'news');
+$sectionID = $_REQUEST['section'] ?? 'news';
 if (!in_array($sectionID, ['news', 'grp.news', 'users', 'grp.users', 'tdata'])) {
     $sectionID = 'news';
 }
-switch (array_get($_REQUEST, 'action', '')) {
+switch ($_REQUEST['action'] ?? '') {
     case 'add':
         showAddEditForm();
         break;

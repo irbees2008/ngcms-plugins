@@ -1,0 +1,16 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+
+ID: content_parser
+Name: Парсер контента (modernized with ng-helpers v0.2.2)
+Version: 0.02
+Acts: index, ppages
+File: content_parser.php
+Config: config.php
+Type: plugin
+Description: Парсер контента из RSS, VK, Instagram. Модернизирован с ng-helpers v0.2.2: безопасный доступ к массивам, logger (3-парам), улучшенная безопасность.
+Author: irbees2008
+Author_URI: http://rostunov.com
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-rss fa-3x" aria-hidden="true"></i>

@@ -14,6 +14,82 @@ if (!defined('NGCMS')) {
 // Import ng-helpers functions
 use function Plugins\{validate_email, validate_phone, sanitize, csrf_field, validate_csrf, logger, get_ip, is_post, array_get};
 
+// Wrapper functions for ng-helpers compatibility
+if (!function_exists('fb_array_get')) {
+	function fb_array_get($array, $key, $default = null) {
+		if (function_exists('Plugins\\array_get')) {
+			return \Plugins\fb_array_get($array, $key, $default);
+		}
+		return $array[$key] ?? $default;
+	}
+}
+
+if (!function_exists('fb_sanitize')) {
+	function fb_sanitize($data, $type = 'string') {
+		if (function_exists('Plugins\\sanitize')) {
+			return \Plugins\fb_sanitize($data, $type);
+		}
+		if ($type === 'html') {
+			return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+		}
+		return strip_tags($data);
+	}
+}
+
+if (!function_exists('fb_logger')) {
+	function fb_logger($message, $level = 'info', $file = '') {
+		if (function_exists('Plugins\\logger')) {
+			return \Plugins\fb_logger($message, $level, $file);
+		}
+		error_log("[$level] $message");
+	}
+}
+
+if (!function_exists('fb_get_ip')) {
+	function fb_get_ip() {
+		if (function_exists('Plugins\\get_ip')) {
+			return \Plugins\fb_get_ip();
+		}
+		return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+	}
+}
+
+if (!function_exists('fb_is_post')) {
+	function fb_is_post() {
+		if (function_exists('Plugins\\is_post')) {
+			return \Plugins\fb_is_post();
+		}
+		return $_SERVER['REQUEST_METHOD'] === 'POST';
+	}
+}
+
+if (!function_exists('fb_validate_csrf')) {
+	function fb_validate_csrf() {
+		if (function_exists('Plugins\\validate_csrf')) {
+			return \Plugins\fb_validate_csrf();
+		}
+		return true; // Skip validation if ng-helpers not loaded
+	}
+}
+
+if (!function_exists('fb_csrf_field')) {
+	function fb_csrf_field() {
+		if (function_exists('Plugins\\csrf_field')) {
+			return \Plugins\fb_csrf_field();
+		}
+		return '';
+	}
+}
+
+if (!function_exists('fb_validate_email')) {
+	function fb_validate_email($email) {
+		if (function_exists('Plugins\\validate_email')) {
+			return \Plugins\fb_validate_email($email);
+		}
+		return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+	}
+}
+
 register_plugin_page('feedback', '', 'plugin_feedback_screen', 0);
 register_plugin_page('feedback', 'post', 'plugin_feedback_post', 0);
 loadPluginLang('feedback', 'main', '', '', ':');
@@ -40,7 +116,7 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '', $successText = '
     // Determine paths for all template files
     $tpath = locatePluginTemplates(['site.form', 'site.notify'], 'feedback', pluginGetVariable('feedback', 'localsource'));
     $SYSTEM_FLAGS['info']['title']['group'] = $lang['feedback:header.title'];
-    $form_id = intval(array_get($_REQUEST, 'id', 0));
+    $form_id = intval(fb_array_get($_REQUEST, 'id', 0));
     $xt = $twig->loadTemplate($tpath['site.notify'] . 'site.notify.tpl', $conversionConfig);
     // Get form data
     if (!is_array($frow = $mysql->record('select * from ' . prefix . '_feedback where active = 1 and id = ' . $form_id))) {
@@ -142,13 +218,13 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '', $successText = '
         $setValue = '';
         if ($mode && (!$fInfo['block'])) {
             // FILLED EARLIER
-            $setValue = secure_html(($isUTF && $flagsUTF) ?  array_get($_REQUEST, 'fld_' . $fInfo['name'], '') : array_get($_REQUEST, 'fld_' . $fInfo['name'], ''));
+            $setValue = secure_html(($isUTF && $flagsUTF) ?  fb_array_get($_REQUEST, 'fld_' . $fInfo['name'], '') : fb_array_get($_REQUEST, 'fld_' . $fInfo['name'], ''));
         } else {
             // INITIAL SHOW
             $setValue = secure_html($fInfo['default']);
             // If 'by parameter' mode is set, check if this variable was passed in GET
             if (($fInfo['auto'] == 1) && isset($_REQUEST['v_' . $fInfo['name']])) {
-                $setValue = secure_html(($isUTF && $flagsUTF) ? array_get($_REQUEST, 'v_' . $fInfo['name'], '') : array_get($_REQUEST, 'v_' . $fInfo['name'], ''));
+                $setValue = secure_html(($isUTF && $flagsUTF) ? fb_array_get($_REQUEST, 'v_' . $fInfo['name'], '') : fb_array_get($_REQUEST, 'v_' . $fInfo['name'], ''));
             } elseif ($fInfo['auto'] == 2) {
                 $setValue = secure_html($xfValues[$fInfo['name']]);
             } elseif ($fInfo['auto'] == 3) {
@@ -167,16 +243,16 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '', $successText = '
                 $setValueMonth = $fInfo['default:vars']['month'];
                 $setValueYear = $fInfo['default:vars']['year'];
                 if ($mode) {
-                    if ((intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':day', 0)) >= 1) &&
-                        (intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':day', 0)) <= 31) &&
-                        (intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':month', 0)) >= 1) &&
-                        (intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':month', 0)) <= 12) &&
-                        (intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':year', 0)) >= 1970) &&
-                        (intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':year', 0)) <= 2020)
+                    if ((intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':day', 0)) >= 1) &&
+                        (intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':day', 0)) <= 31) &&
+                        (intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':month', 0)) >= 1) &&
+                        (intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':month', 0)) <= 12) &&
+                        (intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':year', 0)) >= 1970) &&
+                        (intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':year', 0)) <= 2020)
                     ) {
-                        $setValueDay = intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':day', 0));
-                        $setValueMonth = intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':month', 0));
-                        $setValueYear = intval(array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':year', 0));
+                        $setValueDay = intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':day', 0));
+                        $setValueMonth = intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':month', 0));
+                        $setValueYear = intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':year', 0));
                     }
                 }
                 $opts = $fInfo['required'] ? '' : '<option value="">--</option>';
@@ -247,7 +323,7 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '', $successText = '
         $hF .= '<input type="hidden" name="' . $k . '" value="' . secure_html($v) . '"/>' . "\n";
     }
     // Add CSRF protection
-    $hF .= csrf_field() . "\n";
+    $hF .= fb_csrf_field() . "\n";
     $tVars['hidden_fields'] = $hF;
     // Process filters (if any)
     if (is_array($PFILTERS['feedback'])) {
@@ -277,13 +353,13 @@ function plugin_feedback_post()
     global $template, $lang, $mysql, $userROW, $SYSTEM_FLAGS, $PFILTERS, $twig, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW;
 
     // Check if request method is POST
-    if (!is_post()) {
+    if (!fb_is_post()) {
         return;
     }
 
     // Validate CSRF token
-    if (!validate_csrf()) {
-        logger('CSRF validation failed from IP: ' . get_ip(), 'warning', 'feedback_security.log');
+    if (!fb_validate_csrf()) {
+        fb_logger('CSRF validation failed from IP: ' . fb_get_ip(), 'warning', 'feedback_security.log');
         http_response_code(403);
         die('CSRF validation failed');
     }
@@ -291,7 +367,7 @@ function plugin_feedback_post()
     // Determine paths for all template files
     $tpath = locatePluginTemplates(['site.form', 'site.notify', 'mail.html', 'mail.text'], 'feedback', pluginGetVariable('feedback', 'localsource'));
     $ptpl_url = admin_url . '/plugins/feedback/tpl';
-    $form_id = intval(array_get($_REQUEST, 'id', 0));
+    $form_id = intval(fb_array_get($_REQUEST, 'id', 0));
     $SYSTEM_FLAGS['info']['title']['group'] = $lang['feedback:header.title'];
     $xt = $twig->loadTemplate($tpath['site.notify'] . 'site.notify.tpl');
     // Get form data
@@ -336,7 +412,7 @@ function plugin_feedback_post()
     }
     // Check if captcha check if needed
     if (substr($frow['flags'], 1, 1)) {
-        $vcode = array_get($_REQUEST, 'vcode', '');
+        $vcode = fb_array_get($_REQUEST, 'vcode', '');
         if ((!$vcode) || ($vcode != $_SESSION['captcha.feedback'])) {
             // Wrong CAPTCHA code (!!!)
             plugin_feedback_showScreen(1, $lang['feedback:sform.captcha.badcode']);
@@ -383,13 +459,13 @@ function plugin_feedback_post()
         $fieldValue = '';
         switch ($fInfo['type']) {
             case 'date':
-                $fieldValue = array_get($_REQUEST, 'fld_' . $fName . ':day', '') . '.' . array_get($_REQUEST, 'fld_' . $fName . ':month', '') . '.' . array_get($_REQUEST, 'fld_' . $fName . ':year', '');
+                $fieldValue = fb_array_get($_REQUEST, 'fld_' . $fName . ':day', '') . '.' . fb_array_get($_REQUEST, 'fld_' . $fName . ':month', '') . '.' . fb_array_get($_REQUEST, 'fld_' . $fName . ':year', '');
                 break;
             default:
                 if ($isUTF && $flagsUTF) {
-                    $fieldValue = array_get($_REQUEST, 'fld_' . $fName, '');
+                    $fieldValue = fb_array_get($_REQUEST, 'fld_' . $fName, '');
                 } else {
-                    $fieldValue = array_get($_REQUEST, 'fld_' . $fName, '');
+                    $fieldValue = fb_array_get($_REQUEST, 'fld_' . $fName, '');
                 }
         }
         // Check if required field is filled
@@ -399,7 +475,7 @@ function plugin_feedback_post()
             return;
         }
         // Sanitize field value for security
-        $fieldValue = sanitize($fieldValue);
+        $fieldValue = fb_sanitize($fieldValue);
         $fieldValues[$fName] = str_replace("\n", "<br/>\n", secure_html($fieldValue));
         $tEntry = [
             'id'    => $fName,
@@ -437,8 +513,8 @@ function plugin_feedback_post()
     if ($em === false) {
         $em[1] = [1, '', preg_split("# *(\r\n|\n) *#", $frow['emails'])];
     }
-    $elist = (isset($em[intval(array_get($_POST, 'recipient', 0))])) ? $em[intval(array_get($_POST, 'recipient', 0))][2] : $em[1][2];
-    $eGroupName = (isset($em[intval(array_get($_POST, 'recipient', 0))])) ? $em[intval(array_get($_POST, 'recipient', 0))][1] : $em[1][1];
+    $elist = (isset($em[intval(fb_array_get($_POST, 'recipient', 0))])) ? $em[intval(fb_array_get($_POST, 'recipient', 0))][2] : $em[1][2];
+    $eGroupName = (isset($em[intval(fb_array_get($_POST, 'recipient', 0))])) ? $em[intval(fb_array_get($_POST, 'recipient', 0))][1] : $em[1][1];
     // Prepare EMAIL content
     $mailSubject = str_replace(['{name}', '{title}'], [$frow['name'], $frow['title']], $flagSubj ? $frow['subj'] : $lang['feedback:mail.subj']);
     // Load template for ADMIN notification
@@ -476,10 +552,9 @@ function plugin_feedback_post()
         }
 
         // Log successful form submission
-        $userIP = get_ip();
-        $userName = $userROW['name'] ?? 'Guest';
-        logger("Feedback form #{$form_id} '{$frow['title']}' submitted by {$userName} from IP: {$userIP}. Sent to {$mailCount} recipients.", 'info', 'feedback.log');
-
+		$userIP = fb_get_ip();
+		$userName = $userROW['name'] ?? 'Guest';
+		fb_logger("Feedback form #{$form_id} '{$frow['title']}' submitted by {$userName} from IP: {$userIP}. Sent to {$mailCount} recipients.", 'info', 'feedback.log');
         // Telegram notification
         if (getPluginStatusActive('jchat_tgnotify')) {
             @include_once(root . 'plugins/jchat_tgnotify/jchat_tgnotify.php');
@@ -507,7 +582,7 @@ function plugin_feedback_post()
                 $tfiles = feedback_locateTemplateFiles($fInfo['template'], $flagHTML);
                 $tfn = $tfiles['mail']['file'];
                 // Use ng-helpers email validation
-                if (validate_email($fieldValues[$fName]) && file_exists($tfn)) {
+                if (fb_validate_email($fieldValues[$fName]) && file_exists($tfn)) {
                     $eSendList[] = $fieldValues[$fName];
                     $xtu = $twig->loadTemplate($tfn);
                     // Render USER email body
@@ -518,7 +593,7 @@ function plugin_feedback_post()
         }
     } else {
         // Log plugin-handled submission
-        logger("Feedback form #{$form_id} '{$frow['title']}' submitted and handled by plugin from IP: " . get_ip(), 'info', 'feedback.log');
+        fb_logger("Feedback form #{$form_id} '{$frow['title']}' submitted and handled by plugin from IP: " . fb_get_ip(), 'info', 'feedback.log');
     }
     // Do post processing notification
     if (is_array($PFILTERS['feedback'])) {

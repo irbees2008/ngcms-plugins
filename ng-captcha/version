@@ -1,0 +1,19 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: ng-captcha
+Name: NG Captcha (Universal)
+Version: 1.0.0
+Preinstall: default_no
+Acts: core, comments, comments:add, action.ppages.feedback, feedback, feedback:post
+Library: autoload; vendor/autoload.php
+File: ng-captcha.php
+Config: config.php
+Type: plugin
+Title: NG Captcha (Universal)
+Name: NG Captcha (Universal)
+Description: Универсальная защита форм от ботов с поддержкой Google reCAPTCHA v3, Cloudflare Turnstile и Яндекс SmartCaptcha
+Author: NGCMS Team
+URL: https://ngcms.ru
+MinEngineBuild: 23b3116
+Icons: <i class="fa fa-refresh fa-3x" aria-hidden="true"></i>

@@ -3,23 +3,60 @@
 if (!defined('NGCMS')) die('HAL');
 
 // Modified with ng-helpers v0.2.2 functions (2026-01-29)
-// - Enhanced caching with cache_get/cache_put
-// - Added sanitization for security
-// - Added comprehensive logging
-// - Added benchmark for performance monitoring
-// - Added array helpers for cleaner code
+// NOTE: On hosting, ng-helpers may load after this plugin
+// Using wrapper functions with existence checks for compatibility
 
-use function Plugins\{
-	cache_get,
-	cache_put,
-	logger,
-	sanitize,
-	benchmark,
-	array_get,
-	array_only,
-	clamp,
-	is_ajax
-};
+// Wrapper functions for ng-helpers compatibility
+function ads_logger($message, $level = 'info', $file = 'plugin.log')
+{
+	if (function_exists('Plugins\\logger')) {
+		return \Plugins\logger($message, $level, $file);
+	}
+	return true;
+}
+
+function ads_cache_get($key, $default = null)
+{
+	if (function_exists('Plugins\\cache_get')) {
+		return \Plugins\cache_get($key, $default);
+	}
+	return $default;
+}
+
+function ads_cache_put($key, $value, $minutes = 60)
+{
+	if (function_exists('Plugins\\cache_put')) {
+		return \Plugins\cache_put($key, $value, $minutes);
+	}
+	return false;
+}
+
+function ads_sanitize($data, $type = 'string')
+{
+	if (function_exists('Plugins\\sanitize')) {
+		return \Plugins\sanitize($data, $type !== 'html');
+	}
+	return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+}
+
+function ads_benchmark($callback)
+{
+	if (function_exists('Plugins\\benchmark')) {
+		return \Plugins\benchmark($callback);
+	}
+	$start = microtime(true);
+	$result = $callback();
+	return ['time' => microtime(true) - $start, 'result' => $result];
+}
+
+function ads_clamp($value, $min, $max)
+{
+	if (function_exists('Plugins\\clamp')) {
+		return \Plugins\clamp($value, $min, $max);
+	}
+	return max($min, min($max, $value));
+}
+
 // Classes for traffic handling
 // - static pages
 class ADSProStaticFilter extends StaticFilter
@@ -32,6 +69,7 @@ class ADSProStaticFilter extends StaticFilter
 		return 1;
 	}
 }
+
 // - news
 class ADSProNewsFilter extends NewsFilter
 {
@@ -245,35 +283,35 @@ function plugin_ads_pro()
 			// Cache non-PHP ads blocks
 			if ($blockInfo['type'] != 1) {
 				$cacheKey = 'ads_pro:' . $blockID . ':' . $blockIndexNum . ':' . $blockInfo['type'];
-				$cacheData = cache_get($cacheKey);
+				$cacheData = ads_cache_get($cacheKey);
 
 				if ($cacheData !== null) {
 					$template['vars'][$tplVarName] .= $cacheData;
-					logger('Cache HIT for block: id=' . $blockIndexNum . ', block=' . $blockID, 'debug', 'ads_pro.log');
+					ads_logger('Cache HIT for block: id=' . $blockIndexNum . ', block=' . $blockID, 'debug', 'ads_pro.log');
 					continue;
 				}
 
-				logger('Cache MISS for block: id=' . $blockIndexNum . ', block=' . $blockID, 'debug', 'ads_pro.log');
+				ads_logger('Cache MISS for block: id=' . $blockIndexNum . ', block=' . $blockID, 'debug', 'ads_pro.log');
 
 				$description = '';
 				if (is_array($row = $mysql->record('select ads_blok from ' . prefix . '_ads_pro where id=' . db_squote($blockIndexNum)))) {
 					// Sanitize based on type: 0=HTML, 2=TEXT
 					if ($blockInfo['type'] == 0) {
 						// HTML type - allow HTML but sanitize dangerous content
-						$description = sanitize($row['ads_blok'], 'html');
+						$description = ads_sanitize($row['ads_blok'], 'html');
 					} else {
 						// TEXT type - escape all HTML and convert newlines
-						$description = nl2br(sanitize($row['ads_blok'], 'string'));
+						$description = nl2br(ads_sanitize($row['ads_blok'], 'string'));
 					}
 				}
 
 				$template['vars'][$tplVarName] .= $description;
 
 				// Cache for 8 hours (30000 seconds ≈ 8.3 hours)
-				$cacheDuration = clamp(intval(pluginGetVariable('ads_pro', 'cache_duration', 30000)), 300, 86400);
-				cache_put($cacheKey, $description, $cacheDuration);
+				$cacheDuration = ads_clamp(intval(pluginGetVariable('ads_pro', 'cache_duration', 30000)), 300, 86400);
+				ads_cache_put($cacheKey, $description, $cacheDuration);
 
-				logger('Rendered and cached block: id=' . $blockIndexNum . ', size=' . strlen($description) . ' bytes', 'info', 'ads_pro.log');
+				ads_logger('Rendered and cached block: id=' . $blockIndexNum . ', size=' . strlen($description) . ' bytes', 'info', 'ads_pro.log');
 			} else {
 				// PHP type block - execute dynamically (no caching)
 				$description = '';
@@ -281,17 +319,17 @@ function plugin_ads_pro()
 					$description = $row['ads_blok'];
 				}
 
-				logger('Executing PHP block: id=' . $blockIndexNum . ', block=' . $blockID, 'info', 'ads_pro.log');
+				ads_logger('Executing PHP block: id=' . $blockIndexNum . ', block=' . $blockID, 'info', 'ads_pro.log');
 
 				// Benchmark PHP block execution
-				$result = benchmark(function () use ($description, &$out2) {
+				$result = ads_benchmark(function () use ($description, &$out2) {
 					ob_start();
 					@eval($description);
 					$out2 = ob_get_contents();
 					ob_end_clean();
 				});
 
-				logger('PHP block executed: id=' . $blockIndexNum . ', time=' . round($result['time'] * 1000, 2) . 'ms, output=' . strlen($out2) . ' bytes', 'info', 'ads_pro.log');
+				ads_logger('PHP block executed: id=' . $blockIndexNum . ', time=' . round($result['time'] * 1000, 2) . 'ms, output=' . strlen($out2) . ' bytes', 'info', 'ads_pro.log');
 
 				$template['vars'][$tplVarName] .= $out2;
 			}
@@ -303,7 +341,7 @@ function ads_pro_sync_with_database($dataConfig)
 {
 	global $mysql;
 
-	logger('Starting database synchronization', 'debug', 'ads_pro.log');
+	ads_logger('Starting database synchronization', 'debug', 'ads_pro.log');
 
 	// Получаем все ID из базы данных
 	$dbIds = array();
@@ -325,7 +363,7 @@ function ads_pro_sync_with_database($dataConfig)
 
 	// Если есть ID в конфиге, которых нет в БД - удаляем их из конфига
 	if (!empty($missingInDb)) {
-		logger('Sync: removing ' . count($missingInDb) . ' orphaned blocks from config, IDs=' . implode(',', $missingInDb), 'warning', 'ads_pro.log');
+		ads_logger('Sync: removing ' . count($missingInDb) . ' orphaned blocks from config, IDs=' . implode(',', $missingInDb), 'warning', 'ads_pro.log');
 
 		foreach ($dataConfig as $blockName => &$blocks) {
 			foreach ($blocks as $blockId => $blockData) {
@@ -342,7 +380,7 @@ function ads_pro_sync_with_database($dataConfig)
 
 	// Если есть ID в БД, которых нет в конфиге - восстанавливаем их
 	if (!empty($missingInConfig)) {
-		logger('Sync: restoring ' . count($missingInConfig) . ' blocks from database, IDs=' . implode(',', $missingInConfig), 'warning', 'ads_pro.log');
+		ads_logger('Sync: restoring ' . count($missingInConfig) . ' blocks from database, IDs=' . implode(',', $missingInConfig), 'warning', 'ads_pro.log');
 
 		// Сначала ищем в исходной конфигурации
 		$originalConfig = pluginGetVariable('ads_pro', 'data');
@@ -356,7 +394,7 @@ function ads_pro_sync_with_database($dataConfig)
 						// Найден в исходной конфигурации - восстанавливаем
 						$dataConfig[$blockName][$dbId] = $blockData;
 						$foundInOriginal[] = $dbId;
-						logger('Restored block ' . $dbId . ' from original config', 'info', 'ads_pro.log');
+						ads_logger('Restored block ' . $dbId . ' from original config', 'info', 'ads_pro.log');
 						break 2;
 					}
 				}
@@ -372,15 +410,15 @@ function ads_pro_sync_with_database($dataConfig)
 			if ($row) {
 				$blockName = 'fase'; // Default block name
 				$dataConfig[$blockName][$dbId] = array(
-					'description' => $row['description'] ? sanitize($row['description'], 'string') : 'Восстановленный блок #' . $dbId,
-					'type' => clamp(intval($row['type']), 0, 2), // 0=HTML, 1=PHP, 2=TEXT
-					'state' => clamp(intval($row['state']), 0, 2), // 0=off, 1=on, 2=scheduled
+					'description' => $row['description'] ? ads_sanitize($row['description'], 'string') : 'Восстановленный блок #' . $dbId,
+					'type' => ads_clamp(intval($row['type']), 0, 2), // 0=HTML, 1=PHP, 2=TEXT
+					'state' => ads_clamp(intval($row['state']), 0, 2), // 0=off, 1=on, 2=scheduled
 					'start_view' => $row['start_view'] ? intval($row['start_view']) : null,
 					'end_view' => $row['end_view'] ? intval($row['end_view']) : null,
 					'location' => $row['location'] ? unserialize($row['location']) : array(1 => array('mode' => 0, 'view' => 0))
 				);
 
-				logger('Restored block ' . $dbId . ' from database with basic structure', 'info', 'ads_pro.log');
+				ads_logger('Restored block ' . $dbId . ' from database with basic structure', 'info', 'ads_pro.log');
 			}
 		}
 
@@ -388,9 +426,9 @@ function ads_pro_sync_with_database($dataConfig)
 		pluginSetVariable('ads_pro', 'data', $dataConfig);
 		pluginsSaveConfig();
 
-		logger('Database synchronization completed, config saved', 'info', 'ads_pro.log');
+		ads_logger('Database synchronization completed, config saved', 'info', 'ads_pro.log');
 	} else {
-		logger('Database synchronization: no changes needed', 'debug', 'ads_pro.log');
+		ads_logger('Database synchronization: no changes needed', 'debug', 'ads_pro.log');
 	}
 
 	return $dataConfig;

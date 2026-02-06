@@ -8,7 +8,44 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
-use function Plugins\{time_ago, excerpt, array_get, sanitize};
+// Wrapper functions for ng-helpers compatibility
+function cmtshow_time_ago($timestamp)
+{
+	if (function_exists('Plugins\\time_ago')) {
+		return \Plugins\time_ago($timestamp);
+	}
+	$diff = time() - $timestamp;
+	if ($diff < 60) return $diff . ' сек. назад';
+	if ($diff < 3600) return floor($diff / 60) . ' мин. назад';
+	if ($diff < 86400) return floor($diff / 3600) . ' ч. назад';
+	return floor($diff / 86400) . ' дн. назад';
+}
+
+function cmtshow_excerpt($text, $length = 150)
+{
+	if (function_exists('Plugins\\excerpt')) {
+		return \Plugins\excerpt($text, $length);
+	}
+	$text = strip_tags($text);
+	if (strlen($text) <= $length) return $text;
+	return substr($text, 0, $length) . '...';
+}
+
+function cmtshow_array_get($array, $key, $default = null)
+{
+	if (function_exists('Plugins\\array_get')) {
+		return \Plugins\array_get($array, $key, $default);
+	}
+	return $array[$key] ?? $default;
+}
+
+function cmtshow_sanitize($data, $type = 'string')
+{
+	if (function_exists('Plugins\\sanitize')) {
+		return \Plugins\sanitize($data, $type !== 'html');
+	}
+	return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+}
 
 //
 // Show comments for a news
@@ -123,7 +160,7 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 			$tvars['vars']['edit_info'] = '';
 		}
 		$tvars['vars']['date'] = LangDate($timestamp, $row['postdate']);
-		$tvars['vars']['time_ago'] = time_ago($row['postdate']);
+		$tvars['vars']['time_ago'] = cmtshow_time_ago($row['postdate']);
 		if ($row['reg'] && getPluginStatusActive('uprofile')) {
 			$tvars['vars']['profile_link'] = checkLinkAvailable('uprofile', 'show') ?
 				generateLink('uprofile', 'show', array('name' => $row['author'], 'id' => $row['author_id'])) :
@@ -156,7 +193,7 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 		*/
 		$tvars['vars']['text'] = $text;
 		$tvars['vars']['comment-short'] = $text;
-		$tvars['vars']['comment_preview'] = excerpt($text, 150);
+		$tvars['vars']['comment_preview'] = cmtshow_excerpt($text, 150);
 		$tvars['regx']["'\[comment_full\](.*?)\[/comment_full\]'si"] = '';
 		/* } */
 		if ($commID && $commDisplayNum) {

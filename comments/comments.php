@@ -2,7 +2,30 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
-use function Plugins\{logger, array_get, sanitize, get_ip};
+// Wrapper functions for ng-helpers compatibility
+function cmt_logger($message, $level = 'info', $file = 'plugin.log')
+{
+	if (function_exists('Plugins\\logger')) {
+		return \Plugins\logger($message, $level, $file);
+	}
+	return true;
+}
+
+function cmt_get_ip()
+{
+	if (function_exists('Plugins\\get_ip')) {
+		return \Plugins\get_ip();
+	}
+	return $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+}
+
+function cmt_array_get($array, $key, $default = null)
+{
+	if (function_exists('Plugins\\array_get')) {
+		return \Plugins\array_get($array, $key, $default);
+	}
+	return $array[$key] ?? $default;
+}
 
 $lang = LoadLang("comments", "site");
 
@@ -88,7 +111,7 @@ class CommentsNewsFilter extends NewsFilter
 	}
 	function addNews(&$tvars, &$SQL)
 	{
-		$SQL['allow_com'] = intval(array_get($_REQUEST, 'allow_com', 0));
+		$SQL['allow_com'] = intval($_REQUEST['allow_com'] ?? 0);
 		return 1;
 	}
 	function editNewsForm($newsID, $SQLnews, &$tvars)
@@ -139,7 +162,7 @@ class CommentsNewsFilter extends NewsFilter
 	}
 	function editNews($newsID, $SQLold, &$SQLnew, &$tvars)
 	{
-		$SQLnew['allow_com'] = intval(array_get($_REQUEST, 'allow_com', 0));
+		$SQLnew['allow_com'] = intval(cmt_array_get($_REQUEST, 'allow_com', 0));
 		return 1;
 	}
 	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
@@ -274,7 +297,7 @@ class CommentsFilterAdminCategories extends FilterAdminCategories
 {
 	function addCategory(&$tvars, &$SQL)
 	{
-		$SQL['allow_com'] = intval(array_get($_REQUEST, 'allow_com', 0));
+		$SQL['allow_com'] = intval(cmt_array_get($_REQUEST, 'allow_com', 0));
 		return 1;
 	}
 	function addCategoryForm(&$tvars)
@@ -307,7 +330,7 @@ class CommentsFilterAdminCategories extends FilterAdminCategories
 	}
 	function editCategory($categoryID, $SQL, &$SQLnew, &$tvars)
 	{
-		$SQLnew['allow_com'] = intval(array_get($_REQUEST, 'allow_com', 0));
+		$SQLnew['allow_com'] = intval(cmt_array_get($_REQUEST, 'allow_com', 0));
 		return 1;
 	}
 }
@@ -324,7 +347,7 @@ function plugin_comments_add()
 	if (is_array($addResult = comments_add())) {
 		// Ok.
 		// Check if AJAX mode is turned OFF
-		if (!array_get($_REQUEST, 'ajax', 0)) {
+		if (!cmt_array_get($_REQUEST, 'ajax', 0)) {
 			// We should JUMP to this new comment
 			// Make FULL news link
 			$nlink = newsGenerateLink($addResult[0]);
@@ -358,7 +381,7 @@ function plugin_comments_add()
 		return 1;
 	} else {
 		// Some errors.
-		if (array_get($_REQUEST, 'ajax', 0)) {
+		if (cmt_array_get($_REQUEST, 'ajax', 0)) {
 			// AJAX MODE - return error in JSON
 			$output = array(
 				'status' => 0,
@@ -368,7 +391,7 @@ function plugin_comments_add()
 			$template['vars']['mainblock'] = '';
 		} else {
 			// NON-AJAX MODE: show notification and auto-redirect back
-			$url = secure_html(array_get($_REQUEST, 'referer', '') ? array_get($_REQUEST, 'referer', '') : '/');
+			$url = secure_html(cmt_array_get($_REQUEST, 'referer', '') ? cmt_array_get($_REQUEST, 'referer', '') : '/');
 			// Сообщения уже собраны в $template['vars']['mainblock'] вызовами msg() выше.
 			// Добавим ссылку для возврата и авто-редирект.
 			$linkText = isset($lang['comments:err.redir.url']) ? $lang['comments:err.redir.url'] : 'Вернуться назад';
@@ -385,7 +408,7 @@ function plugin_comments_show()
 	$lang = LoadLang('news', 'site');
 	$SYSTEM_FLAGS['info']['title']['group'] = $lang['comments:header.title'];
 	include_once(root . "/plugins/comments/inc/comments.show.php");
-	$newsID = intval(array_get($_REQUEST, 'news_id', 0));
+	$newsID = intval(cmt_array_get($_REQUEST, 'news_id', 0));
 	if (!$newsID || !is_array($newsRow = $mysql->record("select * from " . prefix . "_news where id = " . db_squote($newsID)))) {
 		error404();
 		return;
@@ -405,11 +428,11 @@ function plugin_comments_show()
 	// Для встроенной (embedded) AJAX пагинации используем те же настройки, что и на странице новости (multi_mcount), иначе multi_scount.
 	$perPageEmbedded = intval(pluginGetVariable('comments', 'multi_mcount'));
 	$perPageStandalone = intval(pluginGetVariable('comments', 'multi_scount'));
-	$isEmbedded = (bool)array_get($_REQUEST, 'embedded', 0);
+	$isEmbedded = (bool)cmt_array_get($_REQUEST, 'embedded', 0);
 	$perPage = $isEmbedded ? $perPageEmbedded : $perPageStandalone;
 	if (($perPage > 0) && ($newsRow['com'] > $perPage)) {
 		$pageCount = ceil($newsRow['com'] / max(1, $perPage));
-		$page = intval(array_get($_REQUEST, 'page', 1));
+		$page = intval(cmt_array_get($_REQUEST, 'page', 1));
 		if ($page < 1) {
 			$page = 1;
 		}
@@ -433,7 +456,7 @@ function plugin_comments_show()
 	} else {
 		$tcvars['vars']['pagination'] = null;
 	}
-	if (array_get($_REQUEST, 'ajax', 0) && array_get($_REQUEST, 'ajax', 0) && array_get($_REQUEST, 'embedded', 0)) {
+	if (cmt_array_get($_REQUEST, 'ajax', 0) && cmt_array_get($_REQUEST, 'ajax', 0) && cmt_array_get($_REQUEST, 'embedded', 0)) {
 		$SUPRESS_TEMPLATE_SHOW = 1;
 		// Рендерим HTML пагинации через шаблон, чтобы верстка была идентичной и на AJAX.
 		global $twig;
@@ -514,28 +537,26 @@ function plugin_comments_delete()
 	$output = array();
 	$params = array();
 	// First: check if user have enough permissions
-	if (!is_array($userROW) || ($userROW['status'] > 2) || (array_get($_GET, 'uT', '') != genUToken(intval(array_get($_REQUEST, 'id', 0))))) {
+	if (!is_array($userROW) || ($userROW['status'] > 2) || (cmt_array_get($_GET, 'uT', '') != genUToken(intval(cmt_array_get($_REQUEST, 'id', 0))))) {
 		// Not allowed
 		msg(array('type' => 'error', 'text' => $lang['perm.denied']));
 		$output['status'] = 0;
 		$output['data'] = $template['vars']['mainblock'];
 	} else {
 		// Second: check if this comment exists
-		$comid = intval(array_get($_REQUEST, 'id', 0));
+		$comid = intval(cmt_array_get($_REQUEST, 'id', 0));
 		if (($comid) && ($row = $mysql->record("select * from " . prefix . "_comments where id=" . db_squote($comid)))) {
 			$mysql->query("delete from " . prefix . "_comments where id=" . db_squote($comid));
 			$mysql->query("update " . uprefix . "_users set com=com-1 where id=" . db_squote($row['author_id']));
 			$mysql->query("update " . prefix . "_news set com=com-1 where id=" . db_squote($row['post']));
 			// Логирование удаления
-			if (function_exists('Plugins\\logger') && function_exists('Plugins\\get_ip')) {
-				\Plugins\logger('comments', sprintf(
-					'Comment #%d deleted by %s (ID: %d, IP: %s)',
-					$comid,
-					$userROW['name'],
-					$userROW['id'],
-					\Plugins\get_ip()
-				));
-			}
+			cmt_logger('comments', sprintf(
+				'Comment #%d deleted by %s (ID: %d, IP: %s)',
+				$comid,
+				$userROW['name'],
+				$userROW['id'],
+				cmt_get_ip()
+			));
 			msg(array('type' => 'info', 'text' => $lang['comments:deleted.text']));
 			$output['status'] = 1;
 			$output['data'] = $template['vars']['mainblock'];
@@ -548,7 +569,7 @@ function plugin_comments_delete()
 	}
 	$SUPRESS_TEMPLATE_SHOW = 1;
 	// Check if we run AJAX request
-	if (array_get($_REQUEST, 'ajax', 0)) {
+	if (cmt_array_get($_REQUEST, 'ajax', 0)) {
 		header('Content-Type: application/json; charset=utf-8');
 		echo json_encode($output);
 		exit;
@@ -574,7 +595,7 @@ function plugin_comments_edit()
 	global $mysql, $config, $userROW, $lang, $parse, $SUPRESS_TEMPLATE_SHOW, $template;
 	$SUPRESS_TEMPLATE_SHOW = 1;
 	$output = array();
-	$comment_id = intval(array_get($_REQUEST, 'id', 0));
+	$comment_id = intval(cmt_array_get($_REQUEST, 'id', 0));
 	// Проверка прав
 	if (!is_array($userROW) || ($userROW['status'] > 2)) {
 		msg(array('type' => 'error', 'text' => 'Недостаточно прав'));
@@ -584,7 +605,7 @@ function plugin_comments_edit()
 		echo json_encode($output);
 		exit;
 	}
-	if (array_get($_REQUEST, 'action', '') == 'get') {
+	if (cmt_array_get($_REQUEST, 'action', '') == 'get') {
 		// Получение текста комментария
 		if ($row = $mysql->record("select * from " . prefix . "_comments where id=" . db_squote($comment_id))) {
 			$output['status'] = 1;
@@ -594,10 +615,10 @@ function plugin_comments_edit()
 			$output['status'] = 0;
 			$output['data'] = $template['vars']['mainblock'];
 		}
-	} elseif (array_get($_REQUEST, 'action', '') == 'save') {
+	} elseif (cmt_array_get($_REQUEST, 'action', '') == 'save') {
 		// Сохранение отредактированного комментария
 		if ($row = $mysql->record("select * from " . prefix . "_comments where id=" . db_squote($comment_id))) {
-			$new_text = secure_html(trim(array_get($_POST, 'text', '')));
+			$new_text = secure_html(trim(cmt_array_get($_POST, 'text', '')));
 			$new_text = str_replace("\r\n", "<br />", $new_text);
 			$edit_date = time() + ($config['date_adjust'] * 60);
 			// Проверяем наличие колонки edit_date, чтобы избежать SQL-ошибки на старых БД
@@ -617,15 +638,13 @@ function plugin_comments_edit()
 				exit;
 			}
 			// Логирование редактирования
-			if (function_exists('Plugins\\logger') && function_exists('Plugins\\get_ip')) {
-				\Plugins\logger('comments', sprintf(
-					'Comment #%d edited by %s (ID: %d, IP: %s)',
-					$comment_id,
-					$userROW['name'],
-					$userROW['id'],
-					\Plugins\get_ip()
-				));
-			}
+			cmt_logger('comments', sprintf(
+				'Comment #%d edited by %s (ID: %d, IP: %s)',
+				$comment_id,
+				$userROW['name'],
+				$userROW['id'],
+				cmt_get_ip()
+			));
 			// Формируем HTML для отображения
 			$display_text = $new_text;
 			if ($config['blocks_for_reg']) {
@@ -673,11 +692,11 @@ function plugin_comments_moderation()
 		return;
 	}
 	// Handle actions
-	if (array_get($_POST, 'action', '')) {
-		switch (array_get($_POST, 'action', '')) {
+	if (cmt_array_get($_POST, 'action', '')) {
+		switch (cmt_array_get($_POST, 'action', '')) {
 			case 'approve':
-				if (array_get($_POST, 'comments', []) && is_array(array_get($_POST, 'comments', []))) {
-					$comments = array_get($_POST, 'comments', []);
+				if (cmt_array_get($_POST, 'comments', []) && is_array(cmt_array_get($_POST, 'comments', []))) {
+					$comments = cmt_array_get($_POST, 'comments', []);
 					$approved_count = 0;
 					foreach ($comments as $comment_id) {
 						$comment_id = intval($comment_id);
@@ -688,12 +707,12 @@ function plugin_comments_moderation()
 						}
 						$approved_count++;
 					}
-					logger('Comments approved: ' . $approved_count . ' by ' . $userROW['name'] . ' (ID: ' . $userROW['id'] . ', IP: ' . get_ip() . ')', 'info', 'comments.log');
+					cmt_logger('Comments approved: ' . $approved_count . ' by ' . $userROW['name'] . ' (ID: ' . $userROW['id'] . ', IP: ' . cmt_get_ip() . ')', 'info', 'comments.log');
 					msg(array("type" => "info", "text" => $lang['comments:moderation.approved']));
 				}
 				break;
 			case 'delete':
-				$comments = array_get($_POST, 'comments', []);
+				$comments = cmt_array_get($_POST, 'comments', []);
 				if ($comments && is_array($comments)) {
 					$deleted_count = 0;
 					foreach ($comments as $comment_id) {
@@ -701,7 +720,7 @@ function plugin_comments_moderation()
 						$mysql->query("DELETE FROM " . prefix . "_comments WHERE id=" . db_squote($comment_id));
 						$deleted_count++;
 					}
-					logger('Comments deleted: ' . $deleted_count . ' by ' . $userROW['name'] . ' (ID: ' . $userROW['id'] . ', IP: ' . get_ip() . ')', 'warning', 'comments.log');
+					cmt_logger('Comments deleted: ' . $deleted_count . ' by ' . $userROW['name'] . ' (ID: ' . $userROW['id'] . ', IP: ' . cmt_get_ip() . ')', 'warning', 'comments.log');
 					msg(array("type" => "info", "text" => $lang['comments:moderation.deleted']));
 				}
 				break;

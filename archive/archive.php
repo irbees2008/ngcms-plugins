@@ -4,13 +4,48 @@
 if (!defined('NGCMS')) die('HAL');
 
 // Integrated with ng-helpers v0.2.2 (2026-01-29)
-// - cache_get/cache_put for caching archive data
-// - logger for operation tracking
-// - clamp for parameter validation
-// - sanitize for input data safety
+// NOTE: Using wrapper functions for hosting compatibility
 
-// Import ng-helpers functions
-use function Plugins\{cache_get, cache_put, logger, clamp, sanitize};
+// Wrapper functions for ng-helpers compatibility
+function arch_logger($message, $level = 'info', $file = 'plugin.log')
+{
+	if (function_exists('Plugins\\logger')) {
+		return \Plugins\logger($message, $level, $file);
+	}
+	return true;
+}
+
+function arch_cache_get($key, $default = null)
+{
+	if (function_exists('Plugins\\cache_get')) {
+		return \Plugins\cache_get($key, $default);
+	}
+	return $default;
+}
+
+function arch_cache_put($key, $value, $minutes = 60)
+{
+	if (function_exists('Plugins\\cache_put')) {
+		return \Plugins\cache_put($key, $value, $minutes);
+	}
+	return false;
+}
+
+function arch_sanitize($data, $type = 'string')
+{
+	if (function_exists('Plugins\\sanitize')) {
+		return \Plugins\sanitize($data, $type !== 'html');
+	}
+	return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+}
+
+function arch_clamp($value, $min, $max)
+{
+	if (function_exists('Plugins\\clamp')) {
+		return \Plugins\clamp($value, $min, $max);
+	}
+	return max($min, min($max, $value));
+}
 
 // Check execution mode
 if (!pluginGetVariable('archive', 'mode')) {
@@ -33,16 +68,16 @@ function plug_arch($maxnum, $counter, $tcounter, $overrideTemplateName, $cacheEx
 
 	global $config, $mysql, $tpl, $template, $twig, $twigLoader, $langMonths, $lang;
 
-	// Валидация параметров с помощью clamp()
-	$maxnum = clamp(intval($maxnum), 1, 50);
+	// Валидация параметров с помощью arch_clamp()
+	$maxnum = arch_clamp(intval($maxnum), 1, 50);
 	$counter = intval($counter);
 	$tcounter = intval($tcounter);
-	$cacheExpire = clamp(intval($cacheExpire), 0, 86400); // 0 до 24 часов
+	$cacheExpire = arch_clamp(intval($cacheExpire), 0, 86400); // 0 до 24 часов
 
-	logger('Generating archive: maxnum=' . $maxnum . ', cache=' . ($cacheExpire > 0 ? $cacheExpire . 's' : 'disabled') . ', called_from=' . basename($_SERVER['PHP_SELF'] ?? 'unknown'), 'info', 'archive.log');
+	arch_logger('Generating archive: maxnum=' . $maxnum . ', cache=' . ($cacheExpire > 0 ? $cacheExpire . 's' : 'disabled') . ', called_from=' . basename($_SERVER['PHP_SELF'] ?? 'unknown'), 'info', 'archive.log');
 
 	if ($overrideTemplateName) {
-		$templateName = sanitize($overrideTemplateName);
+		$templateName = arch_sanitize($overrideTemplateName);
 	} else {
 		$templateName = 'archive';
 	}
@@ -51,13 +86,13 @@ function plug_arch($maxnum, $counter, $tcounter, $overrideTemplateName, $cacheEx
 	$cacheKey = 'archive_' . $config['theme'] . '_' . $templateName . '_' . $config['default_lang'];
 
 	if ($cacheExpire > 0) {
-		$cacheData = cache_get($cacheKey, false);
+		$cacheData = arch_cache_get($cacheKey, false);
 		if ($cacheData !== false) {
 			// We got data from cache. Return it and stop
-			logger('Cache HIT: ' . $cacheKey, 'info', 'archive.log');
+			arch_logger('Cache HIT: ' . $cacheKey, 'info', 'archive.log');
 			return $cacheData;
 		}
-		logger('Cache MISS: ' . $cacheKey, 'info', 'archive.log');
+		arch_logger('Cache MISS: ' . $cacheKey, 'info', 'archive.log');
 	}
 	// Determine paths for all template files
 	$tpath = locatePluginTemplates(array($templateName, 'entries'), 'archive', pluginGetVariable('archive', 'localsource'));
@@ -127,8 +162,8 @@ function plug_arch($maxnum, $counter, $tcounter, $overrideTemplateName, $cacheEx
 	$output = $xt->render($tVars);
 
 	if ($cacheExpire > 0) {
-		cache_put($cacheKey, $output, $cacheExpire);
-		logger('Cache saved: ' . $cacheKey . ' (TTL: ' . $cacheExpire . 's)', 'info', 'archive.log');
+		arch_cache_put($cacheKey, $output, $cacheExpire);
+		arch_logger('Cache saved: ' . $cacheKey . ' (TTL: ' . $cacheExpire . 's)', 'info', 'archive.log');
 	}
 
 	return $output;
@@ -147,7 +182,7 @@ function plugin_archive_showTwig($params)
 	$maxnum = isset($params['maxnum']) ? intval($params['maxnum']) : pluginGetVariable('archive', 'maxnum');
 	$counter = isset($params['counter']) ? intval($params['counter']) : false;
 	$tcounter = isset($params['tcounter']) ? intval($params['tcounter']) : false;
-	$template = isset($params['template']) ? sanitize($params['template']) : false;
+	$template = isset($params['template']) ? arch_sanitize($params['template']) : false;
 	$cacheExpire = isset($params['cacheExpire']) ? intval($params['cacheExpire']) : 0;
 
 	return plug_arch($maxnum, $counter, $tcounter, $template, $cacheExpire);

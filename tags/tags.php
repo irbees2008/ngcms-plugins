@@ -11,6 +11,66 @@ if (!defined('NGCMS')) die('HAL');
 // Import ng-helpers functions
 use function Plugins\{cache_get, cache_put, sanitize, logger, str_limit};
 
+// Wrapper functions for ng-helpers compatibility
+if (!function_exists('tags_sanitize')) {
+	function tags_sanitize($data, $type = 'string')
+	{
+		if (function_exists('Plugins\\sanitize')) {
+			return \Plugins\sanitize($data, $type);
+		}
+		// Native fallback
+		if ($type === 'html') {
+			return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+		}
+		return strip_tags($data);
+	}
+}
+
+if (!function_exists('tags_logger')) {
+	function tags_logger($context, $message, $level = 'info')
+	{
+		if (function_exists('Plugins\\logger')) {
+			return \Plugins\logger($context, $message, $level);
+		}
+		// Native fallback
+		error_log("[tags][$level] $message");
+	}
+}
+
+if (!function_exists('tags_cache_get')) {
+	function tags_cache_get($key, $default = null)
+	{
+		if (function_exists('Plugins\\cache_get')) {
+			return \Plugins\cache_get($key, $default);
+		}
+		return $default;
+	}
+}
+
+if (!function_exists('tags_cache_put')) {
+	function tags_cache_put($key, $value, $ttl = 3600)
+	{
+		if (function_exists('Plugins\\cache_put')) {
+			return \Plugins\cache_put($key, $value, $ttl);
+		}
+		return false;
+	}
+}
+
+if (!function_exists('tags_str_limit')) {
+	function tags_str_limit($string, $limit = 100, $end = '...')
+	{
+		if (function_exists('Plugins\\str_limit')) {
+			return \Plugins\str_limit($string, $limit, $end);
+		}
+		// Native fallback
+		if (mb_strlen($string) <= $limit) {
+			return $string;
+		}
+		return mb_substr($string, 0, $limit) . $end;
+	}
+}
+
 // Safe stub to avoid undefined function in analysis/dev environments
 if (!function_exists('loadCategoryMap')) {
 	function loadCategoryMap() {}
@@ -31,9 +91,9 @@ class TagsNewsfilter extends NewsFilter
 	{
 		// Scan tags, delete dups
 		$tags = array();
-		$tagsInput = sanitize($_REQUEST['tags'] ?? '', 'string');
+		$tagsInput = tags_sanitize($_REQUEST['tags'] ?? '', 'string');
 		foreach (explode(",", $tagsInput) as $tag) {
-			$tag = str_limit(trim($tag), 100); // Limit tag length to 100 chars
+			$tag = tags_str_limit(trim($tag), 100); // Limit tag length to 100 chars
 			if (!strlen($tag)) continue;
 			$tags[$tag] = 1;
 		}
@@ -78,7 +138,7 @@ class TagsNewsfilter extends NewsFilter
 		// Recreate indexes for this news
 		if (count($tagsNewQ))
 			$mysql->query("insert into " . prefix . "_tags_index (newsID, tagID) select " . db_squote($newsid) . ", id from " . prefix . "_tags where tag in (" . join(",", $tagsNewQ) . ")");
-		logger('tags', 'News added with tags: newsid=' . $newsid . ', tags=' . count($tagsNew) . ' (' . implode(', ', $tagsNew) . ')');
+		tags_logger('tags', 'News added with tags: newsid=' . $newsid . ', tags=' . count($tagsNew) . ' (' . implode(', ', $tagsNew) . ')');
 		return 1;
 	}
 
@@ -166,9 +226,9 @@ class TagsNewsfilter extends NewsFilter
 			$SQLnew['tags'] = $SQLold['tags'];
 			return 1;
 		}
-		$tagsInput = sanitize($_REQUEST['tags'], 'string');
+		$tagsInput = tags_sanitize($_REQUEST['tags'], 'string');
 		foreach (explode(",", $tagsInput) as $tag) {
-			$tag = str_limit(trim($tag), 100); // Limit tag length to 100 chars
+			$tag = tags_str_limit(trim($tag), 100); // Limit tag length to 100 chars
 			if (!strlen($tag)) continue;
 			$tags[$tag] = 1;
 		}
@@ -230,7 +290,7 @@ class TagsNewsfilter extends NewsFilter
 		if (count($tagsNewQ))
 			$mysql->query("insert into " . prefix . "_tags_index (newsID, tagID) select " . db_squote($newsID) . ", id from " . prefix . "_tags where tag in (" . join(",", $tagsNewQ) . ")");
 		if (count($tagsDiffQ))
-			logger('tags', 'News tags updated: newsid=' . $newsID . ', added=' . count($tagsAddQ) . ', removed=' . count($tagsDelQ));
+			tags_logger('tags', 'News tags updated: newsid=' . $newsID . ', added=' . count($tagsAddQ) . ', removed=' . count($tagsDelQ));
 		return 1;
 	}
 	// Add {plugin_tags_news} variable into news
@@ -291,7 +351,7 @@ class TagsNewsfilter extends NewsFilter
 		$mysql->query("delete from " . prefix . "_tags_index where newsID = " . intval($newsID));
 		$deletedCount = $mysql->query("delete from " . prefix . "_tags where posts = 0");
 		if ($deletedCount > 0)
-			logger('tags', 'News deleted: newsid=' . $newsID . ', cleaned unused tags: ' . $deletedCount);
+			tags_logger('tags', 'News deleted: newsid=' . $newsID . ', cleaned unused tags: ' . $deletedCount);
 		return 1;
 	}
 	// Mass news modify

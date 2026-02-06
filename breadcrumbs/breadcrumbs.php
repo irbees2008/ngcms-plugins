@@ -27,8 +27,62 @@
  */
 if (!defined('NGCMS')) die('Galaxy in danger');
 
-// Import ng-helpers functions
-use function Plugins\{cache_get, cache_put, array_pluck, logger, sanitize, array_get, get_ip};
+// Wrapper functions for ng-helpers compatibility
+function bc_array_get($array, $key, $default = null)
+{
+	if (function_exists('Plugins\\array_get')) {
+		return \Plugins\array_get($array, $key, $default);
+	}
+	return $array[$key] ?? $default;
+}
+
+function bc_cache_get($key, $default = null)
+{
+	if (function_exists('Plugins\\cache_get')) {
+		return \Plugins\cache_get($key, $default);
+	}
+	return $default;
+}
+
+function bc_cache_put($key, $value, $minutes = 60)
+{
+	if (function_exists('Plugins\\cache_put')) {
+		return \Plugins\cache_put($key, $value, $minutes);
+	}
+	return false;
+}
+
+function bc_logger($message, $level = 'info', $file = 'plugin.log')
+{
+	if (function_exists('Plugins\\logger')) {
+		return \Plugins\logger($message, $level, $file);
+	}
+	return true;
+}
+
+function bc_sanitize($data, $type = 'string')
+{
+	if (function_exists('Plugins\\sanitize')) {
+		return \Plugins\sanitize($data, $type !== 'html');
+	}
+	return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+}
+
+function bc_array_pluck($array, $key)
+{
+	if (function_exists('Plugins\\array_pluck')) {
+		return \Plugins\array_pluck($array, $key);
+	}
+	return array_column($array, $key);
+}
+
+function bc_get_ip()
+{
+	if (function_exists('Plugins\\get_ip')) {
+		return \Plugins\get_ip();
+	}
+	return $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+}
 
 add_act('index', 'breadcrumbs');
 LoadPluginLang('breadcrumbs', 'main', '', 'bc', ':');
@@ -45,13 +99,13 @@ function breadcrumbs()
 	}
 
 	// Generate cache key based on current URL and language
-	$cacheKey = 'breadcrumbs:' . md5($systemAccessURL . array_get($lang, 'locale', 'en') . serialize($CurrentHandler));
+	$cacheKey = 'breadcrumbs:' . md5($systemAccessURL . bc_array_get($lang, 'locale', 'en') . serialize($CurrentHandler));
 
 	// Try to get from cache (5 minutes TTL)
-	$cached = cache_get($cacheKey);
+	$cached = bc_cache_get($cacheKey);
 	if ($cached !== null) {
 		$template['vars']['breadcrumbs'] = $cached;
-		logger('Breadcrumbs served from cache: url=' . sanitize($systemAccessURL, 'string') . ', IP=' . get_ip(), 'debug', 'breadcrumbs.log');
+		bc_logger('Breadcrumbs served from cache: url=' . bc_sanitize($systemAccessURL, 'string') . ', IP=' . bc_get_ip(), 'debug', 'breadcrumbs.log');
 		return;
 	}
 	$tpath = locatePluginTemplates(
@@ -82,8 +136,8 @@ function breadcrumbs()
 		$location_last = $lang['404.title'];
 	} else {
 		if ($CurrentHandler) {
-			$params = array_get($CurrentHandler, 'params', []);
-			$pluginName = array_get($CurrentHandler, 'pluginName', '');
+			$params = bc_array_get($CurrentHandler, 'params', []);
+			$pluginName = bc_array_get($CurrentHandler, 'pluginName', '');
 		}
 		# generate main page with or without link
 		if ($systemAccessURL != '/') {
@@ -267,9 +321,9 @@ function breadcrumbs()
 	$result = $xt->render($tVars);
 
 	// Cache the result for 5 minutes (300 seconds / 60 = 5 minutes)
-	cache_put($cacheKey, $result, 5);
+	bc_cache_put($cacheKey, $result, 5);
 
-	logger('Breadcrumbs generated: url=' . sanitize($systemAccessURL, 'string') . ', items=' . count($location) . ', IP=' . get_ip(), 'info', 'breadcrumbs.log');
+	bc_logger('Breadcrumbs generated: url=' . bc_sanitize($systemAccessURL, 'string') . ', items=' . count($location) . ', IP=' . bc_get_ip(), 'info', 'breadcrumbs.log');
 
 	$template['vars']['breadcrumbs'] = $result;
 }

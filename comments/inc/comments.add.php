@@ -2,7 +2,55 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
-use function Plugins\{logger, get_ip, validate_email, is_post, sanitize, array_get};
+// Wrapper functions for ng-helpers compatibility
+function cmtadd_logger($message, $level = 'info', $file = 'plugin.log')
+{
+	if (function_exists('Plugins\\logger')) {
+		return \Plugins\logger($message, $level, $file);
+	}
+	return true;
+}
+
+function cmtadd_get_ip()
+{
+	if (function_exists('Plugins\\get_ip')) {
+		return \Plugins\get_ip();
+	}
+	return $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+}
+
+function cmtadd_validate_email($email)
+{
+	if (function_exists('Plugins\\validate_email')) {
+		return \Plugins\validate_email($email);
+	}
+	return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+}
+
+function cmtadd_is_post()
+{
+	if (function_exists('Plugins\\is_post')) {
+		return \Plugins\is_post();
+	}
+	return $_SERVER['REQUEST_METHOD'] === 'POST';
+}
+
+function cmtadd_sanitize($data, $type = 'string')
+{
+	if (function_exists('Plugins\\sanitize')) {
+		return \Plugins\sanitize($data, $type !== 'html');
+	}
+	return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+}
+
+function cmtadd_array_get($array, $key, $default = null)
+{
+	if (function_exists('Plugins\\array_get')) {
+		return \Plugins\array_get($array, $key, $default);
+	}
+	return $array[$key] ?? $default;
+}
+
 //
 // Params for filtering and processing
 //
@@ -10,15 +58,15 @@ function comments_add()
 {
 	global $mysql, $config, $AUTH_METHOD, $userROW, $ip, $lang, $parse, $catmap, $catz, $PFILTERS;
 	// Проверка метода запроса
-	if (!is_post()) {
+	if (!cmtadd_is_post()) {
 		msg(array("type" => "error", "text" => "Invalid request method"));
 		return;
 	}
 	// Check membership
 	// If login/pass is entered (either logged or not)
-	if (array_get($_POST, 'name', '') && array_get($_POST, 'password', '')) {
+	if (cmtadd_array_get($_POST, 'name', '') && cmtadd_array_get($_POST, 'password', '')) {
 		$auth = $AUTH_METHOD[$config['auth_module']];
-		$user = $auth->login(0, array_get($_POST, 'name', ''), array_get($_POST, 'password', ''));
+		$user = $auth->login(0, cmtadd_array_get($_POST, 'name', ''), cmtadd_array_get($_POST, 'password', ''));
 		if (!is_array($user)) {
 			msg(array("type" => "error", "text" => $lang['comments:err.password']));
 			return;
@@ -39,48 +87,48 @@ function comments_add()
 		$is_member = 1;
 		$memberRec = $userROW;
 	} else {
-		$SQL['author'] = secure_html(trim(array_get($_POST, 'name', '')));
+		$SQL['author'] = secure_html(trim(cmtadd_array_get($_POST, 'name', '')));
 		$SQL['author_id'] = 0;
-		$SQL['mail'] = secure_html(trim(array_get($_POST, 'mail', '')));
+		$SQL['mail'] = secure_html(trim(cmtadd_array_get($_POST, 'mail', '')));
 		$is_member = 0;
 	}
 	// CSRF protection variables
 	$sValue = '';
 	$SQL['post'] = 0;
-	$newsidValue = array_get($_POST, 'newsid', '');
-	logger('Comment add attempt: newsid=' . $newsidValue . ', module=' . array_get($_POST, 'module', ''), 'info', 'comments.log');
+	$newsidValue = cmtadd_array_get($_POST, 'newsid', '');
+	cmtadd_logger('Comment add attempt: newsid=' . $newsidValue . ', module=' . cmtadd_array_get($_POST, 'module', ''), 'info', 'comments.log');
 	if (preg_match('#^(\d+)\#(.+)$#', $newsidValue, $m)) {
 		$SQL['post'] = intval($m[1]);
 		$sValue = $m[2];
 		$expectedToken = genUToken('comment.add.' . $SQL['post']);
-		logger('CSRF check: post_id=' . $SQL['post'] . ', token_match=' . ($sValue == $expectedToken ? 'yes' : 'no'), 'info', 'comments.log');
+		cmtadd_logger('CSRF check: post_id=' . $SQL['post'] . ', token_match=' . ($sValue == $expectedToken ? 'yes' : 'no'), 'info', 'comments.log');
 	} else {
-		logger('Failed to parse newsid value: ' . $newsidValue, 'warning', 'comments.log');
+		cmtadd_logger('Failed to parse newsid value: ' . $newsidValue, 'warning', 'comments.log');
 	}
 	if (!$SQL['post'] || $sValue != genUToken('comment.add.' . $SQL['post'])) {
-		logger('Comment rejected: post_id=' . $SQL['post'] . ', IP=' . get_ip(), 'warning', 'comments.log');
+		cmtadd_logger('Comment rejected: post_id=' . $SQL['post'] . ', IP=' . cmtadd_get_ip(), 'warning', 'comments.log');
 		msg(array("type" => "error", "text" => $lang['comments:err.regonly']));
 		return;
 	}
 	// Determine module (for gallery images, news, etc.)
-	$module = array_get($_POST, 'module', '');
-	logger('Comment processing: post_id=' . $SQL['post'] . ', module=' . $module, 'info', 'comments.log');
+	$module = cmtadd_array_get($_POST, 'module', '');
+	cmtadd_logger('Comment processing: post_id=' . $SQL['post'] . ', module=' . $module, 'info', 'comments.log');
 	// Обрабатываем текст комментария - используем sanitize с отключением strip_tags
-	$SQL['text'] = sanitize(trim(array_get($_POST, 'content', '')), false);
-	logger('After sanitize, text length: ' . strlen($SQL['text']), 'info', 'comments.log');
+	$SQL['text'] = cmtadd_sanitize(trim(cmtadd_array_get($_POST, 'content', '')), false);
+	cmtadd_logger('After sanitize, text length: ' . strlen($SQL['text']), 'info', 'comments.log');
 	// If user is not logged, make some additional tests
 	if (!$is_member) {
-		logger('User not logged, checking regonly', 'info', 'comments.log');
+		cmtadd_logger('User not logged, checking regonly', 'info', 'comments.log');
 		// Check if unreg are allowed to make comments
 		if (pluginGetVariable('comments', 'regonly')) {
-			logger('Regonly enabled, rejecting', 'warning', 'comments.log');
+			cmtadd_logger('Regonly enabled, rejecting', 'warning', 'comments.log');
 			msg(array("type" => "error", "text" => $lang['comments:err.regonly']));
 			return;
 		}
 		// Check captcha for unregistered visitors
 		if ($config['use_captcha']) {
-			$vcode = array_get($_POST, 'vcode', '');
-			if ($vcode != array_get($_SESSION, 'captcha', '')) {
+			$vcode = cmtadd_array_get($_POST, 'vcode', '');
+			if ($vcode != cmtadd_array_get($_SESSION, 'captcha', '')) {
 				msg(array("type" => "error", "text" => $lang['comments:err.vcode']));
 				return;
 			}
@@ -100,9 +148,9 @@ function comments_add()
 			msg(array("type" => "error", "text" => $lang['comments:err.badname']));
 			return;
 		}
-		if (!validate_email($SQL['mail'])) {
+		if (!cmtadd_validate_email($SQL['mail'])) {
 			msg(array("type" => "error", "text" => $lang['comments:err.badmail']));
-			logger('Invalid email attempt: ' . $SQL['mail'] . ' from IP: ' . get_ip(), 'warning', 'comments.log');
+			cmtadd_logger('Invalid email attempt: ' . $SQL['mail'] . ' from IP: ' . cmtadd_get_ip(), 'warning', 'comments.log');
 			return;
 		}
 		// Check if guest wants to use email of already registered user
@@ -136,13 +184,13 @@ function comments_add()
 	// Locate item (news or other module item like gallery image)
 	if ($module == 'images') {
 		// For gallery images - look in images table
-		logger('Looking for image in _images with id=' . $SQL['post'], 'info', 'comments.log');
+		cmtadd_logger('Looking for image in _images with id=' . $SQL['post'], 'info', 'comments.log');
 		if ($news_row = $mysql->record("select * from " . prefix . "_images where id = " . db_squote($SQL['post']))) {
 			// Gallery images always allow comments if they are shown
 			$allowCom = 1;
-			logger('Image found: ' . ($news_row['title'] ?? 'no title'), 'info', 'comments.log');
+			cmtadd_logger('Image found: ' . ($news_row['title'] ?? 'no title'), 'info', 'comments.log');
 		} else {
-			logger('Image NOT found in _images, id=' . $SQL['post'], 'warning', 'comments.log');
+			cmtadd_logger('Image NOT found in _images, id=' . $SQL['post'], 'warning', 'comments.log');
 			msg(array("type" => "error", "text" => $lang['comments:err.notfound']));
 			return;
 		}
@@ -248,12 +296,12 @@ function comments_add()
 	// Retrieve comment ID
 	$comment_id = $mysql->result("select LAST_INSERT_ID() as id");
 	// Логирование добавления комментария
-	logger(sprintf(
+	cmtadd_logger(sprintf(
 		'New comment #%d by %s (ID: %d, IP: %s) for %s #%d%s',
 		$comment_id,
 		$SQL['author'],
 		$SQL['author_id'],
-		get_ip(),
+		cmtadd_get_ip(),
 		$module == 'images' ? 'image' : 'news',
 		$SQL['post'],
 		$SQL['moderated'] == 0 ? ' [MODERATION]' : ''

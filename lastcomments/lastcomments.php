@@ -2,14 +2,55 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 // Modernized with ng-helpers v0.2.2 (2026)
-// - Replaced cacheRetrieveFile/cacheStoreFile with cache() helper
-// - Added time_ago for human-readable timestamps
-// - Added excerpt for better text truncation
-// - Added logger for operations tracking
-// - Added sanitize for data cleaning
-// - Added array_get for safe access
-// Import ng-helpers functions
-use function Plugins\{cache, time_ago, excerpt, logger, sanitize, array_get};
+
+// Wrapper functions for ng-helpers compatibility
+function lc_cache($key, $callback, $minutes = 60)
+{
+	if (function_exists('Plugins\\cache')) {
+		return \Plugins\cache($key, $callback, $minutes);
+	}
+	return $callback();
+}
+
+function lc_time_ago($timestamp)
+{
+	if (function_exists('Plugins\\time_ago')) {
+		return \Plugins\time_ago($timestamp);
+	}
+	return date('Y-m-d H:i', $timestamp);
+}
+
+function lc_excerpt($text, $length = 100)
+{
+	if (function_exists('Plugins\\excerpt')) {
+		return \Plugins\excerpt($text, $length);
+	}
+	return mb_substr(strip_tags($text), 0, $length) . '...';
+}
+
+function lc_logger($message, $level = 'info', $file = 'plugin.log')
+{
+	if (function_exists('Plugins\\logger')) {
+		return \Plugins\logger($message, $level, $file);
+	}
+	return true;
+}
+
+function lc_sanitize($data, $type = 'string')
+{
+	if (function_exists('Plugins\\sanitize')) {
+		return \Plugins\sanitize($data, $type !== 'html');
+	}
+	return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+}
+
+function lc_array_get($array, $key, $default = null)
+{
+	if (function_exists('Plugins\\array_get')) {
+		return \Plugins\array_get($array, $key, $default);
+	}
+	return $array[$key] ?? $default;
+}
 
 define('lastcomments_version', '0.11');
 loadPluginLang('lastcomments', 'main', '', '', ':');
@@ -87,16 +128,16 @@ function lastcomments($mode = 0)
 			break;
 	}
 	// Generate cache key
-	$page = array_get($_REQUEST, 'page', 0, 'int');
+	$page = lc_array_get($_REQUEST, 'page', 0);
 	$cacheKey = "lastcomments_{$config['theme']}_{$config['default_lang']}_{$tpl_prefix}_{$page}";
 	if (pluginGetVariable('lastcomments', 'cache')) {
 		$cacheExpire = intval(pluginGetVariable('lastcomments', 'cacheExpire')) ?: 30;
 		// Try to get from cache using ng-helpers cache() function
-		$cacheData = cache($cacheKey, function () {
+		$cacheData = lc_cache($cacheKey, function () {
 			return null; // Cache miss, will regenerate below
 		}, $cacheExpire * 60); // Convert minutes to seconds
 		if ($cacheData !== null) {
-			logger('[lastcomments] Cache hit: ' . $cacheKey, 'debug', 'lastcomments.log');
+			lc_logger('[lastcomments] Cache hit: ' . $cacheKey, 'debug', 'lastcomments.log');
 			return $cacheData;
 		}
 	}
@@ -121,7 +162,7 @@ function lastcomments($mode = 0)
 	// Ensure values are within valid ranges
 	$number = max(1, min(50, $number));
 	$comm_length = max(10, min(500, $comm_length));
-	logger('[lastcomments] Mode: ' . $mode . ', prefix: "' . $tpl_prefix . '", number: ' . $number . ', length: ' . $comm_length, 'debug', 'lastcomments.log');
+	lc_logger('[lastcomments] Mode: ' . $mode . ', prefix: "' . $tpl_prefix . '", number: ' . $number . ', length: ' . $comm_length, 'debug', 'lastcomments.log');
 	if ($mode == 2) {
 		$old_locale = setlocale(LC_TIME, 0);
 		setlocale(LC_TIME, 'en_EN');
@@ -145,7 +186,7 @@ function lastcomments($mode = 0)
 		}
 		// Use ng-helpers excerpt for better truncation
 		if (strlen($text) > $comm_length) {
-			$text = excerpt($text, $comm_length, '...');
+			$text = lc_excerpt($text, $comm_length);
 		}
 		$comm_num++;
 		// gen answer
@@ -275,10 +316,10 @@ function lastcomments($mode = 0)
 	// Cache the output using ng-helpers cache() function
 	if (pluginGetVariable('lastcomments', 'cache')) {
 		$cacheExpire = intval(pluginGetVariable('lastcomments', 'cacheExpire')) ?: 30;
-		cache($cacheKey, function () use ($output) {
+		lc_cache($cacheKey, function () use ($output) {
 			return $output;
 		}, $cacheExpire * 60);
-		logger('[lastcomments] Generated and cached: ' . strlen($output) . ' bytes, ' . $comm_num . ' comments', 'info', 'lastcomments.log');
+		lc_logger('[lastcomments] Generated and cached: ' . strlen($output) . ' bytes, ' . $comm_num . ' comments', 'info', 'lastcomments.log');
 	}
 	return $output;
 }

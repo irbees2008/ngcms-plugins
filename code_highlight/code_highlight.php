@@ -2,7 +2,70 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
-use function Plugins\{logger, cache_get, cache_put, cache_forget, array_get, sanitize, get_ip, clamp};
+// Wrapper functions for ng-helpers compatibility
+function ch_logger($message, $level = 'info', $file = 'plugin.log')
+{
+    if (function_exists('Plugins\\logger')) {
+        return \Plugins\logger($message, $level, $file);
+    }
+    return true;
+}
+
+function ch_cache_get($key, $default = null)
+{
+    if (function_exists('Plugins\\cache_get')) {
+        return \Plugins\cache_get($key, $default);
+    }
+    return $default;
+}
+
+function ch_cache_put($key, $value, $minutes = 60)
+{
+    if (function_exists('Plugins\\cache_put')) {
+        return \Plugins\cache_put($key, $value, $minutes);
+    }
+    return false;
+}
+
+function ch_cache_forget($key)
+{
+    if (function_exists('Plugins\\cache_forget')) {
+        return \Plugins\cache_forget($key);
+    }
+    return true;
+}
+
+function ch_sanitize($data, $type = 'string')
+{
+    if (function_exists('Plugins\\sanitize')) {
+        return \Plugins\sanitize($data, $type !== 'html');
+    }
+    return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+}
+
+function ch_get_ip()
+{
+    if (function_exists('Plugins\\get_ip')) {
+        return \Plugins\get_ip();
+    }
+    return $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+}
+
+function ch_clamp($value, $min, $max)
+{
+    if (function_exists('Plugins\\clamp')) {
+        return \Plugins\clamp($value, $min, $max);
+    }
+    return max($min, min($max, $value));
+}
+
+function ch_array_get($array, $key, $default = null)
+{
+    if (function_exists('Plugins\\array_get')) {
+        return \Plugins\array_get($array, $key, $default);
+    }
+    return $array[$key] ?? $default;
+}
 
 // Плагин подсветки кода: подключает локальные файлы SyntaxHighlighter из папки плагина
 // и активирует их на полной новости. Если в конфиге включён CDN — можно быстро
@@ -15,7 +78,7 @@ pluginsLoadConfig();
 if (!function_exists('code_highlight_twig_brushEnabled')) {
     function code_highlight_twig_brushEnabled($params)
     {
-        $name = array_get($params, 'name', '');
+        $name = $params['name'] ?? '';
         $name = mb_strtolower(trim($name));
         // Сопоставление алиасов к ключам настроек плагина
         $aliases = [
@@ -137,12 +200,12 @@ function code_highlight_build_assets_html()
     }
 
     // Cache key based on configuration
-    $cacheKey = 'code_highlight:assets:' . ($useCDN ? 'cdn' : 'local') . ':' . sanitize($theme, 'string');
+    $cacheKey = 'code_highlight:assets:' . ($useCDN ? 'cdn' : 'local') . ':' . ch_sanitize($theme, 'string');
 
     // Try to get from cache (24 hours = 1440 minutes)
-    $cached = cache_get($cacheKey);
+    $cached = ch_cache_get($cacheKey);
     if ($cached !== null) {
-        logger('Code highlight assets served from cache: ' . ($useCDN ? 'CDN' : 'local') . ', theme=' . sanitize($theme, 'string'), 'debug', 'code_highlight.log');
+        ch_logger('Code highlight assets served from cache: ' . ($useCDN ? 'CDN' : 'local') . ', theme=' . ch_sanitize($theme, 'string'), 'debug', 'code_highlight.log');
         return $cached;
     }
 
@@ -287,8 +350,8 @@ function code_highlight_build_assets_html()
     $result = implode("\n", $html);
 
     // Cache for 24 hours (1440 minutes)
-    cache_put($cacheKey, $result, 1440);
-    logger('Code highlight assets generated and cached: ' . ($useCDN ? 'CDN' : 'local') . ', theme=' . sanitize($theme, 'string') . ', scripts=' . count($html), 'info', 'code_highlight.log');
+    ch_cache_put($cacheKey, $result, 1440);
+    ch_logger('Code highlight assets generated and cached: ' . ($useCDN ? 'CDN' : 'local') . ', theme=' . ch_sanitize($theme, 'string') . ', scripts=' . count($html), 'info', 'code_highlight.log');
 
     return $result;
 }
@@ -298,12 +361,12 @@ class CodeHighlightNewsFilter extends NewsFilter
 {
     public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
     {
-        if (array_get($mode, 'style', '') != 'full') {
+        if (ch_array_get($mode, 'style', '') != 'full') {
             return 1;
         }
         if (function_exists('register_htmlvar')) {
             register_htmlvar('plain', code_highlight_build_assets_html());
-            logger('Code highlight activated for news: ' . intval($newsID) . ', IP=' . get_ip(), 'debug', 'code_highlight.log');
+            ch_logger('Code highlight activated for news: ' . intval($newsID) . ', IP=' . ch_get_ip(), 'debug', 'code_highlight.log');
         }
         return 1;
     }

@@ -9,7 +9,72 @@ if (!defined('NGCMS')) {
     die('HAL');
 }
 // Modernized with ng-helpers v0.2.2 (31 января 2026)
-use function Plugins\{notify, sanitize, logger, get_ip, cache_get, cache_put, cache_forget, array_get};
+
+// Wrapper functions for ng-helpers compatibility
+function xf_notify($message, $type = 'info')
+{
+    if (function_exists('Plugins\\notify')) {
+        return \Plugins\notify($message, $type);
+    }
+    return true;
+}
+
+function xf_sanitize($data, $type = 'string')
+{
+    if (function_exists('Plugins\\sanitize')) {
+        return \Plugins\sanitize($data, $type !== 'html');
+    }
+    return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+}
+
+function xf_logger($message, $level = 'info', $file = 'plugin.log')
+{
+    if (function_exists('Plugins\\logger')) {
+        return \Plugins\logger($message, $level, $file);
+    }
+    return true;
+}
+
+function xf_get_ip()
+{
+    if (function_exists('Plugins\\get_ip')) {
+        return \Plugins\get_ip();
+    }
+    return $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+}
+
+function xf_cache_get($key, $default = null)
+{
+    if (function_exists('Plugins\\cache_get')) {
+        return \Plugins\cache_get($key, $default);
+    }
+    return $default;
+}
+
+function xf_cache_put($key, $value, $minutes = 60)
+{
+    if (function_exists('Plugins\\cache_put')) {
+        return \Plugins\cache_put($key, $value, $minutes);
+    }
+    return false;
+}
+
+function xf_cache_forget($key)
+{
+    if (function_exists('Plugins\\cache_forget')) {
+        return \Plugins\cache_forget($key);
+    }
+    return true;
+}
+
+function xf_array_get($array, $key, $default = null)
+{
+    if (function_exists('Plugins\\array_get')) {
+        return \Plugins\array_get($array, $key, $default);
+    }
+    return $array[$key] ?? $default;
+}
+
 // Load lang files
 LoadPluginLang('xfields', 'config');
 LoadPluginLibrary('xfields', 'common');
@@ -484,10 +549,10 @@ class XFieldsNewsFilter extends NewsFilter
             }
             // Fill xfields. Check that all required fields are filled
             if ($rcall[$id] != '') {
-                $xdata[$id] = sanitize($rcall[$id]);
+                $xdata[$id] = xf_sanitize($rcall[$id]);
             } elseif ($data['required']) {
-                notify('error', str_replace('{field}', $id, $lang['xfields_msge_emptyrequired']));
-                logger("Required field empty: {$id}, IP: " . get_ip(), 'warning');
+                xf_notify('error', str_replace('{field}', $id, $lang['xfields_msge_emptyrequired']));
+                xf_logger("Required field empty: {$id}, IP: " . xf_get_ip(), 'warning');
                 return 0;
             }
             // Check if we should save data into separate SQL field
@@ -833,10 +898,10 @@ class XFieldsNewsFilter extends NewsFilter
                 continue;
             }
             if ($rcall[$id] != '') {
-                $xdata[$id] = sanitize($rcall[$id]);
+                $xdata[$id] = xf_sanitize($rcall[$id]);
             } elseif ($data['required']) {
-                notify('error', str_replace('{field}', $id, $lang['xfields_msge_emptyrequired']));
-                logger("Required field empty on edit: {$id}, IP: " . get_ip(), 'warning');
+                xf_notify('error', str_replace('{field}', $id, $lang['xfields_msge_emptyrequired']));
+                xf_logger("Required field empty on edit: {$id}, IP: " . xf_get_ip(), 'warning');
                 return 0;
             }
             // Check if we should save data into separate SQL field
