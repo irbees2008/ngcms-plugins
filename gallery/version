@@ -12,9 +12,9 @@ Install: install.php
 Preinstall: no
 Deinstall: deinstall.php
 Title: Gallery Manager
-Name: Gallery Manager (modernized with ng-helpers v0.2.2)
-Description: Менеджер галерей с ng-helpers v0.2.2: безопасный доступ к массивам через array_get(), обновленный формат логирования logger(message, level, file), оптимизация БД, интеграция с комментариями.
-Information: Модернизированный плагин управления галереями: 30+ замен $_REQUEST/$_POST на array_get(), защита от undefined index, структурированное логирование, оптимизированные запросы, автоматическое подключение CSS/JS скинов.
+Name: Gallery Manager 
+Description: Менеджер галерей
+Information: Модернизированный плагин управления галереями
 Author: rusiq
 Author_URI: https://github.com/russsiq
 MinEngineBuild: 23b3116

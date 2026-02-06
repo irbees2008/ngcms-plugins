@@ -104,7 +104,7 @@ function generateContent($type, $count)
 }
 function plugin_content_generator()
 {
-	global $SUPRESS_TEMPLATE_SHOW, $SYSTEM_FLAGS;
+	global $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $SYSTEM_FLAGS;
 	// Всегда блокируем вывод шаблона для этого плагина
 	$SUPRESS_TEMPLATE_SHOW = 1;
 	$SUPRESS_MAINBLOCK_SHOW = 1;
@@ -182,7 +182,6 @@ function plugin_content_generator()
 			'status' => 'success',
 			'count' => $count,
 			'generated' => $result['generated'],
-			'errors' => $result['errors'],
 			'user' => $result['user'],
 			'action' => $action,
 			'debug' => [
