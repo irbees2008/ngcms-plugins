@@ -48,14 +48,4 @@ function plugin_ng_helpers_info()
     );
 }
 
-// Register Twig functions for templates
-if (function_exists('twigRegisterFunction')) {
-    twigRegisterFunction('ng', 'sanitize', 'Plugins\\sanitize');
-    twigRegisterFunction('ng', 'array_get', 'Plugins\\array_get');
-    twigRegisterFunction('ng', 'str_limit', 'Plugins\\str_limit');
-    twigRegisterFunction('ng', 'excerpt', 'Plugins\\excerpt');
-    twigRegisterFunction('ng', 'slug', 'Plugins\\slug');
-    twigRegisterFunction('ng', 'formatBytes', 'Plugins\\formatBytes');
-}
-
 // No action handlers needed - this is a library plugin

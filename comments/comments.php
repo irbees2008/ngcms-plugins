@@ -27,6 +27,14 @@ function cmt_array_get($array, $key, $default = null)
 	return $array[$key] ?? $default;
 }
 
+function cmt_sanitize($data, $type = 'string')
+{
+	if (function_exists('Plugins\\sanitize')) {
+		return \Plugins\sanitize($data, $type !== 'html');
+	}
+	return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+}
+
 $lang = LoadLang("comments", "site");
 
 // Build structured pagination data for Twig template rendering
@@ -111,7 +119,7 @@ class CommentsNewsFilter extends NewsFilter
 	}
 	function addNews(&$tvars, &$SQL)
 	{
-		$SQL['allow_com'] = intval($_REQUEST['allow_com'] ?? 0);
+		$SQL['allow_com'] = intval(cmt_array_get($_REQUEST, 'allow_com', 0));
 		return 1;
 	}
 	function editNewsForm($newsID, $SQLnews, &$tvars)
@@ -550,13 +558,13 @@ function plugin_comments_delete()
 			$mysql->query("update " . uprefix . "_users set com=com-1 where id=" . db_squote($row['author_id']));
 			$mysql->query("update " . prefix . "_news set com=com-1 where id=" . db_squote($row['post']));
 			// Логирование удаления
-			cmt_logger('comments', sprintf(
+			cmt_logger(sprintf(
 				'Comment #%d deleted by %s (ID: %d, IP: %s)',
 				$comid,
 				$userROW['name'],
 				$userROW['id'],
 				cmt_get_ip()
-			));
+			), 'info', 'comments.log');
 			msg(array('type' => 'info', 'text' => $lang['comments:deleted.text']));
 			$output['status'] = 1;
 			$output['data'] = $template['vars']['mainblock'];
@@ -638,13 +646,13 @@ function plugin_comments_edit()
 				exit;
 			}
 			// Логирование редактирования
-			cmt_logger('comments', sprintf(
+			cmt_logger(sprintf(
 				'Comment #%d edited by %s (ID: %d, IP: %s)',
 				$comment_id,
 				$userROW['name'],
 				$userROW['id'],
 				cmt_get_ip()
-			));
+			), 'info', 'comments.log');
 			// Формируем HTML для отображения
 			$display_text = $new_text;
 			if ($config['blocks_for_reg']) {

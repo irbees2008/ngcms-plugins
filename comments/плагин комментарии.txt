@@ -1,0 +1,1664 @@
+плагин комментарии 
+структура 
+папка comments
+          папка inc 
+                comments.add.php
+                <?php
+// Protect against hack attempts
+if (!defined('NGCMS')) die ('HAL');
+//
+// Params for filtering and processing
+//
+function comments_add() {
+
+	global $mysql, $config, $AUTH_METHOD, $userROW, $ip, $lang, $parse, $catmap, $catz, $PFILTERS;
+	// Check membership
+	// If login/pass is entered (either logged or not)
+	if ($_POST['name'] && $_POST['password']) {
+		$auth = $AUTH_METHOD[$config['auth_module']];
+		$user = $auth->login(0, $_POST['name'], $_POST['password']);
+		if (!is_array($user)) {
+			msg(array("type" => "error", "text" => $lang['comments:err.password']));
+
+			return;
+		}
+	}
+	// Entered data have higher priority then login data
+	$memberRec = null;
+	if (is_array($user)) {
+		$SQL['author'] = $user['name'];
+		$SQL['author_id'] = $user['id'];
+		$SQL['mail'] = $user['mail'];
+		$is_member = 1;
+		$memberRec = $user;
+	} else if (is_array($userROW)) {
+		$SQL['author'] = $userROW['name'];
+		$SQL['author_id'] = $userROW['id'];
+		$SQL['mail'] = $userROW['mail'];
+		$is_member = 1;
+		$memberRec = $userROW;
+	} else {
+		$SQL['author'] = secure_html(trim($_POST['name']));
+		$SQL['author_id'] = 0;
+		$SQL['mail'] = secure_html(trim($_POST['mail']));
+		$is_member = 0;
+	}
+	// CSRF protection variables
+	$sValue = '';
+	if (preg_match('#^(\d+)\#(.+)$#', $_POST['newsid'], $m)) {
+		$SQL['post'] = $m[1];
+		$sValue = $m[2];
+	}
+	if ($sValue != genUToken('comment.add.' . $SQL['post'])) {
+		msg(array("type" => "error", "text" => $lang['comments:err.regonly']));
+
+		return;
+	}
+	$SQL['text'] = secure_html(trim($_POST['content']));
+
+	// If user is not logged, make some additional tests
+	if (!$is_member) {
+		// Check if unreg are allowed to make comments
+		if (pluginGetVariable('comments', 'regonly')) {
+			msg(array("type" => "error", "text" => $lang['comments:err.regonly']));
+
+			return;
+		}
+		// Check captcha for unregistered visitors
+		if ($config['use_captcha']) {
+			$vcode = $_POST['vcode'];
+			if ($vcode != $_SESSION['captcha']) {
+				msg(array("type" => "error", "text" => $lang['comments:err.vcode']));
+
+				return;
+			}
+			// Update captcha
+			$_SESSION['captcha'] = rand(00000, 99999);
+		}
+		if (!$SQL['author']) {
+			msg(array("type" => "error", "text" => $lang['comments:err.name']));
+
+			return;
+		}
+		if (!$SQL['mail']) {
+			msg(array("type" => "error", "text" => $lang['comments:err.mail']));
+
+			return;
+		}
+		// Check if author name use incorrect symbols. Check should be done only for unregs
+		if ((!$SQL['author_id']) && (preg_match("/[^(\w)|(\x7F-\xFF)|(\s)]/", $SQL['author']) || strlen($SQL['author']) > 60)) {
+			msg(array("type" => "error", "text" => $lang['comments:err.badname']));
+
+			return;
+		}
+		if (strlen($SQL['mail']) > 70 || !preg_match("/^[\.A-z0-9_\-]+[@][A-z0-9_\-]+([.][A-z0-9_\-]+)+[A-z]{1,4}$/", $SQL['mail'])) {
+			msg(array("type" => "error", "text" => $lang['comments:err.badmail']));
+
+			return;
+		}
+		// Check if guest wants to use email of already registered user
+		if (pluginGetVariable('comments', 'guest_edup_lock')) {
+			if (is_array($mysql->record("select * from " . uprefix . "_users where mail = " . db_squote($SQL['mail']) . " limit 1"))) {
+				msg(array("type" => "error", "text" => $lang['comments:err.edupmail']));
+
+				return;
+			}
+		}
+	}
+	$maxlen = intval(pluginGetVariable('comments', 'maxlen'));
+	if (($maxlen) && (strlen($SQL['text']) > $maxlen || strlen($SQL['text']) < 2)) {
+		msg(array("type" => "error", "text" => str_replace('{maxlen}', pluginGetVariable('comments', 'maxlen'), $lang['comments:err.badtext'])));
+
+		return;
+	}
+	// Check for flood
+	if (checkFlood(0, $ip, 'comments', 'add', $is_member ? $memberRec : null, $is_member ? null : $SQL['author'])) {
+		msg(array("type" => "error", "text" => str_replace('{timeout}', $config['flood_time'], $lang['comments:err.flood'])));
+
+		return;
+	}
+	// Check for bans
+	if ($ban_mode = checkBanned($ip, 'comments', 'add', $is_member ? $memberRec : null, $is_member ? null : $SQL['author'])) {
+		// If hidden mode is active - say that news is not found
+		if ($ban_mode == 2) {
+			msg(array("type" => "error", "text" => $lang['comments:err.notfound']));
+		} else {
+			msg(array("type" => "error", "text" => $lang['comments:err.ipban']));
+		}
+
+		return;
+	}
+	// Locate news
+	if ($news_row = $mysql->record("select * from " . prefix . "_news where id = " . db_squote($SQL['post']))) {
+		// Determine if comments are allowed in  this specific news
+		$allowCom = $news_row['allow_com'];
+		if ($allowCom == 2) {
+			// `Use default` - check master category
+			$masterCat = intval(array_shift(explode(',', $news_row['catid'])));
+			if ($masterCat && isset($catmap[$masterCat])) {
+				$allowCom = intval($catz[$catmap[$masterCat]]['allow_com']);
+			}
+			// If we still have 2 (no master category or master category also have 'default' - fetch plugin's config
+			if ($allowCom == 2) {
+				$allowCom = pluginGetVariable('comments', 'global_default');
+			}
+		}
+		if (!$allowCom) {
+			msg(array("type" => "error", "text" => $lang['comments:err.forbidden']));
+
+			return;
+		}
+	} else {
+		msg(array("type" => "error", "text" => $lang['comments:err.notfound']));
+
+		return;
+	}
+	// Check for multiple comments block [!!! ADMINS CAN DO IT IN ANY CASE !!!]
+	$multiCheck = 0;
+	// Make tests only for non-admins
+	if (!is_array($userROW)) {
+		// Not logged
+		$multiCheck = !intval(pluginGetVariable('comments', 'multi'));
+	} else {
+		// Logged. Skip admins
+		if ($userROW['status'] != 1) {
+			// Check for author
+			$multiCheck = !intval(pluginGetVariable('comments', (($userROW['id'] == $news_row['author_id']) ? 'author_' : '') . 'multi'));
+		}
+	}
+	if ($multiCheck) {
+		// Locate last comment for this news
+		if (is_array($lpost = $mysql->record("select author_id, author, ip, mail from " . prefix . "_comments where post=" . db_squote($SQL['post']) . " order by id desc limit 1"))) {
+			// Check for post from the same user
+			if (is_array($userROW)) {
+				if ($userROW['id'] == $lpost['author_id']) {
+					msg(array("type" => "error", "text" => $lang['comments:err.multilock']));
+
+					return;
+				}
+			} else {
+				//print "Last post: ".$lpost['id']."<br>\n";
+				if (($lpost['author'] == $SQL['author']) || ($lpost['mail'] == $SQL['mail'])) {
+					msg(array("type" => "error", "text" => $lang['comments:err.multilock']));
+
+					return;
+				}
+			}
+		}
+	}
+	$SQL['postdate'] = time() + ($config['date_adjust'] * 60);
+	if (pluginGetVariable('comments', 'maxwlen') > 1) {
+		$SQL['text'] = preg_replace('/(\S{' . intval(pluginGetVariable('comments', 'maxwlen')) . '})(?!\s)/', '$1 ', $SQL['text']);
+		if ((!$SQL['author_id']) && (strlen($SQL['author']) > pluginGetVariable('comments', 'maxwlen'))) {
+			$SQL['author'] = substr($SQL['author'], 0, pluginGetVariable('comments', 'maxwlen')) . " ...";
+		}
+	}
+	$SQL['text'] = str_replace("\r\n", "<br />", $SQL['text']);
+	$SQL['ip'] = $ip;
+	$SQL['reg'] = ($is_member) ? '1' : '0';
+	// RUN interceptors
+	load_extras('comments:add');
+	if (is_array($PFILTERS['comments']))
+		foreach ($PFILTERS['comments'] as $k => $v) {
+			$pluginResult = $v->addComments($memberRec, $news_row, $tvars, $SQL);
+			if ((is_array($pluginResult) && ($pluginResult['result'])) || (!is_array($pluginResult) && $pluginResult))
+				continue;
+			msg(array("type" => "error", "text" => str_replace(array('{plugin}', '{errorText}'), array($k, (is_array($pluginResult) && isset($pluginResult['errorText']) ? $pluginResult['errorText'] : '')), $lang['comments:err.' . ((is_array($pluginResult) && isset($pluginResult['errorText'])) ? 'e' : '') . 'pluginlock'])));
+
+			return 0;
+		}
+	// Create comment
+	$vnames = array();
+	$vparams = array();
+	foreach ($SQL as $k => $v) {
+		$vnames[] = $k;
+		$vparams[] = db_squote($v);
+	}
+	$mysql->query("insert into " . prefix . "_comments (" . implode(",", $vnames) . ") values (" . implode(",", $vparams) . ")");
+	// Retrieve comment ID
+	$comment_id = $mysql->result("select LAST_INSERT_ID() as id");
+	// Update comment counter in news
+	$mysql->query("update " . prefix . "_news set com=com+1 where id=" . db_squote($SQL['post']));
+	// Update counter for user
+	if ($SQL['author_id']) {
+		$mysql->query("update " . prefix . "_users set com=com+1 where id = " . db_squote($SQL['author_id']));
+	}
+	// Update flood protect database
+	checkFlood(1, $ip, 'comments', 'add', $is_member ? $memberRec : null, $is_member ? null : $SQL['author']);
+	// RUN interceptors
+	if (is_array($PFILTERS['comments']))
+		foreach ($PFILTERS['comments'] as $k => $v)
+			$v->addCommentsNotify($memberRec, $news_row, $tvars, $SQL, $comment_id);
+	// Email informer
+	if (pluginGetVariable('comments', 'inform_author') || pluginGetVariable('comments', 'inform_admin')) {
+		$alink = ($SQL['author_id']) ? generatePluginLink('uprofile', 'show', array('name' => $SQL['author'], 'id' => $SQL['author_id']), array(), false, true) : '';
+		$body = str_replace(
+			array(
+				'{username}',
+				'[userlink]',
+				'[/userlink]',
+				'{comment}',
+				'{newslink}',
+				'{newstitle}'
+			),
+			array(
+				$SQL['author'],
+				($SQL['author_id']) ? '<a href="' . $alink . '">' : '',
+				($SQL['author_id']) ? '</a>' : '',
+				$parse->bbcodes($parse->smilies(secure_html($SQL['text']))),
+				newsGenerateLink($news_row, false, 0, true),
+				$news_row['title'],
+			),
+			$lang['notice']
+		);
+		if (pluginGetVariable('comments', 'inform_author')) {
+			// Determine author's email
+			if (is_array($umail = $mysql->record("select * from " . uprefix . "_users where id = " . db_squote($news_row['author_id'])))) {
+				zzMail($umail['mail'], $lang['newcomment'], $body, 'html');
+			}
+		}
+		if (pluginGetVariable('comments', 'inform_admin'))
+			zzMail($config['admin_mail'], $lang['newcomment'], $body, 'html');
+	}
+	@setcookie("com_username", urlencode($SQL['author']), 0, '/');
+	@setcookie("com_usermail", urlencode($SQL['mail']), 0, '/');
+
+	return array($news_row, $comment_id);
+}
+                comments.lib.php
+                <?php
+// Protect against hack attempts
+if (!defined('NGCMS')) die ('HAL');
+// ==================================================================
+// Comments actions interceptors
+// ==================================================================
+class FilterComments {
+
+	// Form generator
+	function addCommentsForm($newsID, &$tvars) {
+
+		return 1;
+	}
+
+	// Adding executor [ done BEFORE actual add and CAN block adding ]
+	// Returning values in simple mode:
+	// 0 - block adding comment
+	// 1 - allow adding comment
+	// Returning values in advanced mode:
+	// array(
+	//	'result' = 0 - block adding comments
+	//		 = 1 - allow adding comment
+	//	'errorText' = text message (that will be showed) in case if adding was blocked
+	// )
+	function addComments($userRec, $newsRec, &$tvars, &$SQL) {
+
+		return 1;
+	}
+
+	// Adding notificator [ after successful adding ]
+	function addCommentsNotify($userRec, $newsRec, &$tvars, $SQL, $commID) {
+
+		return 1;
+	}
+
+	// Show comments
+	function showComments($newsID, $commRec, $comnum, &$tvars) {
+
+		return 1;
+	}
+
+	// Show comments external table join initiator.
+	// Function should return specially formatted array:
+	// Each array antry is a name of table for joining [ currenly only `users` is supported ] with value of configuration sub array
+	// Sub array should contain configuration parameters:
+	//		fields - list of fields to join
+	// example: array ( 'users' => array ( 'fields' => array ( 'avatar' )))
+	function commentsJoinFilter() {
+
+		return array();
+	}
+} 
+                comments.show.php
+                <?php
+//
+// Copyright (C) 2006-2011 Next Generation CMS (http://ngcms.ru/)
+// Name: comments.show.php
+// Description: Routines for showing comments
+// Author: Vitaly Ponomarev, Alexey Zinchenko
+//
+// Protect against hack attempts
+if (!defined('NGCMS')) die ('HAL');
+//
+// Show comments for a news
+// $newsID - [required] ID of the news for that comments should be showed
+// $commID - [optional] ID of comment for showing in case if we just added it
+// $commDisplayNum - [optional] num that is showed in 'show comment' template
+// $callingParams
+//		'plugin'  => if is called from plugin - ID of plugin
+//		'overrideTemplateName' => alternative template for display
+//		'overrideTemplatePath' => alternative path for searching of template
+//		'limitStart' => order comment no to start (for pagination)
+//		'limitCount' => number of comments to show (for pagination)
+//		'outprint'	 => flag: if set, output will be returned, elsewhere - will be added to mainblock
+//		'total'		=> total number of comments in this news
+function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams = array()) {
+
+	global $mysql, $tpl, $template, $config, $userROW, $parse, $lang, $PFILTERS, $TemplateCache;
+	// Preload template configuration variables
+	templateLoadVariables();
+	// Use default <noavatar> file
+	// - Check if noavatar is defined on template level
+	$tplVars = $TemplateCache['site']['#variables'];
+	$noAvatarURL = (isset($tplVars['configuration']) && is_array($tplVars['configuration']) && isset($tplVars['configuration']['noAvatarImage']) && $tplVars['configuration']['noAvatarImage']) ? (tpl_url . "/" . $tplVars['configuration']['noAvatarImage']) : (avatars_url . "/noavatar.gif");
+	// -> desired template path
+	$templatePath = ($callingParams['overrideTemplatePath']) ? $callingParams['overrideTemplatePath'] : (tpl_site . 'plugins/comments');
+	// -> desired template
+	if ($callingParams['overrideTemplateName']) {
+		$templateName = $callingParams['overrideTemplateName'];
+	} else {
+		$templateName = 'comments.show';
+	}
+	$tpl->template($templateName, $templatePath);
+	$joinFilter = array();
+	if ($config['use_avatars']) {
+		$joinFilter = array('users' => array('fields' => array('avatar')));
+	}
+	// RUN interceptors
+	if (isset($PFILTERS['comments']) && is_array($PFILTERS['comments']))
+		foreach ($PFILTERS['comments'] as $k => $v) {
+			$xcfg = $v->commentsJoinFilter();
+			if (is_array($xcfg) && isset($xcfg['users']) && isset($xcfg['users']['fields']) && is_array($xcfg['users']['fields'])) {
+				$joinFilter['users']['fields'] = array_unique(array_merge($joinFilter['users']['fields'], $xcfg['users']['fields']));
+			}
+		}
+	//print "ARRAY CFG: <pre>".var_export($joinFilter, true)."</pre>";
+	function _cs_am($k) {
+
+		return 'u.' . $k . ' as `users_' . $k . '`';
+	}
+
+	if (isset($joinFilter['users']) && isset($joinFilter['users']['fields']) && is_array($joinFilter['users']['fields']) && (count($joinFilter['users']['fields']) > 0)) {
+		$sql = "select c.*, " .
+			join(", ", array_map('_cs_am', $joinFilter['users']['fields'])) .
+			' from ' . prefix . '_comments c' .
+			' left join ' . uprefix . '_users u on c.author_id = u.id where c.news_id=' . db_squote($newsID) . ($commID ? (" and c.id=" . db_squote($commID)) : '');
+	} else {
+		$sql = "select c.* from " . prefix . "_comments c WHERE c.news_id=" . db_squote($newsID) . ($commID ? (" and c.id=" . db_squote($commID)) : '');
+	}
+	$sql .= " order by c.id" . (pluginGetVariable('comments', 'backorder') ? ' desc' : '');
+	// Comments counter
+	$comnum = 0;
+	// Check if we need to use limits
+	$limitStart = isset($callingParams['limitStart']) ? intval($callingParams['limitStart']) : 0;
+	$limitCount = isset($callingParams['limitCount']) ? intval($callingParams['limitCount']) : 0;
+	if ($limitStart || $limitCount) {
+		$sql .= ' limit ' . $limitStart . ", " . $limitCount;
+		$comnum = $limitStart;
+	}
+	$timestamp = pluginGetVariable('comments', 'timestamp');
+	if (!$timestamp)
+		$timestamp = 'j.m.Y - H:i';
+	$output = '';
+	foreach ($mysql->select($sql) as $row) {
+		$comnum++;
+		$tvars['vars']['id'] = $row['id'];
+		$tvars['vars']['author'] = $row['author'];
+		$tvars['vars']['mail'] = $row['mail'];
+		$tvars['vars']['date'] = LangDate($timestamp, $row['postdate']);
+		if ($row['reg'] && getPluginStatusActive('uprofile')) {
+			$tvars['vars']['profile_link'] = checkLinkAvailable('uprofile', 'show') ?
+				generateLink('uprofile', 'show', array('name' => $row['author'], 'id' => $row['author_id'])) :
+				generateLink('core', 'plugin', array('plugin' => 'uprofile', 'handler' => 'show'), array('id' => $row['author_id']));
+			$tvars['regx']["'\[profile\](.*?)\[/profile\]'si"] = '$1';
+		} else {
+			$tvars['vars']['profile_link'] = '';
+			$tvars['regx']["'\[profile\](.*?)\[/profile\]'si"] = '';
+		}
+		// Add [hide] tag processing
+		$text = $row['text'];
+		if ($config['blocks_for_reg']) {
+			$text = $parse->userblocks($text);
+		}
+		if ($config['use_bbcodes']) {
+			$text = $parse->bbcodes($text);
+		}
+		if ($config['use_htmlformatter']) {
+			$text = $parse->htmlformatter($text);
+		}
+		if ($config['use_smilies']) {
+			$text = $parse->smilies($text);
+		}
+		/*
+		if (intval($config['com_wrap']) && (strlen($text) > $config['com_wrap'])) {
+			$tvars['vars']['comment-short']	=	substr($text, 0, $config['com_wrap']);
+			$tvars['vars']['comment-full']	=	substr($text, $config['com_wrap']);
+			$tvars['regx']["'\[comment_full\](.*?)\[/comment_full\]'si"] = '$1';
+		} else {
+		*/
+		$tvars['vars']['comment-short'] = $text;
+		$tvars['regx']["'\[comment_full\](.*?)\[/comment_full\]'si"] = '';
+		/* } */
+		if ($commID && $commDisplayNum) {
+			$tvars['vars']['comnum'] = $commDisplayNum;
+		} else {
+			if (pluginGetVariable('comments', 'backorder') && (intval($callingParams['total']) > 0)) {
+				$tvars['vars']['comnum'] = intval($callingParams['total']) - $comnum + 1;
+			} else {
+				$tvars['vars']['comnum'] = $comnum;
+			}
+		}
+		$tvars['vars']['alternating'] = ($comnum % 2) ? "comment_even" : "comment_odd";
+		if ($config['use_avatars']) {
+			if ($row['users_avatar']) {
+				$tvars['vars']['avatar'] = "<img src=\"" . avatars_url . "/" . $row['users_avatar'] . "\" alt=\"" . $row['author'] . "\" />";
+			} else {
+				// If gravatar integration is active, show avatar from GRAVATAR.COM
+				if ($config['avatars_gravatar']) {
+					$tvars['vars']['avatar'] = '<img src="http://www.gravatar.com/avatar/' . md5(strtolower($row['mail'])) . '.jpg?s=' . $config['avatar_wh'] . '&amp;d=' . urlencode($noAvatarURL) . '" alt=""/>';
+				} else {
+					$tvars['vars']['avatar'] = "<img src=\"" . $noAvatarURL . "\" alt=\"\" />";
+				}
+			}
+		} else {
+			$tvars['vars']['avatar'] = '';
+		}
+		if ($config['use_bbcodes']) {
+			$tvars['regx']["'\[quote\](.*?)\[/quote\]'si"] = '$1';
+		} else {
+			$tvars['regx']["'\[quote\](.*?)\[/quote\]'si"] = '';
+		}
+		if ($row['answer'] != '') {
+			$answer = $row['answer'];
+			if ($config['blocks_for_reg']) {
+				$answer = $parse->userblocks($answer);
+			}
+			if ($config['use_htmlformatter']) {
+				$answer = $parse->htmlformatter($answer);
+			}
+			if ($config['use_bbcodes']) {
+				$answer = $parse->bbcodes($answer);
+			}
+			if ($config['use_smilies']) {
+				$answer = $parse->smilies($answer);
+			}
+			$tvars['vars']['answer'] = $answer;
+			$tvars['vars']['name'] = $row['name'];
+			$tvars['regx']["'\[answer\](.*?)\[/answer\]'si"] = '$1';
+		} else {
+			$tvars['regx']["'\[answer\](.*?)\[/answer\]'si"] = '';
+		}
+		if (is_array($userROW) && (($userROW['status'] == 1) || ($userROW['status'] == 2))) {
+			$edit_link = admin_url . "/admin.php?mod=editcomments&amp;newsid=" . $newsID . "&amp;comid=" . $row['id'];
+			$delete_link = generateLink('core', 'plugin', array('plugin' => 'comments', 'handler' => 'delete'), array('id' => $row['id'], 'uT' => genUToken($row['id'])), true);
+			$tvars['vars']['[edit-com]'] = "<a href=\"" . $edit_link . "\" target=\"_blank\" title=\"" . $lang['addanswer'] . "\">";
+			$tvars['vars']['[/edit-com]'] = "</a>";
+			$tvars['vars']['[del-com]'] = "<a href=\"" . $delete_link . "\" title=\"" . $lang['comdelete'] . "\">";
+			$tvars['vars']['[/del-com]'] = "</a>";
+			$tvars['vars']['ip'] = "<a href=\"http://www.nic.ru/whois/?ip=$row[ip]\" title=\"" . $lang['whois'] . "\">" . $lang['whois'] . "</a>";
+			$tvars['vars']['[if-have-perm]'] = '';
+			$tvars['vars']['[/if-have-perm]'] = '';
+		} else {
+			$tvars['regx']["'\\[edit-com\\].*?\\[/edit-com\\]'si"] = '';
+			$tvars['regx']["'\\[del-com\\].*?\\[/del-com\\]'si"] = '';
+			$tvars['vars']['ip'] = '';
+			$tvars['regx']['#\[if-have-perm\].*?\[\/if-have-perm\]#si'] = '';
+		}
+		$tvars['regx']['#\[is-logged\](.+?)\[/is-logged\]#is'] = is_array($userROW) ? '$1' : '';
+		$tvars['regx']['#\[isnt-logged\](.+?)\[/isnt-logged\]#is'] = is_array($userROW) ? '' : '$1';
+		// RUN interceptors
+		if (isset($PFILTERS['comments']) && is_array($PFILTERS['comments']))
+			foreach ($PFILTERS['comments'] as $k => $v)
+				$v->showComments($newsID, $row, $comnum, $tvars);
+		// run OLD-STYLE interceptors
+		exec_acts('comments', $row);
+		// Show template
+		$tpl->vars($templateName, $tvars);
+		$output .= $tpl->show($templateName);
+	}
+	if ($callingParams['outprint']) {
+		return $output;
+	}
+	$template['vars']['mainblock'] .= $output;
+}
+
+// $callingParams
+//		'plugin'  => if is called from plugin - ID of plugin
+//		'overrideTemplateName'	=> alternative template for display
+//		'overrideTemplatePath'	=> alternative path for searching of template
+//		'noajax'		=> DISABLE AJAX mode
+//		'outprint'	 	=> flag: if set, output will be returned, elsewhere - will be added to mainblock
+function comments_showform($newsID, $callingParams = array()) {
+
+	global $mysql, $config, $template, $tpl, $userROW, $PFILTERS;
+	// -> desired template path
+	$templatePath = ($callingParams['overrideTemplatePath']) ? $callingParams['overrideTemplatePath'] : (tpl_site . 'plugins/comments');
+	// -> desired template
+	if ($callingParams['overrideTemplateName']) {
+		$templateName = $callingParams['overrideTemplateName'];
+	} else {
+		$templateName = 'comments.form';
+	}
+	$tpl->template($templateName, $templatePath);
+	if ($config['use_smilies']) {
+		$tvars['vars']['smilies'] = InsertSmilies('comments', 10);
+	} else {
+		$tvars['vars']['smilies'] = "";
+	}
+	// Lock AJAX calls if required
+	$tvars['regx']['#\[ajax\](.*?)\[\/ajax\]#is'] = $callingParams['noajax'] ? '' : '$1';
+	if ($_COOKIE['com_username'] && trim($_COOKIE['com_username']) != "") {
+		$tvars['vars']['savedname'] = secure_html(urldecode($_COOKIE['com_username']));
+		$tvars['vars']['savedmail'] = secure_html(urldecode($_COOKIE['com_usermail']));
+	} else {
+		$tvars['vars']['savedname'] = '';
+		$tvars['vars']['savedmail'] = '';
+	}
+	if (!is_array($userROW)) {
+		$tvars['vars']['[not-logged]'] = "";
+		$tvars['vars']['[/not-logged]'] = "";
+	} else {
+		$tvars['regx']["'\[not-logged\].*?\[/not-logged\]'si"] = "";
+	}
+	$tvars['vars']['admin_url'] = admin_url;
+	$tvars['vars']['rand'] = rand(00000, 99999);
+	if ($config['use_captcha'] && (!is_array($userROW))) {
+		$_SESSION['captcha'] = rand(00000, 99999);
+		$tvars['regx']["'\[captcha\](.*?)\[/captcha\]'si"] = '$1';
+	} else {
+		$tvars['regx']["'\[captcha\](.*?)\[/captcha\]'si"] = '';
+	}
+	$tvars['vars']['captcha_url'] = admin_url . "/captcha.php";
+	$tvars['vars']['bbcodes'] = BBCodes();
+	$tvars['vars']['skins_url'] = skins_url;
+	$tvars['vars']['newsid'] = $newsID . '#' . genUToken('comment.add.' . $newsID);
+	$tvars['vars']['request_uri'] = secure_html($_SERVER['REQUEST_URI']);
+	// Generate request URL
+	$link = generateLink('core', 'plugin', array('plugin' => 'comments', 'handler' => 'add'));
+	$tvars['vars']['post_url'] = $link;
+	// RUN interceptors
+	if (is_array($PFILTERS['comments']))
+		foreach ($PFILTERS['comments'] as $k => $v)
+			$v->addCommentsForm($newsID, $tvars);
+	// RUN interceptors ( OLD-style )
+	exec_acts('comments_form', $row);
+	$tpl->vars($templateName, $tvars);
+	$output = $tpl->show($templateName);
+	if ($callingParams['outprint']) {
+		return $output;
+	}
+	$template['vars']['mainblock'] .= $output;
+}
+
+// preload plugins
+load_extras('comments');
+load_extras('comments:show');
+
+        папка lang
+              папка russian
+                    config.ini
+                    desc_install = "Плагин позволяет реализовать функционал комментариев"
+desc_uninstall = "Внимание! Удаление плагина приведёт к удалению всех комментариев из БД системы. Вы уверены?"
+mode.disallow = "запретить"
+mode.allow = "разрешить"
+mode.default = "по умолчанию"
+mode.header = "Комментарии"
+categories.comments = "Управление комментариями в новостях категории"
+categories.comments#desc = "Данная настройка будет действовать для новостей, у которых для комментариев установлен режим `по умолчанию`:<br/><b>запретить</b> - по умолчанию комментарии в новостях этой категории запрещены<br/><b>разрешить</b> - по умолчанию комментарии в этой категории будут разрешены<br/><b>по умолчанию</b> - флаг разрешения/запрета комментариев будет браться из параметра &quot;по умолчанию комментарии&quot;"
+                    main.ini
+                    err.regonly = "Комментарии могут оставлять только зарегистрированные пользователи!"
+err.vcode = "Вы ввели неверный верификационный код!"
+err.name = "Вы не заполнили поле 'Имя'!"
+err.mail = "Вы не заполнили поле 'Email'!"
+err.com = "Вы не заполнили поле 'Комментарий'!"
+err.badname = "Имя пользователя должно состоять из латинских символов и не должно превышать 50-ти символов!"
+err.badmail = "Вы ввели неправильный email!"
+err.edupmail = "Вы пытаетесь использовать Email адрес зарегистрированного пользователя. Для постинга комментария вам необходимо указать имя пользователя и пароль!"
+err.badtext = "Комментарий не должен быть менее <b>2</b>-х символов или превышать <b>{maxlen}</b> символов!"
+err.flood = "Вы должны подождать {timeout} секунд прежде чем оставить новый комментарий!"
+err.ipban = "Добавление комментариев с вашего IP адреса запрещено"
+err.forbidden = "В данной новости комментарии запрещены!"
+err.notfound = "Новость, которую Вы хотите прокомментировать, не найдена"
+err.multilock = "Вы не можете добавлять здесь комментарии до тех пор, пока не появятся новые комментарии!"
+err.password = "Вы ввели неверный пароль!"
+err.pluginlock = "Плагин <b>{plugin}</b> запретил добавление комментария в связи с ошибкой"
+err.epluginlock = "Плагин <b>{plugin}</b> запретил добавление комментария по причине: <i>{errorText}</i>"
+email.subj = "Новый комментарий к новости"
+email.body = "Пользователь [userlink]<b>{username}</b>[/userlink] добавил новый комментарий:<br /><br />{comment}<br /><br />-------------<br />Адрес статьи: <a href='{newslink}'>{newstitle}</a><br />Это письмо сгенерировано почтовым роботом NG CMS, пожалуйста, не отвечайте на него!"
+link.more = "<br/><a href='{link}&page=2'>Читать все комментарии ({count}) &raquo;&raquo;</a><br/><br/>"
+err.nonews = "Указанной новости не существует"
+err.redir.title = "Сообщение об ошибке"
+err.redir.url = "Вернуться назад"
+err.nocomment = "Указанного комментария не существует"
+deleted.title = "Удаление комментария"
+deleted.text = "Комментарий удалён"
+deleted.url = "Продолжить"
+header.title = "Комментарии к новости"
+
+    comments.php
+   <?php
+// Protect against hack attempts
+if (!defined('NGCMS')) die('HAL');
+$lang = LoadLang("comments", "site");
+
+class CommentsNewsFilter extends NewsFilter
+{
+
+	function addNewsForm(&$tvars)
+	{
+
+		global $lang;
+		loadPluginLang('comments', 'config', '', '', ':');
+		for ($ix = 0; $ix <= 2; $ix++) {
+			$tvars['plugin']['comments']['acom:' . $ix] = (pluginGetVariable('comments', 'default_news') == $ix) ? 'selected="selected"' : '';
+		}
+	}
+
+	function addNews(&$tvars, &$SQL)
+	{
+
+		$SQL['allow_com'] = intval($_REQUEST['allow_com']);
+
+		return 1;
+	}
+
+	function editNewsForm($newsID, $SQLnews, &$tvars)
+	{
+
+		global $lang, $mysql, $config, $parse, $tpl, $PHP_SELF;
+		loadPluginLang('comments', 'config', '', '', ':');
+		// List comments
+		$comments = '';
+		$tpl->template('comments', tpl_actions . 'news');
+		foreach ($mysql->select("select * from " . prefix . "_comments where post='" . $newsID . "' order by id") as $crow) {
+			$text = $crow['text'];
+			if ($config['blocks_for_reg']) {
+				$text = $parse->userblocks($text);
+			}
+			if ($config['use_bbcodes']) {
+				$text = $parse->bbcodes($text);
+			}
+			if ($config['use_htmlformatter']) {
+				$text = $parse->htmlformatter($text);
+			}
+			if ($config['use_smilies']) {
+				$text = $parse->smilies($text);
+			}
+			$txvars['vars'] = array(
+				'php_self'   => $PHP_SELF,
+				'com_author' => $crow['author'],
+				'com_post'   => $crow['post'],
+				'com_url'    => ($crow['url']) ? $crow['url'] : $PHP_SELF . '?mod=users&action=edituser&id=' . $crow['author_id'],
+				'com_id'     => $crow['id'],
+				'com_ip'     => $crow['ip'],
+				'com_time'   => LangDate(pluginGetVariable('comments', 'timestamp'), $crow['postdate']),
+				'com_part'   => $text
+			);
+			if ($crow['reg']) {
+				$txvars['vars']['[userlink]'] = '';
+				$txvars['vars']['[/userlink]'] = '';
+			} else {
+				$txvars['regx']["'\\[userlink\\].*?\\[/userlink\\]'si"] = $crow['author'];
+			}
+			$tpl->vars('comments', $txvars);
+			$comments .= $tpl->show('comments');
+		}
+		$tvars['plugin']['comments']['list'] = $comments;
+		$tvars['plugin']['comments']['count'] = $SQLnews['com'] ? $SQLnews['com'] : $lang['noa'];
+		for ($ix = 0; $ix <= 2; $ix++) {
+			$tvars['plugin']['comments']['acom:' . $ix] = ($SQLnews['allow_com'] == $ix) ? 'selected="selected"' : '';
+		}
+	}
+
+	function editNews($newsID, $SQLold, &$SQLnew, &$tvars)
+	{
+
+		$SQLnew['allow_com'] = intval($_REQUEST['allow_com']);
+
+		return 1;
+	}
+
+	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
+	{
+		global $catmap, $catz, $config, $userROW, $template, $lang, $tpl;
+
+		// Определяем, разрешены ли комментарии
+		$allowCom = $SQLnews['allow_com'];
+		if ($allowCom == 2) {
+			$masterCat = intval(array_shift(explode(',', $SQLnews['catid'])));
+			if ($masterCat && isset($catmap[$masterCat])) {
+				$allowCom = intval($catz[$catmap[$masterCat]]['allow_com']);
+			}
+			if ($allowCom == 2) {
+				$allowCom = pluginGetVariable('comments', 'global_default');
+			}
+		}
+
+		// Заполняем переменные для шаблона новости
+		$tvars['vars']['comments-num'] = $SQLnews['com'];
+		$tvars['vars']['comnum'] = $SQLnews['com'];
+		$tvars['regx']['[\[comheader\](.*)\[/comheader\]]'] = ($SQLnews['com']) ? '$1' : '';
+		$tvars['regx']['[\[comments\](.*)\[/comments\]]'] = ($SQLnews['com']) ? '$1' : '';
+		$tvars['regx']['[\[nocomments\](.*)\[/nocomments\]]'] = ($SQLnews['com']) ? '' : '$1';
+
+		// Если это не полный просмотр новости - выходим
+		if (!(($mode['style'] == 'full') && (!$mode['emulate']) && (!isset($mode['plugin'])))) {
+			$tvars['vars']['plugin_comments'] = '';
+			return 1;
+		}
+
+		// Устанавливаем переменную для TWIG вывода
+		$tvars['vars']['plugin_comments'] = '';
+
+		return 1;
+	}
+}
+
+class CommentsFilterAdminCategories extends FilterAdminCategories
+{
+
+	function addCategory(&$tvars, &$SQL)
+	{
+
+		$SQL['allow_com'] = intval($_REQUEST['allow_com']);
+
+		return 1;
+	}
+
+	function addCategoryForm(&$tvars)
+	{
+
+		global $lang;
+		loadPluginLang('comments', 'config', '', '', ':');
+		$allowCom = pluginGetVariable('comments', 'default_categories');
+		$ms = '<select name="allow_com">';
+		$cv = array('0' => 'запретить', '1' => 'разрешить', '2' => 'по умолчанию');
+		for ($i = 0; $i < 3; $i++) {
+			$ms .= '<option value="' . $i . '"' . (($allowCom == $i) ? ' selected="selected"' : '') . '>' . $cv[$i] . '</option>';
+		}
+		$tvars['extend'] .= '<tr><td width="70%" class="contentEntry1">' . $lang['comments:categories.comments'] . '<br/><small>' . $lang['comments:categories.comments#desc'] . '</small></td><td width="30%" class="contentEntry2">' . $ms . '</td></tr>';
+
+		return 1;
+	}
+
+	function editCategoryForm($categoryID, $SQL, &$tvars)
+	{
+
+		global $lang;
+		loadPluginLang('comments', 'config', '', '', ':');
+		if (!isset($SQL['allow_com'])) {
+			$SQL['allow_com'] = pluginGetVariable('comments', 'default_categories');
+		}
+		$ms = '<select name="allow_com">';
+		$cv = array('0' => 'запретить', '1' => 'разрешить', '2' => 'по умолчанию');
+		for ($i = 0; $i < 3; $i++) {
+			$ms .= '<option value="' . $i . '"' . (($SQL['allow_com'] == $i) ? ' selected="selected"' : '') . '>' . $cv[$i] . '</option>';
+		}
+		$tvars['extend'] .= '<tr><td width="70%" class="contentEntry1">' . $lang['comments:categories.comments'] . '<br/><small>' . $lang['comments:categories.comments#desc'] . '</small></td><td width="30%" class="contentEntry2">' . $ms . '</td></tr>';
+
+		return 1;
+	}
+
+	function editCategory($categoryID, $SQL, &$SQLnew, &$tvars)
+	{
+
+		$SQLnew['allow_com'] = intval($_REQUEST['allow_com']);
+
+		return 1;
+	}
+}
+function getAvatar($userID, $email)
+{
+	global $config, $mysql;
+
+	if ($userID) {
+		$avatar = $mysql->result("SELECT avatar FROM " . uprefix . "_users WHERE id = " . db_squote($userID));
+		if ($avatar) {
+			return '<img src="' . avatars_url . '/' . $avatar . '" alt="">';
+		}
+	}
+
+	if ($config['avatars_gravatar']) {
+		return '<img src="https://www.gravatar.com/avatar/' . md5(strtolower($email)) . '.jpg?s=50&d=mm" alt="">';
+	}
+
+	return '<img src="' . tpl_url . '/img/noavatar.png" alt="">';
+}
+
+function generateUserProfileLink($userID, $username)
+{
+	if (!$userID) return '';
+
+	if (getPluginStatusActive('uprofile')) {
+		return checkLinkAvailable('uprofile', 'show') ?
+			generateLink('uprofile', 'show', array('name' => $username, 'id' => $userID)) :
+			generateLink('core', 'plugin', array('plugin' => 'uprofile', 'handler' => 'show'), array('id' => $userID));
+	}
+
+	return '';
+}
+function plugin_comments_add()
+{
+
+	global $config, $catz, $catmap, $tpl, $template, $lang, $SUPRESS_TEMPLATE_SHOW;
+	$SUPRESS_TEMPLATE_SHOW = 1;
+	// Connect library
+	include_once(root . "/plugins/comments/inc/comments.show.php");
+	include_once(root . "/plugins/comments/inc/comments.add.php");
+	// Call comments_add() to ADD COMMENT
+	if (is_array($addResult = comments_add())) {
+		// Ok.
+		// Check if AJAX mode is turned OFF
+		if (!$_REQUEST['ajax']) {
+			// We should JUMP to this new comment
+			// Make FULL news link
+			$nlink = newsGenerateLink($addResult[0]);
+			// Make redirect to full news
+			@header("Location: " . $nlink);
+
+			return 1;
+		}
+		// AJAX MODE.
+		// Let's print (ONLY) new comment
+		$SQLnews = $addResult[0];
+		$commentId = $addResult[1];
+		// Check if we need to override news template
+		$callingCommentsParams = array('outprint' => true);
+		// Set default template path
+		$templatePath = tpl_dir . $config['theme'];
+		// Find first category
+		$fcat = array_shift(explode(",", $SQLnews['catid']));
+		// Check if there is a custom mapping
+		if ($fcat && $catmap[$fcat] && ($ctname = $catz[$catmap[$fcat]]['tpl'])) {
+			// Check if directory exists
+			if (is_dir($templatePath . '/ncustom/' . $ctname))
+				$callingCommentsParams['overrideTemplatePath'] = $templatePath . '/ncustom/' . $ctname;
+		}
+		$output = array(
+			'status' => 1,
+			'rev'    => intval(pluginGetVariable('comments', 'backorder')),
+			'data' => comments_show($SQLnews['id'], $commentId, $SQLnews['com'] + 1, $callingCommentsParams),
+		);
+		print json_encode($output);
+		$template['vars']['mainblock'] = '';
+
+		return 1;
+	} else {
+		// Some errors.
+		if ($_REQUEST['ajax']) {
+			// AJAX MODE
+			// Set default template path [from site template / comments plugin subdirectory]
+			$templatePath = tpl_site . 'plugins/comments';
+			$tpl->template('comments.error', $templatePath);
+			$tpl->vars('comments.error', array('vars' => array('content' => $template['vars']['mainblock'])));
+			$output = array(
+				'status' => 0,
+				'data' => $tpl->show('comments.error'),
+			);
+			print json_encode($output);
+			$template['vars']['mainblock'] = '';
+		} else {
+			// NON-AJAX MODE
+			$tavars = array(
+				'vars' => array(
+					'title'    => $lang['comments:err.redir.title'],
+					'message'  => $template['vars']['mainblock'],
+					'link'     => secure_html(($_REQUEST['referer']) ? $_REQUEST['referer'] : '/'),
+					'linktext' => $lang['comments:err.redir.url'],
+				)
+			);
+			$tpl->template('redirect', tpl_site);
+			$tpl->vars('redirect', $tavars);
+			$template['vars']['mainblock'] = $tpl->show('redirect');
+		}
+	}
+}
+
+// Show dedicated page for comments
+function plugin_comments_show()
+{
+
+	global $config, $catz, $mysql, $catmap, $tpl, $template, $lang, $SUPRESS_TEMPLATE_SHOW, $userROW, $TemplateCache, $SYSTEM_FLAGS;
+	// Load lang file, that is required for [hide]..[/hide] block
+	$lang = LoadLang('news', 'site');
+	$SYSTEM_FLAGS['info']['title']['group'] = $lang['comments:header.title'];
+	include_once(root . "/plugins/comments/inc/comments.show.php");
+	// Try to fetch news
+	$newsID = intval($_REQUEST['news_id']);
+	if (!$newsID || !is_array($newsRow = $mysql->record("select * from " . prefix . "_news where id = " . $newsID))) {
+		error404();
+
+		return;
+	}
+	$SYSTEM_FLAGS['info']['title']['item'] = $newsRow['title'];
+	// Prepare params for call
+	// AJAX is turned off by default
+	$callingCommentsParams = array('noajax' => 1, 'outprint' => true);
+	// Set default template path [from site template / comments plugin subdirectory]
+	$templatePath = tpl_site . 'plugins/comments';
+	$fcat = array_shift(explode(",", $newsRow['catid']));
+	// Check if there is a custom mapping
+	if ($fcat && $catmap[$fcat] && ($ctname = $catz[$catmap[$fcat]]['tpl'])) {
+		// Check if directory exists
+		if (is_dir(tpl_site . 'ncustom/' . $ctname))
+			$callingCommentsParams['overrideTemplatePath'] = tpl_site . 'ncustom/' . $ctname;
+		$templatePath = tpl_site . 'ncustom/' . $ctname;
+	}
+	// Check if we need pagination
+	$page = 0;
+	$pageCount = 0;
+	// If we have comments more than for one page - activate pagination
+	$multi_scount = intval(pluginGetVariable('comments', 'multi_scount'));
+	if (($multi_scount > 0) && ($newsRow['com'] > $multi_scount)) {
+		// Page count
+		$pageCount = ceil($newsRow['com'] / $multi_scount);
+		// Check if user wants to access not first page
+		$page = intval($_REQUEST['page']);
+		if ($page < 1) $page = 1;
+		$callingCommentsParams['limitCount'] = intval(pluginGetVariable('comments', 'multi_scount'));
+		$callingCommentsParams['limitStart'] = ($page - 1) * intval(pluginGetVariable('comments', 'multi_scount'));
+	}
+	// Pass total number of comments
+	$callingCommentsParams['total'] = $newsRow['com'];
+	// Show comments
+	$tcvars = array();
+	$tcvars['vars']['entries'] = comments_show($newsID, 0, 0, $callingCommentsParams);
+	if ($pageCount > 1) {
+		$paginationParams = checkLinkAvailable('comments', 'show') ?
+			array('pluginName' => 'comments', 'pluginHandler' => 'show', 'params' => array('news_id' => $newsID), 'xparams' => array(), 'paginator' => array('page', 0, false)) :
+			array('pluginName' => 'core', 'pluginHandler' => 'plugin', 'params' => array('plugin' => 'comments', 'handler' => 'show'), 'xparams' => array('news_id' => $newsID), 'paginator' => array('page', 1, false));
+		templateLoadVariables(true);
+		$navigations = $TemplateCache['site']['#variables']['navigation'];
+		$tcvars['vars']['more_comments'] = generatePagination($page, 1, $pageCount, 10, $paginationParams, $navigations, true);
+		$tcvars['regx']['#\[more_comments\](.*?)\[\/more_comments\]#is'] = '$1';
+	} else {
+		$tcvars['vars']['more_comments'] = '';
+		$tcvars['regx']['#\[more_comments\](.*?)\[\/more_comments\]#is'] = '';
+	}
+	// Enable AJAX in case if we are on last page
+	if ($page == $pageCount)
+		$callingCommentsParams['noajax'] = 0;
+	$allowCom = $newsRow['allow_com'];
+	// Show form for adding comments
+	if ($newsRow['allow_com'] && (!pluginGetVariable('comments', 'regonly') || is_array($userROW))) {
+		$tcvars['vars']['form'] = comments_showform($newsID, $callingCommentsParams);
+		$tcvars['regx']['#\[regonly\](.*?)\[\/regonly\]#is'] = '';
+		$tcvars['regx']['#\[commforbidden\](.*?)\[\/commforbidden\]#is'] = '';
+	} else {
+		$tcvars['vars']['form'] = '';
+		$tcvars['regx']['#\[regonly\](.*?)\[\/regonly\]#is'] = $allowCom ? '$1' : '';
+		$tcvars['regx']['#\[commforbidden\](.*?)\[\/commforbidden\]#is'] = $allowCom ? '' : '$1';
+	}
+	// Show header file
+	$tcvars['vars']['link'] = newsGenerateLink($newsRow);
+	$tcvars['vars']['title'] = secure_html($newsRow['title']);
+	$tcvars['regx']['[\[comheader\](.*)\[/comheader\]]'] = ($newsRow['com']) ? '$1' : '';
+	$tpl->template('comments.external', $templatePath);
+	$tpl->vars('comments.external', $tcvars);
+	$template['vars']['mainblock'] .= $tpl->show('comments.external');
+}
+
+// Delete comment
+function plugin_comments_delete()
+{
+
+	global $mysql, $config, $userROW, $lang, $tpl, $template, $SUPRESS_MAINBLOCK_SHOW, $SUPRESS_TEMPLATE_SHOW;
+	$output = array();
+	$params = array();
+	// First: check if user have enough permissions
+	if (!is_array($userROW) || ($userROW['status'] > 2) || ($_GET['uT'] != genUToken(intval($_REQUEST['id'])))) {
+		// Not allowed
+		$output['status'] = 0;
+		$output['data'] = $lang['perm.denied'];
+	} else {
+		// Second: check if this comment exists
+		$comid = intval($_REQUEST['id']);
+		if (($comid) && ($row = $mysql->record("select * from " . prefix . "_comments where id=" . db_squote($comid)))) {
+			$mysql->query("delete from " . prefix . "_comments where id=" . db_squote($comid));
+			$mysql->query("update " . uprefix . "_users set com=com-1 where id=" . db_squote($row['author_id']));
+			$mysql->query("update " . prefix . "_news set com=com-1 where id=" . db_squote($row['post']));
+			$output['status'] = 1;
+			$output['data'] = $lang['comments:deleted.text'];
+			$params['newsid'] = $row['post'];
+		} else {
+			$output['status'] = 0;
+			$output['data'] = $lang['comments:err.nocomment'];
+		}
+	}
+	$SUPRESS_TEMPLATE_SHOW = 1;
+	// Check if we run AJAX request
+	if ($_REQUEST['ajax']) {
+		$output['data'] = $output['data'];
+		$template['vars']['mainblock'] = json_encode($output);
+	} else {
+		// NON-AJAX mode
+		// Fetch news record
+		if ($nrow = $mysql->record("select * from " . prefix . "_news where id = " . db_squote($params['newsid']))) {
+			$url = newsGenerateLink($nrow);
+		} else {
+			$url = $config['home_url'];
+		}
+		$tavars = array(
+			'vars' => array(
+				'message' => $output['data'],
+				'link'    => $url,
+			)
+		);
+		// If ok - redirect to news
+		if ($output['status']) {
+			$tavars['vars']['title'] = $lang['comments:deleted.title'];
+			$tavars['vars']['linktext'] = $lang['comments:deleted.url'];
+		} else {
+			// Print error messag
+			// NON-AJAX MODE
+			$tavars['vars']['title'] = $lang['comments:err.redir.title'];
+			$tavars['vars']['linktext'] = $lang['comments:err.redir.url'];
+		}
+		$tpl->template('redirect', tpl_site);
+		$tpl->vars('redirect', $tavars);
+		$template['vars']['mainblock'] = $tpl->show('redirect');
+	}
+}
+
+function checkCommentsAllowed($newsRow)
+{
+	global $catmap, $catz;
+
+	$allowCom = $newsRow['allow_com'];
+	if ($allowCom != 2) {
+		return $allowCom;
+	}
+
+	// Проверяем настройки категории
+	$cats = explode(',', $newsRow['catid']);
+	$masterCat = intval($cats[0]);
+	if ($masterCat && isset($catmap[$masterCat])) {
+		$allowCom = intval($catz[$catmap[$masterCat]]['allow_com']);
+		if ($allowCom != 2) {
+			return $allowCom;
+		}
+	}
+
+	// Возвращаем глобальную настройку по умолчанию
+	return pluginGetVariable('comments', 'global_default');
+}
+// Основная функция для вывода комментариев через TWIG
+function plugin_comments_showTwig($params)
+{
+	global $mysql, $config, $userROW, $parse, $lang, $twig;
+
+	// Проверка новости
+	$newsID = intval($params['news_id']);
+	$newsRow = $mysql->record("SELECT * FROM " . prefix . "_news WHERE id = " . db_squote($newsID));
+	if (!$newsID || !is_array($newsRow)) {
+		return '<!-- Новость не найдена -->';
+	}
+
+	// Определяем расположение шаблонов
+	$templateBase = pluginGetVariable('comments', 'localsource') ?
+		root . '/plugins/comments/tpl/' :
+		root . '/templates/' . $config['theme'] . '/plugins/comments/';
+
+	// Проверяем существование шаблонов
+	$templates = [
+		'main' => $templateBase . 'main.tpl',
+		'entries' => $templateBase . 'entries.tpl',
+		'form' => $templateBase . 'form.tpl'
+	];
+
+	foreach ($templates as $type => $path) {
+		if (!file_exists($path)) {
+			return "<!-- Не найден шаблон $type: $path -->";
+		}
+		$templates[$type] = file_get_contents($path);
+	}
+
+	// Получаем комментарии
+	$comments = [];
+	$sql = "SELECT * FROM " . prefix . "_comments WHERE news_id = " . db_squote($newsID) . " ORDER BY id " .
+		(pluginGetVariable('comments', 'backorder') ? 'DESC' : 'ASC');
+
+	foreach ($mysql->select($sql) as $row) {
+		$isAdmin = ($userROW['status'] == 1);
+		$comments[] = [
+			'id' => $row['id'],
+			'author' => $row['author'],
+			'date' => LangDate(pluginGetVariable('comments', 'timestamp') ?: 'j.m.Y - H:i', $row['postdate']),
+			'text' => $parse->bbcodes($parse->smilies($row['text'])),
+			'avatar' => getAvatar($row['author_id'], $row['mail']),
+			'profile_link' => generateUserProfileLink($row['author_id'], $row['author']),
+			'answer' => $row['answer'] ? $parse->bbcodes($parse->smilies($row['answer'])) : null,
+			'is_admin' => $isAdmin
+		];
+	}
+
+	// Подготавливаем данные для шаблона
+	$tVars = [
+		'news' => ['com' => $newsRow['com'], 'id' => $newsID, 'title' => $newsRow['title']],
+		'entries' => $comments,
+		'allow_com' => checkCommentsAllowed($newsRow),
+		'is_logged' => is_array($userROW),
+		'user' => ['is_admin' => (is_array($userROW) && ($userROW['status'] == 1))],
+		'regonly' => pluginGetVariable('comments', 'regonly'),
+		'lang' => [
+			'err' => [
+				'forbidden' => $lang['comments:err.forbidden'],
+				'regonly' => $lang['comments:err.regonly']
+			]
+		],
+		'form_action' => generateLink('core', 'plugin', ['plugin' => 'comments', 'handler' => 'add']),
+		'newsid_token' => $newsID . '#' . genUToken('comment.add.' . $newsID),
+		'entry_template' => $templates['entries'],
+		'form_template' => $templates['form']
+	];
+
+	// Рендерим шаблон
+	try {
+		return $twig->createTemplate($templates['main'])->render($tVars);
+	} catch (Exception $e) {
+		return '<!-- Ошибка рендеринга: ' . $e->getMessage() . ' -->';
+	}
+}
+
+// Регистрируем TWIG функцию
+twigRegisterFunction('comments', 'show', 'plugin_comments_showTwig');
+
+// Остальной код (фильтры, обработчики) остается без изменений
+register_filter('news', 'comments', new CommentsNewsFilter);
+register_admin_filter('categories', 'comments', new CommentsFilterAdminCategories);
+register_plugin_page('comments', 'add', 'plugin_comments_add', 0);
+register_plugin_page('comments', 'show', 'plugin_comments_show', 0);
+register_plugin_page('comments', 'delete', 'plugin_comments_delete', 0);
+
+config.php
+<?php
+// Protect against hack attempts
+if (!defined('NGCMS')) die('HAL');
+
+pluginsLoadConfig();
+LoadPluginLang('comments', 'config', '', '', ':');
+
+$cfg = array();
+$cfgX = array();
+array_push($cfgX, array(
+    'name' => 'mode',
+    'title' => "Режим вывода",
+    'descr' => "<b>Автоматически</b> - комментарии выводятся автоматически<br/><b>TWIG</b> - вывод только через TWIG функцию",
+    'type' => 'select',
+    'values' => array('0' => 'Автоматически', '1' => 'TWIG'),
+    'value' => intval(pluginGetVariable('comments', 'mode'))
+));
+array_push($cfgX, array(
+	'name' => 'localsource',
+	'title' => "Источник шаблонов",
+	'descr' => "<b>Шаблон сайта</b> - шаблоны из общего шаблона сайта<br/><b>Плагин</b> - шаблоны из каталога плагина",
+	'type' => 'select',
+	'values' => array('0' => 'Шаблон сайта', '1' => 'Плагин'),
+	'value' => intval(pluginGetVariable('comments', 'localsource'))
+));
+
+array_push($cfgX, array(
+	'name' => 'cache',
+	'title' => "Кеширование",
+	'descr' => "Включить кеширование комментариев",
+	'type' => 'select',
+	'values' => array('0' => 'Нет', '1' => 'Да'),
+	'value' => intval(pluginGetVariable('comments', 'cache'))
+));
+
+array_push($cfgX, array(
+	'name' => 'cacheExpire',
+	'title' => "Время жизни кеша (сек)",
+	'descr' => "Через сколько секунд кеш будет обновляться",
+	'type' => 'input',
+	'value' => intval(pluginGetVariable('comments', 'cacheExpire')) ?: '3600'
+));
+
+array_push($cfgX, array('name' => 'regonly', 'title' => "Комментарии только для зарегистрированных", 'descr' => '<b>Да</b> - комментарии могут оставлять только зарегистрированные пользователи<br/><b>Нет</b> - комментарии может оставить любой посетитель', 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => intval(pluginGetVariable($plugin, 'regonly'))));
+array_push($cfgX, array('name' => 'guest_edup_lock', 'title' => "Запретить гостям использовать <b>email</b>'ы зарегистрированных пользователей", 'descr' => '<b>Да</b> - гости не смогут в качестве email адреса указывать адрес уже зарегистрированных пользоваталей<br/><b>Нет</b> - гость может использовать любой валидный email адрес', 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => intval(pluginGetVariable($plugin, 'guest_edup_lock'))));
+array_push($cfgX, array('name' => 'backorder', 'title' => "Очередность отображения комментариев", 'descr' => "<b>Прямая</b> - отображение в порядке добавления<br/><b>Обратная</b> - самые новые показываются первыми", 'type' => 'select', 'values' => array('0' => 'Прямая', '1' => 'Обратная'), 'value' => intval(pluginGetVariable($plugin, 'backorder'))));
+array_push($cfgX, array('name' => 'maxlen', 'title' => "Максимальный размер", 'descr' => "Укажите максимальное кол-во символов для комментариев (например: <b>200</b>; <b>0</b> - не ограничивать)", 'type' => 'input', 'html_flags' => 'size="4"', 'value' => pluginGetVariable($plugin, 'maxlen')));
+array_push($cfgX, array('name' => 'maxwlen', 'title' => "Автоурезание слов в комментариях", 'descr' => "В случае превышения заданного числа, в слово будет автоматически будет добавляться пробел (например: <b>50</b>)", 'type' => 'input', 'html_flags' => 'size="4"', 'value' => pluginGetVariable($plugin, 'maxwlen')));
+array_push($cfgX, array('name' => 'multi', 'title' => "Разрешить множественные комментарии", 'descr' => "<b>Да</b> - пользователь может оставлять последовательно несколько комментариев<br/><b>Нет</b> - пользователю запрещено размещать последовательно несколько комментариев (необходимо дождаться комментария другого пользователя)", 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => intval(pluginGetVariable($plugin, 'multi'))));
+array_push($cfgX, array('name' => 'author_multi', 'title' => "Разрешить множественные комментарии <u>для автора</u>", 'descr' => "<b>Да</b> - автор может оставлять последовательно несколько комментариев<br/><b>Нет</b> - автору запрещено размещать последовательно несколько комментариев", 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => intval(pluginGetVariable($plugin, 'author_multi'))));
+array_push($cfgX, array('name' => 'timestamp', 'title' => "Формат отображения даты/времени", 'descr' => "Помощь по работе функции: <a href=\"http://php.net/date/\" target=\"_blank\">php.net/date</a><br/>Значение по умолчанию: <b>j.m.Y - H:i</b>", 'type' => 'input', 'value' => pluginGetVariable($plugin, 'timestamp')));
+array_push($cfg, array('mode' => 'group', 'title' => '<b>Общие настройки</b>', 'entries' => $cfgX));
+$cfgX = array();
+array_push($cfgX, array('name' => 'global_default', 'title' => "По умолчанию комментарии", 'descr' => '<b>разрешены</b> - будут разрешены в новости если они явно не запрещены<br/><b>запрещены</b> - будут запрещены новости если они явно не разрешены', 'type' => 'select', 'values' => array('0' => 'запрещены', '1' => 'разрешены'), 'value' => intval(pluginGetVariable($plugin, 'global_default'))));
+array_push($cfgX, array('name' => 'default_news', 'title' => "Значение доступности при добавлении новостей", 'descr' => 'При добавлении новостей по умолчанию будет устанавливаться:<br/><b>запретить</b> - комментарии будут запрещены<br/><b>разрешить</b> - комментарии будут разрешены<br/><b>по умолчанию</b> - флаг разрешения/запрета комментариев будет браться из настроек главной категории новости', 'type' => 'select', 'values' => array('0' => 'запрещены', '1' => 'разрешены', '2' => 'по умолчанию'), 'value' => intval(pluginGetVariable($plugin, 'default_news'))));
+array_push($cfgX, array('name' => 'default_categories', 'title' => "Значение доступности при добавлении категорий", 'descr' => 'При добавлении категорий по умолчанию будет устанавливаться:<br/><b>запретить</b> - по умолчанию комментарии в новостях этой категории запрещены<br/><b>разрешить</b> - по умолчанию комментарии в этой категории будут разрешены<br/><b>по умолчанию</b> - флаг разрешения/запрета комментариев будет браться из параметра "по умолчанию комментарии"', 'type' => 'select', 'values' => array('0' => 'запрещены', '1' => 'разрешены', '2' => 'по умолчанию'), 'value' => intval(pluginGetVariable($plugin, 'default_categories'))));
+array_push($cfg, array('mode' => 'group', 'title' => '<b>Настройки по умолчанию</b>', 'entries' => $cfgX, 'toggle' => true, 'toggle.mode' => 'hide'));
+$cfgX = array();
+array_push($cfgX, array('name' => 'multipage', 'title' => "Использовать многостраничное отображение", 'descr' => '<b>Да</b> - на странице новости будет отображаться только часть комментариев, остальные будут доступны на отдельной страничке<br/><b>Нет</b> - все комментарии будут отображаться на странице новости', 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => intval(pluginGetVariable($plugin, 'multipage'))));
+array_push($cfgX, array('name' => 'multi_mcount', 'title' => "Кол-во комментариев на странице новости", 'descr' => "Укажите кол-во комментариев, отображаемых на странице новости<br/>(<b>0</b> - не отображать ни одного комментария)", 'type' => 'input', 'html_flags' => 'size="4"', 'value' => pluginGetVariable($plugin, 'multi_mcount')));
+array_push($cfgX, array('name' => 'multi_scount', 'title' => "Кол-во комментариев на странице с комментариями", 'descr' => "Укажите кол-во комментариев, отображаемых на каждой странице с комментариями<br/>(<b>0</b> - отображать все на одной странице)", 'type' => 'input', 'html_flags' => 'size="4"', 'value' => pluginGetVariable($plugin, 'multi_scount')));
+array_push($cfg, array('mode' => 'group', 'title' => '<b>Многостраничное отображение</b>', 'entries' => $cfgX, 'toggle' => true, 'toggle.mode' => 'hide'));
+$cfgX = array();
+array_push($cfgX, array('name' => 'inform_author', 'title' => "Оповещать автора новости по email о новом комментарии", 'descr' => "<b>Да</b> - при добавлении каждого комментария автор будет получать e-mail сообщение<br/><b>Нет</b> - автор не будет получать e-mail нотификаций", 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => intval(pluginGetVariable($plugin, 'inform_author'))));
+array_push($cfgX, array('name' => 'inform_admin', 'title' => "Оповещать администратора о новом комментарии", 'descr' => "<b>Да</b> - при добавлении каждого комментария администратор будет получать e-mail сообщение<br/><b>Нет</b> - администратор(ы) не будет получать e-mail нотификаций", 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => intval(pluginGetVariable($plugin, 'inform_admin'))));
+array_push($cfg, array('mode' => 'group', 'title' => '<b>Настройки оповещений</b>', 'entries' => $cfgX, 'toggle' => true, 'toggle.mode' => 'hide'));
+// RUN
+if ($_REQUEST['action'] == 'commit') {
+	commit_plugin_config_changes('comments', $cfg);
+	print_commit_complete('comments');
+} else {
+	generate_config_page('comments', $cfg);
+}
+
+install.php
+<?php
+// Protect against hack attempts
+if (!defined('NGCMS')) die ('HAL');
+//
+// Configuration file for plugin
+//
+//
+// Install script for plugin.
+// $action: possible action modes
+// 	confirm		- screen for installation confirmation
+//	apply		- apply installation, with handy confirmation
+//	autoapply       - apply installation in automatic mode [INSTALL script]
+//
+function plugin_comments_install($action) {
+
+	global $lang;
+	if ($action != 'autoapply')
+		loadPluginLang('comments', 'config', '', '', ':');
+	// Fill DB_UPDATE configuration scheme
+	$db_update = array(
+		array(
+			'table'  => 'news',
+			'action' => 'cmodify',
+			'fields' => array(
+				array('action' => 'cmodify', 'name' => 'allow_com', 'type' => 'tinyint(1)', 'params' => "default '2'"),
+				array('action' => 'cmodify', 'name' => 'com', 'type' => 'int', 'params' => "default '0'"),
+			)
+		),
+		array(
+			'table'  => 'category',
+			'action' => 'cmodify',
+			'fields' => array(
+				array('action' => 'cmodify', 'name' => 'allow_com', 'type' => 'tinyint(1)', 'params' => "default '2'"),
+			)
+		),
+		array(
+			'table'  => 'comments',
+			'action' => 'cmodify',
+			'key'    => 'primary key(id), KEY `c_post` (`post`)',
+			'fields' => array(
+				array('action' => 'cmodify', 'name' => 'id', 'type' => 'int', 'params' => 'not null auto_increment'),
+				array('action' => 'cmodify', 'name' => 'postdate', 'type' => 'int', 'params' => "default '0'"),
+				array('action' => 'cmodify', 'name' => 'post', 'type' => 'int', 'params' => "default '0'"),
+				array('action' => 'cmodify', 'name' => 'name', 'type' => 'char(100)', 'params' => "default ''"),
+				array('action' => 'cmodify', 'name' => 'author', 'type' => 'char(100)', 'params' => "default ''"),
+				array('action' => 'cmodify', 'name' => 'author_id', 'type' => 'int', 'params' => "default '0'"),
+				array('action' => 'cmodify', 'name' => 'mail', 'type' => 'char(100)', 'params' => "default ''"),
+				array('action' => 'cmodify', 'name' => 'text', 'type' => 'text'),
+				array('action' => 'cmodify', 'name' => 'answer', 'type' => 'text'),
+				array('action' => 'cmodify', 'name' => 'ip', 'type' => 'char(15)', 'params' => "default ''"),
+				array('action' => 'cmodify', 'name' => 'reg', 'type' => 'tinyint(1)', 'params' => "default '0'"),
+			)
+		),
+		array(
+			'table'  => 'users',
+			'action' => 'modify',
+			'fields' => array(
+				array('action' => 'cmodify', 'name' => 'com', 'type' => 'int', 'params' => "default '0'"),
+			)
+		)
+	);
+	// Apply requested action
+	switch ($action) {
+		case 'confirm':
+			generate_install_page('comments', $lang['comments:desc_install']);
+			break;
+		case 'autoapply':
+		case 'apply':
+			if (fixdb_plugin_install('comments', $db_update, 'install', ($action == 'autoapply') ? true : false)) {
+				plugin_mark_installed('comments');
+			} else {
+				return false;
+			}
+			// Now we need to set some default params
+			$params = array(
+				'regonly'            => 0,
+				'backorder'          => 0,
+				'maxlen'             => 500,
+				'maxwlen'            => 50,
+				'multi'              => 1,
+				'author_multi'       => 1,
+				'timestamp'          => 'j.m.Y - H:i',
+				'multipage'          => 1,
+				'multi_mcount'       => 10,
+				'multi_scount'       => 10,
+				'inform_author'      => 0,
+				'inform_admin'       => 0,
+				'global_default'     => 1,
+				'default_news'       => 2,
+				'default_categories' => 2
+			);
+			foreach ($params as $k => $v) {
+				extra_set_param('comments', $k, $v);
+			}
+			pluginsSaveConfig();
+			break;
+	}
+
+	return true;
+}
+
+uninstall.php
+<?php
+// Protect against hack attempts
+if (!defined('NGCMS')) die ('HAL');
+//
+// Configuration file for plugin
+//
+pluginsLoadConfig();
+$db_update = array(
+	array(
+		'table'  => 'news',
+		'action' => 'modify',
+		'fields' => array(
+			array('action' => 'drop', 'name' => 'com'),
+			array('action' => 'drop', 'name' => 'allow_com'),
+		)
+	),
+	array(
+		'table'  => 'users',
+		'action' => 'modify',
+		'fields' => array(
+			array('action' => 'drop', 'name' => 'com'),
+		)
+	),
+	array(
+		'table'  => 'comments',
+		'action' => 'drop',
+	)
+);
+if ($_REQUEST['action'] == 'commit') {
+	// If submit requested, do config save
+	if (fixdb_plugin_install('comments', $db_update, 'deinstall')) {
+		plugin_mark_deinstalled('comments');
+	}
+} else {
+	$text = $lang['comments_desc_uninstall'];
+	generate_install_page('comments', $text, 'deinstall');
+}
+
+Version
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+
+ID: comments
+Name: User comments
+Version: 0.12
+Acts: news_short, news_full, ppages, editnews, editnews_form, news, admin:mod:news, admin:mod:categories
+File: comments.php
+Config: config.php
+Install: install.php
+Deinstall: uninstall.php
+Type: plugin
+Description: Комментарии пользователей
+Author: Vitaly A. Ponomarev
+Author_URI: http://ngcms.ru/
+Title: Комментарии пользователей
+Information: Реализует функционал работы с комментариями
+Preinstall: default_no
+Preinstall_vars: cache="1"; cacheExpire="3600";
+Library: lib; inc/comments.lib.php
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-comments-o fa-3x" aria-hidden="true"></i>
+
+шаблоны main.tpl <div class="comments">
+	<h3>Комментарии ({{ news.com }})</h3>
+
+	<ul class="comment-list">
+		{% for entry in entries %}
+			{% include template_from_string(entry_template) %}
+		{% endfor %}
+	</ul>
+
+	{% if not allow_com %}
+		<div class="alert alert-warning">
+			{{ lang.err.forbidden }}
+		</div>
+	{% elseif not is_logged and regonly %}
+		<div class="alert alert-info">
+			{{ lang.err.regonly }}
+		</div>
+	{% else %}
+		{% include template_from_string(form_template) %}
+	{% endif %}
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработка удаления комментария
+    document.querySelectorAll('.comment-delete').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const commentId = this.getAttribute('data-id');
+            const commentElement = document.getElementById('comment_' + commentId);
+            
+            if (confirm('Вы уверены, что хотите удалить этот комментарий?')) {
+                fetch('/engine/ajax/controller.php?mod=comments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'action=delete&id=' + commentId
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status) {
+                        commentElement.remove();
+                        // Обновляем счетчик комментариев
+                        const countElement = document.querySelector('.comments-count');
+                        if (countElement) {
+                            countElement.textContent = parseInt(countElement.textContent) - 1;
+                        }
+                    } else {
+                        alert('Ошибка: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при удалении комментария');
+                });
+            }
+        });
+    });
+
+    // Обработка редактирования комментария
+    document.querySelectorAll('.comment-edit').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const commentId = this.getAttribute('data-id');
+            const commentElement = document.getElementById('comment_' + commentId);
+            const commentText = commentElement.querySelector('.comment-text').innerHTML;
+            
+            // Создаем форму редактирования
+            const editForm = document.createElement('div');
+            editForm.innerHTML = `
+                <form class="comment-edit-form" data-id="${commentId}">
+                    <textarea class="form-control">${commentText.replace(/<br\s*\/?>/gi, "\n")}</textarea>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                    <button type="button" class="btn btn-secondary cancel-edit">Отмена</button>
+                </form>
+            `;
+            
+            // Заменяем текст комментария формой
+            commentElement.querySelector('.comment-text').innerHTML = '';
+            commentElement.querySelector('.comment-text').appendChild(editForm);
+            
+            // Обработка отмены редактирования
+            editForm.querySelector('.cancel-edit').addEventListener('click', function() {
+                commentElement.querySelector('.comment-text').innerHTML = commentText;
+            });
+            
+            // Обработка сохранения
+            editForm.querySelector('form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const newText = this.querySelector('textarea').value;
+                
+                fetch('/engine/ajax/controller.php?mod=comments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'action=edit&id=' + commentId + '&text=' + encodeURIComponent(newText)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status) {
+                        commentElement.querySelector('.comment-text').innerHTML = newText.replace(/\n/g, '<br>');
+                    } else {
+                        alert('Ошибка: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при сохранении комментария');
+                });
+            });
+        });
+    });
+});
+
+// Функция цитирования
+function quote(author) {
+    const commentForm = document.getElementById('comment-form');
+    if (commentForm) {
+        const textarea = commentForm.querySelector('textarea');
+        textarea.value = `[quote="${author}"]${textarea.value}[/quote]\n`;
+        textarea.focus();
+    }
+}</script>
+
+form.tpl
+<div class="comment-form">
+	<h4>Добавить комментарий</h4>
+
+	<form id="comment-form" method="post" action="{{ form_action }}">
+		<input type="hidden" name="newsid" value="{{ newsid_token }}"/>
+		<input type="hidden" name="referer" value="{{ app.request.uri }}"/>
+
+		{% if not is_logged %}
+			<div class="form-group">
+				<label for="comment-name">Ваше имя:</label>
+				<input type="text" id="comment-name" name="name" value="{{ app.cookies.get('com_username')|default('') }}" required>
+			</div>
+
+			<div class="form-group">
+				<label for="comment-email">Email:</label>
+				<input type="email" id="comment-email" name="mail" value="{{ app.cookies.get('com_usermail')|default('') }}" required>
+			</div>
+
+			{% if config.use_captcha %}
+				<div class="form-group">
+					<label for="comment-captcha">Код с картинки:</label>
+					<input type="text" id="comment-captcha" name="vcode" required>
+					<img src="{{ admin_url }}/captcha.php?rand={{ random() }}" onclick="this.src='{{ admin_url }}/captcha.php?rand='+Math.random();" alt="CAPTCHA">
+				</div>
+			{% endif %}
+		{% endif %}
+
+		<div class="form-group">
+			<label for="comment-text">Комментарий:</label>
+			<textarea id="comment-text" name="content" rows="5" required></textarea>
+		</div>
+
+		<div class="form-group">
+			<button type="submit">Отправить</button>
+		</div>
+	</form>
+</div>
+<script type="text/javascript">
+	var cajax = new sack();
+function reload_captcha() {
+var captc = document.getElementById('img_captcha');
+if (captc != null) {
+captc.src = "{captcha_url}?rand=" + Math.random();
+}
+}
+
+function add_comment() { // First - delete previous error message
+var perr;
+if (perr = document.getElementById('error_message')) {
+perr.parentNode.removeChild(perr);
+}
+
+// Now let's call AJAX comments add
+var form = document.getElementById('comment');
+// cajax.whattodo = 'append';
+cajax.onShow("");{% if not is_logged %}cajax.setVar("name", form.name.value);
+cajax.setVar("mail", form.mail.value);{% if config.use_captcha %}cajax.setVar("vcode", form.vcode.value);{% endif %}
+
+{% endif %}cajax.setVar("content", form.content.value);
+cajax.setVar("newsid", form.newsid.value);
+cajax.setVar("ajax", "1");
+cajax.setVar("json", "1");
+cajax.requestFile = "{post_url}"; // +Math.random();
+cajax.method = 'POST';
+// cajax.element = 'new_comments';
+cajax.onComplete = function () {
+if (cajax.responseStatus[0] == 200) {
+try {
+var resRX = eval('(' + cajax.response + ')');
+var nc;
+if (resRX['rev'] && document.getElementById('new_comments_rev')) {
+nc = document.getElementById('new_comments_rev');
+} else {
+nc = document.getElementById('new_comments');
+} nc.innerHTML += resRX['data'];
+if (resRX['status']) { // Added successfully!
+form.content.value = '';
+}
+} catch (err) {
+alert('Error parsing JSON output. Result: ' + cajax.response);
+}
+} else {
+alert('TX.fail: HTTP code ' + cajax.responseStatus[0]);
+}
+{% if config.use_captcha %}reload_captcha();{% endif %}
+
+}
+cajax.runAJAX();
+}
+</script>
+
+entries.tpl  
+<li id="comment-{{ entry.id }}">
+	<div class="comment clearfix">
+		<div class="comment-avatar">
+			<div class="avatar">
+				{{ entry.avatar|raw }}
+			</div>
+		</div>
+		<div class="comment-content">
+			<div class="comment-name">
+
+				{% if entry.profile_link %}
+					<a href="{{ entry.profile_link }}">{{ entry.author }}</a>
+				{% else %}
+					{{ entry.author }}
+				{% endif %}
+			</div>
+<div class="meta">{{ entry.date }}|[quote]<a onclick="quote('{author}');" style="cursor: pointer;">Ответить</a>[/quote]
+								{% if user.is_admin %}
+[edit-com]Изменить[/edit-com] | [del-com]Удалить[/del-com]
+
+				{% endif %}
+			</div>
+			<div class="comment-text">
+				{{ entry.text|raw }}
+				{% if entry.answer %}
+					<div class="comment-answer">
+						<strong>Ответ администратора:</strong>
+						<div>{{ entry.answer|raw }}</div>
+					</div>
+				{% endif %}
+			</div>
+		</div>
+	</div>
+</li>
