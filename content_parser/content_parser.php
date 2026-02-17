@@ -2,8 +2,7 @@
 // Защита от прямого доступа
 if (!defined('NGCMS')) die('HAL');
 
-// Modernized with ng-helpers v0.2.2 (31 января 2026)
-use function Plugins\{logger, benchmark, sanitize, get_ip, validate_url, array_get};
+use function Plugins\{logger, benchmark, sanitize, get_ip, validate_url};
 
 register_plugin_page('content_parser', '', 'plugin_content_parse', 0);
 
@@ -63,20 +62,36 @@ function downloadMediaToServer($url, $type = 'image')
 			$name = isset($data['name']) ? $data['name'] : '';
 
 			if ($name && $type == 'image') {
-				// Нормализуем путь - убираем двойные слэши и добавляем ведущий слэш
-				$fullPath = '/' . trim($baseDir . $category . $name, '/');
-				logger('Media downloaded: type=' . $type . ', url=' . sanitize($url) . ', path=' . $fullPath, 'info', 'content_parser.log');
+				// Формируем путь и нормализуем слэши
+				$fullPath = str_replace('\\', '/', $baseDir . $category . $name);
+
+				// Удаляем абсолютный путь диска (C:/, D:/ и т.д.) и оставляем только относительный путь от корня сайта
+				if (preg_match('#/(uploads|files)/.+$#i', $fullPath, $matches)) {
+					$fullPath = $matches[0];
+				} else {
+					$fullPath = '/' . trim($fullPath, '/');
+				}
+
+				logger('content_parser', 'Media downloaded: type=' . $type . ', url=' . sanitize($url) . ', path=' . $fullPath);
 				return $fullPath;
 			} elseif ($name) {
-				// Для файлов (не изображений) просто возвращаем путь
-				$fullPath = '/' . trim($baseDir . $category . $name, '/');
-				logger('File downloaded: type=' . $type . ', url=' . sanitize($url) . ', path=' . $fullPath, 'info', 'content_parser.log');
+				// Для файлов (не изображений) формируем путь аналогично
+				$fullPath = str_replace('\\', '/', $baseDir . $category . $name);
+
+				// Удаляем абсолютный путь диска и оставляем только относительный путь
+				if (preg_match('#/(uploads|files)/.+$#i', $fullPath, $matches)) {
+					$fullPath = $matches[0];
+				} else {
+					$fullPath = '/' . trim($fullPath, '/');
+				}
+
+				logger('content_parser', 'File downloaded: type=' . $type . ', url=' . sanitize($url) . ', path=' . $fullPath);
 				return $fullPath;
 			}
 		}
 	}
 
-	logger('Media download failed: url=' . sanitize($url), 'error', 'content_parser.log');
+	logger('content_parser', 'Media download failed: url=' . sanitize($url));
 	return false;
 }
 /**
@@ -84,13 +99,13 @@ function downloadMediaToServer($url, $type = 'image')
  */
 function parseRssFeed($rssUrl, $count)
 {
-	$startTime = microtime(true);
+	$startTime = benchmark();
 
 	// Загружаем RSS-канал через cURL (throws Exception on error)
 	try {
 		$rss = loadRssFeed($rssUrl);
 	} catch (Exception $e) {
-		logger('RSS load failed: url=' . sanitize($rssUrl) . ', error=' . $e->getMessage(), 'error', 'content_parser.log');
+		logger('content_parser', 'RSS load failed: url=' . sanitize($rssUrl) . ', error=' . $e->getMessage());
 		throw new Exception("Ошибка загрузки RSS: " . $e->getMessage());
 	}
 
@@ -128,8 +143,8 @@ function parseRssFeed($rssUrl, $count)
 		$parsedCount++;
 	}
 
-	$elapsed = round((microtime(true) - $startTime) * 1000, 2);
-	logger('RSS parsed: url=' . sanitize($rssUrl) . ', items=' . $parsedCount . ', elapsed=' . $elapsed . 'ms', 'info', 'content_parser.log');
+	$elapsed = benchmark($startTime);
+	logger('content_parser', 'RSS parsed: url=' . sanitize($rssUrl) . ', items=' . $parsedCount . ', elapsed=' . round($elapsed, 2) . 'ms');
 
 	return $items;
 }
@@ -703,9 +718,9 @@ function addNewsDirect($item)
 {
 	global $mysql, $userROW, $parse;
 
-	$category = intval(array_get($_REQUEST, 'category', 0));
-	$title = array_get($_REQUEST, 'title', '');
-	$content = array_get($_REQUEST, 'ng_news_content', '');
+	$category = intval($_REQUEST['category'] ?? 0);
+	$title = $_REQUEST['title'];
+	$content = $_REQUEST['ng_news_content'];
 
 	// Генерируем alt_name
 	$alt_name = mb_strtolower($parse->translit(trim($title), 1));
@@ -784,7 +799,7 @@ function createContentFromRss($type, $items)
 			// Готовим данные для добавления через addNews
 			$_REQUEST['title'] = $item['title'];
 			// Категория публикации (передаётся из запроса)
-			$_REQUEST['category'] = intval(array_get($_REQUEST, 'category', 0));
+			$_REQUEST['category'] = intval($_REQUEST['category'] ?? 0);
 			$_POST['category'] = $_REQUEST['category'];
 			// Не разрешаем HTML, используем BBCode
 			$_REQUEST['flag_HTML'] = 0;
@@ -860,12 +875,12 @@ function plugin_content_parse()
 	];
 
 	try {
-		$count = (int)array_get($_REQUEST, 'real_count', 0);
-		$action = array_get($_REQUEST, 'actionName', '');
-		$source = array_get($_REQUEST, 'source', 'rss');
-		$rssUrl = array_get($_REQUEST, 'rss_url', '');
-		$category = intval(array_get($_REQUEST, 'category', 0));
-		$igUser = array_get($_REQUEST, 'ig_user', '');
+		$count = (int)($_REQUEST['real_count'] ?? 0);
+		$action = $_REQUEST['actionName'] ?? '';
+		$source = $_REQUEST['source'] ?? 'rss';
+		$rssUrl = $_REQUEST['rss_url'] ?? '';
+		$category = intval($_REQUEST['category'] ?? 0);
+		$igUser = $_REQUEST['ig_user'] ?? '';
 
 		if ($count < 1) {
 			echo json_encode(['error' => 'Invalid count']);
@@ -904,7 +919,7 @@ function plugin_content_parse()
 				}
 				$items = parseInstagramPosts($igUser, $count);
 			} elseif ($source === 'vk') {
-				$vkGroup = array_get($_REQUEST, 'vk_group', '');
+				$vkGroup = $_REQUEST['vk_group'] ?? '';
 				if (!$vkGroup) {
 					throw new Exception('Не указана группа VK');
 				}

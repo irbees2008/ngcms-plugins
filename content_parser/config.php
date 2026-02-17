@@ -3,10 +3,6 @@
 if (!defined('NGCMS')) {
     exit('HAL');
 }
-
-// Modernized with ng-helpers v0.2.2 (31 января 2026)
-use function Plugins\{array_get, notify};
-
 // Подключаем конфигурацию плагина
 pluginsLoadConfig();
 // Нормализация URL для защиты от дубликатов
@@ -77,14 +73,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $didChannelsChange = false;
     // Сохранение VK API токена
     if (isset($_POST['save_vk_token'])) {
-        $vkToken = trim(array_get($_POST, 'vk_token', ''));
+        $vkToken = trim($_POST['vk_token']);
         pluginSetVariable('content_parser', 'vk_token', $vkToken);
         $didChannelsChange = true;
         msg(['type' => 'info', 'message' => 'VK API токен сохранен']);
     }
     // Добавление нового RSS-канала
     if (isset($_POST['new_rss_url'])) {
-        $newRaw = u_trim(array_get($_POST, 'new_rss_url', ''));
+        $newRaw = u_trim($_POST['new_rss_url']);
         $newNorm = normalize_url($newRaw);
         if ($newNorm === '') {
             msg(['type' => 'error', 'message' => 'Некорректный URL RSS-канала']);
@@ -106,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Удаление RSS-канала
     if (isset($_POST['delete_rss_url'])) {
-        $delRaw = u_trim(array_get($_POST, 'delete_rss_url', ''));
+        $delRaw = u_trim($_POST['delete_rss_url']);
         $delNorm = normalize_url($delRaw);
         $channelsRaw = pluginGetVariable('content_parser', 'rss_channels');
         $channels = json_decode($channelsRaw ?: '[]', true);
@@ -125,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Добавление Instagram-аккаунта
     if (isset($_POST['new_ig_user'])) {
-        $rawUser = trim(array_get($_POST, 'new_ig_user', ''));
+        $rawUser = trim($_POST['new_ig_user']);
         $normUser = normalize_instagram_username($rawUser);
         if ($normUser === '') {
             msg(['type' => 'error', 'message' => 'Некорректное имя пользователя Instagram']);
@@ -147,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Удаление Instagram-аккаунта
     if (isset($_POST['delete_ig_user'])) {
-        $rawUser = trim(array_get($_POST, 'delete_ig_user', ''));
+        $rawUser = trim($_POST['delete_ig_user']);
         $normUser = normalize_instagram_username($rawUser);
         $accRaw = pluginGetVariable('content_parser', 'ig_accounts');
         $acc = json_decode($accRaw ?: '[]', true);
@@ -166,7 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Добавление VK группы
     if (isset($_POST['new_vk_group'])) {
-        $rawGroup = trim(array_get($_POST, 'new_vk_group', ''));
+        $rawGroup = trim($_POST['new_vk_group']);
         if ($rawGroup === '') {
             msg(['type' => 'error', 'message' => 'Некорректное имя/URL группы VK']);
         } else {
@@ -187,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Удаление VK группы
     if (isset($_POST['delete_vk_group'])) {
-        $rawGroup = trim(array_get($_POST, 'delete_vk_group', ''));
+        $rawGroup = trim($_POST['delete_vk_group']);
         $vkRaw = pluginGetVariable('content_parser', 'vk_groups');
         $vkGroups = json_decode($vkRaw ?: '[]', true);
         if (!is_array($vkGroups)) {
@@ -291,7 +287,7 @@ function automation()
     }
 }
 // Основной обработчик запросов
-switch (array_get($_REQUEST, 'action', '')) {
+switch ($_REQUEST['action'] ?? '') {
     case 'ajax_parse':
         // Проксируем AJAX-запрос в серверный обработчик парсинга
         include_once root . 'engine/plugins/content_parser/content_parser.php';

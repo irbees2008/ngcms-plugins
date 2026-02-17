@@ -1,0 +1,19 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+
+ID: weather
+Name: Погодный информер (TWIG)
+Version: 1.0
+Acts: 
+File: weather.php
+Config: config.php
+Type: widget
+Description: Отображает текущую погоду через TWIG
+Information: Плагин получает данные о погоде с внешнего API и отображает их через TWIG шаблон.
+Author: Ваше имя
+Author_URI: http://вашсайт.ru/
+Title: Погода (TWIG)
+Preinstall: no
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-cloud fa-3x" aria-hidden="true"></i>

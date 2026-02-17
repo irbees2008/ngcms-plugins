@@ -597,6 +597,19 @@ function plugin_tags_generatecloud($ppage = 0, $catlist = '', $age = 0)
 				("select * from " . prefix . "_tags order by " . $orderby . ' ' . $limit) : ("select DISTINCTROW nt.* from " . prefix . "_tags nt left join " . prefix . "_tags_index ti on nt.id = ti.tagID left join " . prefix . "_news_map nm using(newsID) where to_days(nm.dt) + " . intval($age) . " >= to_days(now()) order by " . $orderby . ' ' . $limit)
 			)
 	);
+
+	// Check if we have any tags - if not, return empty result
+	if (empty($rows)) {
+		$emptyMessage = isset($displayParams[($ppage ? 'cloud' : 'sidebar') . '.notags']) ?
+			$displayParams[($ppage ? 'cloud' : 'sidebar') . '.notags'] :
+			'<div class="tags-empty">Теги отсутствуют</div>';
+		$template['vars'][$ppage ? 'mainblock' : 'plugin_tags'] = $emptyMessage;
+		if (pluginGetVariable('tags', 'cache')) {
+			cacheStoreFile($cacheKey, $emptyMessage, 'tags');
+		}
+		return;
+	}
+
 	// Prepare style definition
 	$wlist = array();
 	if ($manualstyle = intval(pluginGetVariable('tags', 'manualstyle'))) {
@@ -615,6 +628,11 @@ function plugin_tags_generatecloud($ppage = 0, $catlist = '', $age = 0)
 		if ($row['posts'] > $max) $max = $row['posts'];
 		if (($min == -1) || ($row['posts'] < $min)) $min = $row['posts'];
 	}
+
+	// Additional safety check: if max is 0, set it to 1 to avoid division by zero
+	if ($max == 0) $max = 1;
+	if ($min == -1) $min = 0;
+
 	// Init variables for 3D cloud
 	$cloud3d = array();
 	$cloudMin = (isset($displayParams['size3d.min']) && (intval($displayParams['size3d.min']) > 0)) ? intval($displayParams['size3d.min']) : 10;

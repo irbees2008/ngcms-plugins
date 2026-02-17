@@ -2,7 +2,8 @@
 ; Version description file for plugin @@ Next Generation CMS
 ;
 ID: jchat_tgnotify
-Name: Telegram Уведомления
+Name: NGCMS Telegram Уведомления
+Name_EN: NGCMS Telegram Notifications
 Version: 1.2.0
 Acts: index
 File: jchat_tgnotify.php
@@ -10,7 +11,9 @@ Config: config.php
 Install: install.php
 Deinstall: uninstall.php
 Type: plugin
-Description: Универсальная система Telegram-уведомлений : jChat, обратная связь, личные сообщения, жалобы, комментарии.
+Description: Универсальная система Telegram-уведомлений для NGCMS: jChat, обратная связь, личные сообщения, жалобы, комментарии. Поддерживает фильтры и индивидуальные настройки для каждого типа уведомлений.
+Description_EN: Universal Telegram notification system for NGCMS: jChat, feedback, private messages, complaints, comments. Supports filters and individual settings for each notification type.
+Author: GitHub Copilot
 Title: NGCMS → Telegram
 Information: Универсальные уведомления о всех событиях сайта в Telegram
 Preinstall: no

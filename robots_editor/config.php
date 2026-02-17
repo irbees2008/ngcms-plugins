@@ -25,7 +25,6 @@ function robots_editor_get_system_items()
                 '/uploads/avatars/' => 'Аватары пользователей',
                 '/uploads/files/' => 'Загруженные файлы',
                 '/uploads/images/thumb/' => 'Миниатюры изображений',
-                '/uploads/photos/' => 'Фотографии пользователей',
                 '/plugin/' => 'Плагины (общее)',
                 '/lib/' => 'Библиотеки',
                 '/webstat/' => 'Веб-статистика',
@@ -87,7 +86,6 @@ function robots_editor_get_ai_bots()
         )
     );
 }
-
 // Function to generate robots.txt content
 function robots_editor_generate_content()
 {
@@ -96,16 +94,13 @@ function robots_editor_generate_content()
     $auto_sitemap = pluginGetVariable('robots_editor', 'auto_sitemap');
     $ai_search_allowed = pluginGetVariable('robots_editor', 'ai_search_allowed');
     $ai_training_blocked = pluginGetVariable('robots_editor', 'ai_training_blocked');
-
     $content = "";
-
     // Generate rules for each user-agent
     $user_agents = array(
         'Yandex' => 'Yandex',
         'Googlebot' => 'Googlebot',
         '*' => 'Все остальные'
     );
-
     foreach ($user_agents as $ua => $title) {
         $content .= "User-agent: $ua\n";
         if (is_array($rules) && isset($rules[$ua])) {
@@ -119,7 +114,6 @@ function robots_editor_generate_content()
         }
         $content .= "\n";
     }
-
     // Add AI Search bots (if enabled)
     if ($ai_search_allowed) {
         $ai_bots = robots_editor_get_ai_bots();
@@ -138,7 +132,6 @@ function robots_editor_generate_content()
         }
         $content .= "\n";
     }
-
     // Add AI Training bots (blocked if enabled)
     if ($ai_training_blocked) {
         $ai_bots = robots_editor_get_ai_bots();
@@ -149,32 +142,35 @@ function robots_editor_generate_content()
         }
         $content .= "\n";
     }
-
     // Add custom rules - ДОБАВЛЕНО правильное отображение
     if (!empty($custom_rules)) {
         $content .= trim($custom_rules) . "\n\n";
     }
-
     // Add sitemap if enabled
     if ($auto_sitemap) {
         $sitemap_url = home . '/gsmg.xml';
         $content .= "Sitemap: " . $sitemap_url . "\n";
     }
-
     // Add host
     $content .= "Host: " . home . "\n";
-
     return $content;
 }
 // Function to save robots.txt
 function robots_editor_save_file()
 {
+    global $multiDomainName;
     $content = robots_editor_generate_content();
-    $site_root = get_site_root();
-    $path = $site_root . 'robots.txt';
+    // Determine path based on multisite context
+    if (!empty($multiDomainName) && $multiDomainName !== 'main') {
+        // Multisite: save to engine/conf/multi/{site_id}/robots.txt
+        $path = root . 'conf/multi/' . $multiDomainName . '/robots.txt';
+    } else {
+        // Main site: save to engine/conf/robots.txt
+        $path = root . 'conf/robots.txt';
+    }
     // Детальная отладка
     $debug_info = array();
-    $debug_info[] = "Корень сайта: " . $site_root;
+    $debug_info[] = "Мультисайт: " . ($multiDomainName ?: 'main');
     $debug_info[] = "Полный путь: " . $path;
     $debug_info[] = "Файл существует: " . (file_exists($path) ? "Да" : "Нет");
     if (file_exists($path)) {
@@ -211,7 +207,8 @@ function robots_editor_save_file()
     }
     // Логируем отладочную информацию
     $debug_log = implode("\n", $debug_info);
-    @file_put_contents($site_root . 'robots_debug.log', $debug_log . "\n\n", FILE_APPEND);
+    $log_dir = dirname($path);
+    @file_put_contents($log_dir . '/robots_debug.log', $debug_log . "\n\n", FILE_APPEND);
     return $result !== false;
 }
 // Get current settings or set defaults
@@ -220,24 +217,20 @@ $custom_rules = pluginGetVariable('robots_editor', 'custom_rules');
 $auto_sitemap = pluginGetVariable('robots_editor', 'auto_sitemap');
 $ai_search_allowed = pluginGetVariable('robots_editor', 'ai_search_allowed');
 $ai_training_blocked = pluginGetVariable('robots_editor', 'ai_training_blocked');
-
 // Set defaults if not set
 if ($auto_sitemap === null) {
     pluginSetVariable('robots_editor', 'auto_sitemap', 1);
     $auto_sitemap = 1;
 }
-
 // Set default AI settings
 if ($ai_search_allowed === null) {
     pluginSetVariable('robots_editor', 'ai_search_allowed', 1);
     $ai_search_allowed = 1;
 }
-
 if ($ai_training_blocked === null) {
     pluginSetVariable('robots_editor', 'ai_training_blocked', 1);
     $ai_training_blocked = 1;
 }
-
 // Set default rules if not set
 if (!is_array($current_rules)) {
     $system_items = robots_editor_get_system_items();
@@ -337,12 +330,6 @@ if ($_REQUEST['action'] == 'commit') {
     }
     $status_html .= '<br><strong>Путь:</strong> ' . $current_robots_path;
     $status_html .= '</div>';
-    array_push($cfgX, array(
-        'name' => 'file_status',
-        'title' => 'Статус файла',
-        'descr' => $status_html,
-        'type' => 'plain'
-    ));
     // Auto sitemap option
     array_push($cfgX, array(
         'name' => 'auto_sitemap',
@@ -352,7 +339,6 @@ if ($_REQUEST['action'] == 'commit') {
         'values' => array('1' => 'Да', '0' => 'Нет'),
         'value' => $auto_sitemap
     ));
-
     // AI Search bots option
     array_push($cfgX, array(
         'name' => 'ai_search_allowed',
@@ -362,7 +348,6 @@ if ($_REQUEST['action'] == 'commit') {
         'values' => array('1' => 'Да', '0' => 'Нет'),
         'value' => $ai_search_allowed
     ));
-
     // AI Training bots option
     array_push($cfgX, array(
         'name' => 'ai_training_blocked',
@@ -431,6 +416,11 @@ if ($_REQUEST['action'] == 'commit') {
         'title' => $lang['robots_editor:group_config'],
         'entries' => $cfgX
     ));
+    // Output file status in custom table with two columns
+    echo '<table class="content" cellpadding="0" cellspacing="0" width="100%">';
+    echo '<tr><td width="50%"><b>Статус файла</b></td>';
+    echo '<td width="50%">' . $status_html . '</td></tr>';
+    echo '</table>';
     // Add custom CSS
     echo '<style>
     .robots-rules-table {

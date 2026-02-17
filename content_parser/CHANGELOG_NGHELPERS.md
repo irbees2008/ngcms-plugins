@@ -1,68 +1,11 @@
-# CHANGELOG: ng-helpers v0.2.0 → v0.2.2 Integration - content_parser Plugin
+# CHANGELOG: ng-helpers v0.2.0 Integration - content_parser Plugin
 
 ## 📋 Общая информация
 
 **Плагин:** content_parser
-**Версия ng-helpers:** v0.2.0 → v0.2.2
-**Дата модернизации:** 14 января 2026 г. → 31 января 2026 г.
+**Версия ng-helpers:** v0.2.0
+**Дата модернизации:** 14 января 2026 г.
 **Назначение:** Парсинг контента из внешних источников (RSS, VK, Instagram) и импорт в NGCMS
-
----
-
-## 🔄 Обновление v0.2.2 (31 января 2026)
-
-### Добавленные функции:
-
-- ✅ **array_get()** - Безопасный доступ к массивам $\_REQUEST и $\_POST
-- ✅ **logger() 3-парам** - Обновленный формат logger(message, level, file)
-
-### Улучшения безопасности:
-
-- Заменено **15+ обращений** к `$_REQUEST` и `$_POST` на `array_get()`
-- Предотвращение ошибок "Undefined array key"
-- Все logger вызовы обновлены до 3-параметр формата (message, level, file)
-
-### Модифицированные файлы:
-
-#### **content_parser.php**
-
-- Обновлен импорт: `use function Plugins\{logger, benchmark, sanitize, get_ip, validate_url, array_get};`
-- Обновлено **5 logger вызовов** до 3-параметр формата:
-  - `downloadMediaToServer()` - 3 logger вызова
-  - `parseRssFeed()` - 2 logger вызова
-- Заменено **10 обращений** к $\_REQUEST:
-  - `addNewsDirect()`: category, title, ng_news_content
-  - `plugin_content_parse()`: real_count, actionName, source, rss_url, category, ig_user, vk_group
-  - `createContentFromRss()`: category
-
-#### **config.php**
-
-- Добавлен импорт: `use function Plugins\{array_get, notify};`
-- Заменено **8 обращений** к $\_POST:
-  - `vk_token` - VK API токен
-  - `new_rss_url` - добавление RSS
-  - `delete_rss_url` - удаление RSS
-  - `new_ig_user` - добавление Instagram
-  - `delete_ig_user` - удаление Instagram
-  - `new_vk_group` - добавление VK
-  - `delete_vk_group` - удаление VK
-  - `action` - switch обработчик
-
-**Примеры изменений:**
-
-```php
-// Было:
-logger('content_parser', 'Media downloaded: type=' . $type . ', url=' . sanitize($url) . ', path=' . $fullPath);
-$vkToken = trim($_POST['vk_token']);
-$count = (int)($_REQUEST['real_count'] ?? 0);
-
-// Стало:
-logger('Media downloaded: type=' . $type . ', url=' . sanitize($url) . ', path=' . $fullPath, 'info', 'content_parser.log');
-$vkToken = trim(array_get($_POST, 'vk_token', ''));
-$count = (int)array_get($_REQUEST, 'real_count', 0);
-```
-
----
 
 ## 🎯 Описание плагина
 
@@ -220,11 +163,13 @@ if (!validate_url($rssUrl)) {
 ### Факторы производительности
 
 1. **Сетевая задержка**
+
    - RSS: 100-500 мс
    - VK API: 200-800 мс
    - Изображения: 200-1000 мс каждое
 
 2. **Обработка контента**
+
    - XML парсинг: 10-50 мс
    - HTML парсинг: 50-200 мс
    - Очистка контента: 5-20 мс

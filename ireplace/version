@@ -8,7 +8,7 @@ Config: config.php
 Type: maintanance
 Description: Замена подстрок в БД
 Author: Vitaly A. Ponomarev
-Author_URI: http://ngcms.org/
+Author_URI: http://ngcms.ru/
 Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-exchange fa-3x" aria-hidden="true"></i>

@@ -1,6 +1,7 @@
 <?php
 
 use function Plugins\{logger, sanitize, cache_get, cache_put};
+
 // Wrapper functions for ng-helpers compatibility
 if (!function_exists('akeys_sanitize')) {
 	function akeys_sanitize($data, $type = 'string')
@@ -15,6 +16,7 @@ if (!function_exists('akeys_sanitize')) {
 		return strip_tags($data);
 	}
 }
+
 if (!function_exists('akeys_logger')) {
 	function akeys_logger($message, $level = 'info', $file = '')
 	{
@@ -25,6 +27,7 @@ if (!function_exists('akeys_logger')) {
 		error_log("[$level] $message");
 	}
 }
+
 if (!function_exists('akeys_cache_get')) {
 	function akeys_cache_get($key, $default = null)
 	{
@@ -34,6 +37,7 @@ if (!function_exists('akeys_cache_get')) {
 		return $default;
 	}
 }
+
 if (!function_exists('akeys_cache_put')) {
 	function akeys_cache_put($key, $value, $ttl = 3600)
 	{
@@ -43,6 +47,7 @@ if (!function_exists('akeys_cache_put')) {
 		return false;
 	}
 }
+
 // Подключаем необходимые файлы Morphos вручную
 require __DIR__ . '/morphos/src/Cases.php'; // Подключаем интерфейс Cases
 require __DIR__ . '/morphos/src/CasesHelper.php'; // Подключаем интерфейс Cases
@@ -70,6 +75,7 @@ class AutoKeyword
 	public $wordB;
 	public $wordAddTitle;
 	public $wordTitle;
+
 	public function __construct($params, $encoding)
 	{
 		$this->wordGoodArray = [];
@@ -79,9 +85,11 @@ class AutoKeyword
 		$this->wordLengthMax = $params['max_word_length'] ?? 0;
 		$this->wordOccuredMin = $params['min_word_occur'] ?? 0;
 		$this->wordMaxCount = $params['word_count'] ?? 0;
+
 		$this->wordB = !empty($params['good_b']);
 		$this->wordAddTitle = $params['add_title'] ?? 0;
 		$this->wordTitle = $params['title'] ?? '';
+
 		$content = '';
 		if ($this->wordAddTitle > 0) {
 			for ($i = 0; $i < $this->wordAddTitle; $i++) {
@@ -89,15 +97,19 @@ class AutoKeyword
 			}
 			$params['content'] = $content . ' ' . ($params['content'] ?? '');
 		}
+
 		if (!empty($params['good_array']) && !empty($params['good_word'])) {
 			$this->wordGoodArray = explode("\r\n", $params['good_array']);
 		}
+
 		if (!empty($params['block_array']) && !empty($params['block_word'])) {
 			$this->wordBlockArray = explode("\r\n", $params['block_array']);
 		}
+
 		$this->contents = $this->replace_chars($params['content'] ?? '');
 		akeys_logger('AutoKeyword init: length=' . mb_strlen($this->contents) . ' chars, minLen=' . $this->wordLengthMin . ', maxLen=' . $this->wordLengthMax, 'info', 'autokeys.log');
 	}
+
 	public function replace_chars($content)
 	{
 		$content = akeys_sanitize($content, 'html'); // Очистка HTML
@@ -107,11 +119,14 @@ class AutoKeyword
 		$content = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $content); // Заменяем спецсимволы на пробелы
 		$content = preg_replace('/\s+/u', ' ', $content); // Удаляем лишние пробелы
 		$content = trim($content); // Удаляем пробелы в начале и конце
+
 		return $content;
 	}
+
 	public function parse_words()
 	{
 		$startTime = microtime(true);
+
 		// Стоп-слова (общие предлоги, союзы, частицы)
 		$stopWords = [
 			'это',
@@ -178,8 +193,10 @@ class AutoKeyword
 			'вообще',
 			'всегда'
 		];
+
 		$s = explode(" ", $this->contents);
 		$k = [];
+
 		foreach ($s as $val) {
 			$val = trim($val);
 			// Проверяем длину, стоп-слова, числа
@@ -203,20 +220,27 @@ class AutoKeyword
 				}
 			}
 		}
+
 		$k = array_count_values($k);
 		$occur_filtered = $this->occure_filter($k, $this->wordOccuredMin);
 		arsort($occur_filtered);
+
 		// Добавляем приоритетные слова в начало
 		$occur_filtered = array_flip($this->wordGoodArray) + $occur_filtered;
+
 		// Ограничиваем количество ключевых слов
 		array_splice($occur_filtered, $this->wordMaxCount);
+
 		$imploded = $this->implode(", ", $occur_filtered);
 		unset($k);
 		unset($s);
+
 		$duration = round((microtime(true) - $startTime) * 1000, 2);
 		akeys_logger('parse_words: extracted ' . count($occur_filtered) . ' keywords, time=' . $duration . 'ms', 'info', 'autokeys.log');
+
 		return $imploded;
 	}
+
 	public function occure_filter($array_count_values, $min_occur)
 	{
 		$occur_filtered = [];
@@ -225,17 +249,21 @@ class AutoKeyword
 				$occur_filtered[$word] = $occured;
 			}
 		}
+
 		return $occur_filtered;
 	}
+
 	public function implode($glue, $array)
 	{
 		$c = "";
 		foreach ($array as $key => $val) {
 			$c .= $key . $glue;
 		}
+
 		return $c;
 	}
 }
+
 function akeysGetKeys($params)
 {
 	$cfg = array(
@@ -253,12 +281,17 @@ function akeysGetKeys($params)
 		'word_count'      => (intval(pluginGetVariable('autokeys', 'count'))) ? intval(pluginGetVariable('autokeys', 'count')) : 245,
 		'good_b'          => pluginGetVariable('autokeys', 'good_b') ? pluginGetVariable('autokeys', 'good_b') : false,
 	);
+
 	$keyword = new AutoKeyword($cfg, "utf-8");
+
 	$words = $keyword->parse_words();
 	$words = implode(', ', array_slice(explode(', ', $words), 0, $cfg['word_count']));
+
 	if (!empty($words)) {
 		$words = rtrim($words, ', ');
 	}
+
 	akeys_logger('akeysGetKeys: result=' . count(explode(', ', $words)) . ' keywords, length=' . mb_strlen($words) . ' chars', 'info', 'autokeys.log');
+
 	return $words;
 }

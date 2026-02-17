@@ -1,0 +1,17 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+
+ID: qrcode
+Name: QRcode
+Version: 0.02
+Acts: news_full
+File: qrcode.php
+Config: config.php
+Type: plugin
+Description: Генерирует QRcode
+Author: Dzmitry Khadorkin (KhadeR), irbees2008
+Author_URI: http://khadersg.com/me/
+Preinstall: no
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-qrcode fa-3x" aria-hidden="true"></i>

@@ -12,7 +12,7 @@ Deinstall: uninstall.php
 Type: plugin
 Description: Генерация карты сайта для Google
 Author: Vitaly A. Ponomarev
-Author_URI: http://ngcms.org/
+Author_URI: http://ngcms.ru/
 Title: Генератор Google SiteMap
 Information: Позволяет создавать SiteMap для вашего сайта с поддержкой ng-helpers
 Library: common; lib/common.php

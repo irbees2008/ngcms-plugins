@@ -2,8 +2,10 @@
 if (!defined('NGCMS')) {
 	exit('HAL');
 }
+
 // Import ng-helpers functions
 use function Plugins\{array_get, notify};
+
 pluginsLoadConfig();
 LoadPluginLang('faq', 'config', '', '', '#');
 switch (array_get($_REQUEST, 'action', '')) {
@@ -25,12 +27,9 @@ switch (array_get($_REQUEST, 'action', '')) {
 }
 function show_add_faq()
 {
+
 	global $tpl, $mysql, $lang, $twig;
 	$tpath = locatePluginTemplates(array('main', 'add_faq'), 'faq', 1);
-	$question = '';
-	$answer = '';
-	$active = 1;
-	$error_input = '';
 	if (isset($_REQUEST['submit'])) {
 		$question = array_get($_REQUEST, 'question', '');
 		$answer = array_get($_REQUEST, 'answer', '');
@@ -73,12 +72,13 @@ function show_add_faq()
 	);
 	print $xg->render($tVars);
 }
+
 function show_edit_faq()
 {
+
 	global $tpl, $mysql, $lang, $twig;
 	$tpath = locatePluginTemplates(array('main', 'edit_faq'), 'faq', 1);
 	$id = intval(array_get($_REQUEST, 'id', 0));
-	$error_input = '';
 	if (!empty($id)) {
 		$row = $mysql->record('SELECT * FROM ' . prefix . '_faq WHERE id = ' . db_squote($id) . ' LIMIT 1');
 		if (isset($_REQUEST['submit'])) {
@@ -100,11 +100,21 @@ function show_edit_faq()
 			foreach ($error_text as $error) {
 				$error_input .= msg(array("type" => "error", "text" => $error), 0, 2);
 			}
+		} else {
+			$error_input = '';
 		}
 		$xt = $twig->loadTemplate($tpath['edit_faq'] . 'edit_faq.tpl');
+		$tVars = array(
+			'skins_url' => skins_url,
+			'home'      => home,
+			'tpl_home'  => admin_url,
+			'question'  => $question,
+			'answer'    => $answer,
+			'active'    => $active,
+			'error'     => $error_input,
+		);
 	} else {
 		msg(array("type" => "error", "text" => "Не найден id"));
-		return;
 	}
 	$tVars = array(
 		'skins_url' => skins_url,
@@ -121,8 +131,10 @@ function show_edit_faq()
 	);
 	print $xg->render($tVars);
 }
+
 function modify()
 {
+
 	global $mysql;
 	$selected_faq = array_get($_REQUEST, 'selected_faq', []);
 	$subaction = array_get($_REQUEST, 'subaction', '');
@@ -155,8 +167,10 @@ function modify()
 	}
 	msg(array("type" => "info", "info" => $result));
 }
+
 function show_faq()
 {
+
 	global $tpl, $mysql, $lang, $twig;
 	$tpath = locatePluginTemplates(array('main', 'list_faq'), 'faq', 1);
 	$tVars = array();
@@ -172,7 +186,7 @@ function show_faq()
 	$sqlQ = "select * " . $sqlQPart;
 	$pageNo = intval(array_get($_REQUEST, 'page', 0)) ? array_get($_REQUEST, 'page', 0) : 0;
 	if ($pageNo < 1) $pageNo = 1;
-	$start_from = ($pageNo - 1) * $news_per_page;
+	if (!$start_from) $start_from = ($pageNo - 1) * $news_per_page;
 	$count = $mysql->result($sqlQCount);
 	$countPages = ceil($count / $news_per_page);
 	foreach ($mysql->select($sqlQ . ' LIMIT ' . $start_from . ', ' . $news_per_page) as $row) {
@@ -187,7 +201,7 @@ function show_faq()
 	$tVars = array(
 		'pagesss'   => generateAdminPagelist(array('current' => $pageNo, 'count' => $countPages, 'url' => admin_url . '/admin.php?mod=extra-config&plugin=faq' . ($news_per_page ? '&rpp=' . $news_per_page : '') . '&page=%page%')),
 		'entries'   => isset($tEntry) ? $tEntry : '',
-		'php_self'  => $_SERVER['PHP_SELF'],
+		'php_self'  => $PHP_SELF,
 		'skins_url' => skins_url,
 		'home'      => home,
 		'rpp'       => $news_per_page
@@ -198,8 +212,10 @@ function show_faq()
 	);
 	print $xg->render($tVars);
 }
+
 function redirect_faq($url)
 {
+
 	if (headers_sent()) {
 		echo "<script>document.location.href='{$url}';</script>\n";
 	} else {

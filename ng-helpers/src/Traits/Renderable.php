@@ -1,6 +1,6 @@
 <?php
 
-namespace Plugins\Traits;
+namespace Plugins\NgHelpers\Traits;
 // Исключения.
 use RuntimeException;
 // Используем функции из пространства `Plugins`.

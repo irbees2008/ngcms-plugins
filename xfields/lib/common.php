@@ -14,13 +14,22 @@ function xf_configLoad()
     if (!($confdir = get_plugcfg_dir('xfields'))) {
         return false;
     }
-    if (!file_exists($confdir.'/config.php')) {
+    if (!file_exists($confdir . '/config.php')) {
         $XF_loaded = 1;
         return ['news' => []];
     }
-    include $confdir.'/config.php';
+    include $confdir . '/config.php';
     $XF_loaded = 1;
-    $XF = is_array($xarray) ? $xarray : ['news' => []];
+    $XF = is_array($xarray) ? $xarray : [];
+    if (!isset($XF['news']) || !is_array($XF['news'])) {
+        $XF['news'] = [];
+    }
+    if (!isset($XF['grp.news']) || !is_array($XF['grp.news'])) {
+        $XF['grp.news'] = [];
+    }
+    if (!isset($XF['tdata']) || !is_array($XF['tdata'])) {
+        $XF['tdata'] = [];
+    }
     return $XF;
 }
 // Save fields definition
@@ -34,11 +43,11 @@ function xf_configSave($xf = null)
         return false;
     }
     // Open config
-    if (!($fn = fopen($confdir.'/config.php', 'w'))) {
+    if (!($fn = fopen($confdir . '/config.php', 'w'))) {
         return false;
     }
     // Write config
-    fwrite($fn, "<?php\n\$xarray = ".var_export(is_array($xf) ? $xf : $XF, true).";\n");
+    fwrite($fn, "<?php\n\$xarray = " . var_export(is_array($xf) ? $xf : $XF, true) . ";\n");
     fclose($fn);
     return true;
 }
@@ -112,11 +121,11 @@ function xf_getTableBySectionID($sectionID)
 {
     switch ($sectionID) {
         case 'news':
-            return prefix.'_news';
+            return prefix . '_news';
         case 'users':
-            return prefix.'_users';
+            return prefix . '_users';
         case 'tdata':
-            return prefix.'_xfields';
+            return prefix . '_xfields';
     }
     return false;
 }
@@ -125,7 +134,5 @@ function xf_getTableBySectionID($sectionID)
 class XFieldsFilter
 {
     //
-    public function showTableEntry($newsID, $SQLnews, $rowData, &$rowVars)
-    {
-    }
+    public function showTableEntry($newsID, $SQLnews, $rowData, &$rowVars) {}
 }

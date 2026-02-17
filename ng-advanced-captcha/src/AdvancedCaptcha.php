@@ -14,7 +14,7 @@ use Plugins\AdvancedCaptcha\Types\QuestionCaptcha;
 use Plugins\AdvancedCaptcha\Types\CheckboxCaptcha;
 use Plugins\AdvancedCaptcha\Types\SliderCaptcha;
 // Сторонние зависимости.
-use Plugins\Traits\Renderable;
+use Plugins\NgHelpers\Traits\Renderable;
 // Используем функции из пространства `Plugins`.
 use function Plugins\dd;
 use function Plugins\setting;

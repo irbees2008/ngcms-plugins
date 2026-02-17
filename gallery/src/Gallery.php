@@ -1,34 +1,46 @@
 <?php
 // Import ng-helpers functions
 use function Plugins\{cache_get, cache_put, formatBytes, logger, get_ip, notify, sanitize};
+
 /*
  * Class PluginGallery
  * Description: PluginGallery
  */
+
 class PluginGallery
 {
     protected $lang = [];
     protected $params = [];
+
     protected $galleries = [];
+
     protected $pluginTitle;
+
     public function __construct()
     {
         global $lang;
+
         $this->lang = $lang;
+
         $this->loadParams();
         $this->loadGalleries();
+
         $this->pluginTitle = $this->params['seo_title'] ?: $this->lang['gallery:title'];
     }
+
     // Load all params of plugin gallery
     protected function loadParams()
     {
         global $PLUGINS;
+
         $this->params = $PLUGINS['config']['gallery'];
     }
+
     // Load info about galleries
     protected function loadGalleries()
     {
         global $mysql;
+
         if (($this->galleries = cacheRetrieveFile('galleries.dat', 86400, 'gallery')) === false) {
             $rows = $mysql->select('SELECT *, (SELECT count(*) FROM ' . prefix . '_images WHERE folder=' . prefix . '_gallery.name) AS count FROM ' . prefix . '_gallery WHERE if_active=1 ORDER BY position');
             foreach ($rows as $row) {
@@ -57,13 +69,16 @@ class PluginGallery
             $this->galleries = unserialize($this->galleries);
         }
     }
+
     public function categoryAction()
     {
         global $twig, $mysql, $template;
+
         // Register skin assets
         if (function_exists('gallery_register_skin_assets')) {
             gallery_register_skin_assets(pluginGetVariable('gallery', 'skin'), 'category');
         }
+
         if ($this->params['cache']) {
             $cacheFileName = md5('gallery' . 'category') . '.txt';
             $cacheData = cacheRetrieveFile($cacheFileName, (int) $this->params['cache_expire'], 'gallery');
@@ -71,6 +86,7 @@ class PluginGallery
                 return $template['vars']['plugin_gallery_category'] = $cacheData;
             }
         }
+
         $tPath = locatePluginTemplates(
             ['category'],
             'gallery',
@@ -88,21 +104,27 @@ class PluginGallery
             'galleries' => $this->galleries,
         ];
         $template['vars']['plugin_gallery_category'] = $twig->render($tPath['category'] . 'category.tpl', $tVars);
+
         if ($this->params['cache']) {
             cacheStoreFile($cacheFileName, $template['vars']['plugin_gallery_category'], 'gallery');
         }
     }
+
     public function widgetAction()
     {
         global $template, $twig, $mysql, $config;
+
         if (empty($this->params['widgets']) or ! is_array($widgets = $this->params['widgets'])) {
             return;
         }
+
         foreach ($widgets as $id => $widget) {
             if (! $widget['if_active']) {
                 continue;
             }
+
             $widgetName = 'plugin_gallery_' . $widget['name'];
+
             if ($this->params['cache']) {
                 $cacheFileName = md5($config['theme'] . $config['default_lang'] . $widget['skin'] . $widgetName) . '.txt';
                 $cacheData = cacheRetrieveFile($cacheFileName, (int) $this->params['cache_expire'], 'gallery');
@@ -112,10 +134,12 @@ class PluginGallery
                     continue;
                 }
             }
+
             $where = " where folder <>''";
             if (! empty($widget['gallery'])) {
                 $where = ' where folder=' . db_squote($widget['gallery']);
             }
+
             $limit = 'limit ' . $widget['images_count'];
             if ($widget['if_rand'] == 1) {
                 $image_key = $mysql->select('select id from ' . prefix . '_images ' . $where);
@@ -139,6 +163,7 @@ class PluginGallery
             } elseif ($widget['if_rand'] == 3) {
                 $where .= ' ORDER BY com desc';
             }
+
             $images = [];
             $rows = $mysql->select('SELECT id, name, folder, description, views, com FROM ' . prefix . '_images ' . $where . ' ' . $limit);
             foreach ($rows as $row) {
@@ -162,6 +187,7 @@ class PluginGallery
                     'gallery_title' => $this->galleries[$row['folder']]['title'],
                 ];
             }
+
             $tPath = locatePluginTemplates(['widget'], 'gallery', 0, $widget['skin']);
             // Register skin assets
             if (function_exists('gallery_register_skin_assets')) {
@@ -173,16 +199,21 @@ class PluginGallery
                 'images' => $images,
                 'widget_title' => $widget['title'],
             ];
+
             $template['vars'][$widgetName] = $twig->render($tPath['widget'] . 'widget.tpl', $tVars);
+
             if ($this->params['cache']) {
                 cacheStoreFile($cacheFileName, $template['vars'][$widgetName], 'gallery');
             }
         }
     }
+
     public function indexPageAction($params)
     {
         global $userROW, $template, $twig, $lang, $mysql, $TemplateCache, $SYSTEM_FLAGS;
+
         $page = isset($params['page']) ? abs(intval($params['page'])) : (isset($_REQUEST['page']) ? abs(intval($_REQUEST['page'])) : 1);
+
         $SYSTEM_FLAGS['info']['title']['group'] = $this->pluginTitle;
         $SYSTEM_FLAGS['info']['title']['item'] = $this->lang['gallery:page'] . ' ' . $page;
         if ($this->params['if_description'] and ! empty($this->params['seo_description'])) {
@@ -192,6 +223,7 @@ class PluginGallery
             $SYSTEM_FLAGS['meta']['keywords'] = $this->params['seo_keywords'];
         }
         $SYSTEM_FLAGS['info']['breadcrumbs'] = [['link' => generatePluginLink('gallery', null), 'text' => $this->pluginTitle]];
+
         if ($this->params['cache']) {
             $cacheFileName = md5('gallery' . 'mainblock' . $page) . '.txt';
             $cacheData = cacheRetrieveFile($cacheFileName, (int) $this->params['cache_expire'], 'gallery');
@@ -199,8 +231,10 @@ class PluginGallery
                 return $template['vars']['mainblock'] .= $cacheData;
             }
         }
+
         // Work with array galleries, below we [SLICE] array
         $galleries = $this->galleries;
+
         $pagesss = '';
         if ($this->params['galleries_count'] && is_array($galleries) && count($galleries) > 0) {
             $pagesCount = ceil(count($galleries) / $this->params['galleries_count']);
@@ -214,16 +248,19 @@ class PluginGallery
                 $pagesss .= ($page < $pagesCount) ? str_replace('%page%', $this->lang['next_page'], str_replace('%link%', generatePageLink($paginationParams, $page + 1), $navigations['nextlink'])) : '';
             }
         }
+
         $tPath = locatePluginTemplates(
             ['page_index'],
             'gallery',
             0,
             pluginGetVariable('gallery', 'skin')
         );
+
         // Register skin assets
         if (function_exists('gallery_register_skin_assets')) {
             gallery_register_skin_assets(pluginGetVariable('gallery', 'skin'), 'page_index');
         }
+
         $tVars = [
             'plugin_title' => $this->pluginTitle,
             'url_tpl' => $tPath['url:page_index'],
@@ -232,26 +269,32 @@ class PluginGallery
             'pagesss' => $pagesss,
         ];
         $template['vars']['mainblock'] .= $output = $twig->render($tPath['page_index'] . 'page_index.tpl', $tVars);
+
         if ($this->params['cache']) {
             cacheStoreFile($cacheFileName, $output, 'gallery');
         }
     }
+
     public function galleryPageAction($params)
     {
         global $userROW, $template, $twig, $lang, $mysql, $TemplateCache, $SYSTEM_FLAGS;
+
         $page = ! empty($params['page']) ? intval($params['page']) : (! empty($_REQUEST['page']) ? intval($_REQUEST['page']) : 1);
         if ($page < 1) {
             $page = 1;
         }
         $gallery['name'] = ! empty($params['name']) ? secure_html($params['name']) : (! empty($_REQUEST['name']) ? secure_html($_REQUEST['name']) : false);
+
         if (! $gallery['name']) {
             notify('danger', 'Не все параметры заданы');
             return false;
         }
+
         if (! is_array($gallery = $this->galleries[$gallery['name']])) {
             notify('danger', 'Не все параметры заданы');
             return false;
         }
+
         $SYSTEM_FLAGS['info']['title']['group'] = $this->pluginTitle . ' ' . $gallery['title'];
         $SYSTEM_FLAGS['info']['title']['item'] = $this->lang['gallery:page'] . ' ' . $page;
         if ($this->params['if_description']) {
@@ -264,6 +307,7 @@ class PluginGallery
             ['link' => generatePluginLink('gallery', null), 'text' => $this->pluginTitle],
             ['link' => generatePluginLink('gallery', 'gallery', ['id' => $gallery['id'], 'name' => $gallery['name']]), 'text' => $gallery['title']],
         ];
+
         if ($this->params['cache']) {
             $cacheFileName = md5('gallery' . $gallery['id'] . $gallery['name'] . $page) . '.txt';
             $cacheData = cacheRetrieveFile($cacheFileName, (int) $this->params['cache_expire'], 'gallery');
@@ -271,6 +315,7 @@ class PluginGallery
                 return $template['vars']['mainblock'] .= $cacheData;
             }
         }
+
         $images = [];
         $limit = 'LIMIT ' . ($page - 1) * $gallery['images_count'] . ', ' . $gallery['images_count'];
         $rows = $mysql->select('SELECT id, name, description, folder, views, com,width,height FROM ' . prefix . '_images WHERE folder=' . db_squote($gallery['name']) . ' ORDER BY date asc, id asc ' . $limit);
@@ -278,6 +323,7 @@ class PluginGallery
             $id = (int) $row['id'];
             $name = secure_html($row['name']);
             $folder = secure_html($row['folder']);
+
             $images[] = [
                 'id' => $id,
                 'name' => $name,
@@ -294,6 +340,7 @@ class PluginGallery
                     : images_url . '/' . $folder . '/' . $name,
             ];
         }
+
         $pagesss = '';
         if ($gallery['images_count']) {
             $count = 0;
@@ -310,11 +357,14 @@ class PluginGallery
                 $pagesss .= ($page < $pagesCount) ? str_replace('%page%', $this->lang['next_page'], str_replace('%link%', generatePageLink($paginationParams, $page + 1), $navigations['nextlink'])) : '';
             }
         }
+
         $tPath = locatePluginTemplates(['page_gallery'], 'gallery', 0, $gallery['skin']);
+
         // Register skin assets
         if (function_exists('gallery_register_skin_assets')) {
             gallery_register_skin_assets($gallery['skin'], 'page_gallery');
         }
+
         $tVars = [
             'plugin_title' => $this->pluginTitle,
             'url_tpl' => $tPath['url:page_gallery'],
@@ -329,28 +379,36 @@ class PluginGallery
             'pagesss' => $pagesss,
         ];
         $template['vars']['mainblock'] .= $output = $twig->render($tPath['page_gallery'] . 'page_gallery.tpl', $tVars);
+
         if ($this->params['cache']) {
             cacheStoreFile($cacheFileName, $output, 'gallery');
         }
     }
+
     public function imagePageAction($params)
     {
         global $userROW, $template, $tpl, $twig, $lang, $mysql, $TemplateCache, $SYSTEM_FLAGS;
+        global $galleries;
+
         $imageName = ! empty($params['name']) ? secure_html($params['name']) : false;
         $gallery['name'] = ! empty($params['gallery']) ? secure_html($params['gallery']) : false;
+
         if (! $imageName or ! $gallery['name']) {
             error404();
             return false;
         }
+
         if (! is_array($gallery = $this->galleries[$gallery['name']])) {
             error404();
             return false;
         }
+
         $gallery['id'] = (int) $gallery['id'];
         $gallery['name'] = secure_html($gallery['name']); // Reload name of gallery
         $gallery['title'] = secure_html($gallery['title']);
         $gallery['description'] = secure_html($gallery['description']);
         $gallery['keywords'] = secure_html($gallery['keywords']);
+
         $SYSTEM_FLAGS['info']['title']['group'] = $this->pluginTitle . ' ' . $gallery['title'];
         $SYSTEM_FLAGS['info']['title']['item'] = $imageName;
         if ($this->params['if_keywords']) {
@@ -364,8 +422,10 @@ class PluginGallery
             ['link' => generatePluginLink('gallery', 'gallery', ['id' => $gallery['id'], 'name' => $gallery['name']]), 'text' => $gallery['title']],
             ['link' => generatePluginLink('gallery', 'image', ['gallery' => $gallery['name'], 'name' => $imageName]), 'text' => $imageName],
         ];
+
         // Need to update count views
         $mysql->query('UPDATE ' . prefix . '_images SET views=views+1 WHERE name=' . db_squote($imageName));
+
         // Temporaly disabled cached
         if ($this->params['cache']) {
             //$havePerm = (is_array($userROW) and (($userROW['status'] == 1) or ($userROW['status'] == 2) or ($row['author_id'] == $userROW['id'])));
@@ -375,7 +435,9 @@ class PluginGallery
                 //return $template['vars']['mainblock'] .= $cacheData;
             }
         }
+
         $row = $mysql->record('SELECT * FROM ' . prefix . '_images WHERE folder=' . db_squote($gallery['name']) . ' and name=' . db_squote($imageName) . ' ORDER BY date LIMIT 1');
+
         $row['id'] = (int) $row['id'];
         $row['com'] = (int) $row['com'];
         $row['views'] = (int) $row['views'];
@@ -383,13 +445,16 @@ class PluginGallery
         $row['height'] = (int) $row['height'];
         $row['name'] = secure_html($row['name']);
         $row['description'] = secure_html($row['description']);
+
         // Reload meta-description of page
         if ($this->params['if_description']) {
             $SYSTEM_FLAGS['meta']['description'] = $row['description'];
         }
+
         // Prepare date to generate output Prev and Next
         templateLoadVariables(true);
         $nav = $TemplateCache['site']['#variables']['navigation'];
+
         // Prev image, if isset
         $pimage = $mysql->select('SELECT name FROM ' . prefix . '_images WHERE folder=' . db_squote($gallery['name']) . ' AND id<' . db_squote($row['id']) . ' ORDER BY `id` desc limit 1');
         if (isset($pimage[0])) {
@@ -405,6 +470,7 @@ class PluginGallery
         } else {
             $prevlink = '';
         }
+
         // Next image, if isset
         $nimage = $mysql->select('select name from ' . prefix . '_images where folder=' . db_squote($gallery['name']) . ' and id>' . db_squote($row['id']) . ' ORDER BY `id` asc limit 1');
         if (isset($nimage[0])) {
@@ -420,20 +486,26 @@ class PluginGallery
         } else {
             $nextlink = '';
         }
+
         // Комментарии
         $commentsOutput = '';
         if (getPluginStatusActive('comments')) {
             $commentsFile = root . 'plugins/comments/inc/comments.show.php';
             if (file_exists($commentsFile)) {
                 include_once $commentsFile;
+
                 if (function_exists('comments_show') && function_exists('comments_showform')) {
                     // Prepare params for call - module 'images' for gallery images
                     $callingCommentsParams = ['outprint' => true, 'total' => $row['com'], 'module' => 'images'];
+
                     // Capture output with buffering
                     ob_start();
+
                     // Show comments list
                     echo comments_show($row['id'], 0, 0, $callingCommentsParams);
+
                     echo "\n";
+
                     // Show comment form (check if user can add comments)
                     if (!pluginGetVariable('comments', 'regonly') || is_array($userROW)) {
                         // Call comments_showform with proper parameters
@@ -442,7 +514,9 @@ class PluginGallery
                     } else {
                         echo '<div class="alert alert-info">Для добавления комментариев необходимо авторизоваться.</div>';
                     }
+
                     $commentsOutput = ob_get_clean();
+
                     // Log for debugging
                     if (function_exists('Plugins\logger')) {
                         \Plugins\logger('Comments output for image #' . $row['id'] . ', length: ' . strlen($commentsOutput), 'info', 'gallery.log');
@@ -456,11 +530,14 @@ class PluginGallery
         } else {
             $commentsOutput = '<!-- Comments plugin not active -->';
         }
+
         $tPath = locatePluginTemplates(['page_image'], 'gallery', 0, $gallery['skin']);
+
         // Register skin assets
         if (function_exists('gallery_register_skin_assets')) {
             gallery_register_skin_assets($gallery['skin'], 'page_image');
         }
+
         $tVars = [
             'plugin_title' => $this->pluginTitle,
             'url_tpl' => $tPath['url:page_image'],
@@ -489,6 +566,7 @@ class PluginGallery
             'prevlink' => $prevlink,
             'plugin_comments' => $commentsOutput,
         ];
+
         $template['vars']['mainblock'] .= $output = $twig->render($tPath['page_image'] . 'page_image.tpl', $tVars);
         if ($this->params['cache']) {
             cacheStoreFile($cacheFileName, $output, 'gallery');

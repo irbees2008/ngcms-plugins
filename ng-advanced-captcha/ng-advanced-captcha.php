@@ -10,18 +10,35 @@ if (! getPluginStatusActive('ng-helpers')) {
     return false;
 }
 
-// Если помощники активированы,
-// но по каким-то причинам не были подгружены.
-load_extras('core', 'ng-helpers');
+// КРИТИЧЕСКИ ВАЖНО: Загружаем ng-helpers ПЕРЕД использованием его классов/трейтов
+// Это гарантирует регистрацию автозагрузчика для namespace Plugins\NgHelpers\
+$ngHelpersFile = root . 'engine/plugins/ng-helpers/ng-helpers.php';
+if (file_exists($ngHelpersFile) && !defined('NG_HELPERS_VERSION')) {
+    require_once $ngHelpersFile;
+    $GLOBALS['PLUGINS']['loaded']['ng-helpers'] = 1;
+    // DEBUG: раскомментируйте для диагностики
+    // error_log('[ng-advanced-captcha] ng-helpers.php загружен: ' . (defined('NG_HELPERS_VERSION') ? 'OK' : 'FAIL'));
+}
 
-// Подгрузка библиотек-файлов плагина.
+// Явно проверяем доступность трейта Renderable и загружаем его если нужно
+if (!trait_exists('Plugins\\NgHelpers\\Traits\\Renderable', false)) {
+    $traitFile = root . 'engine/plugins/ng-helpers/src/Traits/Renderable.php';
+    if (file_exists($traitFile)) {
+        require_once $traitFile;
+        // DEBUG: раскомментируйте для диагностики
+        // error_log('[ng-advanced-captcha] Renderable.php загружен вручную');
+    } else {
+        // КРИТИЧЕСКАЯ ОШИБКА: трейт не найден
+        error_log('[ng-advanced-captcha] ОШИБКА: Trait Renderable не найден! Путь: ' . $traitFile);
+        return false;
+    }
+}
+
+// Загружаем классы плагина (они используют Renderable трейт)
 loadPluginLibrary('ng-advanced-captcha', 'autoload');
 
 // Подгрузка языкового файла плагина.
 LoadPluginLang('ng-advanced-captcha', 'main', '', '', ':');
-
-// Плагин использует отрисовку шаблонов, подгружаем трейт.
-loadPluginLibrary('ng-helpers', 'renderable');
 
 // Используем функции из пространства `Plugins`.
 use function Plugins\dd;
@@ -50,6 +67,9 @@ $coreFilter = new Plugins\AdvancedCaptcha\Filters\AdvancedCaptchaCoreFilter($adv
 
 // Регистрируем фильтр для проверки капчи при регистрации
 pluginRegisterFilter('core.registerUser', 'ng-advanced-captcha', $coreFilter);
+
+// Регистрируем фильтр для добавления виджета в форму регистрации
+pluginRegisterFilter('core.registrationForm', 'ng-advanced-captcha', $coreFilter);
 
 // Если активирован плагин комментариев.
 if (getPluginStatusActive('comments')) {
