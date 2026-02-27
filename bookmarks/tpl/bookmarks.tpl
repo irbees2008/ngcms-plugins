@@ -5,7 +5,7 @@
 				<tr>
 					<td>
 						<b>
-							<font color="#FFFFFF">Ваши закладки</font>
+							<font color="#FFFFFF">{{ lang.title }}</font>
 						</b>
 					</td>
 				</tr>
@@ -20,7 +20,7 @@
 						<ul>
 							{% for entry in entries %}
 								<li>
-<img src="{{ entry.image ? entry.image : tpl_url ~ '/img/img-none.png' }}" width="50" height="50" alt="{{ entry.title }}"/>
+									<img src="{{ entry.image ? entry.image : tpl_url ~ '/img/img-none.png' }}" width="50" height="50" alt="{{ entry.title }}"/>
 									<a href="{{ entry.link }}">{{ entry.title }}</a>
 								</li>
 							{% endfor %}
@@ -28,7 +28,7 @@
 						<br/>
 						{% if (count) %}
 							<center>
-								<a href="{{ bookmarks_page }}">Все закладки</a>
+								<a href="{{ bookmarks_page }}">{{ lang.view_all }}</a>
 							</center>
 						{% endif %}
 					</td>
@@ -37,5 +37,6 @@
 		</td>
 	</tr>
 </table>
-{% if not (count) %}Если закладок нет :)
+{% if not (count) %}
+	{{ lang.empty_hint }}
 {% endif %}

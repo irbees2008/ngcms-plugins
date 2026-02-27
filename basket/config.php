@@ -1,23 +1,25 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 //
 // Configuration file for plugin
 //
 // Preload config file
 pluginsLoadConfig();
+$plugin = 'basket';
+LoadPluginLang($plugin, 'config', '', '', ':');
 // Load XFields config
 if (!function_exists('xf_configLoad')) {
 	print "XFields plugin is not loaded now!";
 } else {
 	$XFc = xf_configLoad();
-	$xfCatList = array('' => ' // не выбрано //');
+	$xfCatList = array('' => $lang['basket:xf.none']);
 	foreach ($XFc['news'] as $k => $v) {
 		if ($v['type'] == 'images')
 			continue;
 		$xfCatList[$k] = $k . ' - ' . $v['title'];
 	}
-	$xfNTableList = array('' => ' // не выбрано //');
+	$xfNTableList = array('' => $lang['basket:xf.none']);
 	foreach ($XFc['tdata'] as $k => $v) {
 		if ($v['type'] == 'images')
 			continue;
@@ -28,17 +30,19 @@ if (!function_exists('xf_configLoad')) {
 $feedbackFormList = array();
 if (getPluginStatusInstalled('feedback')) {
 	foreach ($mysql->select("select * from " . prefix . "_feedback order by id", 1) as $frow) {
-		$feedbackFormList [$frow['id']] = $frow['id'] . ' - ' . $frow['title'];
+		$feedbackFormList[$frow['id']] = $frow['id'] . ' - ' . $frow['title'];
 	}
 	if (!count($feedbackFormList)) {
-		$feedbackFormList [0] = '// формы не найдены //';
+		$feedbackFormList[0] = $lang['basket:feedback.none'];
 	}
 } else {
-	$feedbackFormList [0] = '// плагин не установлен //';
+	$feedbackFormList[0] = $lang['basket:feedback.not_installed'];
 }
 // Fill configuration parameters
 $cfg = array();
-array_push($cfg, array('descr' => 'Плагин реализует функционал "корзины товаров"<br/><b>Внимание!</b><br/>Для работы плагина <i>basket</i> вы должны включить и настроить плагины: <b>feedback</b> и <b>xfields</b>.'));
+$boolValues = array(0 => $lang['basket:bool.no'], 1 => $lang['basket:bool.yes']);
+$activationValues = array(0 => $lang['basket:mode.all'], 1 => $lang['basket:mode.xfields']);
+array_push($cfg, array('descr' => $lang['basket:description']));
 /*
 $cfgX = array();
 array_push($cfgX, array('name' => 'catalog_flag', 'type' => 'select', 'title' => 'Включить корзину для элементов каталога', 'descr' => '<b>Да</b> - корзина будет активна для элементов каталога<br/><b>Нет</b> - корзина не будет активна для элементов каталога', 'values' => array ( 0 => 'Нет', 1 => 'Да'), 'value' => pluginGetVariable('basket','catalog_flag')));
@@ -49,22 +53,22 @@ array_push($cfgX, array('name' => 'catalog_itemname', 'type' => 'input', 'title'
 array_push($cfg,  array('mode' => 'group', 'title' => '<b>Работа с каталогом</b>', 'entries' => $cfgX));
 */
 $cfgX = array();
-array_push($cfgX, array('name' => 'ntable_flag', 'type' => 'select', 'title' => 'Включить корзину для таблиц доп. полей внутри новостей', 'descr' => '<b>Да</b> - корзина будет активна для элементов таблицы<br/><b>Нет</b> - корзина не будет активна для элементов таблицы', 'values' => array(0 => 'Нет', 1 => 'Да'), 'value' => pluginGetVariable('basket', 'ntable_flag')));
-array_push($cfgX, array('name' => 'ntable_activated', 'title' => "Активация корзины в таблице по..", 'type' => 'select', 'descr' => '<b>Всем записям</b> - "положить в корзину" будет доступно для всех элементов<br/><b>Полю <i>xfields</i></b> - "положить в корзину" можно будет только те записи, в которых значение указанного поля <b>> 0</b> (больше нуля)', 'values' => array(0 => 'Всем записям', 1 => 'Полю xfields'), 'value' => pluginGetVariable('basket', 'ntable_activated')));
-array_push($cfgX, array('name' => 'ntable_xfield', 'title' => "Поле xfields", 'type' => 'select', 'descr' => 'Поле для параметра "активация корзины по.."', 'values' => $xfNTableList, 'value' => pluginGetVariable('basket', 'ntable_xfield')));
-array_push($cfgX, array('name' => 'ntable_price', 'title' => "Поле с ценой", 'type' => 'select', 'descr' => 'Поле xfields с ценой товара', 'values' => $xfNTableList, 'value' => pluginGetVariable('basket', 'ntable_price')));
-array_push($cfgX, array('name' => 'ntable_itemname', 'type' => 'input', 'title' => 'Формат заголовка наименования товара:', 'descr' => 'Доступные переменные:<br/><b>{title}</b> - наименование элемента каталога<br/><b>{xt:NAME}</b> (где <b>NAME</b> - название поля XFIELDS) - вывести доп. поле <u>таблицы</u><br/><b>{x:NAME}</b> (где <b>NAME</b> - название поля XFIELDS) - вывести доп. поле из оригинальной <u>новости</u>', 'html_flags' => 'style="width: 300px;"', 'value' => pluginGetVariable('basket', 'ntable_itemname') ? pluginGetVariable('basket', 'ntable_itemname') : '{title}'));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>Работа с таблицами доп. полей внутри новостей</b>', 'entries' => $cfgX));
+array_push($cfgX, array('name' => 'ntable_flag', 'type' => 'select', 'title' => $lang['basket:ntable_flag'], 'descr' => $lang['basket:ntable_flag#desc'], 'values' => $boolValues, 'value' => pluginGetVariable($plugin, 'ntable_flag')));
+array_push($cfgX, array('name' => 'ntable_activated', 'title' => $lang['basket:ntable_activated'], 'type' => 'select', 'descr' => $lang['basket:ntable_activated#desc'], 'values' => $activationValues, 'value' => pluginGetVariable($plugin, 'ntable_activated')));
+array_push($cfgX, array('name' => 'ntable_xfield', 'title' => $lang['basket:ntable_xfield'], 'type' => 'select', 'descr' => $lang['basket:ntable_xfield#desc'], 'values' => $xfNTableList, 'value' => pluginGetVariable($plugin, 'ntable_xfield')));
+array_push($cfgX, array('name' => 'ntable_price', 'title' => $lang['basket:ntable_price'], 'type' => 'select', 'descr' => $lang['basket:ntable_price#desc'], 'values' => $xfNTableList, 'value' => pluginGetVariable($plugin, 'ntable_price')));
+array_push($cfgX, array('name' => 'ntable_itemname', 'type' => 'input', 'title' => $lang['basket:ntable_itemname'], 'descr' => $lang['basket:ntable_itemname#desc'], 'html_flags' => 'style="width: 300px;"', 'value' => pluginGetVariable($plugin, 'ntable_itemname') ? pluginGetVariable($plugin, 'ntable_itemname') : '{title}'));
+array_push($cfg, array('mode' => 'group', 'title' => $lang['basket:group.ntable'], 'entries' => $cfgX));
 $cfgX = array();
-array_push($cfgX, array('name' => 'news_flag', 'type' => 'select', 'title' => 'Включить корзину для таблиц доп. полей внутри новостей', 'descr' => '<b>Да</b> - корзина будет активна для элементов таблицы<br/><b>Нет</b> - корзина не будет активна для элементов таблицы', 'values' => array(0 => 'Нет', 1 => 'Да'), 'value' => pluginGetVariable('basket', 'news_flag')));
-array_push($cfgX, array('name' => 'news_activated', 'title' => "Активация корзины в новостях по..", 'type' => 'select', 'descr' => '<b>Всем записям</b> - "положить в корзину" будет доступно для всех новостей<br/><b>Полю <i>xfields</i></b> - "положить в корзину" можно будет только те новости, в которых значение указанного поля <b>> 0</b> (больше нуля)', 'values' => array(0 => 'Всем записям', 1 => 'Полю xfields'), 'value' => pluginGetVariable('basket', 'news_activated')));
-array_push($cfgX, array('name' => 'news_xfield', 'title' => "Поле xfields", 'type' => 'select', 'descr' => 'Поле для параметра "активация корзины по.."', 'values' => $xfCatList, 'value' => pluginGetVariable('basket', 'news_xfield')));
-array_push($cfgX, array('name' => 'news_price', 'title' => "Поле с ценой", 'type' => 'select', 'descr' => 'Поле xfields с ценой товара', 'values' => $xfCatList, 'value' => pluginGetVariable('basket', 'news_price')));
-array_push($cfgX, array('name' => 'news_itemname', 'type' => 'input', 'title' => 'Формат заголовка наименования товара:', 'descr' => 'Доступные переменные:<br/><b>{title}</b> - наименование элемента каталога<br/><b>{x:NAME}</b> (где <b>NAME</b> - название поля XFIELDS) - вывести доп. поле', 'html_flags' => 'style="width: 300px;"', 'value' => pluginGetVariable('basket', 'ntable_itemname') ? pluginGetVariable('basket', 'news_itemname') : '{title}'));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>Работа с доп. полями внутри новостей</b>', 'entries' => $cfgX));
+array_push($cfgX, array('name' => 'news_flag', 'type' => 'select', 'title' => $lang['basket:news_flag'], 'descr' => $lang['basket:news_flag#desc'], 'values' => $boolValues, 'value' => pluginGetVariable($plugin, 'news_flag')));
+array_push($cfgX, array('name' => 'news_activated', 'title' => $lang['basket:news_activated'], 'type' => 'select', 'descr' => $lang['basket:news_activated#desc'], 'values' => $activationValues, 'value' => pluginGetVariable($plugin, 'news_activated')));
+array_push($cfgX, array('name' => 'news_xfield', 'title' => $lang['basket:news_xfield'], 'type' => 'select', 'descr' => $lang['basket:news_xfield#desc'], 'values' => $xfCatList, 'value' => pluginGetVariable($plugin, 'news_xfield')));
+array_push($cfgX, array('name' => 'news_price', 'title' => $lang['basket:news_price'], 'type' => 'select', 'descr' => $lang['basket:news_price#desc'], 'values' => $xfCatList, 'value' => pluginGetVariable($plugin, 'news_price')));
+array_push($cfgX, array('name' => 'news_itemname', 'type' => 'input', 'title' => $lang['basket:news_itemname'], 'descr' => $lang['basket:news_itemname#desc'], 'html_flags' => 'style="width: 300px;"', 'value' => pluginGetVariable($plugin, 'ntable_itemname') ? pluginGetVariable($plugin, 'news_itemname') : '{title}'));
+array_push($cfg, array('mode' => 'group', 'title' => $lang['basket:group.news'], 'entries' => $cfgX));
 $cfgX = array();
-array_push($cfgX, array('name' => 'feedback_form', 'type' => 'select', 'title' => 'Форма обратной связи для оформления заказа', 'descr' => 'Плагин <b>basket</b> отвечает только за наполнение корзины товаров.<br/>Отправка заказа производится через форму обратной связи плагина <b>feedback</b>.<br/>Выберите форму обратной связи через которую будет производиться отправка заказа', 'values' => $feedbackFormList, 'value' => pluginGetVariable('basket', 'feedback_form')));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>Настройки интеграции</b>', 'entries' => $cfgX));
+array_push($cfgX, array('name' => 'feedback_form', 'type' => 'select', 'title' => $lang['basket:feedback_form'], 'descr' => $lang['basket:feedback_form#desc'], 'values' => $feedbackFormList, 'value' => pluginGetVariable($plugin, 'feedback_form')));
+array_push($cfg, array('mode' => 'group', 'title' => $lang['basket:group.integration'], 'entries' => $cfgX));
 // RUN
 if ($_REQUEST['action'] == 'commit') {
 	// If submit requested, do config save
@@ -73,4 +77,3 @@ if ($_REQUEST['action'] == 'commit') {
 } else {
 	generate_config_page($plugin, $cfg);
 }
-

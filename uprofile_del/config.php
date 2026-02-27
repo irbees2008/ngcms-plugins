@@ -26,7 +26,7 @@ function about()
 	$about = 'версия 0.2';
 	
 	$tVars = array(
-		'global' => 'О плагине',
+		'global' => $lang['uprofile_del']['group.about'],
 		'header' => $about,
 		'entries' => $xt->render($tVars)
 	);
@@ -43,7 +43,7 @@ function main()
 		pluginSetVariable('uprofile_del', 'notif_pm', intval($_REQUEST['notif_pm']));
 		pluginSetVariable('uprofile_del', 'day_period', $_REQUEST['day_period']);
 		pluginsSaveConfig();
-		msg(array("type" => "info", "info" => "сохранение прошло успешно"));
+		msg(array("type" => "info", "info" => $lang['uprofile_del']['save.ok']));
 	}
 	
 	$day_period = pluginGetVariable('uprofile_del', 'day_period');
@@ -59,7 +59,7 @@ function main()
 	);
 	
 	$tVars = array(
-		'global' => 'Общие',
+		'global' => $lang['uprofile_del']['group.general'],
 		'header' => '<a href="?mod=extra-config&plugin=uprofile_del&action=about">'.$lang['uprofile_del']['about'].'</a>',
 		'entries' => $xt->render($tVars)
 	);

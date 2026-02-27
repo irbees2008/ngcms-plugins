@@ -1,6 +1,7 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+LoadPluginLang('category_access', 'main', '', '', ':');
 class CategoryAccessNewsFilter extends NewsFilter
 {
 	public $flag;
@@ -77,11 +78,11 @@ class CategoryAccessNewsFilter extends NewsFilter
 	}
 	function onAfterShow($mode)
 	{
-		global $template;
+		global $template, $lang;
 		if ($this->flag && !$this->flag2) {
 			$message = pluginGetVariable('category_access', 'message');
 			if (!$message) {
-				$message = 'Доступ к материалам ограничен';
+				$message = $lang['category_access:message_full_default'];
 			}
 			if (!$this->notified) {
 				msg(array('type' => 'error', 'text' => $message));
@@ -91,7 +92,7 @@ class CategoryAccessNewsFilter extends NewsFilter
 		} else if ($this->hiddenCount > 0 && !$this->notified) {
 			// Частичный запрет: показываем мягкое уведомление, контент страницы не трогаем
 			$pm = pluginGetVariable('category_access', 'message');
-			$txt = $pm ? $pm : 'Доступ к части материалов ограничен';
+			$txt = $pm ? $pm : $lang['category_access:message_partial_default'];
 			msg(array('type' => 'info', 'text' => $txt));
 			$this->notified = true;
 		}
@@ -99,11 +100,11 @@ class CategoryAccessNewsFilter extends NewsFilter
 	}
 	function onAfterNewsShow($newsID, $SQLnews, $mode = array())
 	{
-		global $template;
+		global $template, $lang;
 		if ($this->flag && !$this->flag2) {
 			$message = pluginGetVariable('category_access', 'message');
 			if (!$message) {
-				$message = 'Доступ к материалам ограничен';
+				$message = $lang['category_access:message_full_default'];
 			}
 			if (!$this->notified) {
 				msg(array('type' => 'error', 'text' => $message));

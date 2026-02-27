@@ -2,13 +2,13 @@
 	<a href="{{ link }}" title="{{ link_title }}" onclick="bookmarks('{{ url }}', '{{ news }}', '{{ action }}', {{ isFullNews ? 'true' : 'false' }}); return false;">
 		{% if found %}
 			{% if isFullNews %}
-				удалить закладку
+				{{ lang.act_delete }}
 			{% else %}
 				-
 			{% endif %}
 		{% else %}
 			{% if isFullNews %}
-				добавить закладку
+				{{ lang.act_add }}
 			{% else %}
 				+
 			{% endif %}
@@ -18,10 +18,3 @@
 		<span id="bookmarks_counter_{{ news }}">{{ counter }}</span>
 	{% endif %}
 </span>
-<script type="text/javascript">
-	document.getElementById('bookmarks_{{ news }}').querySelector('a').addEventListener('click', function (e) {
-e.preventDefault();
-var isFull = {% if isHandler('news:news') %}true{% else %}false{% endif %};
-bookmarks("{{ url }}", "{{ news }}", "{{ action }}", isFull);
-});
-</script>

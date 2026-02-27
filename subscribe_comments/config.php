@@ -19,12 +19,14 @@ switch ($_REQUEST['action']) {
 		break;
 	case 'modify':
 		modify();
-		if ($get_params['action'] == 'list_subscribe') show_list_subscribe(); else show_list_subscribe_post();
+		if ($get_params['action'] == 'list_subscribe') show_list_subscribe();
+		else show_list_subscribe_post();
 		break;
 	default:
 		main();
 }
-function show_list_subscribe() {
+function show_list_subscribe()
+{
 
 	global $tpl, $mysql, $lang, $config;
 	$tpath = locatePluginTemplates(array('config/main', 'config/list_subscribe', 'config/list_entries'), 'subscribe_comments', 1);
@@ -60,14 +62,15 @@ function show_list_subscribe() {
 	$tvars['vars'] = array(
 		'entries_cron' => '',
 		'entries'      => $tpl->show('list_subscribe'),
-		'global'       => 'Список подписок'
+		'global'       => $lang['subscribe_comments#page.subscribe_list']
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);
 	print $tpl->show('main');
 }
 
-function show_list_subscribe_post() {
+function show_list_subscribe_post()
+{
 
 	global $tpl, $mysql, $lang, $config;
 	$tpath = locatePluginTemplates(array('config/main', 'config/list_subscribe_post', 'config/list_entries_post'), 'subscribe_comments', 1);
@@ -104,43 +107,45 @@ function show_list_subscribe_post() {
 	$tvars['vars'] = array(
 		'entries_cron' => '',
 		'entries'      => $tpl->show('list_subscribe_post'),
-		'global'       => 'Сформированные письма'
+		'global'       => $lang['subscribe_comments#page.subscribe_post']
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);
 	print $tpl->show('main');
 }
 
-function modify() {
+function modify()
+{
 
-	global $mysql;
+	global $mysql, $lang;
 	$selected_news = $_REQUEST['selected_subscribe_comments'];
 	$subaction = $_REQUEST['subaction'];
 	$id = implode(',', $selected_news);
 	if (empty($id)) {
-		return msg(array("type" => "error", "text" => "Вы не выбрали объектов"));
+		return msg(array("type" => "error", "text" => $lang['subscribe_comments#err.no_selection']));
 	}
 	switch ($subaction) {
-		case 'mass_delete'       :
+		case 'mass_delete':
 			$del = true;
 			break;
-		case 'mass_delete_post'       :
+		case 'mass_delete_post':
 			$del_post = true;
 			break;
 	}
 	if (isset($del)) {
 		$mysql->query("delete from " . prefix . "_subscribe_comments where id in ({$id})");
-		msg(array("type" => "info", "info" => "Подписки с ID${id} удалены"));
+		msg(array("type" => "info", "info" => str_replace('{id}', $id, $lang['subscribe_comments#notify.subs_deleted'])));
 	}
 	if (isset($del_post)) {
 		$mysql->query("delete from " . prefix . "_subscribe_comments_temp where id in ({$id})");
-		msg(array("type" => "info", "info" => "Пиьсма с ID${id} удалены"));
+		msg(array("type" => "info", "info" => str_replace('{id}', $id, $lang['subscribe_comments#notify.letters_deleted'])));
 	}
 }
 
-function main() {
+function main()
+{
 
-	global $tpl, $mysql, $config, $template, $cron;
+	global $tpl, $mysql, $config, $template, $cron, $lang;
 	$tpath = locatePluginTemplates(array('config/main', 'config/general.from', 'config/list_entries_cron', 'config/list_subscribe_cron'), 'subscribe_comments', 1);
 	$delayed_send = pluginGetVariable('subscribe_comments', 'delayed_send');
 	if ($delayed_send == 1) {
@@ -194,7 +199,7 @@ function main() {
 	}
 	$admin_count = pluginGetVariable('subscribe_comments', 'admin_count');
 	$delayed_send = pluginGetVariable('subscribe_comments', 'delayed_send');
-	$delayed_send = '<option value="0" ' . (empty($delayed_send) ? 'selected' : '') . '>Нет</option><option value="1" ' . (!empty($delayed_send) ? 'selected' : '') . '>Да</option>';
+	$delayed_send = '<option value="0" ' . (empty($delayed_send) ? 'selected' : '') . '>' . $lang['subscribe_comments#val.no'] . '</option><option value="1" ' . (!empty($delayed_send) ? 'selected' : '') . '>' . $lang['subscribe_comments#val.yes'] . '</option>';
 	$pvars['vars'] = array(
 		'admin_count'  => isset($admin_count) ? $admin_count : '10',
 		'delayed_send' => isset($delayed_send) ? $delayed_send : '10',
@@ -204,14 +209,15 @@ function main() {
 	$tvars['vars'] = array(
 		'entries_cron' => $tpl->show('list_subscribe_cron'),
 		'entries'      => $tpl->show('general.from'),
-		'global'       => 'Общие настройки'
+		'global'       => $lang['subscribe_comments#page.main']
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);
 	print $tpl->show('main');
 }
 
-function redirect_subscribe_comments($url) {
+function redirect_subscribe_comments($url)
+{
 
 	if (headers_sent()) {
 		echo "<script>document.location.href='{$url}';</script>\n";
@@ -221,7 +227,8 @@ function redirect_subscribe_comments($url) {
 	}
 }
 
-function input_filter_rev($text) {
+function input_filter_rev($text)
+{
 
 	$text = trim($text);
 	$search = array("<", ">");

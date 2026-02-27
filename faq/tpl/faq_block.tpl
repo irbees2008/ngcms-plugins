@@ -1,7 +1,7 @@
 {% if (entries) %}
 	<section class="questions">
 		<h2 class="title">
-			<span>Вопрос / Ответ</span>
+			<span>{{ lang['faq:public.block.heading']|default('Вопрос / Ответ') }}</span>
 		</h2>
 		{% for entry in entries %}
 			<div class="question_item">
@@ -10,10 +10,6 @@
 			</div>
 			<div class="line"></div>
 		{% endfor %}
-		<a href="{{ home }}/plugin/faq/" class="main_btn">Все вопросы</a>
+		<a href="{{ home }}/plugin/faq/" class="main_btn">{{ lang['faq:public.block.button']|default('Все вопросы') }}</a>
 	</section>
 {% endif %}
-
-
-
-								

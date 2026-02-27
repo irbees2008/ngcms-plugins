@@ -49,13 +49,13 @@ function url()
 		redirect_suser('?mod=extra-config&plugin=suser&url');
 	}
 	$url = pluginGetVariable('suser', 'url');
-	$url = '<option value="0" ' . (empty($url) ? 'selected' : '') . '>Нет</option><option value="1" ' . (!empty($url) ? 'selected' : '') . '>Да</option>';
+	$url = '<option value="0" ' . (empty($url) ? 'selected' : '') . '>' . $lang['suser#opt.no'] . '</option><option value="1" ' . (!empty($url) ? 'selected' : '') . '>' . $lang['suser#opt.yes'] . '</option>';
 	$pvars['vars']['info'] = $url;
 	$tpl->template('url', $tpath['config/url'] . 'config');
 	$tpl->vars('url', $pvars);
 	$tvars['vars'] = array(
 		'entries' => $tpl->show('url'),
-		'global'  => 'Настройка ЧПУ'
+		'global'  => $lang['suser#group.url']
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);
@@ -81,9 +81,9 @@ function main()
 	$description = pluginGetVariable('suser', 'description');
 	$keywords = pluginGetVariable('suser', 'keywords');
 	$localsource = pluginGetVariable('suser', 'localsource');
-	$localsource = '<option value="0" ' . (empty($localsource) ? 'selected' : '') . '>Шаблон сайта</option><option value="1" ' . (!empty($localsource) ? 'selected' : '') . '>Плагин</option>';
+	$localsource = '<option value="0" ' . (empty($localsource) ? 'selected' : '') . '>' . $lang['suser#localsource.site'] . '</option><option value="1" ' . (!empty($localsource) ? 'selected' : '') . '>' . $lang['suser#localsource.plugin'] . '</option>';
 	if (empty($user_per_page))
-		msg(array("type" => "error", "text" => "Критическая ошибка. <br /> Не задано количество пользователей на странице"), 1);
+		msg(array("type" => "error", "text" => $lang['suser#err.no_perpage']), 1);
 	$pvars['vars'] = array(
 		'user_per_page' => $user_per_page,
 		'title_plg'     => $title_plg,
@@ -95,7 +95,7 @@ function main()
 	$tpl->vars('general.from', $pvars);
 	$tvars['vars'] = array(
 		'entries' => $tpl->show('general.from'),
-		'global'  => 'Общие'
+		'global'  => $lang['suser#group.general']
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);

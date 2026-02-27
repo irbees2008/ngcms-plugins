@@ -1,0 +1,18 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: ng-advanced-captcha
+Name: Advanced Captcha
+Version: 1.0.0
+Acts: core, comments, comments:add, action.ppages.feedback, feedback, feedback:post
+File: ng-advanced-captcha.php
+Config: config.php
+Preinstall: no
+Type: plugin
+Library: autoload; autoload.php
+Description: Продвинутая защита форм от ботов. Локальная система с несколькими типами капчи без внешних сервисов.
+Information: Локальная система защиты с несколькими типами капчи: математические примеры, текстовая капча, вопросы-ответы, checkbox "Я не робот", slider. Не требует внешних сервисов.
+Author: NGCMS Team
+Author_URI: https://ngcms.ru
+Icons: <i class="fa fa-lock fa-3x" aria-hidden="true"></i>
+MinEngineBuild: 23b3116

@@ -1,24 +1,19 @@
-<form method="post" id="commit_delete"
-	action="admin.php?mod=extra-config&amp;plugin=category_access&amp;action=dell_category">
-	<input type="hidden" name="category" value="{category}" />
-	<input type="hidden" id="commit" name="commit" value="no" />
+<form method="post" id="commit_delete" action="{{ admin_url }}/admin.php?mod=extra-config&plugin=category_access&action=dell_category">
+	<input type="hidden" name="category" value="{{ category }}"/>
+	<input type="hidden" id="commit" name="commit" value="no"/>
 	<div class="col-sm-12 mt-2">
 		<div class="card">
-			<div class="card-header">{action}</div>
-			<div class="card-body">
-				<div align="center">
-					<font color="red" size="+2">{commit}</font>
-				</div>
+			<div class="card-header">{{ lang['category_access:title_commit'] }}</div>
+			<div class="card-body text-center">
+				<span style="color: red; font-size: 1.5rem;">{{ commit|raw }}</span>
 			</div>
 		</div>
 	</div>
 	<div class="col-sm-12 text-center mt-2">
 		<div class="card">
 			<div class="card-body">
-				<input type="submit" value="{l_category_access:button_cancel}" class="btn btn-outline-success" />&#160;
-				<input type="submit"
-					onclick="document.forms['commit_delete'].elements['commit'].value='yes'; return true;"
-					value="{l_category_access:button_dell}" class="btn btn-outline-danger" />
+				<input type="submit" value="{{ lang['category_access:button_cancel'] }}" class="btn btn-outline-success"/>
+				<input type="submit" onclick="document.getElementById('commit').value='yes'; return true;" value="{{ lang['category_access:button_dell'] }}" class="btn btn-outline-danger ml-2"/>
 			</div>
 		</div>
 	</div>

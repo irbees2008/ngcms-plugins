@@ -3,6 +3,36 @@
 if (!defined('NGCMS')) die('HAL');
 pluginsLoadConfig();
 LoadPluginLang('guestbook', 'config', '', 'gbconfig', '#');
+
+function guestbook_get_lang_pair($key)
+{
+	static $gbLangCache = array();
+	foreach (array('russian', 'english') as $locale) {
+		if (!array_key_exists($locale, $gbLangCache)) {
+			$file = __DIR__ . '/lang/' . $locale . '/config.ini';
+			$gbLangCache[$locale] = (is_file($file)) ? parse_ini_file($file) : array();
+		}
+	}
+	return array(
+		'russian' => isset($gbLangCache['russian'][$key]) ? $gbLangCache['russian'][$key] : '',
+		'english' => isset($gbLangCache['english'][$key]) ? $gbLangCache['english'][$key] : ''
+	);
+}
+
+function guestbook_table_exists($tableSuffix)
+{
+	global $mysql;
+	static $cache = array();
+	$tableName = prefix . '_' . $tableSuffix;
+	if (!array_key_exists($tableName, $cache)) {
+		try {
+			$cache[$tableName] = is_array($mysql->record('SHOW TABLES LIKE ' . db_squote($tableName)));
+		} catch (Exception $e) {
+			$cache[$tableName] = false;
+		}
+	}
+	return $cache[$tableName];
+}
 switch ($_REQUEST['action']) {
 	case 'manage_fields':
 		manage_fields();
@@ -236,9 +266,6 @@ function show_options()
 		pluginSetVariable('guestbook', 'minlength', intval($_REQUEST['minlength']));
 		pluginSetVariable('guestbook', 'maxlength', intval($_REQUEST['maxlength']));
 		pluginSetVariable('guestbook', 'guests', secure_html($_REQUEST['guests']));
-		pluginSetVariable('guestbook', 'ecaptcha', secure_html($_REQUEST['ecaptcha']));
-		pluginSetVariable('guestbook', 'public_key', secure_html($_REQUEST['public_key']));
-		pluginSetVariable('guestbook', 'private_key', secure_html($_REQUEST['private_key']));
 		pluginSetVariable('guestbook', 'perpage', intval($_REQUEST['perpage']));
 		pluginSetVariable('guestbook', 'order', secure_html($_REQUEST['order']));
 		pluginSetVariable('guestbook', 'date', secure_html($_REQUEST['date']));
@@ -256,21 +283,15 @@ function show_options()
 						'page' =>
 						array(
 							'matchRegex' => '\\d{1,4}',
-							'descr'      =>
-							array(
-								'russian' => 'Страница',
-							),
+							'descr'      => guestbook_get_lang_pair('url_var_page'),
 						),
 						'act'  =>
 						array(
 							'matchRegex' => '.+?',
-							'descr'      =>
-							array(
-								'russian' => 'action',
-							),
+							'descr'      => guestbook_get_lang_pair('url_var_action'),
 						),
 					),
-					'descr' => array('russian' => 'Гостевая книга'),
+					'descr' => guestbook_get_lang_pair('url_descr_guestbook'),
 				)
 			);
 			$ULIB->registerCommand(
@@ -281,13 +302,10 @@ function show_options()
 						'id' =>
 						array(
 							'matchRegex' => '\\d+',
-							'descr'      =>
-							array(
-								'russian' => 'ID записи',
-							),
+							'descr'      => guestbook_get_lang_pair('url_var_record'),
 						),
 					),
-					'descr' => array('russian' => 'Редактирование'),
+					'descr' => guestbook_get_lang_pair('url_descr_edit'),
 				)
 			);
 			$ULIB->saveConfig();
@@ -307,9 +325,6 @@ function show_options()
 	$minlength = pluginGetVariable('guestbook', 'minlength');
 	$maxlength = pluginGetVariable('guestbook', 'maxlength');
 	$guests = pluginGetVariable('guestbook', 'guests');
-	$ecaptcha = pluginGetVariable('guestbook', 'ecaptcha');
-	$public_key = pluginGetVariable('guestbook', 'public_key');
-	$private_key = pluginGetVariable('guestbook', 'private_key');
 	$perpage = pluginGetVariable('guestbook', 'perpage');
 	$order = pluginGetVariable('guestbook', 'order');
 	$date = pluginGetVariable('guestbook', 'date');
@@ -327,9 +342,6 @@ function show_options()
 		'minlength'   => $minlength,
 		'maxlength'   => $maxlength,
 		'guests'      => $guests,
-		'ecaptcha'    => $ecaptcha,
-		'public_key'  => $public_key,
-		'private_key' => $private_key,
 		'perpage'     => $perpage,
 		'order'       => $order,
 		'url'         => $url,
@@ -348,28 +360,38 @@ function show_options()
 function show_messages()
 {
 	global $tpl, $mysql, $lang, $twig, $config, $PHP_SELF;
+	if (!guestbook_table_exists('guestbook')) {
+		msg(array('type' => 'error', 'text' => $lang['gbconfig']['msge_table_guestbook']));
+		return;
+	}
 	$tpath = locatePluginTemplates(array('config/main', 'config/messages_list'), 'guestbook', 1);
 	$tVars = array();
-	$news_per_page = pluginGetVariable('guestbook', 'admin_count');
+	$news_per_page = intval(pluginGetVariable('guestbook', 'admin_count'));
+	if ($news_per_page < 1) {
+		$news_per_page = 10;
+	}
 	$fSort = "ORDER BY id DESC";
 	$sqlQPart = "from " . prefix . "_guestbook " . $fSort;
 	$sqlQCount = "select count(id) " . $sqlQPart;
 	$sqlQ = "select * " . $sqlQPart;
 	$pageNo = intval($_REQUEST['page']) ? $_REQUEST['page'] : 0;
 	if ($pageNo < 1) $pageNo = 1;
-	if (!$start_from) $start_from = ($pageNo - 1) * $news_per_page;
+	$start_from = ($pageNo - 1) * $news_per_page;
 	$count = $mysql->result($sqlQCount);
 	$countPages = ceil($count / $news_per_page);
-	foreach ($mysql->select($sqlQ . ' LIMIT ' . $start_from . ', ' . $news_per_page) as $row) {
-		$tEntry[] = array(
-			'id'       => $row['id'],
-			'postdate' => $row['postdate'],
-			'message'  => $row['message'],
-			'answer'   => $row['answer'],
-			'author'   => $row['author'],
-			'ip'       => $row['ip'],
-			'status'   => $row['status'],
-		);
+	$rows = $mysql->select($sqlQ . ' LIMIT ' . $start_from . ', ' . $news_per_page);
+	if (is_array($rows)) {
+		foreach ($rows as $row) {
+			$tEntry[] = array(
+				'id'       => $row['id'],
+				'postdate' => $row['postdate'],
+				'message'  => $row['message'],
+				'answer'   => $row['answer'],
+				'author'   => $row['author'],
+				'ip'       => $row['ip'],
+				'status'   => $row['status'],
+			);
+		}
 	}
 	$xt = $twig->loadTemplate($tpath['config/messages_list'] . 'config/messages_list.tpl');
 	$tVars = array(
@@ -467,7 +489,7 @@ function edit_message($mid)
 			$tFields[] = $tField;
 		}
 	} else {
-		msg(array("type" => "error", "text" => "Не передан id"));
+		msg(array("type" => "error", "text" => $lang['gbconfig']['msge_id_not_provided']));
 	}
 	$xt = $twig->loadTemplate($tpath['config/messages_edit'] . 'config/messages_edit.tpl');
 	$tVars = array(

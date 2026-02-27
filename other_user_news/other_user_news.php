@@ -1,7 +1,8 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
-function plugin_other_user_news($number, $mode, $overrideTemplateName, $cacheExpire) {
+if (!defined('NGCMS')) die('HAL');
+function plugin_other_user_news($number, $mode, $overrideTemplateName, $cacheExpire)
+{
 
 	global $config, $mysql, $tpl, $template, $twig, $twigLoader, $langMonths, $lang, $TemplateCache, $CurrentHandler, $SYSTEM_FLAGS, $parse;
 	// Prepare keys for cacheing
@@ -41,11 +42,11 @@ function plugin_other_user_news($number, $mode, $overrideTemplateName, $cacheExp
 	}
 	// Determine paths for all template files
 	$tpath = locatePluginTemplates(array($templateName), 'other_user_news', pluginGetVariable('other_user_news', 'localsource'));
-	$cacheKeys [] = '|current_news_id=' . $current_news_id;
-	$cacheKeys [] = '|current_author_id=' . $current_author_id;
-	$cacheKeys [] = '|number=' . $number;
-	$cacheKeys [] = '|mode=' . $mode;
-	$cacheKeys [] = '|templateName=' . $templateName;
+	$cacheKeys[] = '|current_news_id=' . $current_news_id;
+	$cacheKeys[] = '|current_author_id=' . $current_author_id;
+	$cacheKeys[] = '|number=' . $number;
+	$cacheKeys[] = '|mode=' . $mode;
+	$cacheKeys[] = '|templateName=' . $templateName;
 	// Generate cache file name [ we should take into account SWITCHER plugin ]
 	$cacheFileName = md5('other_user_news' . $config['theme'] . $templateName . $config['default_lang'] . join('', $cacheKeys)) . '.txt';
 	if (!$cacheDisabled && ($cacheExpire > 0)) {
@@ -63,7 +64,7 @@ function plugin_other_user_news($number, $mode, $overrideTemplateName, $cacheExp
 		$news_link = newsGenerateLink($row);
 		$categories = GetCategories($row['catid']);
 		$short_news = '';
-		list ($short_news, $full_news) = explode('<!--more-->', $row['content'], 2);
+		list($short_news, $full_news) = explode('<!--more-->', $row['content'], 2);
 		if ($config['blocks_for_reg']) $short_news = $parse->userblocks($short_news);
 		if ($config['use_htmlformatter']) $short_news = $parse->htmlformatter($short_news);
 		if ($config['use_bbcodes']) $short_news = $parse->bbcodes($short_news);
@@ -72,13 +73,18 @@ function plugin_other_user_news($number, $mode, $overrideTemplateName, $cacheExp
 		$row['news_link'] = $news_link;
 		$row['categories'] = $categories;
 		$row['short_news'] = $short_news;
-		$tEntries [] = $row;
+		$tEntries[] = $row;
 	}
+	loadPluginLang('other_user_news', 'main', '', '', ':');
 	$tVars['entries'] = $tEntries;
 	$tVars['author'] = $current_author;
 	$tVars['author_id'] = $current_author_id;
 	$tVars['author_link'] = $author_link;
 	$tVars['ublog_link'] = $ublog_link;
+	$tVars['lbl_title']    = $lang['other_user_news:tpl.title'];
+	$tVars['lbl_col_title'] = $lang['other_user_news:tpl.col.title'];
+	$tVars['lbl_col_news']  = $lang['other_user_news:tpl.col.news'];
+	$tVars['lbl_col_date']  = $lang['other_user_news:tpl.col.date'];
 	$xt = $twig->loadTemplate($tpath[$templateName] . $templateName . '.tpl');
 	$output = $xt->render($tVars);
 	if (!$cacheDisabled && ($cacheExpire > 0)) {
@@ -95,7 +101,8 @@ function plugin_other_user_news($number, $mode, $overrideTemplateName, $cacheExp
 // * mode			- Mode for show
 // * template		- Personal template for plugin
 // * cacheExpire	- age of cache [in seconds]
-function plugin_other_user_news_showTwig($params) {
+function plugin_other_user_news_showTwig($params)
+{
 
 	global $CurrentHandler, $config;
 

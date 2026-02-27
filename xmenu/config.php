@@ -1,31 +1,31 @@
 <?php
 if (!defined('NGCMS')) die('HAL');
 pluginsLoadConfig();
-LoadPluginLang('xmenu', 'config');
+LoadPluginLang('xmenu', 'config', '', 'xmenu', ':');
 function showXMenuConfig()
 {
-    global $mysql, $tpl;
+    global $mysql, $tpl, $lang;
     $tpath = locatePluginTemplates(['mhead', 'ehead', 'efoot'], 'xmenu', 1);
     if (!$tpath) {
-        return 'Ошибка: не найдены шаблоны плагина';
+        return $lang['xmenu:err.no_templates'];
     }
     // Получаем количество меню из конфига
     $menu_count = intval(extra_get_param('xmenu', 'menu_count')) ?: 9;
     // Получаем категории
     $catz = $mysql->select("SELECT id, name, poslevel, xmenu FROM " . prefix . "_category ORDER BY posorder");
     if ($mysql->error) {
-        return 'Ошибка при получении категорий: ' . $mysql->error;
+        return $lang['xmenu:err.categories'] . ' ' . $mysql->error;
     }
     // Получаем статические страницы
     $static_pages = $mysql->select("SELECT id, title, alt_name, xmenu FROM " . prefix . "_static ORDER BY id");
     if ($mysql->error) {
-        return 'Ошибка при получении статических страниц: ' . $mysql->error;
+        return $lang['xmenu:err.static_pages'] . ' ' . $mysql->error;
     }
     // Формируем таблицу категорий
-    $categories_html = '<div class="xmenu-section"><h3>Категории</h3>';
-    $categories_html .= '<table class="table table-striped"><thead><tr><th>Категория</th>';
+    $categories_html = '<div class="xmenu-section"><h3>' . $lang['xmenu:header.categories'] . '</h3>';
+    $categories_html .= '<table class="table table-striped"><thead><tr><th>' . $lang['xmenu:th.category'] . '</th>';
     for ($i = 1; $i <= $menu_count; $i++) {
-        $categories_html .= '<th>Меню ' . $i . '</th>';
+        $categories_html .= '<th>' . $lang['xmenu:th.menu'] . ' ' . $i . '</th>';
     }
     $categories_html .= '</tr></thead><tbody>';
     foreach ($catz as $cat) {
@@ -40,16 +40,16 @@ function showXMenuConfig()
     }
     $categories_html .= '</tbody></table></div>';
     // Формируем таблицу статических страниц
-    $static_html = '<div class="xmenu-section"><h3>Статические страницы</h3>';
-    $static_html .= '<table class="table table-striped"><thead><tr><th>Страница</th>';
+    $static_html = '<div class="xmenu-section"><h3>' . $lang['xmenu:header.static'] . '</h3>';
+    $static_html .= '<table class="table table-striped"><thead><tr><th>' . $lang['xmenu:th.page'] . '</th>';
     for ($i = 1; $i <= $menu_count; $i++) {
-        $static_html .= '<th>Меню ' . $i . '</th>';
+        $static_html .= '<th>' . $lang['xmenu:th.menu'] . ' ' . $i . '</th>';
     }
     $static_html .= '</tr></thead><tbody>';
     foreach ($static_pages as $page) {
         $xmenu = isset($page['xmenu']) ? $page['xmenu'] : str_repeat('_', $menu_count);
         $xmenu = str_pad(substr($xmenu, 0, $menu_count), $menu_count, '_');
-        $page_title = htmlspecialchars($page['title'] ?? 'Без названия');
+        $page_title = htmlspecialchars($page['title'] ?? $lang['xmenu:no_title']);
         $page_altname = isset($page['alt_name']) ? ' (' . htmlspecialchars($page['alt_name']) . ')' : '';
         $static_html .= '<tr><td>' . $page_title . $page_altname . '</td>';
         for ($i = 1; $i <= $menu_count; $i++) {
@@ -131,7 +131,7 @@ if (isset($_REQUEST['action']) && $_REQUEST['action'] == 'commit') {
         }
     }
     pluginsSaveConfig();
-    msg(['type' => 'info', 'text' => 'Настройки успешно сохранены']);
+    msg(['type' => 'info', 'text' => $lang['xmenu:msg.saved']]);
     header("Location: " . admin_url . "/admin.php?mod=extra-config&plugin=xmenu");
     exit;
 }
@@ -144,38 +144,38 @@ $cfg = [
     ],
     [
         'mode' => 'group',
-        'title' => 'Основные настройки',
+        'title' => $lang['xmenu:group.main'],
         'entries' => [
             [
                 'name' => 'menu_count',
-                'title' => "Количество меню",
+                'title' => $lang['xmenu:menu_count'],
                 'type' => 'input',
                 'value' => intval(extra_get_param('xmenu', 'menu_count')) ?: 9,
-                'help' => 'Укажите количество различных меню, которые будут использоваться в плагине'
+                'help' => $lang['xmenu:menu_count#help']
             ],
             [
                 'name' => 'localsource',
-                'title' => "Источник шаблонов",
+                'title' => $lang['xmenu:localsource'],
                 'type' => 'select',
-                'values' => ['0' => 'Шаблон сайта', '1' => 'Плагин'],
+                'values' => ['0' => $lang['xmenu:lsrc_site'], '1' => $lang['xmenu:lsrc_plugin']],
                 'value' => intval(extra_get_param('xmenu', 'localsource'))
             ]
         ]
     ],
     [
         'mode' => 'group',
-        'title' => 'Настройки кеширования',
+        'title' => $lang['xmenu:group.cache'],
         'entries' => [
             [
                 'name' => 'cache',
-                'title' => "Кеширование",
+                'title' => $lang['xmenu:cache'],
                 'type' => 'select',
-                'values' => ['1' => 'Да', '0' => 'Нет'],
+                'values' => ['1' => $lang['yesa'], '0' => $lang['noa']],
                 'value' => intval(extra_get_param('xmenu', 'cache'))
             ],
             [
                 'name' => 'cacheExpire',
-                'title' => "Время жизни кеша (сек)",
+                'title' => $lang['xmenu:cache_expire'],
                 'type' => 'input',
                 'value' => extra_get_param('xmenu', 'cacheExpire') ?: '3600'
             ]

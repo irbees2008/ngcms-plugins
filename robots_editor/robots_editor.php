@@ -7,9 +7,10 @@ LoadPluginLang('robots_editor', 'config', '', '', ':');
 // Get AI bots configuration
 function robots_editor_get_ai_bots()
 {
+    global $lang;
     return array(
         'search' => array(
-            'title' => 'AI Search боты (для поиска)',
+            'title' => $lang['robots_editor:ai.search.title'],
             'bots' => array(
                 'OAI-SearchBot' => 'OpenAI Search (ChatGPT)',
                 'PerplexityBot' => 'Perplexity AI Search',
@@ -18,12 +19,12 @@ function robots_editor_get_ai_bots()
             )
         ),
         'training' => array(
-            'title' => 'AI Training боты (обучение)',
+            'title' => $lang['robots_editor:ai.training.title'],
             'bots' => array(
-                'GPTBot' => 'OpenAI GPTBot (обучение)',
-                'ClaudeBot' => 'Anthropic ClaudeBot (обучение)',
-                'Google-Extended' => 'Google AI (обучение)',
-                'Meta-ExternalAgent' => 'Meta AI (обучение)',
+                'GPTBot' => 'OpenAI GPTBot',
+                'ClaudeBot' => 'Anthropic ClaudeBot',
+                'Google-Extended' => 'Google AI',
+                'Meta-ExternalAgent' => 'Meta AI',
                 'Bytespider' => 'ByteDance/TikTok AI',
                 'anthropic-ai' => 'Anthropic AI',
                 'Omgilibot' => 'Omgili Bot',
@@ -36,6 +37,7 @@ function robots_editor_get_ai_bots()
 // Function to generate robots.txt content (duplicated from config.php for TWIG)
 function robots_editor_generate_content_twig()
 {
+    global $lang;
     $rules = pluginGetVariable('robots_editor', 'rules');
     $custom_rules = pluginGetVariable('robots_editor', 'custom_rules');
     $auto_sitemap = pluginGetVariable('robots_editor', 'auto_sitemap');
@@ -48,7 +50,7 @@ function robots_editor_generate_content_twig()
     $user_agents = array(
         'Yandex' => 'Yandex',
         'Googlebot' => 'Googlebot',
-        '*' => 'Все остальные'
+        '*' => $lang['robots_editor:ua.other']
     );
 
     foreach ($user_agents as $ua => $title) {
@@ -68,7 +70,7 @@ function robots_editor_generate_content_twig()
     // Add AI Search bots (if enabled)
     if ($ai_search_allowed) {
         $ai_bots = robots_editor_get_ai_bots();
-        $content .= "# --- AI Search Bots (разрешены для индексации) ---\n";
+        $content .= $lang['robots_editor:gen.search_bots'] . "\n";
         foreach ($ai_bots['search']['bots'] as $bot => $title) {
             $content .= "\nUser-agent: $bot\n";
             $content .= "Allow: /\n";
@@ -87,7 +89,7 @@ function robots_editor_generate_content_twig()
     // Add AI Training bots (blocked if enabled)
     if ($ai_training_blocked) {
         $ai_bots = robots_editor_get_ai_bots();
-        $content .= "# --- AI Training Bots (блокированы для обучения) ---\n";
+        $content .= $lang['robots_editor:gen.training_bots'] . "\n";
         foreach ($ai_bots['training']['bots'] as $bot => $title) {
             $content .= "\nUser-agent: $bot\n";
             $content .= "Disallow: /\n";

@@ -14,7 +14,9 @@
       ? url + (url.indexOf("?") === -1 ? "?ajax=1" : "&ajax=1")
       : url;
   }
-  function openModalWithHTML(innerHtml) {
+  function openModalWithHTML(innerHtml, titleOverride) {
+    var strings = window.NG_COMPLAIN_STRINGS || {};
+    var modalTitle = titleOverride || strings.title || "Жалобы";
     var existing = q("#complain-modal");
     if (existing) existing.remove();
     var modal = document.createElement("div");
@@ -24,7 +26,9 @@
       "" +
       '<div class="modal-box">' +
       '<div class="modal-clouse"></div>' +
-      '<div class="title">Жалобы</div>' +
+      '<div class="title">' +
+      modalTitle +
+      "</div>" +
       '<div class="modal-content clearfix">' +
       innerHtml +
       "</div>" +
@@ -126,6 +130,7 @@
       var href = a.getAttribute("href");
       if (!href || href.charAt(0) === "#") return;
       e.preventDefault();
+      var modalTitleOverride = a.getAttribute("data-modal-title") || "";
       fetchHTML(ensureAjax(href), function (err, html) {
         if (err) {
           if (window.showToast) {
@@ -138,10 +143,10 @@
           }
           return;
         }
-        openModalWithHTML(html);
+        openModalWithHTML(html, modalTitleOverride);
       });
     },
-    true
+    true,
   );
   // Delegate submit for AJAX forms inside modal
   on(document, "submit", function (e) {
@@ -153,12 +158,12 @@
     try {
       var tbody = form.querySelector("tbody");
       if (tbody) {
-        qa('input[type="checkbox"][name^="inc_"]', tbody).forEach(function (
-          ch
-        ) {
-          if (!ch.checked) return;
-          // already part of form; nothing to do
-        });
+        qa('input[type="checkbox"][name^="inc_"]', tbody).forEach(
+          function (ch) {
+            if (!ch.checked) return;
+            // already part of form; nothing to do
+          },
+        );
       }
     } catch (_e) {}
     e.preventDefault();
@@ -171,7 +176,7 @@
       var anyChecked = qa('input[type="checkbox"][name^="inc_"]', form).some(
         function (ch) {
           return ch.checked;
-        }
+        },
       );
       if (!anyChecked) {
         if (window.showToast) {
@@ -243,13 +248,13 @@
         e.target &&
         e.target.closest &&
         e.target.closest(
-          '.complain-form[data-ajax="true"] button[type="submit"]'
+          '.complain-form[data-ajax="true"] button[type="submit"]',
         );
       if (!btn) return;
       var form = btn.closest("form");
       if (form) form.__lastSubmitter = btn;
     },
-    true
+    true,
   );
   // Make links clicked inside modal load via AJAX into modal as well (for fallback info pages)
   document.addEventListener(
@@ -272,7 +277,7 @@
         if (cont) cont.innerHTML = html;
       });
     },
-    true
+    true,
   );
   // Update complaints counter in usermenu periodically (init after DOM is ready)
   (function () {
@@ -283,7 +288,7 @@
     urlCandidates.push(
       location.origin + "/plugin/complain/count",
       location.origin + "/plugin/complain/count/",
-      location.origin + "/plugin/complain/?handler=count"
+      location.origin + "/plugin/complain/?handler=count",
     );
     function pickMenuLink() {
       // Prefer a menu link marked with data-modal (to avoid picking news item links)
@@ -331,7 +336,7 @@
           try {
             var newText = rewriteTextPreservingMeaning(
               link.textContent || "",
-              d.count
+              d.count,
             );
             link.textContent = newText;
           } catch (_e) {

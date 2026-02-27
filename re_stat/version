@@ -3,7 +3,7 @@
 ;
 ID: re_stat
 Name: Перенаправление статики
-Version: 0.02
+Version: 0.03
 Actions: ppages; re_stat.php
 Config: config.php
 Type: plugin

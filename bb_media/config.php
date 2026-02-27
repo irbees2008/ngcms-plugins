@@ -12,11 +12,12 @@ switch ($_REQUEST['action']) {
 		main();
 }
 
-function general_submit() {
+function general_submit()
+{
 
 	global $lang;
 
-	if (isset($_POST['submit'])){
+	if (isset($_POST['submit'])) {
 		pluginSetVariable('bb_media', 'player_name', $_POST['player_name']);
 		pluginSetVariable('bb_media', 'theme_player', $_POST['theme_player']);
 
@@ -25,12 +26,14 @@ function general_submit() {
 	}
 }
 
-function main() {
+function main()
+{
 
 	global $tpl, $lang;
 	$tpath = locatePluginTemplates(array('conf.main', 'conf.general.form'), 'bb_media', 1);
-	
-	function getPlayersNames($path) {
+
+	function getPlayersNames($path)
+	{
 
 		$dirs = array_filter(glob($path . '*'), 'is_dir');
 		$dirNames = array();
@@ -44,24 +47,35 @@ function main() {
 
 	$dirNames = getPlayersNames(__DIR__ . '/players/');
 
-    $lout = '';
-    foreach ($dirNames as $k => $v) {
-        $lout .= '<option value="'.$k.'"'.(pluginGetVariable('bb_media', 'player_name') == $k ? ' selected="selected"' : '').'>'.$v.'</option>';
-    }
+	$lout = '';
+	foreach ($dirNames as $k => $v) {
+		$lout .= '<option value="' . $k . '"' . (pluginGetVariable('bb_media', 'player_name') == $k ? ' selected="selected"' : '') . '>' . $v . '</option>';
+	}
 
 	$ttvars['vars']['player_name'] = $lout;
-	
+
 	$theme_player = pluginGetVariable('bb_media', 'theme_player');
-	$ttvars['vars']['theme_player'] = '<option value="default" '.($theme_player=='default'?'selected':'').'>Стандарт</option><option value="city" '.($theme_player=='city'?'selected':'').'>Город</option><option value="sea" '.($theme_player=='sea'?'selected':'').'>Море</option><option value="fantasy" '.($theme_player=='fantasy'?'selected':'').'>Фантазия</option><option value="forest" '.($theme_player=='forest'?'selected':'').'>Лес</option>';
+	$themes = array(
+		'default' => $lang['bb_media:theme.default'],
+		'city'    => $lang['bb_media:theme.city'],
+		'sea'     => $lang['bb_media:theme.sea'],
+		'fantasy' => $lang['bb_media:theme.fantasy'],
+		'forest'  => $lang['bb_media:theme.forest'],
+	);
+	$themeOptions = '';
+	foreach ($themes as $key => $label) {
+		$themeOptions .= '<option value="' . $key . '" ' . ($theme_player == $key ? 'selected' : '') . '>' . $label . '</option>';
+	}
+	$ttvars['vars']['theme_player'] = $themeOptions;
 
 	$ttvars['vars']['action'] = $lang['bb_media:settings'];
-	
+
 	$tpl->template('conf.general.form', $tpath['conf.general.form']);
 	$tpl->vars('conf.general.form', $ttvars);
-	
+
 	$tvars['vars']['entries'] = $tpl->show('conf.general.form');
 	$tvars['vars']['action'] = $lang['bb_media:settings'];
-	
+
 	$tpl->template('conf.main', $tpath['conf.main']);
 	$tpl->vars('conf.main', $tvars);
 	print $tpl->show('conf.main');

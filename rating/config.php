@@ -1,11 +1,12 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 //
 // Configuration file for plugin
 //
 // Preload config file
 pluginsLoadConfig();
+loadPluginLang($plugin, 'admin', '', '', ':');
 // Fill configuration parameters
 $skList = array();
 if ($skDir = opendir(extras_dir . '/rating/tpl/skins')) {
@@ -19,13 +20,13 @@ if ($skDir = opendir(extras_dir . '/rating/tpl/skins')) {
 // Fill configuration parameters
 $cfg = array();
 $cfgX = array();
-array_push($cfg, array('descr' => 'Плагин позволяет посетителям проставлять рейтинг для новостей на сайте.'));
-array_push($cfgX, array('name' => 'regonly', 'title' => 'Рейтинг только для зарегистрированных', 'descr' => '<b>Да</b> - проставлять оценки могут только зарегистрированные пользователи<br><b>Нет</b> - проставлять оценки могут все', 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => extra_get_param($plugin, 'regonly')));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>Настройки плагина</b>', 'entries' => $cfgX));
+array_push($cfg, array('descr' => $lang['rating:description']));
+array_push($cfgX, array('name' => 'regonly', 'title' => $lang['rating:regonly.title'], 'descr' => $lang['rating:regonly.descr'], 'type' => 'select', 'values' => array('0' => $lang['rating:opt.no'], '1' => $lang['rating:opt.yes']), 'value' => extra_get_param($plugin, 'regonly')));
+array_push($cfg, array('mode' => 'group', 'title' => $lang['rating:group.plugin'], 'entries' => $cfgX));
 $cfgX = array();
-array_push($cfgX, array('name' => 'localsource', 'title' => "Выберите каталог из которого плагин будет брать шаблоны для отображения<br /><small><b>Шаблон сайта</b> - плагин будет пытаться взять шаблоны из общего шаблона сайта; в случае недоступности - шаблоны будут взяты из собственного каталога плагина<br /><b>Плагин</b> - шаблоны будут браться из собственного каталога плагина</small>", 'type' => 'select', 'values' => array('0' => 'Шаблон сайта', '1' => 'Плагин'), 'value' => intval(extra_get_param($plugin, 'localsource'))));
-array_push($cfgX, array('name' => 'localskin', 'title' => "Выберите активный шаблон<br /><small>Выбранный скин будет использоваться при установке <b>Плагин</b> в предыдущем поле</small>", 'type' => 'select', 'values' => $skList, 'value' => extra_get_param($plugin, 'localskin') ? extra_get_param($plugin, 'localskin') : 'basic'));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>Настройки отображения</b>', 'entries' => $cfgX));
+array_push($cfgX, array('name' => 'localsource', 'title' => $lang['rating:localsource.title'], 'type' => 'select', 'values' => array('0' => $lang['rating:localsource.opt.site'], '1' => $lang['rating:localsource.opt.plugin']), 'value' => intval(extra_get_param($plugin, 'localsource'))));
+array_push($cfgX, array('name' => 'localskin', 'title' => $lang['rating:localskin.title'], 'type' => 'select', 'values' => $skList, 'value' => extra_get_param($plugin, 'localskin') ? extra_get_param($plugin, 'localskin') : 'basic'));
+array_push($cfg, array('mode' => 'group', 'title' => $lang['rating:group.display'], 'entries' => $cfgX));
 // RUN
 if ($_REQUEST['action'] == 'commit') {
 	// If submit requested, do config save
@@ -34,4 +35,3 @@ if ($_REQUEST['action'] == 'commit') {
 } else {
 	generate_config_page($plugin, $cfg);
 }
-?>

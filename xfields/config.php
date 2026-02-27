@@ -163,33 +163,33 @@ function showAddEditForm($xdata = '', $eMode = null, $efield = null)
         if ($data['type'] == 'select') {
             if (is_array($data['options'])) {
                 foreach ($data['options'] as $k => $v) {
-                    array_push($sOpts, '<tr><td><input size="12" name="so_data[' . ($fNum) . '][0]" type="text" value="' . ($data['storekeys'] ? secure_html($k) : '') . '"/></td><td><input type="text" size="55" name="so_data[' . ($fNum) . '][1]" value="' . secure_html($v) . '"/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="Удалить"><i class="fa fa-trash"></i></a></td></tr>');
+                    array_push($sOpts, '<tr><td><input size="12" name="so_data[' . ($fNum) . '][0]" type="text" value="' . ($data['storekeys'] ? secure_html($k) : '') . '"/></td><td><input type="text" size="55" name="so_data[' . ($fNum) . '][1]" value="' . secure_html($v) . '"/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="' . $lang['xfconfig']['delete'] . '"><i class="fa fa-trash"></i></a></td></tr>');
                     $fNum++;
                 }
             }
         }
         if (!count($sOpts)) {
-            array_push($sOpts, '<tr><td><input size="12" name="so_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="so_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="Удалить"><i class="fa fa-trash"></i></a></td></tr>');
+            array_push($sOpts, '<tr><td><input size="12" name="so_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="so_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="' . $lang['xfconfig']['delete'] . '"><i class="fa fa-trash"></i></a></td></tr>');
         }
         $m_sOpts = [];
         $fNum = 1;
         if ($data['type'] == 'multiselect') {
             if (is_array($data['options'])) {
                 foreach ($data['options'] as $k => $v) {
-                    array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[' . ($fNum) . '][0]" type="text" value="' . ($data['storekeys'] ? secure_html($k) : '') . '"/></td><td><input type="text" size="55" name="mso_data[' . ($fNum) . '][1]" value="' . secure_html($v) . '"/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="Удалить"><i class="fa fa-trash"></i></a></td></tr>');
+                    array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[' . ($fNum) . '][0]" type="text" value="' . ($data['storekeys'] ? secure_html($k) : '') . '"/></td><td><input type="text" size="55" name="mso_data[' . ($fNum) . '][1]" value="' . secure_html($v) . '"/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="' . $lang['xfconfig']['delete'] . '"><i class="fa fa-trash"></i></a></td></tr>');
                     $fNum++;
                 }
             }
         }
         if (!count($m_sOpts)) {
-            array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="mso_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="Удалить"><i class="fa fa-trash"></i></a></td></tr>');
+            array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="mso_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="' . $lang['xfconfig']['delete'] . '"><i class="fa fa-trash"></i></a></td></tr>');
         }
         $tVars = $tVars + [
             'sOpts'          => implode("\n", $sOpts),
             'm_sOpts'        => implode("\n", $m_sOpts),
             'type_opts'      => $xsel,
-            'storekeys_opts' => '<option value="0">Сохранять значение</option><option value="1"' . (($data['storekeys']) ? ' selected' : '') . '>Сохранять код</option>',
-            'required_opts'  => '<option value="0">Нет</option><option value="1"' . (($data['required']) ? ' selected' : '') . '>Да</option>',
+            'storekeys_opts' => '<option value="0">' . $lang['xfconfig']['storekeys.value'] . '</option><option value="1"' . (($data['storekeys']) ? ' selected' : '') . '>' . $lang['xfconfig']['storekeys.code'] . '</option>',
+            'required_opts'  => '<option value="0">' . $lang['noa'] . '</option><option value="1"' . (($data['required']) ? ' selected' : '') . '>' . $lang['yesa'] . '</option>',
             'images'         => [
                 'maxCount'    => intval($data['maxCount']),
                 'thumbWidth'  => intval($data['thumbWidth']),
@@ -202,9 +202,9 @@ function showAddEditForm($xdata = '', $eMode = null, $efield = null)
         //print "<pre>".var_export($tVars, true)."</pre>";
     } else {
         $sOpts = [];
-        array_push($sOpts, '<tr><td><input size="12" name="so_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="so_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="Удалить"><i class="fa fa-trash"></i></a></td></tr>');
+        array_push($sOpts, '<tr><td><input size="12" name="so_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="so_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="' . $lang['xfconfig']['delete'] . '"><i class="fa fa-trash"></i></a></td></tr>');
         $m_sOpts = [];
-        array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="mso_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="Удалить"><i class="fa fa-trash"></i></a></td></tr>');
+        array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="mso_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="' . $lang['xfconfig']['delete'] . '"><i class="fa fa-trash"></i></a></td></tr>');
         $tVars['flags']['editmode'] = 0;
         $tVars['flags']['disabled'] = false;
         $tVars = $tVars + [
@@ -224,8 +224,8 @@ function showAddEditForm($xdata = '', $eMode = null, $efield = null)
         }
         $tVars = $tVars + [
             'type_opts'      => $xsel,
-            'storekeys_opts' => '<option value="0">Сохранять значение</option><option value="1">Сохранять код</option>',
-            'required_opts'  => '<option value="0">Нет</option><option value="1">Да</option>',
+            'storekeys_opts' => '<option value="0">' . $lang['xfconfig']['storekeys.value'] . '</option><option value="1">' . $lang['xfconfig']['storekeys.code'] . '</option>',
+            'required_opts'  => '<option value="0">' . $lang['noa'] . '</option><option value="1">' . $lang['yesa'] . '</option>',
             'select_options' => '',
             'images'         => [
                 'maxCount'    => '1',
@@ -440,7 +440,7 @@ function doAddEdit()
     }
     // Now we should update table `_news` structure and content
     if (!($tableName = xf_getTableBySectionID($sectionID))) {
-        echo 'Ошибка: неизвестная секция/блок (' . $sectionID . ')';
+        echo $lang['xfconfig']['err.unknown_section'] . ' (' . $sectionID . ')';
         return;
     }
     $found = 0;

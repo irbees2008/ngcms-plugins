@@ -1,6 +1,12 @@
 <div class="container">
-	{% if (error) %}
-		<div class="msge alert alert-info">{{ error }}</div>
+	{% if error %}
+		 <script>
+			document.addEventListener('DOMContentLoaded', function () {
+				if (typeof window.showToast === 'function') {
+					window.showToast({{ error|json_encode|raw }}, { type: 'error' });
+				}
+			});
+			</script>
 	{% endif %}
 	<form method='post' action='{{ php_self }}?action=edit'>
 		<div class="row">
@@ -9,9 +15,12 @@
 		</div>
 		{% for field in fields %}
 			<div class="row">
-				<label for="{{ field.id }}">{{ field.name }} {% if field.required %}
-						<b style="color:red">*</b>{% endif %}</label>
-				<input type="text" id="{{ field.id }}" name="{{ field.id }}" value="{{ field.value }}" {% if field.required %}required{% endif %} />
+				<label for="{{ field.id }}">{{ field.name }}
+					{% if field.required %}
+						<b style="color:red">*</b>
+					{% endif %}
+				</label>
+				<input type="text" id="{{ field.id }}" name="{{ field.id }}" value="{{ field.value }}" {% if field.required %} required {% endif %}/>
 			</div>
 		{% endfor %}
 		<div class="row">

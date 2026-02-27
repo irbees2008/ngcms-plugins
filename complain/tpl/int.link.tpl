@@ -1,1 +1,1 @@
-<a href="{{ link }}" class="btn btn-link complain-open" data-modal="true">{{ lang['complain:link.text']|default('Сообщить о проблеме') }}</a>
+<a href="{{ link }}" class="btn btn-link complain-open" data-modal="true" data-modal-title="{{ lang['complain:modal.title']|default('Жалобы') }}">{{ lang['complain:link.text']|default('Сообщить о проблеме') }}</a>

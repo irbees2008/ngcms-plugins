@@ -5,13 +5,13 @@
 		<table class="table table-bordered table-striped">
 			<thead class="thead-dark">
 				<tr>
-					<th scope="col" style="width: 5%;">ID</th>
-					<th scope="col" style="width: 35%;">Вопрос</th>
-					<th scope="col" style="width: 35%;">Ответ</th>
-					<th scope="col" style="width: 15%;">Активна?</th>
+					<th scope="col" style="width: 5%;">{{ lang['faq:list.header.id']|default('ID') }}</th>
+					<th scope="col" style="width: 35%;">{{ lang['faq:list.header.question']|default('Вопрос') }}</th>
+					<th scope="col" style="width: 35%;">{{ lang['faq:list.header.answer']|default('Ответ') }}</th>
+					<th scope="col" style="width: 15%;">{{ lang['faq:list.header.active']|default('Активна?') }}</th>
 					<th scope="col" class="text-center align-middle">
 						<div class="form-check">
-							<input class="form-check-input" type="checkbox" name="master_box" title="Выбрать все" onclick="javascript:check_uncheck_all(check_faq)"/>
+							<input class="form-check-input" type="checkbox" name="master_box" title="{{ lang['faq:list.header.select']|default('Выбрать все') }}" onclick="javascript:check_uncheck_all(check_faq)"/>
 						</div>
 					</th>
 				</tr>
@@ -25,7 +25,10 @@
 						<td>{{ entry.question }}</td>
 						<td>{{ entry.answer }}</td>
 						<td>
-							{% if (entry.active == "1") %}Да{% else %}Нет
+							{% if (entry.active == "1") %}
+								{{ lang['faq:list.status.yes']|default('Да') }}
+							{% else %}
+								{{ lang['faq:list.status.no']|default('Нет') }}
 							{% endif %}
 						</td>
 						<td class="text-center ">
@@ -36,7 +39,7 @@
 					</tr>
 				{% else %}
 					<tr>
-						<td colspan="5" class="text-center">Нет добавленных записей.</td>
+						<td colspan="5" class="text-center">{{ lang['faq:list.empty']|default('Нет добавленных записей.') }}</td>
 					</tr>
 				{% endfor %}
 			</tbody>
@@ -45,15 +48,15 @@
 		<div class="row mt-3">
 			<div class="col text-right">
 				<div style="text-align: left;">
-					Действие:
+					{{ lang['faq:list.action.label']|default('Действие:') }}
 					<select name="subaction" class="form-control" style="font: 12px Verdana, Courier, Arial; width: 230px;">
-						<option value="">-- Действие --</option>
-						<option value="mass_approve">Активировать</option>
-						<option value="mass_forbidden">Деактивировать</option>
+						<option value="">{{ lang['faq:list.action.placeholder']|default('-- Действие --') }}</option>
+						<option value="mass_approve">{{ lang['faq:list.action.activate']|default('Активировать') }}</option>
+						<option value="mass_forbidden">{{ lang['faq:list.action.deactivate']|default('Деактивировать') }}</option>
 						<option value="" style="background-color: #E0E0E0;" disabled="disabled">===================</option>
-						<option value="mass_delete">Удалить</option>
+						<option value="mass_delete">{{ lang['faq:list.action.delete']|default('Удалить') }}</option>
 					</select>
-					<button type="submit" class="btn btn-primary mt-2">Выполнить..</button>
+					<button type="submit" class="btn btn-primary mt-2">{{ lang['faq:list.action.submit']|default('Выполнить') }}</button>
 				</div>
 			</div>
 		</div>

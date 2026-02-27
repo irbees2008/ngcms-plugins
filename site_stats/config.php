@@ -31,16 +31,16 @@ array_push($cfg, array(
 $cfgX = array();
     array_push($cfgX, array(
         'name' => 'outNW',
-        'title' => 'В случае отсутствия материалов выводить цифры или слова',
-        'descr' => 'Отметьте что писать в случае если по определенной позиции материалов не обнаружится',
+        'title' => $lang[$plugin.':outNW.title'],
+        'descr' => $lang[$plugin.':outNW.descr'],
         'type' => 'select',
-        'values' => array ( '0' => 'цифры', '1' => 'слова'),
+        'values' => array ( '0' => $lang[$plugin.':outNW.val.numbers'], '1' => $lang[$plugin.':outNW.val.words']),
         'value' => pluginGetVariable($plugin, 'outNW'),
         ));
     array_push($cfgX, array(
         'name' => 'site_exists',
-        'title' => 'Подсчитывать количество дней существования сайта',
-        'descr' => 'Укажите дату создания сайта в формате <b>dd.mm.YYYY</b> или оставьте поле пустым, если не хотите отображать эту информацию',
+        'title' => $lang[$plugin.':site_exists.title'],
+        'descr' => $lang[$plugin.':site_exists.descr'],
         'type' => 'input',
         'html_flags' => 'placeholder="'.$dReg.'"',
         'value' => pluginGetVariable($plugin, 'site_exists') ? pluginGetVariable($plugin, 'site_exists') : $dReg,
@@ -54,73 +54,73 @@ array_push($cfg, array(
 $cfgX = array();
     array_push($cfgX, array(
         'name' => 'static',
-        'title' => 'Подсчитывать количество статических страниц',
-        'descr' => 'Если Вы поставите галочку, то плагин выведет колчиество статических страниц',
+        'title' => $lang[$plugin.':static.title'],
+        'descr' => $lang[$plugin.':static.descr'],
         'type' => 'checkbox',
         'value' => pluginGetVariable($plugin, 'static'),
         ));
     array_push($cfgX, array(
         'name' => 'category',
-        'title' => 'Подсчитывать количество категорий',
-        'descr' => 'Если Вы поставите галочку, то плагин выведет колчиество категорий',
+        'title' => $lang[$plugin.':category.title'],
+        'descr' => $lang[$plugin.':category.descr'],
         'type' => 'checkbox',
         'value' => pluginGetVariable($plugin, 'category'),
         ));
     array_push($cfgX, array(
         'name' => 'news',
-        'title' => 'Подсчитывать количество новостей',
-        'descr' => 'Если Вы поставите галочку, то плагин выведет колчиество новостей',
+        'title' => $lang[$plugin.':news.title'],
+        'descr' => $lang[$plugin.':news.descr'],
         'type' => 'checkbox',
         'value' => pluginGetVariable($plugin, 'news'),
         ));
     array_push($cfgX, array(
         'name' => 'news_na',
-        'title' => 'Подсчитывать количество неопубликованных новостей',
-        'descr' => 'Если Вы поставите галочку, то плагин выведет колчиество неопубликованных новостей',
+        'title' => $lang[$plugin.':news_na.title'],
+        'descr' => $lang[$plugin.':news_na.descr'],
         'type' => 'checkbox',
         'value' => pluginGetVariable($plugin,'news_na'),
         ));
     if (getPluginStatusActive('comments')) {
         array_push($cfgX, array(
             'name' => 'comments',
-            'title' => 'Подсчитывать количество комментариев',
-            'descr' => 'Если Вы поставите галочку, то плагин выведет колчиество комментариев',
+            'title' => $lang[$plugin.':comments.title'],
+            'descr' => $lang[$plugin.':comments.descr'],
             'type' => 'checkbox',
             'value' => pluginGetVariable($plugin,'comments'),
             ));
     }
     array_push($cfgX, array(
         'name' => 'images',
-        'title' => 'Подсчитывать количество загруженных изображений',
-        'descr' => 'Если Вы поставите галочку, то плагин выведет колчиество загруженных изображений',
+        'title' => $lang[$plugin.':images.title'],
+        'descr' => $lang[$plugin.':images.descr'],
         'type' => 'checkbox',
         'value' => pluginGetVariable($plugin,'images'),
         ));
     array_push($cfgX, array(
         'name' => 'files',
-        'title' => 'Подсчитывать количество загруженных файлов',
-        'descr' => 'Если Вы поставите галочку, то плагин выведет колчиество загруженных файлов',
+        'title' => $lang[$plugin.':files.title'],
+        'descr' => $lang[$plugin.':files.descr'],
         'type' => 'checkbox',
         'value' => pluginGetVariable($plugin,'files'),
         ));
     array_push($cfgX, array(
         'name' => 'users',
-        'title' => 'Подсчитывать количество зарегестрированных пользователей',
-        'descr' => 'Если Вы поставите галочку, то плагин выведет колчиество зарегестрированных пользователей',
+        'title' => $lang[$plugin.':users.title'],
+        'descr' => $lang[$plugin.':users.descr'],
         'type' => 'checkbox',
         'value' => pluginGetVariable($plugin,'users'),
         ));
     array_push($cfgX, array(
         'name' => 'users_na',
-        'title' => 'Подсчитывать количество неактивных пользователей',
-        'descr' => 'Если Вы поставите галочку, то плагин выведет колчиество неактивных пользователей',
+        'title' => $lang[$plugin.':users_na.title'],
+        'descr' => $lang[$plugin.':users_na.descr'],
         'type' => 'checkbox',
         'value' => pluginGetVariable($plugin,'users_na'),
         ));
     array_push($cfgX, array(
         'name' => 'ipban',
-        'title' => 'Подсчитывать количество банов по айпи',
-        'descr' => 'Если Вы поставите галочку, то плагин выведет колчиество забаненных по айпи',
+        'title' => $lang[$plugin.':ipban.title'],
+        'descr' => $lang[$plugin.':ipban.descr'],
         'type' => 'checkbox',
         'value' => pluginGetVariable($plugin,'ipban'),
         ));
@@ -141,7 +141,7 @@ $cfgX = array();
         ));
 array_push($cfg,  array(
     'mode' => 'group',
-    'title' => 'Настройки общей статистики сайта',
+    'title' => $lang[$plugin.':group.stats'],
     'toggle' => '1',
     'toggle.mode' => 'hide',
     'entries' => $cfgX,
@@ -150,14 +150,14 @@ array_push($cfg,  array(
 $cfgX = array();
     array_push($cfgX, array(
         'name' => 'last_time',
-        'title' => 'Период обновления онлайн статистики пользователей',
-        'descr' => 'Через сколько секунд происходит обновление онлайн статистики пользователей. Значение по умолчанию: <b>500</b> сек.',
+        'title' => $lang[$plugin.':last_time.title'],
+        'descr' => $lang[$plugin.':last_time.descr'],
         'type' => 'input',
         'value' => intval(pluginGetVariable($plugin, 'last_time')) ? intval(pluginGetVariable($plugin, 'last_time')) : 500,
         ));
 array_push($cfg,  array(
     'mode' => 'group',
-    'title' => 'Настройки онлайн статистики пользователей',
+    'title' => $lang[$plugin.':group.online'],
     'toggle' => '1',
     'toggle.mode' => 'hide',
     'entries' => $cfgX,

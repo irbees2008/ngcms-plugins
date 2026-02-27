@@ -50,12 +50,36 @@ function plugin_complain_resolve_error($id)
 	}
 	return null;
 }
+function complain_load_main_lang()
+{
+	static $loaded;
+	if (!$loaded) {
+		loadPluginLang('complain', 'main', '', '', ':');
+		$loaded = true;
+	}
+}
+function complain_assign_lang(&$tvars)
+{
+	global $lang;
+	if (!isset($tvars['vars']) || !is_array($tvars['vars'])) {
+		$tvars['vars'] = array();
+	}
+	$tvars['vars']['lang'] = $lang;
+}
+complain_load_main_lang();
+if (function_exists('register_htmlvar')) {
+	$strings = array(
+		'title' => isset($lang['complain:modal.title']) ? $lang['complain:modal.title'] : 'Жалобы',
+		'menu'  => isset($lang['complain:menu.title']) ? $lang['complain:menu.title'] : 'Жалобы',
+	);
+	register_htmlvar('plain', '<script>(function(){window.NG_COMPLAIN_STRINGS = window.NG_COMPLAIN_STRINGS || {};window.NG_COMPLAIN_STRINGS.title = ' . json_encode($strings['title']) . ';window.NG_COMPLAIN_STRINGS.menu = ' . json_encode($strings['menu']) . ';})();</script>');
+}
 function plugin_complain_screen()
 {
 	global $template, $tpl, $lang, $mysql, $userROW;
 	global $SUPRESS_TEMPLATE_SHOW;
 	global $EXTRA_HTML_VARS, $config;
-	loadPluginLang('complain', 'main', '', '', ':');
+	complain_load_main_lang();
 	// Attach plugin JS once
 	if (!isset($GLOBALS['__complain_js_attached'])) {
 		$jsPath = rtrim($config['home_url'], '/') . '/engine/plugins/complain/tpl/complain.js';
@@ -69,7 +93,9 @@ function plugin_complain_screen()
 	// No access for unregistered users
 	if (!is_array($userROW)) {
 		$tpl->template('infoblock', $tpath['infoblock']);
-		$tpl->vars('infoblock', array('vars' => array('infoblock' => $lang['complain:error.regonly'])));
+		$tvars = array('vars' => array('infoblock' => $lang['complain:error.regonly']));
+		complain_assign_lang($tvars);
+		$tpl->vars('infoblock', $tvars);
 		$template['vars']['mainblock'] = $tpl->show('infoblock');
 		return 1;
 	}
@@ -122,6 +148,7 @@ function plugin_complain_screen()
 		} else {
 			$tvars['regx']['#\[perm\](.+?)\[\/perm\]#is'] = '';
 		}
+		complain_assign_lang($tvars);
 		$tpl->vars('list.entry', $tvars);
 		$entries .= $tpl->show('list.entry');
 	}
@@ -137,6 +164,7 @@ function plugin_complain_screen()
 		'refresh_url'    => generateLink('core', 'plugin', array('plugin' => 'complain')), // screen handler URL for refresh
 		'ETEXT'          => json_encode($etext)
 	);
+	complain_assign_lang($tvars);
 	$tpl->vars('list.header', $tvars);
 	$template['vars']['mainblock'] = $tpl->show('list.header');
 }
@@ -145,7 +173,7 @@ function plugin_complain_add()
 	global $template, $tpl, $lang, $mysql, $userROW;
 	global $SUPRESS_TEMPLATE_SHOW;
 	global $EXTRA_HTML_VARS, $config;
-	loadPluginLang('complain', 'main', '', '', ':');
+	complain_load_main_lang();
 	// Attach plugin JS once
 	if (!isset($GLOBALS['__complain_js_attached'])) {
 		$jsPath = rtrim($config['home_url'], '/') . '/engine/plugins/complain/tpl/complain.js';
@@ -158,7 +186,9 @@ function plugin_complain_add()
 	// Check if we shouldn't show block for unregs
 	if ((!is_array($userROW)) && (!pluginGetVariable('complain', 'allow_unreg'))) {
 		$tpl->template('infoblock', $tpath['infoblock']);
-		$tpl->vars('infoblock', array('vars' => array('infoblock' => $lang['complain:error.regonly'] . $lang['complain:link.close'])));
+		$tvars = array('vars' => array('infoblock' => $lang['complain:error.regonly'] . $lang['complain:link.close']));
+		complain_assign_lang($tvars);
+		$tpl->vars('infoblock', $tvars);
 		$template['vars']['mainblock'] = $tpl->show('infoblock');
 		return 1;
 	}
@@ -176,6 +206,7 @@ function plugin_complain_add()
 	$txvars['regx']['#\[text\](.*?)\[/text\]#is'] = ((is_array($userROW) && (pluginGetVariable('complain', 'allow_text') == 1)) || (pluginGetVariable('complain', 'allow_text') == 2)) ? '$1' : '';
 	$txvars['vars']['form_url'] = generateLink('core', 'plugin', array('plugin' => 'complain', 'handler' => 'post'));
 	$tpl->template('ext.form', $tpath['ext.form']);
+	complain_assign_lang($txvars);
 	$tpl->vars('ext.form', $txvars);
 	$template['vars']['mainblock'] = $tpl->show('ext.form');
 }
@@ -184,7 +215,7 @@ function plugin_complain_post()
 	global $template, $tpl, $mysql, $lang, $userROW, $ip, $config;
 	global $SUPRESS_TEMPLATE_SHOW;
 	global $EXTRA_HTML_VARS;
-	loadPluginLang('complain', 'main', '', '', ':');
+	complain_load_main_lang();
 	// Attach plugin JS once
 	if (!isset($GLOBALS['__complain_js_attached'])) {
 		$jsPath = rtrim($config['home_url'], '/') . '/engine/plugins/complain/tpl/complain.js';
@@ -197,7 +228,9 @@ function plugin_complain_post()
 	// Check if we shouldn't show block for unregs
 	if ((!is_array($userROW)) && (!pluginGetVariable('complain', 'allow_unreg'))) {
 		$tpl->template('infoblock', $tpath['infoblock']);
-		$tpl->vars('infoblock', array('vars' => array('infoblock' => $lang['complain:error.regonly'] . $lang['complain:link.close'])));
+		$tvars = array('vars' => array('infoblock' => $lang['complain:error.regonly'] . $lang['complain:link.close']));
+		complain_assign_lang($tvars);
+		$tpl->vars('infoblock', $tvars);
 		$template['vars']['mainblock'] = $tpl->show('infoblock');
 		return 1;
 	}
@@ -220,7 +253,9 @@ function plugin_complain_post()
 	// Check if data entry was not found
 	if (!isset($cdata['id'])) {
 		$tpl->template('infoblock', $tpath['infoblock']);
-		$tpl->vars('infoblock', array('vars' => array('infoblock' => $lang['complain:error.noentry'] . $lang['complain:link.close'])));
+		$tvars = array('vars' => array('infoblock' => $lang['complain:error.noentry'] . $lang['complain:link.close']));
+		complain_assign_lang($tvars);
+		$tpl->vars('infoblock', $tvars);
 		$template['vars']['mainblock'] = $tpl->show('infoblock');
 		return;
 	}
@@ -229,7 +264,9 @@ function plugin_complain_post()
 	// Do not accept unresolvable errors
 	if ($errtext === null) {
 		$tpl->template('infoblock', $tpath['infoblock']);
-		$tpl->vars('infoblock', array('vars' => array('infoblock' => $lang['complain:error.unresolvable'] . $lang['complain:link.close'])));
+		$tvars = array('vars' => array('infoblock' => $lang['complain:error.unresolvable'] . $lang['complain:link.close']));
+		complain_assign_lang($tvars);
+		$tpl->vars('infoblock', $tvars);
 		$template['vars']['mainblock'] = $tpl->show('infoblock');
 		return;
 	}
@@ -292,7 +329,9 @@ function plugin_complain_post()
 	// Add hidden success marker for JS to auto-close modal and show toast
 	$successMsg = $lang['complain:info.accepted'];
 	$marker = '<div class="complain-result" data-status="ok" style="display:none" data-message="' . htmlspecialchars($successMsg, ENT_COMPAT | ENT_HTML401, 'UTF-8') . '"></div>';
-	$tpl->vars('infoblock', array('vars' => array('infoblock' => $marker . $lang['complain:info.accepted'] . $lang['complain:link.close'])));
+	$tvars = array('vars' => array('infoblock' => $marker . $lang['complain:info.accepted'] . $lang['complain:link.close']));
+	complain_assign_lang($tvars);
+	$tpl->vars('infoblock', $tvars);
 	$template['vars']['mainblock'] = $tpl->show('infoblock');
 }
 function plugin_complain_update()
@@ -300,7 +339,7 @@ function plugin_complain_update()
 	global $template, $config, $tpl, $mysql, $lang, $userROW;
 	global $SUPRESS_TEMPLATE_SHOW;
 	global $EXTRA_HTML_VARS;
-	loadPluginLang('complain', 'main', '', '', ':');
+	complain_load_main_lang();
 	// Attach plugin JS once
 	if (!isset($GLOBALS['__complain_js_attached'])) {
 		$jsPath = rtrim($config['home_url'], '/') . '/engine/plugins/complain/tpl/complain.js';
@@ -314,7 +353,9 @@ function plugin_complain_update()
 	// Only registered users are allowed here
 	if (!is_array($userROW)) {
 		$tpl->template('infoblock', $tpath['infoblock']);
-		$tpl->vars('infoblock', array('vars' => array('infoblock' => $lang['complain:error.regonly'])));
+		$tvars = array('vars' => array('infoblock' => $lang['complain:error.regonly']));
+		complain_assign_lang($tvars);
+		$tpl->vars('infoblock', $tvars);
 		$template['vars']['mainblock'] = $tpl->show('infoblock');
 		return 1;
 	}
@@ -327,7 +368,9 @@ function plugin_complain_update()
 	// Exit if no incidents are marked
 	if (!count($ilist)) {
 		$tpl->template('infoblock', $tpath['infoblock']);
-		$tpl->vars('infoblock', array('vars' => array('infoblock' => $lang['complain:info.nothing'] . $link_admin)));
+		$tvars = array('vars' => array('infoblock' => $lang['complain:info.nothing'] . $link_admin));
+		complain_assign_lang($tvars);
+		$tpl->vars('infoblock', $tvars);
 		$template['vars']['mainblock'] = $tpl->show('infoblock');
 		return 1;
 	}
@@ -381,7 +424,9 @@ function plugin_complain_update()
 	$tpl->template('infoblock', $tpath['infoblock']);
 	$successMsg = $lang['complain:info.executed'];
 	$marker = '<div class="complain-result" data-status="ok" style="display:none" data-message="' . htmlspecialchars($successMsg, ENT_COMPAT | ENT_HTML401, 'UTF-8') . '"></div>';
-	$tpl->vars('infoblock', array('vars' => array('infoblock' => $marker . $lang['complain:info.executed'] . $link_admin)));
+	$tvars = array('vars' => array('infoblock' => $marker . $lang['complain:info.executed'] . $link_admin));
+	complain_assign_lang($tvars);
+	$tpl->vars('infoblock', $tvars);
 	$template['vars']['mainblock'] = $tpl->show('infoblock');
 }
 //
@@ -392,6 +437,7 @@ class ComplainNewsFilter extends NewsFilter
 	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
 	{
 		global $tpl, $mysql, $userROW;
+		complain_load_main_lang();
 		// Делаем кнопку жалобы доступной всегда (не только в полной новости)
 		// Но при запрете для незарегистрированных - скрываем
 		if ((!is_array($userROW)) && (!pluginGetVariable('complain', 'allow_unreg'))) {
@@ -404,11 +450,13 @@ class ComplainNewsFilter extends NewsFilter
 		$txvars = array();
 		$txvars['vars'] = array('link' => $link);
 		$tpl->template('int.link', $tpath['int.link']);
+		complain_assign_lang($txvars);
 		$tpl->vars('int.link', $txvars);
 		$tvars['vars']['plugin_complain'] = $tpl->show('int.link');
 		return;
 	}
 }
+complain_load_main_lang();
 register_filter('news', 'complain', new ComplainNewsFilter);
 register_plugin_page('complain', '', 'plugin_complain_screen', 0);
 register_plugin_page('complain', 'add', 'plugin_complain_add', 0);

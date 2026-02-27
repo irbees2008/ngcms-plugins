@@ -45,8 +45,8 @@ array_push($cfgX, array('name' => 'localsource', 'title' => $lang['tags:localsou
 array_push($cfgX, array('name' => 'skin', 'title' => $lang['tags:skin'], 'descr' => $lang['tags:skin#desc'], 'type' => 'select', 'values' => $skList, 'value' => pluginGetVariable('tags', 'skin')));
 array_push($cfgX, array('name' => 'cloud3d', 'title' => $lang['tags:cloud3d'], 'descr' => $lang['tags:cloud3d#desc'], 'type' => 'select', 'values' => array('0' => $lang['noa'], '1' => $lang['yesa']), 'value' => pluginGetVariable('tags', 'cloud3d')));
 array_push($cfgX, array('name' => 'show_always', 'title' => $lang['tags:show_always'], 'descr' => $lang['tags:show_always#desc'], 'type' => 'select', 'values' => array('0' => $lang['noa'], '1' => $lang['yesa']), 'value' => pluginGetVariable('tags', 'show_always')));
-array_push($cfgX, array('name' => 'suggestHelper', 'title' => 'Включить автоподбор тегов', 'descr' => 'Включает функцию автоподбора тегов при добавлении/редактировании новостей', 'type' => 'select', 'values' => array('0' => $lang['noa'], '1' => $lang['yesa']), 'value' => pluginGetVariable('tags', 'suggestHelper')));
-array_push($cfgX, array('name' => 'auto_category_tags', 'title' => 'Автоматически добавлять категории в теги', 'descr' => 'При сохранении новости автоматически добавляет название категории в список тегов', 'type' => 'select', 'values' => array('0' => $lang['noa'], '1' => $lang['yesa']), 'value' => pluginGetVariable('tags', 'auto_category_tags')));
+array_push($cfgX, array('name' => 'suggestHelper', 'title' => $lang['tags:suggestHelper'], 'descr' => $lang['tags:suggestHelper#desc'], 'type' => 'select', 'values' => array('0' => $lang['noa'], '1' => $lang['yesa']), 'value' => pluginGetVariable('tags', 'suggestHelper')));
+array_push($cfgX, array('name' => 'auto_category_tags', 'title' => $lang['tags:auto_category_tags'], 'descr' => $lang['tags:auto_category_tags#desc'], 'type' => 'select', 'values' => array('0' => $lang['noa'], '1' => $lang['yesa']), 'value' => pluginGetVariable('tags', 'auto_category_tags')));
 array_push($cfg, array('mode' => 'group', 'title' => '<b>' . $lang['tags:block.display'] . '</b>', 'entries' => $cfgX));
 $cfgX = array();
 array_push($cfgX, array('name' => 'cache', 'title' => $lang['tags:cache.use'], 'descr' => $lang['tags:cache.use#desc'], 'type' => 'select', 'values' => array('1' => $lang['yesa'], '0' => $lang['noa']), 'value' => intval(pluginGetVariable($plugin, 'cache'))));
@@ -66,7 +66,7 @@ if (!$_REQUEST['action']) {
 		}
 
 		if ($needsUpgrade) {
-			print $lang['tags:cmd.rebuild'] . ": Обновление структуры БД для PHP 8.3...<br/>";
+			print $lang['tags:cmd.rebuild'] . ": " . $lang['tags:rebuild.php83'] . "<br/>";
 
 			// Create temporary mapping table
 			$mysql->query("CREATE TEMPORARY TABLE temp_tag_mapping AS
@@ -94,7 +94,7 @@ if (!$_REQUEST['action']) {
 			// Clean up
 			$mysql->query("DROP TEMPORARY TABLE temp_tag_mapping");
 
-			print "Структура БД обновлена для PHP 8.3.<br/>";
+			print $lang['tags:rebuild.php83.done'] . "<br/>";
 		}
 
 		// Rebuild index table

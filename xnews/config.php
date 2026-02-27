@@ -21,14 +21,14 @@ for ($i = 1; $i <= $count; $i++) {
 	$currentVar = "{$i}";
 	array_push($cfgX, array(
 			'name'  => "{$currentVar}_name",
-			'title' => 'Идентификатор блока<br/><small>По данному ID можно будет формировать данный блок через вызов <b>TWIG</b> функции <b>callPlugin()</b>',
+			'title' => $lang['tn:block_id'],
 			'type'  => 'input',
 			'value' => pluginGetVariable($plugin, "{$currentVar}_name")
 		)
 	);
 	array_push($cfgX, array(
 			'name'  => "{$currentVar}_template",
-			'title' => 'Используемый шаблон',
+			'title' => $lang['tn:template'],
 			'type'  => 'input',
 			//						'values'	=> $templateDirectories,
 			'value' => pluginGetVariable($plugin, "{$currentVar}_template")
@@ -36,72 +36,72 @@ for ($i = 1; $i <= $count; $i++) {
 	);
 	array_push($cfgX, array(
 			'name'   => "{$currentVar}_visibilityMode",
-			'title'  => 'Область видимости<br/><small>Укажите на каких страницах будет отображаться данный блок</small>',
+			'title' => $lang['tn:visibility'],
 			'type'   => 'select',
-			'values' => array('0' => 'Везде', 1 => 'На странице категорий', 2 => 'На странице новостей', 3 => 'Страница категорий + новостей'),
+			'values' => array('0' => $lang['tn:visibility_0'], 1 => $lang['tn:visibility_1'], 2 => $lang['tn:visibility_2'], 3 => $lang['tn:visibility_3']),
 			'value'  => pluginGetVariable($plugin, "{$currentVar}_visibilityMode")
 		)
 	);
 	array_push($cfgX, array(
 			'name'  => "{$currentVar}_visibilityCList",
-			'title' => 'Список категорий на которых отображается блок<br/><small>Можно указать конкретные категории при выборе <b>категории/новости</b> в предыдущем пункте',
+			'title' => $lang['tn:visibility_clist'],
 			'type'  => 'input',
 			'value' => pluginGetVariable($plugin, "{$currentVar}_visibilityCList")
 		)
 	);
 	array_push($cfgX, array(
 			'name'   => "{$currentVar}_categoryMode",
-			'title'  => 'Из каких категорий генерируется лента новостей',
+			'title' => $lang['tn:category_mode'],
 			'type'   => 'select',
-			'values' => array('0' => 'Список категорий', 1 => 'Текущая категория', 2 => 'Список + текущая'),
+			'values' => array('0' => $lang['tn:category_mode_0'], 1 => $lang['tn:category_mode_1'], 2 => $lang['tn:category_mode_2']),
 			'value'  => pluginGetVariable($plugin, "{$currentVar}_categoryMode")
 		)
 	);
 	array_push($cfgX, array(
 			'name'  => "{$currentVar}_categories",
-			'title' => 'Список категорий для генерации ленты<br/><small>Задаётся список категорий (через запятую) при выборе <b>список</b> в предыдущем поле. Оставьте поле пустым для генерации ленты по всем категориям</small>',
+			'title' => $lang['tn:category_list'],
 			'type'  => 'input',
 			'value' => pluginGetVariable($plugin, "{$currentVar}_categories")
 		)
 	);
 	array_push($cfgX, array(
 		'name'   => "{$currentVar}_mainMode",
-		'title'  => "Отображение новостей с главной страницы<br/><small>Выберите тип новостей, которые будут отображаться в блоке</small>",
+		'title' => $lang['tn:main_mode'],
 		'type'   => 'select',
 		'value'  => pluginGetVariable($plugin, "{$currentVar}_mainMode"),
-		'values' => array('0' => 'Все', 1 => 'С главной', 2 => 'Не с главной'),
+		'values' => array('0' => $lang['tn:mode_all'], 1 => $lang['tn:main_mode_1'], 2 => $lang['tn:main_mode_2']),
 	));
 	array_push($cfgX, array(
 		'name'   => "{$currentVar}_pinMode",
-		'title'  => "Отображение прикрепленных новостей<br/><small>Выберите тип новостей, которые будут отображаться в блоке</small>",
+		'title' => $lang['tn:pin_mode'],
 		'type'   => 'select',
 		'value'  => pluginGetVariable($plugin, "{$currentVar}_pinMode"),
-		'values' => array('0' => 'Все', 1 => 'Прикрепленные', 2 => 'Не прикрепленные'),
+		'values' => array('0' => $lang['tn:mode_all'], 1 => $lang['tn:pin_mode_1'], 2 => $lang['tn:pin_mode_2']),
 	));
 	array_push($cfgX, array(
 		'name'   => "{$currentVar}_favMode",
-		'title'  => "Отображение новостей из закладок<br/><small>Выберите тип новостей, которые будут отображаться в блоке</small>",
+		'title' => $lang['tn:fav_mode'],
 		'type'   => 'select',
 		'value'  => pluginGetVariable($plugin, "{$currentVar}_favMode"),
-		'values' => array('0' => 'Все', 1 => 'Только из закладок', 2 => 'Не добавленные в закладки'),
+		'values' => array('0' => $lang['tn:mode_all'], 1 => $lang['tn:fav_mode_1'], 2 => $lang['tn:fav_mode_2']),
 	));
 	array_push($cfgX, array(
 		'name'   => "{$currentVar}_skipCurrent",
-		'title'  => "Не отображать в блоке текущую новость<br/><small>Данный режим не позволяет использовать кеширование блоков и повышает нагрузку на систему</small>",
+		'title' => $lang['tn:skip_current'],
 		'type'   => 'select',
 		'value'  => pluginGetVariable($plugin, "{$currentVar}_skipCurrent"),
-		'values' => array('0' => 'Нет', 1 => 'Да'),
+		'values' => array('0' => $lang['noa'], 1 => $lang['yesa']),
 	));
 	array_push($cfgX, array(
 		'name'   => "{$currentVar}_extractEmbeddedItems",
-		'title'  => "Извлекать URL'ы изображений из текста новости<br/><small>Список URL'ов будет доступен в массиве news.embed.images, кол-во - в news.embed.imgCount</small>",
+		'title' => $lang['tn:extract_embedded'],
 		'type'   => 'select',
 		'value'  => pluginGetVariable($plugin, "{$currentVar}_extractEmbeddedItems"),
-		'values' => array('0' => 'Нет', 1 => 'Да'),
+		'values' => array('0' => $lang['noa'], 1 => $lang['yesa']),
 	));
 	array_push($cfgX, array(
 			'name'  => "{$currentVar}_showNoNews",
-			'title' => 'Выводить блок если в нём нет новостей',
+			'title' => $lang['tn:show_no_news'],
 			'type'  => 'checkbox',
 			'value' => pluginGetVariable($plugin, "{$currentVar}_showNoNews")
 		)
@@ -115,7 +115,7 @@ for ($i = 1; $i <= $count; $i++) {
 	);
 	array_push($cfgX, array(
 			'name'  => "{$currentVar}_skip",
-			'title' => 'Пропустить первые <b>X</b> новостей при показе блока<br/><small>Значение по умолчанию: 0',
+			'title' => $lang['tn:skip'],
 			'type'  => 'input',
 			'value' => intval(pluginGetVariable($plugin, "{$currentVar}_skip")) ? pluginGetVariable($plugin, "{$currentVar}_skip") : '0'
 		)

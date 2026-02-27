@@ -12,7 +12,7 @@
 		</tr>
 		<tr>
 			<td colspan="6" style="background: #f0f0f0; padding: 5px; text-align: center;">
-				Лимит:
+{{ lang['pm:limit'] }}
 				{% if max_messages > 0 %}
 					{{ max_messages }}
 				{% else %}

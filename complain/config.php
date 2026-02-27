@@ -6,26 +6,31 @@ if (!defined('NGCMS')) die('HAL');
 //
 // Preload config file
 pluginsLoadConfig();
+LoadPluginLang('complain', 'config', '', 'complain', ':');
+$plugin = 'complain';
 // Fill configuration parameters
 $cfg = array();
-array_push($cfg, array('descr' => 'Плагин позволяет любому посетителю отправить администратору/автору новости отчёт о проблеме в конкретной новости'));
+array_push($cfg, array('descr' => $lang['complain:description']));
+$boolOptions = array('0' => $lang['complain:option.no'], '1' => $lang['complain:option.yes']);
+$informReporterOptions = array('0' => $lang['complain:option.no'], '1' => $lang['complain:option.yes'], '2' => $lang['complain:option.on_request']);
+$allowTextOptions = array('0' => $lang['complain:option.no'], '1' => $lang['complain:option.reg_only'], '2' => $lang['complain:option.yes']);
 $cfgX = array();
 // Убраны настройки отображения и вариант inline-формы: плагин всегда работает через AJAX-модалку, шаблоны берутся из каталога плагина
-array_push($cfgX, array('name' => 'errlist', 'title' => "Список ошибок", 'descr' => "Записывается в формате:<br/>КОД_ОШИБКИ<b>|</b>ТЕКСТ_ОШИБКИ<br/><b>КОД_ОШИБКИ</b> - уникальный цифровой идентификатор (от 1 до 255) ошибки<br/><b>ТЕКСТ_ОШИБКИ</b> - текст ошибки, показываемый пользователю.<br/>Пользователю и администратору будет отображаться текст, но в БД будет храниться только код", 'type' => 'text', 'html_flags' => 'cols=50 rows=6', 'value' => pluginGetVariable($plugin, 'errlist')));
-array_push($cfgX, array('name' => 'inform_author', 'title' => "Оповещать автора новости по email о проблеме", 'descr' => "<b>Да</b> - на каждый отчёт об ошибке будет сформировано email сообщение<br/><b>Нет</b> - email сообщение отправляться не будет", 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => intval(pluginGetVariable($plugin, 'inform_author'))));
-array_push($cfgX, array('name' => 'inform_admin', 'title' => "Оповещать <b>администраторов сайта</b> по email о проблеме", 'descr' => "<b>Да</b> - на каждый отчёт об ошибке будет сформировано email сообщение<br/><b>Нет</b> - email сообщение отправляться не будет", 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => intval(pluginGetVariable($plugin, 'inform_admin'))));
-array_push($cfgX, array('name' => 'inform_reporter', 'title' => "Оповещать о решении проблемы автора отчёта", 'descr' => "<b>Да</b> - автор будет получаеть email сообщение при реакции администрации на его отчёт<br/><b>Нет</b> - email сообщение отправляться не будет<br/><b>По запросу</b> - email сообщение будет отправляться, если оно запрошено автором", 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да', '2' => 'По запросу'), 'value' => intval(pluginGetVariable($plugin, 'inform_reporter'))));
-array_push($cfgX, array('name' => 'allow_unreg', 'title' => "Разрешить незарегистрированным оставлять отчёты", 'descr' => "<b>Да</b> - незарегистрированный пользователь сможет оставлять отчёт<br/><b>Нет</b> - отчёт сможет оставить только зарегистрированный пользователь", 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => intval(pluginGetVariable($plugin, 'allow_unreg'))));
-array_push($cfgX, array('name' => 'allow_unreg_inform', 'title' => "Разрешить незарегистрированным получать оповещения", 'descr' => "<b>Да</b> - незарегистрированный пользователь сможет указать свой email адрес для получения писем о реакции администрации на отчёт<br/><b>Нет</b> - получить email оповещение незарегистрированный пользователь не сможет", 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => intval(pluginGetVariable($plugin, 'allow_unreg_inform'))));
-array_push($cfgX, array('name' => 'allow_text', 'title' => "Разрешить добавлять текстовое сообщение к отчёту об ошибке", 'descr' => "<b>Нет</b> - добавление текста запрещено<br/><b>Только зарегистрированные</b> - текст могут добавлять только зарегистрированные пользователи<br/><b>Да</b> - текст могут добавлять все", 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Только зарегистрированные', '2' => 'Да'), 'value' => intval(pluginGetVariable($plugin, 'allow_text'))));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>Настройки оповещений</b>', 'entries' => $cfgX));
+array_push($cfgX, array('name' => 'errlist', 'title' => $lang['complain:errlist.title'], 'descr' => $lang['complain:errlist.descr'], 'type' => 'text', 'html_flags' => 'cols=50 rows=6', 'value' => pluginGetVariable($plugin, 'errlist')));
+array_push($cfgX, array('name' => 'inform_author', 'title' => $lang['complain:inform_author.title'], 'descr' => $lang['complain:inform_author.descr'], 'type' => 'select', 'values' => $boolOptions, 'value' => intval(pluginGetVariable($plugin, 'inform_author'))));
+array_push($cfgX, array('name' => 'inform_admin', 'title' => $lang['complain:inform_admin.title'], 'descr' => $lang['complain:inform_admin.descr'], 'type' => 'select', 'values' => $boolOptions, 'value' => intval(pluginGetVariable($plugin, 'inform_admin'))));
+array_push($cfgX, array('name' => 'inform_reporter', 'title' => $lang['complain:inform_reporter.title'], 'descr' => $lang['complain:inform_reporter.descr'], 'type' => 'select', 'values' => $informReporterOptions, 'value' => intval(pluginGetVariable($plugin, 'inform_reporter'))));
+array_push($cfgX, array('name' => 'allow_unreg', 'title' => $lang['complain:allow_unreg.title'], 'descr' => $lang['complain:allow_unreg.descr'], 'type' => 'select', 'values' => $boolOptions, 'value' => intval(pluginGetVariable($plugin, 'allow_unreg'))));
+array_push($cfgX, array('name' => 'allow_unreg_inform', 'title' => $lang['complain:allow_unreg_inform.title'], 'descr' => $lang['complain:allow_unreg_inform.descr'], 'type' => 'select', 'values' => $boolOptions, 'value' => intval(pluginGetVariable($plugin, 'allow_unreg_inform'))));
+array_push($cfgX, array('name' => 'allow_text', 'title' => $lang['complain:allow_text.title'], 'descr' => $lang['complain:allow_text.descr'], 'type' => 'select', 'values' => $allowTextOptions, 'value' => intval(pluginGetVariable($plugin, 'allow_text'))));
+array_push($cfg, array('mode' => 'group', 'title' => $lang['complain:group.notifications'], 'entries' => $cfgX));
 $cfgX = array();
-array_push($cfgX, array('name' => 'admins', 'title' => "Список назначенных администраторов", 'descr' => "Укажите список логинов пользователей (по одному логину в строке), которым будут выданы административные права для работы с данным плагином<br/><i>Пробелы в конце строк недопустимы!</i>", 'type' => 'text', 'html_flags' => 'cols=50 rows=2', 'value' => pluginGetVariable($plugin, 'admins')));
-array_push($cfgX, array('name' => 'inform_admins', 'title' => "Оповещать <b>назначенных администраторов</b> по email о проблеме", 'descr' => "<b>Да</b> - на каждый отчёт об ошибке будет сформировано email сообщение<br/><b>Нет</b> - email сообщение отправляться не будет", 'type' => 'select', 'values' => array('0' => 'Нет', '1' => 'Да'), 'value' => intval(pluginGetVariable($plugin, 'inform_admins'))));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>Управление доступом</b>', 'entries' => $cfgX));
+array_push($cfgX, array('name' => 'admins', 'title' => $lang['complain:admins.title'], 'descr' => $lang['complain:admins.descr'], 'type' => 'text', 'html_flags' => 'cols=50 rows=2', 'value' => pluginGetVariable($plugin, 'admins')));
+array_push($cfgX, array('name' => 'inform_admins', 'title' => $lang['complain:inform_admins.title'], 'descr' => $lang['complain:inform_admins.descr'], 'type' => 'select', 'values' => $boolOptions, 'value' => intval(pluginGetVariable($plugin, 'inform_admins'))));
+array_push($cfg, array('mode' => 'group', 'title' => $lang['complain:group.access'], 'entries' => $cfgX));
 $cfgX = array();
-array_push($cfgX, array('name' => 'cache', 'title' => "Разрешить кеширование формы<br />", 'descr' => '<b>Да</b> - кеширование разрешено<br /><b>Нет</b> - кеширование запрещено', 'type' => 'select', 'values' => array('1' => 'Да', '0' => 'Нет'), 'value' => intval(pluginGetVariable($plugin, 'cache'))));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>Настройки кеширования</b>', 'entries' => $cfgX));
+array_push($cfgX, array('name' => 'cache', 'title' => $lang['complain:cache.title'], 'descr' => $lang['complain:cache.descr'], 'type' => 'select', 'values' => array('1' => $lang['complain:option.yes'], '0' => $lang['complain:option.no']), 'value' => intval(pluginGetVariable($plugin, 'cache'))));
+array_push($cfg, array('mode' => 'group', 'title' => $lang['complain:group.cache'], 'entries' => $cfgX));
 // RUN
 if ($_REQUEST['action'] == 'commit') {
 	// If submit requested, do config save

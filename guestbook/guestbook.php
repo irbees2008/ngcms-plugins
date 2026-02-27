@@ -19,15 +19,10 @@ function msg_add_submit()
 		if (!strlen($_POST['author'])) {
 			$errors[] = $lang['guestbook']['error_req_name'];
 		}
-		// Check captcha
-		if (pluginGetVariable('guestbook', 'ecaptcha')) {
-			require_once(root . "/plugins/guestbook/lib/recaptchalib.php");
-			$publickey = pluginGetVariable('guestbook', 'public_key');
-			$privatekey = pluginGetVariable('guestbook', 'private_key');
-			$resp = recaptcha_check_answer($privatekey, $_SERVER["REMOTE_ADDR"], $_POST["recaptcha_challenge_field"], $_POST["recaptcha_response_field"]);
-			if (!$resp->is_valid) {
-				// What happens when the CAPTCHA was entered incorrectly
-				$errors[] = $lang['guestbook']['error_req_code'];
+		// Check ng-advanced-captcha
+		if (getPluginStatusActive('ng-advanced-captcha') && isset($GLOBALS['advancedCaptcha'])) {
+			if (!$GLOBALS['advancedCaptcha']->verifying('guestbook')) {
+				$errors[] = $GLOBALS['advancedCaptcha']->rejectionReason();
 			}
 		}
 	}
@@ -215,9 +210,11 @@ function guestbook_list($params = array())
 			break;
 	}
 
-	require_once(root . "/plugins/guestbook/lib/recaptchalib.php");
-	$publickey = pluginGetVariable('guestbook', 'public_key');
-	$privatekey = pluginGetVariable('guestbook', 'private_key');
+	// Виджет ng-advanced-captcha (только для гостей)
+	$captchaWidget = '';
+	if (!is_array($userROW) && getPluginStatusActive('ng-advanced-captcha') && isset($GLOBALS['advancedCaptcha'])) {
+		$captchaWidget = $GLOBALS['advancedCaptcha']->generateWidget('guestbook');
+	}
 	// ADD notication
 	if ((isset($params['act']) && $params['act'] == 'add') || (isset($_REQUEST['add']) && $_REQUEST['add'])) {
 		$success_add[] = (pluginGetVariable('guestbook', 'approve_msg')) ? $lang['guestbook']['success_add_wo_approve'] : $lang['guestbook']['success_add'];
@@ -271,11 +268,10 @@ function guestbook_list($params = array())
 		'errors'      => $errors,
 		'success'     => $success_add,
 		'ip'          => $ip,
-		'smilies'     => (pluginGetVariable('guestbook', 'usmilies')) ? InsertSmilies('', 10) : "",
-		'bbcodes'     => (pluginGetVariable('guestbook', 'ubbcodes')) ? BBCodes() : "",
-		'use_captcha' => (pluginGetVariable('guestbook', 'ecaptcha')),
-		'captcha'     => (pluginGetVariable('guestbook', 'ecaptcha') && !(is_array($userROW))) ? recaptcha_get_html($publickey) : '',
-		'use_guests'  => (!is_array($userROW) && !pluginGetVariable('guestbook', 'guests')),
+		'smilies'        => (pluginGetVariable('guestbook', 'usmilies')) ? InsertSmilies('', 10) : "",
+		'bbcodes'        => (pluginGetVariable('guestbook', 'ubbcodes')) ? BBCodes() : "",
+		'captcha_widget' => $captchaWidget,
+		'use_guests'     => (!is_array($userROW) && !pluginGetVariable('guestbook', 'guests')),
 		'fields'      => $tEntries
 	);
 	$tpath = locatePluginTemplates(array('guestbook.list'), 'guestbook', pluginGetVariable('guestbook', 'localsource'));

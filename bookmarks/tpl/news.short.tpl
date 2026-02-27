@@ -1,4 +1,3 @@
-[TWIG]
 <article class="article">
 	<div class="article-img">
 		<img src="{{ entry.image|default(tpl_url~'/img/img-none.png') }}" width="315" height="161"/>
@@ -24,4 +23,3 @@
 		<p>{{ news.short|truncateHTML(150,'...')|striptags }}</p>
 	</div>
 </article>
-[/TWIG]

@@ -22,101 +22,69 @@
  *
  */
 # protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 add_act('index', 'bookmarks_view');
 register_plugin_page('bookmarks', 'modify', 'bookmarks_t', 0);
 register_plugin_page('bookmarks', '', 'bookmarksPage', 0);
 global $lang;
 LoadPluginLang('bookmarks', 'main', '', '', ':');
-$bookmarks_script = '
+$bookmarks_script = <<<HTML
 <script type="text/javascript">
-	function futu_alert(header, text, close, className) {
-		if (!document.getElementById(\'futu_alerts_holder\')) {
-			var futuAlertOuter = document.createElement(\'div\');
-			futuAlertOuter.className = \'futu_alert_outer\';
-			document.body.appendChild(futuAlertOuter);
-			var futuAlertFrame = document.createElement(\'div\');
-			futuAlertFrame.className = \'frame\';
-			futuAlertOuter.appendChild(futuAlertFrame);
-			var futuAlertsHolder = document.createElement(\'div\');
-			futuAlertsHolder.id = \'futu_alerts_holder\';
-			futuAlertsHolder.className = \'futu_alerts_holder\';
-			futuAlertFrame.appendChild(futuAlertsHolder);
-		}
-		var futuAlert = document.createElement(\'div\');
-		futuAlert.className = \'futu_alert \' + className;
-		document.getElementById(\'futu_alerts_holder\').appendChild(futuAlert);
-		futuAlert.id = \'futu_alert\';
-		var futuAlertHeader = document.createElement(\'div\');
-		futuAlertHeader.className = \'futu_alert_header\';
-		futuAlert.appendChild(futuAlertHeader);
-		futuAlertHeader.innerHTML = header;
-		if (close) {
-			var futuAlertCloseButton = document.createElement(\'a\');
-			futuAlertCloseButton.href = \'#\';
-			futuAlertCloseButton.className = \'futu_alert_close_button\';
-			futuAlertCloseButton.onclick = function(ev) {
-				if(!ev) {
-					ev=window.event;
-				}
-				if (!document.all) ev.preventDefault(); else ev.returnValue = false;
-				document.getElementById(\'futu_alerts_holder\').removeChild(futuAlert);
-			}
-			futuAlert.appendChild(futuAlertCloseButton);
-			var futuAlertCloseButtonIcon = document.createElement(\'img\');
-			futuAlertCloseButtonIcon.src = \'/engine/plugins/bookmarks/img/btn_close.gif\';
-			futuAlertCloseButton.appendChild(futuAlertCloseButtonIcon);
-		}
-		var futuAlertText = document.createElement(\'div\');
-		futuAlertText.className = \'futu_alert_text\';
-		futuAlert.appendChild(futuAlertText);
-		futuAlertText.innerHTML = text;
-		futuAlert.style.position = \'relative\';
-		futuAlert.style.top = \'0\';
-		futuAlert.style.display = \'block\';
-		if (!close) {
-			/* addEvent("click",function(){
-				document.getElementById(\'futu_alerts_holder\').removeChild(futuAlert);
-			}, document.getElementById(\'futu_alert\'));*/
-			setTimeout(function () { document.getElementById(\'futu_alerts_holder\').removeChild(futuAlert); }, 3000);
+(function () {
+	function bookmarksToast(message, type, sticky) {
+		if (window.showToast) {
+			window.showToast(message, {
+				title: "{$lang['bookmarks:msg_title']}",
+				type: type || "info",
+				sticked: !!sticky,
+				timeout: sticky ? 6000 : 3500
+			});
+		} else if (typeof window.alert === "function") {
+			window.alert(message);
 		}
 	}
-	function bookmarks(url, news, action, isFullNews) {
-    var ajaxBookmarks = new sack();
-    ajaxBookmarks.onShow("");
-    ajaxBookmarks.onComplete = function() {
-        if(ajaxBookmarks.response == "limit") {
-            futu_alert("' . $lang['bookmarks:msg_title'] . '", "' . $lang['bookmarks:err_add_limit'] . '", true, "message");
-        }
-										else if(ajaxBookmarks.response == "notlogged"){
-											futu_alert("' . $lang['bookmarks:msg_title'] . '", "' . $lang['bookmarks:err_notlogged'] . '", true, "error");
-										}
-										else if(ajaxBookmarks.response == "err_add"){
-											futu_alert("' . $lang['bookmarks:msg_title'] . '", "' . $lang['bookmarks:err_add'] . '", true, "error");
-										} else {
-											elementObj = document.getElementById("bookmarks_" + news);
-											elementObj.innerHTML = ajaxBookmarks.response;
-											elementObj = document.getElementById("bookmarks_counter_" + news);
-											if(ajaxBookmarks.response.indexOf("<!-- add -->") != -1){
-												futu_alert("' . $lang['bookmarks:msg_title'] . '", "' . $lang['bookmarks:msg_add'] . '", false, "save");
-											}
-											else{
-												futu_alert("' . $lang['bookmarks:msg_title'] . '", "' . $lang['bookmarks:msg_delete'] . '", false, "save");
-											}
-										}
-									};
-    ajaxBookmarks.setVar("news", news);
-    ajaxBookmarks.setVar("action", action);
-    ajaxBookmarks.setVar("ajax", true);
-    ajaxBookmarks.setVar("isFullNews", isFullNews ? "1" : "0");
-    ajaxBookmarks.requestFile = url;
-    ajaxBookmarks.method = "GET";
-    ajaxBookmarks.runAJAX();
-}
-</script>';
+
+	window.bookmarks = function (url, news, action, isFullNews) {
+		var ajaxBookmarks = new sack();
+		ajaxBookmarks.onShow("");
+		ajaxBookmarks.onComplete = function () {
+			var response = ajaxBookmarks.response || "";
+			if (response === "limit") {
+				bookmarksToast("{$lang['bookmarks:err_add_limit']}", "warning", true);
+				return;
+			}
+			if (response === "notlogged") {
+				bookmarksToast("{$lang['bookmarks:err_notlogged']}", "error", true);
+				return;
+			}
+			if (response === "err_add") {
+				bookmarksToast("{$lang['bookmarks:err_add']}", "error", true);
+				return;
+			}
+			var linksContainer = document.getElementById("bookmarks_" + news);
+			if (linksContainer) {
+				linksContainer.innerHTML = response;
+			}
+			var isAdded = response.indexOf("<!-- add -->") !== -1;
+			var isDeleted = response.indexOf("<!-- delete -->") !== -1;
+			if (isAdded) {
+				bookmarksToast("{$lang['bookmarks:msg_add']}", "success", false);
+			} else if (isDeleted) {
+				bookmarksToast("{$lang['bookmarks:msg_delete']}", "success", false);
+			}
+		};
+		ajaxBookmarks.setVar("news", news);
+		ajaxBookmarks.setVar("action", action);
+		ajaxBookmarks.setVar("ajax", true);
+		ajaxBookmarks.setVar("isFullNews", isFullNews ? "1" : "0");
+		ajaxBookmarks.requestFile = url;
+		ajaxBookmarks.method = "GET";
+		ajaxBookmarks.runAJAX();
+	};
+})();
+</script>
+HTML;
 register_htmlvar('plain', $bookmarks_script);
-$tpath = locatePluginTemplates(array(':bookmarks.css'), 'bookmarks', intval(pluginGetVariable('bookmarks', 'localsource')));
-register_stylesheet($tpath['url::bookmarks.css'] . '/bookmarks.css');
 /* declare variables to be global
  * bookmarksLoaded - flag is bookmarks already loaded
  * bookmarksList   - result of $mysql -> select
@@ -125,7 +93,8 @@ global $bookmarksLoaded, $bookmarksList;
 $bookmarksLoaded = 0;
 $bookmarksList = array();
 # generate links for add/remove bookmark
-class BookmarksNewsFilter extends NewsFilter {
+class BookmarksNewsFilter extends NewsFilter
+{
 	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
 	{
 		global $lang, $bookmarksLoaded, $bookmarksList, $userROW, $tpl, $mysql, $twig;
@@ -171,7 +140,11 @@ class BookmarksNewsFilter extends NewsFilter {
 			'url' => $url,
 			'link_title' => ($found ? $lang['bookmarks:title_delete'] : $lang['bookmarks:title_add']),
 			'isFullNews' => $isFullNews,
-			'isShortNews' => $isShortNews
+			'isShortNews' => $isShortNews,
+			'lang' => array(
+				'act_add' => $lang['bookmarks:act_add'],
+				'act_delete' => $lang['bookmarks:act_delete'],
+			),
 		);
 		# генерируем счетчик
 		if (pluginGetVariable('bookmarks', 'counter')) {
@@ -262,7 +235,12 @@ function bookmarks_view()
 		'tpl_url' => tpl_url,
 		'entries' => $result,
 		'bookmarks_page' => generatePluginLink('bookmarks', null),
-		'count' => $count
+		'count' => $count,
+		'lang' => array(
+			'title' => $lang['bookmarks:bookmarks'],
+			'view_all' => $lang['bookmarks:view_all'],
+			'empty_hint' => $lang['bookmarks:empty_hint'],
+		),
 	);
 	$xt = $twig->loadTemplate($tpath['bookmarks'] . 'bookmarks.tpl');
 	$output = $xt->render($tVars);
@@ -272,7 +250,8 @@ function bookmarks_view()
 	$template['vars']['plugin_bookmarks'] = $output;
 }
 # personal plugin pages for add/remove bookmarks
-function bookmarks_t() {
+function bookmarks_t()
+{
 	global $mysql, $config, $userROW, $HTTP_REFERER, $SUPRESS_TEMPLATE_SHOW, $tpl, $lang, $bookmarksList, $bookmarksLoaded, $template, $twig, $handler;
 	# news ID
 	$newsID = intval($_GET['news']);
@@ -309,7 +288,8 @@ function bookmarks_t() {
 			}
 		}
 		# check that this news exists & we didn't bookmarked this news earlier
-		if (count($mysql->select("SELECT id FROM " . prefix . "_news WHERE id = " . $newsID)) &&
+		if (
+			count($mysql->select("SELECT id FROM " . prefix . "_news WHERE id = " . $newsID)) &&
 			(!count($mysql->select("SELECT * FROM " . prefix . '_bookmarks WHERE user_id = ' . db_squote($userROW['id']) . " AND news_id=" . $newsID)))
 		) {
 			# ok, bookmark it
@@ -345,7 +325,11 @@ function bookmarks_t() {
 		'link_title' => ($action == 'delete' ? $lang['bookmarks:title_delete'] : $lang['bookmarks:title_add']),
 		'isFullNews' => $isFullNews,
 		'isShortNews' => !$isFullNews,
-		'counter' => pluginGetVariable('bookmarks', 'counter') ? $mysql->result('SELECT COUNT(*) FROM ' . prefix . '_bookmarks WHERE news_id=' . $newsID) : ''
+		'counter' => pluginGetVariable('bookmarks', 'counter') ? $mysql->result('SELECT COUNT(*) FROM ' . prefix . '_bookmarks WHERE news_id=' . $newsID) : '',
+		'lang' => array(
+			'act_add' => $lang['bookmarks:act_add'],
+			'act_delete' => $lang['bookmarks:act_delete'],
+		),
 	);
 	$isFullNews = isset($_GET['isFullNews']) ? intval($_GET['isFullNews']) : (isHandler('news:news') ? 1 : 0);
 	$tVars['isFullNews'] = $isFullNews;
@@ -359,67 +343,71 @@ function bookmarks_t() {
 	echo $xt->render($tVars) . ($action == 'delete' ? '<!-- add -->' : '<!-- delete -->');
 }
 # personal plugin pages for display all user's bookmarks
-function bookmarksPage() {
-    global $SYSTEM_FLAGS, $lang, $userROW, $bookmarksLoaded, $bookmarksList, $template, $config, $tpl, $twig, $mysql;
-    if (!is_array($userROW)) {
-        header('Location: ' . $config['home_url']);
-        return;
-    }
-    if (!$bookmarksLoaded)
-        bookmarks_sql();
-    $tpath = locatePluginTemplates(array('bookmarks.page', 'news.short'), 'bookmarks', pluginGetVariable('bookmarks', 'localsource'));
-    $SYSTEM_FLAGS['info']['title']['group'] = $lang['bookmarks:pp_title'];
-    if (!count($bookmarksList)) {
-        $template['vars']['mainblock'] = $lang['bookmarks:nobookmarks'];
-        return;
-    }
-    include_once root . 'includes/news.php';
-    load_extras('news');
-    // Получаем ID новостей для фильтра
-    $ids = array();
-    foreach ($bookmarksList as $brow) {
-        $ids[] = $brow['id'];
-    }
-    // Настройки для отображения новостей
-    $callingParams = array(
-        'style' => 'short',
-        'plugin' => 'bookmarks',
-        'extractEmbeddedItems' => true, // Включаем извлечение изображений
-        'overrideTemplatePath' => pluginGetVariable('bookmarks', 'news_short') ? $tpath['news.short'] : null,
-        'page' => isset($_GET['page']) ? intval($_GET['page']) : 1
-    );
-    $paginationParams = array(
-        'pluginName' => 'bookmarks',
-        'xparams' => array(),
-        'params' => array(),
-        'paginator' => array('page', 1, false)
-    );
-    // Фильтр по ID новостей
-    $filter = array('DATA', 'ID', 'IN', $ids);
-    // Получаем список новостей с изображениями
-    $newslist = news_showlist($filter, $paginationParams, $callingParams);
-    // Если нужно обработать данные перед выводом
-    if (isset($newslist['data'])) {
-        foreach ($newslist['data'] as &$news) {
-            // Добавляем дополнительные данные, если нужно
-            if (!isset($news['image'])) {
-                // Извлекаем первое изображение из контента (BBCode)
-                if (preg_match('/\[img\=["\']?([^\]"\']+)["\']?[^\]]*\](?:[^\[]+)?\[\/img\]/i', $news['content'], $matches)) {
-                    $news['image'] = $matches[1];
-                    if (strpos($news['image'], 'http') !== 0) {
-                        $news['image'] = $config['home_url'] . $news['image'];
-                    }
-                } else {
-                    $news['image'] = tpl_url . '/img/img-none.png';
-                }
-            }
-        }
-    }
-    $tVars = array(
-        'all_bookmarks' => $newslist,
-        'count' => count($bookmarksList),
-        'tpl_url' => tpl_url
-    );
-    $xt = $twig->loadTemplate($tpath['bookmarks.page'] . 'bookmarks.page.tpl');
-    $template['vars']['mainblock'] = $xt->render($tVars);
+function bookmarksPage()
+{
+	global $SYSTEM_FLAGS, $lang, $userROW, $bookmarksLoaded, $bookmarksList, $template, $config, $tpl, $twig, $mysql;
+	if (!is_array($userROW)) {
+		header('Location: ' . $config['home_url']);
+		return;
+	}
+	if (!$bookmarksLoaded)
+		bookmarks_sql();
+	$tpath = locatePluginTemplates(array('bookmarks.page', 'news.short'), 'bookmarks', pluginGetVariable('bookmarks', 'localsource'));
+	$SYSTEM_FLAGS['info']['title']['group'] = $lang['bookmarks:pp_title'];
+	if (!count($bookmarksList)) {
+		$template['vars']['mainblock'] = $lang['bookmarks:nobookmarks'];
+		return;
+	}
+	include_once root . 'includes/news.php';
+	load_extras('news');
+	// Получаем ID новостей для фильтра
+	$ids = array();
+	foreach ($bookmarksList as $brow) {
+		$ids[] = $brow['id'];
+	}
+	// Настройки для отображения новостей
+	$callingParams = array(
+		'style' => 'short',
+		'plugin' => 'bookmarks',
+		'extractEmbeddedItems' => true, // Включаем извлечение изображений
+		'overrideTemplatePath' => pluginGetVariable('bookmarks', 'news_short') ? $tpath['news.short'] : null,
+		'page' => isset($_GET['page']) ? intval($_GET['page']) : 1
+	);
+	$paginationParams = array(
+		'pluginName' => 'bookmarks',
+		'xparams' => array(),
+		'params' => array(),
+		'paginator' => array('page', 1, false)
+	);
+	// Фильтр по ID новостей
+	$filter = array('DATA', 'ID', 'IN', $ids);
+	// Получаем список новостей с изображениями
+	$newslist = news_showlist($filter, $paginationParams, $callingParams);
+	// Если нужно обработать данные перед выводом
+	if (isset($newslist['data'])) {
+		foreach ($newslist['data'] as &$news) {
+			// Добавляем дополнительные данные, если нужно
+			if (!isset($news['image'])) {
+				// Извлекаем первое изображение из контента (BBCode)
+				if (preg_match('/\[img\=["\']?([^\]"\']+)["\']?[^\]]*\](?:[^\[]+)?\[\/img\]/i', $news['content'], $matches)) {
+					$news['image'] = $matches[1];
+					if (strpos($news['image'], 'http') !== 0) {
+						$news['image'] = $config['home_url'] . $news['image'];
+					}
+				} else {
+					$news['image'] = tpl_url . '/img/img-none.png';
+				}
+			}
+		}
+	}
+	$tVars = array(
+		'all_bookmarks' => $newslist,
+		'count' => count($bookmarksList),
+		'tpl_url' => tpl_url,
+		'lang' => array(
+			'noentries' => $lang['bookmarks:noentries'],
+		),
+	);
+	$xt = $twig->loadTemplate($tpath['bookmarks.page'] . 'bookmarks.page.tpl');
+	$template['vars']['mainblock'] = $xt->render($tVars);
 }

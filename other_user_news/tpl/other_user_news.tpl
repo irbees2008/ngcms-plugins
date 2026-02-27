@@ -1,15 +1,24 @@
 {% if (entries|length > 0) %}
 	<br/>
-	<b>Другие новости от пользователя <a href="{{ author_link }}" target="_blank">{{ author }}</a>:</b>
+	<b>{{ lbl_title }}
+		<a href="{{ author_link }}" target="_blank">{{ author }}</a>:</b>
 	<table width="100%">
 		<tr>
-			<td align="center"><b>Заголовок</b></td>
-			<td align="center"><b>Новость</b></td>
-			<td align="center"><b>Дата публикации</b></td>
+			<td align="center">
+				<b>{{ lbl_col_title }}</b>
+			</td>
+			<td align="center">
+				<b>{{ lbl_col_news }}</b>
+			</td>
+			<td align="center">
+				<b>{{ lbl_col_date }}</b>
+			</td>
 		</tr>
 		{% for entry in entries %}
 			<tr>
-				<td align="center"><a href="{{ entry.news_link }}" target="_blank">{{ entry.title }}</a></td>
+				<td align="center">
+					<a href="{{ entry.news_link }}" target="_blank">{{ entry.title }}</a>
+				</td>
 				<td align="center">{{ entry.short_news }}</td>
 				<td align="center">{{ entry.postdate|date("d-m-Y h:i") }}</td>
 			</tr>

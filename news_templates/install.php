@@ -4,12 +4,16 @@ if (!defined('NGCMS')) {
     exit('HAL');
 }
 // Install DB structures for plugin 'news_templates'
+pluginsLoadConfig();
 function plugin_news_templates_install($action)
 {
     global $lang;
+    if ($action != 'autoapply') {
+        loadPluginLang('news_templates', 'main', '', '', ':');
+    }
     // Two-phase install: 'confirm' -> show page, 'apply' -> perform DB changes
     if ($action == 'confirm') {
-        generate_install_page('news_templates', 'Установка плагина «Шаблоны новостей». Будет создана таблица для хранения шаблонов.');
+        generate_install_page('news_templates', $lang['news_templates:desc_install']);
         return true;
     }
     if ($action != 'apply') {
@@ -36,5 +40,6 @@ function plugin_news_templates_install($action)
     pluginsSaveConfig();
     // Mark plugin as installed in conf/plugins.php
     plugin_mark_installed('news_templates');
-    return $t;
+    header('Location: ' . home . '/engine/admin.php?mod=extras');
+    exit;
 }

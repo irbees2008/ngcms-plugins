@@ -22,9 +22,9 @@
 открывает модальное окно через AJAX. В полном шаблоне новости вы по-прежнему
 можете вывести блок с ссылкой, вставив переменную {% if pluginIsActive('complain') %}{{ plugin_complain }} {% endif %}.
 Ссылка на админский список жалоб доступна из пользовательского меню (см. `templates/*/usermenu.tpl`).
-<a href="{{ p.complain.link|default(home ~ '/plugin/complain/?ajax=1') }}" class="complain-open" data-modal="true">
-   Жалобы ({{ p.complain.new_count|default(0) }})
+<a href="{{ p.complain.link|default(home ~ '/plugin/complain/?ajax=1') }}" class="complain-open" data-modal="true" data-modal-title="{{ lang['complain:modal.title']|default('Жалобы') }}">
+   {{ lang['complain:menu.title']|default('Жалобы') }} ({{ p.complain.new_count|default(0) }})
 </a>
- Счётчик «Жалобы (N)» обновляется автоматически и сразу после действий в модалке.
+ Счётчик «{{ lang['complain:menu.title']|default('Жалобы') }} (N)» обновляется автоматически и сразу после действий в модалке.
 Управление отчётами пользователей
 ---------------------------------

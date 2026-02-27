@@ -3,7 +3,7 @@ if (!defined('NGCMS')) {
 	exit('HAL');
 }
 pluginsLoadConfig();
-LoadPluginLang('auth_social', 'config', '', '', '#');
+LoadPluginLang('auth_social', 'config', '', '', ':');
 switch ($_REQUEST['action']) {
 	case 'options':
 		show_options();
@@ -56,7 +56,7 @@ function show_options()
 	//$facebook_redirect_uri = pluginGetVariable('auth_social', 'facebook_redirect_uri');
 	// removed providers vars
 	$xt = $twig->loadTemplate($tpath['config/general.from'] . 'config/general.from.tpl');
-	$tVars = array(
+	$contentVars = array(
 		'skins_url' => skins_url,
 		'home'      => home,
 		'tpl_home'  => admin_url,
@@ -76,12 +76,14 @@ function show_options()
 		'facebook_client_id'     => $facebook_client_id,
 		'facebook_client_secret' => $facebook_client_secret,
 		//'facebook_redirect_uri' => $facebook_redirect_uri,
+		'lang'               => $lang,
 	);
 	$xg = $twig->loadTemplate($tpath['config/main'] . 'config/main.tpl');
-	$tVars = array(
-		'entries' => $xt->render($tVars),
+	$pageVars = array(
+		'entries' => $xt->render($contentVars),
+		'lang'    => $lang,
 	);
-	print $xg->render($tVars);
+	print $xg->render($pageVars);
 }
 function redirect_auth_social($url)
 {

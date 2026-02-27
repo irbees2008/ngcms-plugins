@@ -7,7 +7,6 @@
 	<div class="row mb-2">
 		<div class="col-sm-6 d-none d-md-block ">
 			<h1 class="m-0 text-dark">guestbook</h1>
-
 		</div>
 		<!-- /.col -->
 		<div class="col-sm-6">
@@ -18,10 +17,9 @@
 					</a>
 				</li>
 				<li class="breadcrumb-item">
-					<a href="admin.php?mod=extras">Управление плагинами</a>
+					<a href="admin.php?mod=extras">{{ lang['extras'] }}</a>
 				</li>
 				<li class="breadcrumb-item active" aria-current="page">{{ lang['gbconfig']['guestbook'] }}</li>
-
 			</ol>
 		</div>
 		<!-- /.col -->
@@ -36,9 +34,7 @@
 				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=guestbook" class="btn btn-outline-success">{{ lang['gbconfig']['menu_settings'] }}</a>
 				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=guestbook&action=show_messages" class="btn btn-outline-success">{{ lang['gbconfig']['menu_messages'] }}</a>
 				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=guestbook&action=manage_fields" class="btn btn-outline-success">{{ lang['gbconfig']['menu_fields'] }}</a>
-				
 			</div>
-
 			{{ entries }}
 		</div>
 	</div>
