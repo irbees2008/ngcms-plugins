@@ -144,7 +144,7 @@ final class XFilter
      */
     private function __construct()
     {
-        include_once root.'includes/news.php';
+        include_once root . 'includes/news.php';
 
         $this->loadParams();
         $this->registerXFields(
@@ -170,10 +170,10 @@ final class XFilter
     }
 
     /**
-      * Fill plugin parameters.
-      *
-      * @return void
-      */
+     * Fill plugin parameters.
+     *
+     * @return void
+     */
     protected function loadParams()
     {
         foreach ($this->params as $param => $default) {
@@ -213,7 +213,7 @@ final class XFilter
         }, preg_split('/,/', $this->skipcat, -1, PREG_SPLIT_NO_EMPTY));
 
         // Get all categories which have `id` parent or `id` in skip list.
-        $categories = array_filter(catz(), function($data, $cat) use ($skipcat) {
+        $categories = array_filter(catz(), function ($data, $cat) use ($skipcat) {
             return in_array($data['parent'], $skipcat) or in_array($data['id'], $skipcat);
         }, ARRAY_FILTER_USE_BOTH);
 
@@ -231,9 +231,14 @@ final class XFilter
     {
         $xarray = xf_configLoad();
 
-        return array_filter($xarray['news'], function($v, $k) {
-               return $v['storage'] == 1;
-           }, ARRAY_FILTER_USE_BOTH);
+        // Check if xfields config is loaded and has news array
+        if (!is_array($xarray) || !isset($xarray['news']) || !is_array($xarray['news'])) {
+            return [];
+        }
+
+        return array_filter($xarray['news'], function ($v, $k) {
+            return $v['storage'] == 1;
+        }, ARRAY_FILTER_USE_BOTH);
     }
 
     /**
@@ -248,9 +253,11 @@ final class XFilter
                 return secure_html($input);
             },
             array_filter(
-                request(), function($v, $k) {
+                request(),
+                function ($v, $k) {
                     return !empty($v) and 'x_' === substr($k, 0, 2);
-                }, ARRAY_FILTER_USE_BOTH
+                },
+                ARRAY_FILTER_USE_BOTH
             )
         );
     }
@@ -334,9 +341,9 @@ final class XFilter
      */
     protected function template(string $tpl)
     {
-        $file = ('url:' == substr($tpl, 0, 4)) ? '/'.substr($tpl, 5) : ($tpl . '.tpl');
+        $file = ('url:' == substr($tpl, 0, 4)) ? '/' . substr($tpl, 5) : ($tpl . '.tpl');
 
-        return $this->templatePath($tpl).$file;
+        return $this->templatePath($tpl) . $file;
     }
 
     protected function addToFilter()
@@ -440,10 +447,10 @@ final class XFilter
 
         foreach ($this->getXFields() as $id => $data) {
             // var_dump($data);
-            $tvars['x_'.$id] = [
+            $tvars['x_' . $id] = [
                 'title' => $data['title'],
                 'input' => $this->createField($id, $data),
-                'active' => request('x_'.$id) ? true : false,
+                'active' => request('x_' . $id) ? true : false,
                 // 'value' => secure_html(request('x_'.$id)) ?: false,
                 // {{ x_price.value ? ' <small class="text-muted">('~x_price.value~')</small>' : '' }}
             ];
@@ -461,12 +468,12 @@ final class XFilter
      */
     protected function createField(string $id, array $data)
     {
-        if(!in_array($type = $data['type'], ['text', 'select'])) {
+        if (!in_array($type = $data['type'], ['text', 'select'])) {
             return null;
         }
 
-        $input = '<select name="x_'.$id.'" class="form-control">';
-        $input .= $data['required'] ? '' : '<option value>'.__('sh_all').'</option>';
+        $input = '<select name="x_' . $id . '" class="form-control">';
+        $input .= $data['required'] ? '' : '<option value>' . __('sh_all') . '</option>';
 
         switch ($type) {
             case 'text':
@@ -474,11 +481,11 @@ final class XFilter
                     return database()->select(
                         "SELECT DISTINCT xfields_$id AS xtext,
                             count(*) AS xcount
-                        FROM ".prefix."_news
-                        WHERE `xfields_$id` != '' ".
+                        FROM " . prefix . "_news
+                        WHERE `xfields_$id` != '' " .
                             ($this->category
-                            ? " AND `catid` REGEXP '\\\\b(" . $this->category . ")\\\\b'"
-                                : '')."
+                                ? " AND `catid` REGEXP '\\\\b(" . $this->category . ")\\\\b'"
+                                : '') . "
                         GROUP BY xtext
                         ORDER BY xtext ASC"
                     );
@@ -491,7 +498,7 @@ final class XFilter
 
                     $input .= "<option value=\"$xtext\" $selected>$xtext ($xcount)</option>";
                 }
-            break;
+                break;
 
             case 'select':
                 foreach ($data['options'] as $k => $v) {
@@ -502,10 +509,10 @@ final class XFilter
                     $input .= "<option value=\"$key\" $selected>$value</option>";
                 }
 
-            break;
+                break;
         }
 
-        return $input.'</select>';
+        return $input . '</select>';
     }
 
     /**
@@ -593,27 +600,31 @@ final class XFilter
     public function htmlVars($ppage = false)
     {
         if ($this->canonical and $ppage) {
-            register_htmlvar('plain',
-                '<link rel="canonical" href="'.$this->pluginLink.'" />'
+            register_htmlvar(
+                'plain',
+                '<link rel="canonical" href="' . $this->pluginLink . '" />'
             );
         }
 
         if ($this->meta_robots and $ppage) {
-            register_htmlvar('plain',
+            register_htmlvar(
+                'plain',
                 '<meta name="robots" content="noindex, follow" />'
             );
         }
 
         if ($this->use_css) {
-            register_htmlvar('css',
+            register_htmlvar(
+                'css',
                 $this->template('url::x_filter.css')
             );
         }
 
         if ($this->use_js) {
-            register_htmlvar('plain',
+            register_htmlvar(
+                'plain',
                 // Defer loading !!!
-                '<script type="text/javascript" src="'.$this->template('url::x_filter.js').'" defer></script>'
+                '<script type="text/javascript" src="' . $this->template('url::x_filter.js') . '" defer></script>'
             );
         }
     }
@@ -632,7 +643,9 @@ final class XFilter
 
         if ($this->newsList()->count) {
             $title = str_replace(
-                '{count}', $this->newsList()->count, __('x_filter:msg.find_count')
+                '{count}',
+                $this->newsList()->count,
+                __('x_filter:msg.find_count')
             );
 
             pageInfo('info.title.title', $title);
