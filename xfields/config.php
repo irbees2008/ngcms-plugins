@@ -3,6 +3,11 @@
 if (!defined('NGCMS')) {
     die('HAL');
 }
+
+// Modernized with ng-helpers v0.2.2 (31 января 2026)
+// Note: Using native PHP ?? operator for early loading compatibility
+use function Plugins\{notify, sanitize, logger};
+
 // Load lang files
 LoadPluginLang('xfields', 'config');
 LoadPluginLang('xfields', 'config', '', 'xfconfig', '#');
@@ -12,11 +17,11 @@ if (!is_array($xf = xf_configLoad())) {
 }
 //
 // Управление необходимыми действиями
-$sectionID = $_REQUEST['section'];
+$sectionID = $_REQUEST['section'] ?? 'news';
 if (!in_array($sectionID, ['news', 'grp.news', 'users', 'grp.users', 'tdata'])) {
     $sectionID = 'news';
 }
-switch ($_REQUEST['action']) {
+switch ($_REQUEST['action'] ?? '') {
     case 'add':
         showAddEditForm();
         break;
@@ -129,7 +134,7 @@ function showFieldList()
 function showAddEditForm($xdata = '', $eMode = null, $efield = null)
 {
     global $xf, $lang, $sectionID, $twig;
-    $field = ($efield == null) ? $_REQUEST['field'] : $efield;
+    $field = ($efield == null) ? ($_REQUEST['field'] ?? '') : $efield;
     if ($eMode == null) {
         $editMode = (isset($xf[$sectionID][$field]) && is_array($xf[$sectionID][$field])) ? 1 : 0;
     } else {
@@ -163,33 +168,33 @@ function showAddEditForm($xdata = '', $eMode = null, $efield = null)
         if ($data['type'] == 'select') {
             if (is_array($data['options'])) {
                 foreach ($data['options'] as $k => $v) {
-                    array_push($sOpts, '<tr><td><input size="12" name="so_data[' . ($fNum) . '][0]" type="text" value="' . ($data['storekeys'] ? secure_html($k) : '') . '"/></td><td><input type="text" size="55" name="so_data[' . ($fNum) . '][1]" value="' . secure_html($v) . '"/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="' . $lang['xfconfig']['delete'] . '"><i class="fa fa-trash"></i></a></td></tr>');
+                    array_push($sOpts, '<tr><td><input size="12" name="so_data[' . ($fNum) . '][0]" type="text" value="' . ($data['storekeys'] ? secure_html($k) : '') . '"/></td><td><input type="text" size="55" name="so_data[' . ($fNum) . '][1]" value="' . secure_html($v) . '"/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="Удалить"><i class="fa fa-trash"></i></a></td></tr>');
                     $fNum++;
                 }
             }
         }
         if (!count($sOpts)) {
-            array_push($sOpts, '<tr><td><input size="12" name="so_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="so_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="' . $lang['xfconfig']['delete'] . '"><i class="fa fa-trash"></i></a></td></tr>');
+            array_push($sOpts, '<tr><td><input size="12" name="so_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="so_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="Удалить"><i class="fa fa-trash"></i></a></td></tr>');
         }
         $m_sOpts = [];
         $fNum = 1;
         if ($data['type'] == 'multiselect') {
             if (is_array($data['options'])) {
                 foreach ($data['options'] as $k => $v) {
-                    array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[' . ($fNum) . '][0]" type="text" value="' . ($data['storekeys'] ? secure_html($k) : '') . '"/></td><td><input type="text" size="55" name="mso_data[' . ($fNum) . '][1]" value="' . secure_html($v) . '"/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="' . $lang['xfconfig']['delete'] . '"><i class="fa fa-trash"></i></a></td></tr>');
+                    array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[' . ($fNum) . '][0]" type="text" value="' . ($data['storekeys'] ? secure_html($k) : '') . '"/></td><td><input type="text" size="55" name="mso_data[' . ($fNum) . '][1]" value="' . secure_html($v) . '"/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="Удалить"><i class="fa fa-trash"></i></a></td></tr>');
                     $fNum++;
                 }
             }
         }
         if (!count($m_sOpts)) {
-            array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="mso_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="' . $lang['xfconfig']['delete'] . '"><i class="fa fa-trash"></i></a></td></tr>');
+            array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="mso_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="Удалить"><i class="fa fa-trash"></i></a></td></tr>');
         }
         $tVars = $tVars + [
             'sOpts'          => implode("\n", $sOpts),
             'm_sOpts'        => implode("\n", $m_sOpts),
             'type_opts'      => $xsel,
-            'storekeys_opts' => '<option value="0">' . $lang['xfconfig']['storekeys.value'] . '</option><option value="1"' . (($data['storekeys']) ? ' selected' : '') . '>' . $lang['xfconfig']['storekeys.code'] . '</option>',
-            'required_opts'  => '<option value="0">' . $lang['noa'] . '</option><option value="1"' . (($data['required']) ? ' selected' : '') . '>' . $lang['yesa'] . '</option>',
+            'storekeys_opts' => '<option value="0">Сохранять значение</option><option value="1"' . (($data['storekeys']) ? ' selected' : '') . '>Сохранять код</option>',
+            'required_opts'  => '<option value="0">Нет</option><option value="1"' . (($data['required']) ? ' selected' : '') . '>Да</option>',
             'images'         => [
                 'maxCount'    => intval($data['maxCount']),
                 'thumbWidth'  => intval($data['thumbWidth']),
@@ -202,9 +207,9 @@ function showAddEditForm($xdata = '', $eMode = null, $efield = null)
         //print "<pre>".var_export($tVars, true)."</pre>";
     } else {
         $sOpts = [];
-        array_push($sOpts, '<tr><td><input size="12" name="so_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="so_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="' . $lang['xfconfig']['delete'] . '"><i class="fa fa-trash"></i></a></td></tr>');
+        array_push($sOpts, '<tr><td><input size="12" name="so_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="so_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="Удалить"><i class="fa fa-trash"></i></a></td></tr>');
         $m_sOpts = [];
-        array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="mso_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="' . $lang['xfconfig']['delete'] . '"><i class="fa fa-trash"></i></a></td></tr>');
+        array_push($m_sOpts, '<tr><td><input size="12" name="mso_data[1][0]" type="text" value=""/></td><td><input type="text" size="55" name="mso_data[1][1]" value=""/></td><td><a href="#" onclick="return false;"class="btn btn-outline-danger" title="Удалить"><i class="fa fa-trash"></i></a></td></tr>');
         $tVars['flags']['editmode'] = 0;
         $tVars['flags']['disabled'] = false;
         $tVars = $tVars + [
@@ -224,8 +229,8 @@ function showAddEditForm($xdata = '', $eMode = null, $efield = null)
         }
         $tVars = $tVars + [
             'type_opts'      => $xsel,
-            'storekeys_opts' => '<option value="0">' . $lang['xfconfig']['storekeys.value'] . '</option><option value="1">' . $lang['xfconfig']['storekeys.code'] . '</option>',
-            'required_opts'  => '<option value="0">' . $lang['noa'] . '</option><option value="1">' . $lang['yesa'] . '</option>',
+            'storekeys_opts' => '<option value="0">Сохранять значение</option><option value="1">Сохранять код</option>',
+            'required_opts'  => '<option value="0">Нет</option><option value="1">Да</option>',
             'select_options' => '',
             'images'         => [
                 'maxCount'    => '1',
@@ -248,59 +253,63 @@ function doAddEdit()
     global $xf, $XF, $lang, $tpl, $twig, $mysql, $sectionID;
     //print "<pre>".var_export($_POST, true)."</pre>";
     $error = 0;
-    $field = $_REQUEST['id'];
-    $editMode = $_REQUEST['edit'] ? 1 : 0;
+    $field = $_REQUEST['id'] ?? '';
+    $editMode = ($_REQUEST['edit'] ?? 0) ? 1 : 0;
     // Check if field exists or not [depends on mode]
     if ($editMode && (!isset($xf[$sectionID][$field]) || !is_array($xf[$sectionID][$field]))) {
-        msg(['type' => 'error', 'text' => $lang['xfields_msge_noexists']]);
+        notify('error', $lang['xfields_msge_noexists']);
+        logger("Field not exists: {$field}, section: {$sectionID}", 'error');
         $error = 1;
     } elseif (!$editMode && (isset($xf[$sectionID][$field]) && is_array($xf[$sectionID][$field]))) {
-        msg(['type' => 'error', 'text' => $lang['xfields_msge_exists']]);
+        notify('error', $lang['xfields_msge_exists']);
+        logger("Field already exists: {$field}, section: {$sectionID}", 'error');
         $error = 1;
     }
     // Check if Field name fits our requirements
     if (!$editMode) {
         if (!preg_match('/^[a-z]{1}[a-z0-9]{2}[a-z0-9]*$/', $field)) {
-            msg(['type' => 'error', 'text' => $lang['xfields_msge_format']]);
+            notify('error', $lang['xfields_msge_format']);
+            logger("Invalid field name format: {$field}", 'error');
             $error = 1;
         }
     }
     // Let's fill parameters
-    $data['title'] = $_REQUEST['title'];
-    $data['required'] = intval($_REQUEST['required']);
-    $data['disabled'] = intval($_REQUEST['disabled']);
-    $data['area'] = intval($_REQUEST['area']);
-    $data['type'] = $_REQUEST['type'];
-    $data['bb_support'] = $_REQUEST['bb_support'] ? 1 : 0;
+    $data['title'] = $_REQUEST['title'] ?? '';
+    $data['required'] = intval($_REQUEST['required'] ?? 0);
+    $data['disabled'] = intval($_REQUEST['disabled'] ?? 0);
+    $data['area'] = intval($_REQUEST['area'] ?? 0);
+    $data['type'] = $_REQUEST['type'] ?? 'text';
+    $data['bb_support'] = ($_REQUEST['bb_support'] ?? 0) ? 1 : 0;
     $data['default'] = '';
     if (($sectionID == 'users') && ($data['type'] != 'images')) {
-        $data['regpage'] = intval($_REQUEST['regpage']);
+        $data['regpage'] = intval($_REQUEST['regpage'] ?? 0);
     }
     switch ($data['type']) {
         case 'checkbox':
-            $data['default'] = $_REQUEST['checkbox_default'] ? 1 : 0;
+            $data['default'] = ($_REQUEST['checkbox_default'] ?? 0) ? 1 : 0;
             break;
         case 'text':
-            if ($_REQUEST['text_default'] != '') {
-                $data['default'] = $_REQUEST['text_default'];
+            if (($_REQUEST['text_default'] ?? '') != '') {
+                $data['default'] = $_REQUEST['text_default'] ?? '';
             }
-            $data['bb_support'] = $_REQUEST['text_bb_support'] ? 1 : 0;
-            $data['html_support'] = $_REQUEST['text_html_support'] ? 1 : 0;
+            $data['bb_support'] = ($_REQUEST['text_bb_support'] ?? 0) ? 1 : 0;
+            $data['html_support'] = ($_REQUEST['text_html_support'] ?? 0) ? 1 : 0;
             break;
         case 'textarea':
-            if ($_REQUEST['textarea_default'] != '') {
-                $data['default'] = $_REQUEST['textarea_default'];
+            if (($_REQUEST['textarea_default'] ?? '') != '') {
+                $data['default'] = $_REQUEST['textarea_default'] ?? '';
             }
-            $data['bb_support'] = $_REQUEST['textarea_bb_support'] ? 1 : 0;
-            $data['html_support'] = $_REQUEST['textarea_html_support'] ? 1 : 0;
-            $data['noformat'] = $_REQUEST['textarea_noformat'] ? 1 : 0;
+            $data['bb_support'] = ($_REQUEST['textarea_bb_support'] ?? 0) ? 1 : 0;
+            $data['html_support'] = ($_REQUEST['textarea_html_support'] ?? 0) ? 1 : 0;
+            $data['noformat'] = ($_REQUEST['textarea_noformat'] ?? 0) ? 1 : 0;
             break;
         case 'select':
             // Check options
             $optlist = [];
             $optvals = [];
-            if (isset($_REQUEST['so_data']) && is_array($_REQUEST['so_data'])) {
-                foreach ($_REQUEST['so_data'] as $k => $v) {
+            $so_data = $_REQUEST['so_data'] ?? [];
+            if (is_array($so_data)) {
+                foreach ($so_data as $k => $v) {
                     if (is_array($v) && isset($v[0]) && isset($v[1]) && (($v[0] != '') || ($v[1] != ''))) {
                         if ($v[0] != '') {
                             $optlist[$v[0]] = $v[1];
@@ -327,10 +336,10 @@ function doAddEdit()
                 }
             }
             */
-            $data['storekeys'] = intval($_REQUEST['select_storekeys']) ? 1 : 0;
+            $data['storekeys'] = intval($_REQUEST['select_storekeys'] ?? 0) ? 1 : 0;
             $data['options'] = $optlist;
-            if (trim($_REQUEST['select_default'])) {
-                $data['default'] = trim($_REQUEST['select_default']);
+            if (trim($_REQUEST['select_default'] ?? '')) {
+                $data['default'] = trim($_REQUEST['select_default'] ?? '');
                 if (
                     (($data['storekeys']) && (!array_key_exists($data['default'], $optlist))) ||
                     ((!$data['storekeys']) && (!in_array($data['default'], $optlist)))
@@ -344,8 +353,9 @@ function doAddEdit()
             // Check options
             $optlist = [];
             $optvals = [];
-            if (isset($_REQUEST['mso_data']) && is_array($_REQUEST['mso_data'])) {
-                foreach ($_REQUEST['mso_data'] as $k => $v) {
+            $mso_data = $_REQUEST['mso_data'] ?? [];
+            if (is_array($mso_data)) {
+                foreach ($mso_data as $k => $v) {
                     if (is_array($v) && isset($v[0]) && isset($v[1]) && (($v[0] != '') || ($v[1] != ''))) {
                         if ($v[0] != '') {
                             $optlist[$v[0]] = $v[1];
@@ -372,54 +382,59 @@ function doAddEdit()
                 }
             }
             */
-            $data['storekeys'] = intval($_REQUEST['select_storekeys_multi']) ? 1 : 0;
+            $data['storekeys'] = intval($_REQUEST['select_storekeys_multi'] ?? 0) ? 1 : 0;
             $data['options'] = $optlist;
-            if (trim($_REQUEST['select_default_multi'])) {
-                $data['default'] = trim($_REQUEST['select_default_multi']);
+            if (trim($_REQUEST['select_default_multi'] ?? '')) {
+                $data['default'] = trim($_REQUEST['select_default_multi'] ?? '');
                 if (
                     (($data['storekeys']) && (!array_key_exists($data['default'], $optlist))) ||
                     ((!$data['storekeys']) && (!in_array($data['default'], $optlist)))
                 ) {
-                    msg(['type' => 'error', 'text' => $lang['xfields_msge_errdefault']]);
+                    notify('error', $lang['xfields_msge_errdefault']);
+                    logger("Invalid default value for multiselect field: {$field}, value: {$data['default']}", 'error');
                     $error = 1;
                 }
             }
             break;
         case 'images':
-            $data['maxCount'] = intval($_REQUEST['images_maxCount']);
-            $data['imgShadow'] = intval($_REQUEST['images_imgShadow']) ? 1 : 0;
-            $data['imgStamp'] = intval($_REQUEST['images_imgStamp']) ? 1 : 0;
-            $data['imgThumb'] = intval($_REQUEST['images_imgThumb']) ? 1 : 0;
-            $data['thumbWidth'] = intval($_REQUEST['images_thumbWidth']);
-            $data['thumbHeight'] = intval($_REQUEST['images_thumbHeight']);
-            $data['thumbStamp'] = intval($_REQUEST['images_thumbStamp']) ? 1 : 0;
-            $data['thumbShadow'] = intval($_REQUEST['images_thumbShadow']) ? 1 : 0;
+            $data['maxCount'] = intval($_REQUEST['images_maxCount'] ?? 1);
+            $data['imgShadow'] = intval($_REQUEST['images_imgShadow'] ?? 0) ? 1 : 0;
+            $data['imgStamp'] = intval($_REQUEST['images_imgStamp'] ?? 0) ? 1 : 0;
+            $data['imgThumb'] = intval($_REQUEST['images_imgThumb'] ?? 0) ? 1 : 0;
+            $data['thumbWidth'] = intval($_REQUEST['images_thumbWidth'] ?? 150);
+            $data['thumbHeight'] = intval($_REQUEST['images_thumbHeight'] ?? 150);
+            $data['thumbStamp'] = intval($_REQUEST['images_thumbStamp'] ?? 0) ? 1 : 0;
+            $data['thumbShadow'] = intval($_REQUEST['images_thumbShadow'] ?? 0) ? 1 : 0;
             break;
         default:
             $data['type'] = '';
             break;
     }
     if (!$data['type']) {
-        msg(['type' => 'error', 'text' => $lang['xfields_msge_errtype']]);
+        notify('error', $lang['xfields_msge_errtype']);
+        logger("Empty field type: {$field}", 'error');
         $error = 1;
     }
     if (!$data['title']) {
-        msg(['type' => 'error', 'text' => $lang['xfields_msge_errtitle']]);
+        notify('error', $lang['xfields_msge_errtitle']);
+        logger("Empty field title: {$field}", 'error');
         $error = 1;
     }
     // Check for storage params
-    $data['storage'] = $_REQUEST['storage'];
-    $data['db.type'] = $_REQUEST['db_type'];
-    $data['db.len'] = intval($_REQUEST['db_len']);
+    $data['storage'] = $_REQUEST['storage'] ?? 0;
+    $data['db.type'] = $_REQUEST['db_type'] ?? '';
+    $data['db.len'] = intval($_REQUEST['db_len'] ?? 0);
     if ($data['storage']) {
         // Check for correct DB type
         if (!in_array($data['db.type'], ['int', 'decimal', 'char', 'datetime', 'text'])) {
-            msg(['type' => 'error', 'text' => $lang['xfields_error.db.type']]);
+            notify('error', $lang['xfields_error.db.type']);
+            logger("Invalid DB type: {$field}, type: {$data['db.type']}", 'error');
             $error = 1;
         }
         // Check for correct DB len (if applicable)
         if (($data['db.type'] == 'char') && ((intval($data['db.len']) < 1) || (intval($data['db.len']) > 255))) {
-            msg(['type' => 'error', 'text' => $lang['xfields_error.db.len']]);
+            notify('error', $lang['xfields_error.db.len']);
+            logger("Invalid DB length: {$field}, len: {$data['db.len']}", 'error');
             $error = 1;
         }
     }
@@ -434,13 +449,14 @@ function doAddEdit()
     }
     $XF[$sectionID][$field] = $data;
     if (!xf_configSave()) {
-        msg(['type' => 'error', 'text' => $lang['xfields_msge_errcsave']]);
+        notify('error', $lang['xfields_msge_errcsave']);
+        logger("Failed to save config: {$field}, section: {$sectionID}", 'error');
         showAddEditForm($data, $editMode, $field);
         return;
     }
     // Now we should update table `_news` structure and content
     if (!($tableName = xf_getTableBySectionID($sectionID))) {
-        echo $lang['xfconfig']['err.unknown_section'] . ' (' . $sectionID . ')';
+        echo 'Ошибка: неизвестная секция/блок (' . $sectionID . ')';
         return;
     }
     $found = 0;
@@ -531,14 +547,16 @@ function doUpdate()
 {
     global $xf, $XF, $lang, $tpl, $mysql, $sectionID;
     $error = 0;
-    $field = $_REQUEST['field'];
+    $field = $_REQUEST['field'] ?? '';
     // Check if field exists or not [depends on mode]
     if (!isset($xf[$sectionID][$field]) || !is_array($xf[$sectionID][$field])) {
-        msg(['type' => 'error', 'text' => $lang['xfields_msge_noexists'] . '(' . $sectionID . ': ' . $field . ')']);
+        notify('error', $lang['xfields_msge_noexists'] . '(' . $sectionID . ': ' . $field . ')');
+        logger("Field not found for update: {$field}, section: {$sectionID}", 'error');
         $error = 1;
     }
     $notif = '';
-    switch ($_REQUEST['subaction']) {
+    $subaction = $_REQUEST['subaction'] ?? '';
+    switch ($subaction) {
         case 'del':        // Delete field from SQL table if required
             if (($XF[$sectionID][$field]['storage']) && ($tableName = xf_getTableBySectionID($sectionID))) {
                 // Check if field really exist
@@ -568,7 +586,8 @@ function doUpdate()
             $notif = $lang['xfields_updateunk'];
     }
     if (!xf_configSave()) {
-        msg(['type' => 'error', 'text' => $lang['xfields_msge_errcsave']]);
+        notify('error', $lang['xfields_msge_errcsave']);
+        logger("Failed to save config after update: {$field}, section: {$sectionID}, action: {$subaction}", 'error');
         return;
     }
     $xf = $XF;
