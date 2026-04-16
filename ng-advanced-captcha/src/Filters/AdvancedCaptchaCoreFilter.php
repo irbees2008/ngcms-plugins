@@ -20,7 +20,7 @@ class AdvancedCaptchaCoreFilter
     /**
      * Добавление виджета капчи в форму регистрации
      */
-    public function registrationForm(&$tVars)
+    public function registerUserForm(&$tVars)
     {
         $tVars['captcha_widget'] = $this->captcha->generateWidget('register');
     }

@@ -183,17 +183,11 @@ class AdvancedCaptcha
         }
         $pluginUrl = home . '/engine/plugins/ng-advanced-captcha';
         return $this->view('captcha-widget', [
-            'form_id'      => $formId,
-            'type'         => $this->currentType,
-            'challenge'    => $challenge,
-            'honeypot'     => $honeypot,
-            'plugin_url'   => $pluginUrl,
-            'lbl_math'     => trans($this->plugin . ':tpl.label.math'),
-            'lbl_text'     => trans($this->plugin . ':tpl.label.text'),
-            'lbl_question' => trans($this->plugin . ':tpl.label.question'),
-            'ph_answer'    => trans($this->plugin . ':tpl.placeholder.answer'),
-            'ph_symbols'   => trans($this->plugin . ':tpl.placeholder.symbols'),
-            'btn_refresh'  => trans($this->plugin . ':tpl.btn.refresh'),
+            'form_id' => $formId,
+            'type' => $this->currentType,
+            'challenge' => $challenge,
+            'honeypot' => $honeypot,
+            'plugin_url' => $pluginUrl,
         ]);
     }
     /**

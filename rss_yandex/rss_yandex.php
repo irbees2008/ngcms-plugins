@@ -1,29 +1,41 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
+
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	} else {
+		die('ng-helpers plugin is required for rss_yandex plugin');
+	}
+}
+
+// Modernized with ng-helpers v0.2.2 (2026)
+// - Using cache_get/cache_put for caching
+// - Added logger() for enhanced logging
+// - Requires PHP 8.0+
+
+use function Plugins\{cache_get, cache_put, logger};
 
 include_once root . "/includes/news.php";
-
 register_plugin_page('rss_yandex', '', 'plugin_rss_yandex', 0);
 register_plugin_page('rss_yandex', 'category', 'plugin_rss_yandex_category', 0);
-
-function plugin_rss_yandex() {
+function plugin_rss_yandex()
+{
 	plugin_rss_yandex_generate();
 }
-
-function plugin_rss_yandex_category($params) {
-
+function plugin_rss_yandex_category($params)
+{
 	plugin_rss_yandex_generate($params['category']);
 }
-
-function plugin_rss_yandex_generate($catname = '') {
-
+function plugin_rss_yandex_generate($catname = '')
+{
 	global $lang, $PFILTERS, $template, $config, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $mysql, $catz, $parse;
-	
 	// Initiate instance of TWIG engine with string loader
 	//$twigString = new Twig_Environment($twigStringLoader);
 	// Disable executing of `index` action (widget plugins and so on..)
-	
 	actionDisable('index');
 	// Suppress templates
 	$SUPRESS_TEMPLATE_SHOW = 1;
@@ -40,12 +52,13 @@ function plugin_rss_yandex_generate($catname = '') {
 	// Generate cache file name [ we should take into account SWITCHER plugin ]
 	// Take into account: FLAG: use_hide, check if user is logged in
 	$cacheFileName = md5('rss_yandex' . $config['theme'] . $config['home_url'] . $config['default_lang'] . (is_array($xcat) ? $xcat['id'] : '') . pluginGetVariable('rss_yandex', 'use_hide') . is_array($userROW)) . '.txt';
-	if (pluginGetVariable('rss_yandex', 'cache')) {
-		$cacheData = cacheRetrieveFile($cacheFileName, pluginGetVariable('rss_yandex', 'cacheExpire'), 'rss_yandex');
-		if ($cacheData != false) {
-			// We got data from cache. Return it and stop
-			print $cacheData;
-
+	$cacheExpire = pluginGetVariable('rss_yandex', 'cache') ? intval(pluginGetVariable('rss_yandex', 'cacheExpire')) * 60 : 0;
+	if ($cacheExpire > 0) {
+		$cacheKey = 'rss_yandex_' . $cacheFileName;
+		$cached = cache_get($cacheKey);
+		if ($cached !== null) {
+			logger('[rss_yandex] Cache hit: cat=' . ($catname ?: 'all'), 'debug', 'rss_yandex.log');
+			print $cached;
 			return;
 		}
 	}
@@ -67,10 +80,22 @@ function plugin_rss_yandex_generate($catname = '') {
 		$query = "select * from " . prefix . "_news where approve=1 ";
 	}
 	$query .= (($delay > 0) ? (" and ((postdate + " . intval($delay * 60) . ") < unix_timestamp(now())) ") : '');
-	$query .= " and ((postdate + " . intval($maxAge * 86400) . ") > unix_timestamp(now())) ";
+	// Фильтр по возрасту новостей - только если задан параметр news_age
+	if ($maxAge > 0) {
+		$query .= " and ((postdate + " . intval($maxAge * 86400) . ") > unix_timestamp(now())) ";
+		logger('[rss_yandex] Filtering news by age: ' . $maxAge . ' days', 'debug', 'rss_yandex.log');
+	}
 	$query .= "" . " order by " . $orderBy;
+	
+	// Логируем SQL запрос для отладки
+	logger('[rss_yandex] SQL: ' . $query, 'debug', 'rss_yandex.log');
+	
 	// Fetch SQL record
 	$sqlData = $mysql->select($query . " limit 100");
+	
+	// Логируем количество найденных новостей
+	logger('[rss_yandex] Found ' . count($sqlData) . ' news items', 'info', 'rss_yandex.log');
+	
 	// Check if enclosure is requested and used for "images" field
 	$xFList = array();
 	$encImages = array();
@@ -84,7 +109,7 @@ function plugin_rss_yandex_generate($catname = '') {
 			$nAList = array();
 			foreach ($sqlData as $row) {
 				if ($row['num_images'] > 0)
-					$nAList [] = $row['id'];
+					$nAList[] = $row['id'];
 			}
 			$iQuery = "select * from " . prefix . "_images where (linked_ds = 1) and (linked_id in (" . join(",", $nAList) . ")) and (plugin = 'xfields') and (pidentity = " . db_squote($eFieldName) . ")";
 			foreach ($mysql->select($iQuery) as $row) {
@@ -93,7 +118,6 @@ function plugin_rss_yandex_generate($catname = '') {
 			}
 		}
 	}
-
 	foreach ($sqlData as $row) {
 		// Make standard system call in 'export' mode
 		$newsVars = news_showone($row['id'], '', array(
@@ -102,7 +126,6 @@ function plugin_rss_yandex_generate($catname = '') {
 			'extractEmbeddedItems' => pluginGetVariable('rss_yandex', 'textEnclosureEnabled') ? 1 : 0,
 			'plugin' => 'rss_yandex'
 		));
-
 		$export_mode = 'export_body';
 		switch (pluginGetVariable('rss_yandex', 'full_format')) {
 			case '1':
@@ -113,9 +136,7 @@ function plugin_rss_yandex_generate($catname = '') {
 				break;
 		}
 		$content = news_showone($row['id'], '', array('emulate' => $row, 'style' => $export_mode, 'plugin' => 'rss_yandex'));
-
 		$enclosureList = array();
-
 		// Check if Enclosure `xfields` integration is activated
 		if (pluginGetVariable('rss_yandex', 'xfEnclosureEnabled') && getPluginStatusActive('xfields')) {
 			include_once(root . "/plugins/xfields/xfields.php");
@@ -128,11 +149,9 @@ function plugin_rss_yandex_generate($catname = '') {
 				} else {
 					$enclosureUrl = $xfd[pluginGetVariable('rss_yandex', 'xfEnclosure')];
 				}
-
 				if ($enclosureUrl) {
 					$fileSize = 0;
 					$mimeType = 'application/octet-stream';
-
 					if (filter_var($enclosureUrl, FILTER_VALIDATE_URL)) {
 						$headers = @get_headers($enclosureUrl, 1);
 						$fileSize = isset($headers['Content-Length']) ? $headers['Content-Length'] : 0;
@@ -143,58 +162,48 @@ function plugin_rss_yandex_generate($catname = '') {
 							$mimeType = mime_content_type($enclosureUrl);
 						}
 					}
-
 					$enclosureList[] = '   <enclosure url="' . $enclosureUrl . '" length="' . $fileSize . '" type="' . $mimeType . '" />';
 				}
 			}
 		}
-
 		// Check if embedded items should be exported in enclosure
 		if (pluginGetVariable('rss_yandex', 'textEnclosureEnabled') && isset($newsVars['news']['embed']['images']) && is_array($newsVars['news']['embed']['images'])) {
 			foreach ($newsVars['news']['embed']['images'] as $url) {
 				if (!preg_match('#^http(s{0,1})\:\/\/#', $url)) {
 					$url = home . $url;
 				}
-
 				$fileSize = 0;
 				$mimeType = 'image/jpeg';
-
 				if (filter_var($url, FILTER_VALIDATE_URL)) {
 					$headers = @get_headers($url, 1);
 					$fileSize = isset($headers['Content-Length']) ? $headers['Content-Length'] : 0;
 					$mimeType = isset($headers['Content-Type']) ? $headers['Content-Type'] : 'image/jpeg';
 				}
-
 				$enclosureList[] = '   <enclosure url="' . $url . '" length="' . $fileSize . '" type="' . $mimeType . '" />';
 			}
 		}
-
 		$newsTitleFormat = str_replace(
 			array('%site_title%', '%news_title%', '%cat_title%'),
 			array($config['home_title'], secure_html($row['title']), GetCategories($row['catid'], true)),
 			pluginGetVariable('rss_yandex', 'news_title')
 		);
-
 		// Обрезаем описание до 500 символов и убираем HTML-теги
 		$shortDescription = strip_tags($newsVars['short-story']); // Убираем HTML-теги
 		$shortDescription = mb_substr($shortDescription, 0, 500, 'UTF-8'); // Обрезаем до 500 символов
 		if (mb_strlen($newsVars['short-story'], 'UTF-8') > 500) {
 			$shortDescription .= '...'; // Добавляем многоточие, если текст был обрезан
 		}
-
 		$output .= "  <item>\n";
 		$output .= "   <title><![CDATA[" . $newsTitleFormat . "]]></title>\n";
 		$output .= "   <link><![CDATA[" . newsGenerateLink($row, false, 0, true) . "]]></link>\n";
 		$output .= "   <pubDate>" . gmstrftime('%a, %d %b %Y %H:%M:%S GMT', $row['postdate']) . "</pubDate>\n";
 		$output .= "   <yandex:full-text>" . htmlspecialchars($content) . "</yandex:full-text>\n";
 		$output .= "   <description><![CDATA[" . htmlspecialchars($shortDescription) . "]]></description>\n";
-
 		// Generate list of enclosures
 		$output .= join("\n", $enclosureList);
 		if (count($enclosureList)) {
 			$output .= "\n";
 		}
-
 		if (is_array($xcat)) {
 			$main_cat_name = $xcat['name'];
 		} else {
@@ -207,58 +216,62 @@ function plugin_rss_yandex_generate($catname = '') {
 	}
 	setlocale(LC_TIME, $old_locale);
 	$output .= " </channel>\n</rss>\n";
+	// Save to cache
+	if ($cacheExpire > 0) {
+		$cacheKey = 'rss_yandex_' . $cacheFileName;
+		cache_put($cacheKey, $output, $cacheExpire / 60);
+		logger('[rss_yandex] Cached: cat=' . ($catname ?: 'all') . ', size=' . strlen($output), 'info', 'rss_yandex.log');
+	}
 	// Print output
 	print $output;
-	if (pluginGetVariable('rss_yandex', 'cache')) {
-		cacheStoreFile($cacheFileName, $output, 'rss_yandex');
-	}
 }
-
-function plugin_rss_yandex_mk_header($xcat) {
-
+function plugin_rss_yandex_mk_header($xcat)
+{
 	global $config;
 	// Initiate instance of TWIG engine with string loader
-
-	$feedTitleFormat = str_replace('%site_title%', $config['home_title'], pluginGetVariable('rss_yandex', 'feed_title')); 
+	$feedTitleFormat = str_replace('%site_title%', $config['home_title'], pluginGetVariable('rss_yandex', 'feed_title'));
 	// Generate RSS header
 	$line = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-$line .= ' <rss xmlns:yandex="http://news.yandex.ru" xmlns:media="http://search.yahoo.com/mrss/"
+	$line .= ' <rss xmlns:yandex="http://news.yandex.ru" xmlns:media="http://search.yahoo.com/mrss/"
     xmlns:turbo="http://turbo.yandex.ru" version="2.0">' . "\n";
-    $line .= " <channel>\n";
-        // Channel title
-        $line .= " <title>
+	$line .= " <channel>\n";
+	// Channel title
+	$line .= " <title>
             <![CDATA[" . $feedTitleFormat/* $config['home_title'] . (is_array($xcat) ? ' :: ' . $xcat['name'] : '') */ . "]]>
         </title>\n";
-        // LINK
-        $line .= "
+	// LINK
+	$line .= "
         <link>
         <![CDATA[" . $config['home_url'] . "]]>
         </link>\n";
-        // Description
-        $line .= " <description>
+	// Description
+	$line .= " <description>
             <![CDATA[" . $config['description'] . "]]>
         </description>\n";
-        // Image
-        $imgInfo = array(
-        'url' => pluginGetVariable('rss_yandex', 'feed_image_url') ? pluginGetVariable('rss_yandex', 'feed_image_url') :
-        'http://ngcms.ru/templates/ngcms2/images/logo.png',
-        'title' => pluginGetVariable('rss_yandex', 'feed_image_title') ? pluginGetVariable('rss_yandex',
-        'feed_image_title') : 'Next generation CMS demo RSS feed',
-        'link' => pluginGetVariable('rss_yandex', 'feed_image_link') ? pluginGetVariable('rss_yandex',
-        'feed_image_link') : 'http://ngcms.ru/',
-        );
-        $line .= " <image>\n";
-            $line .= " <url>" . $imgInfo['url'] . "</url>\n";
-            $line .= " <title>
+	// Image
+	$imgInfo = array(
+		'url' => pluginGetVariable('rss_yandex', 'feed_image_url') ? pluginGetVariable('rss_yandex', 'feed_image_url') :
+			'http://ngcms.ru/templates/ngcms2/images/logo.png',
+		'title' => pluginGetVariable('rss_yandex', 'feed_image_title') ? pluginGetVariable(
+			'rss_yandex',
+			'feed_image_title'
+		) : 'Next generation CMS demo RSS feed',
+		'link' => pluginGetVariable('rss_yandex', 'feed_image_link') ? pluginGetVariable(
+			'rss_yandex',
+			'feed_image_link'
+		) : 'http://ngcms.ru/',
+	);
+	$line .= " <image>\n";
+	$line .= " <url>" . $imgInfo['url'] . "</url>\n";
+	$line .= " <title>
                 <![CDATA[" . $imgInfo['title'] . "]]>
             </title>\n";
-            $line .= "
+	$line .= "
             <link>" . $imgInfo['link'] . "</link>\n";
-            $line .= "
+	$line .= "
         </image>\n";
-        $line .= " <generator>
+	$line .= " <generator>
             <![CDATA[Plugin rss_yandex (0.01) // Next Generation CMS (" . engineVersion . ")]]>
         </generator>\n";
-
-        return $line;
-        }
+	return $line;
+}
