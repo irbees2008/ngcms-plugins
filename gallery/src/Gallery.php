@@ -1,4 +1,13 @@
 <?php
+
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\formatBytes')) {
+    $ngHelpersPath = __DIR__ . '/../../ng-helpers/ng-helpers.php';
+    if (file_exists($ngHelpersPath)) {
+        require_once $ngHelpersPath;
+    }
+}
+
 // Import ng-helpers functions
 use function Plugins\{cache_get, cache_put, formatBytes, logger, get_ip, notify, sanitize};
 
@@ -390,24 +399,52 @@ class PluginGallery
         global $userROW, $template, $tpl, $twig, $lang, $mysql, $TemplateCache, $SYSTEM_FLAGS;
         global $galleries;
 
+        // Debug logging
+        $debugFile = root . 'engine/cache/gallery_debug.txt';
+        file_put_contents($debugFile, date('Y-m-d H:i:s') . " - imagePageAction called\n", FILE_APPEND);
+        file_put_contents($debugFile, "Params: " . print_r($params, true) . "\n", FILE_APPEND);
+
         $imageName = ! empty($params['name']) ? secure_html($params['name']) : false;
-        $gallery['name'] = ! empty($params['gallery']) ? secure_html($params['gallery']) : false;
+        $galleryName = ! empty($params['gallery']) ? secure_html($params['gallery']) : false;
 
-        if (! $imageName or ! $gallery['name']) {
+        file_put_contents($debugFile, "Image: $imageName, Gallery: $galleryName\n", FILE_APPEND);
+
+        if (! $imageName or ! $galleryName) {
+            file_put_contents($debugFile, "ERROR: Missing image or gallery name\n", FILE_APPEND);
             error404();
             return false;
         }
 
-        if (! is_array($gallery = $this->galleries[$gallery['name']])) {
-            error404();
-            return false;
-        }
+        // Try to get gallery from cache first
+        if (isset($this->galleries[$galleryName]) && is_array($this->galleries[$galleryName])) {
+            $gallery = $this->galleries[$galleryName];
+            file_put_contents($debugFile, "Gallery found in cache: {$galleryName}\n", FILE_APPEND);
+        } else {
+            file_put_contents($debugFile, "Gallery NOT in cache, loading from DB: {$galleryName}\n", FILE_APPEND);
+            // If not in cache, try to load from database
+            $galleryRow = $mysql->record('SELECT * FROM ' . prefix . '_gallery WHERE name=' . db_squote($galleryName) . ' AND if_active=1 LIMIT 1');
+            if (!is_array($galleryRow) || empty($galleryRow)) {
+                file_put_contents($debugFile, "ERROR: Gallery not found in DB: {$galleryName}\n", FILE_APPEND);
+                if (function_exists('Plugins\\logger')) {
+                    logger('Gallery not found or inactive: ' . $galleryName, 'error', 'gallery.log');
+                }
+                error404();
+                return false;
+            }
 
-        $gallery['id'] = (int) $gallery['id'];
-        $gallery['name'] = secure_html($gallery['name']); // Reload name of gallery
-        $gallery['title'] = secure_html($gallery['title']);
-        $gallery['description'] = secure_html($gallery['description']);
-        $gallery['keywords'] = secure_html($gallery['keywords']);
+            $gallery = [
+                'id' => (int) $galleryRow['id'],
+                'name' => secure_html($galleryRow['name']),
+                'title' => secure_html($galleryRow['title']),
+                'description' => secure_html($galleryRow['description']),
+                'keywords' => secure_html($galleryRow['keywords']),
+            ];
+
+            file_put_contents($debugFile, "Gallery loaded from DB successfully\n", FILE_APPEND);
+            if (function_exists('Plugins\\logger')) {
+                logger('Gallery loaded from DB: ' . $galleryName, 'info', 'gallery.log');
+            }
+        }
 
         $SYSTEM_FLAGS['info']['title']['group'] = $this->pluginTitle . ' ' . $gallery['title'];
         $SYSTEM_FLAGS['info']['title']['item'] = $imageName;
@@ -423,9 +460,6 @@ class PluginGallery
             ['link' => generatePluginLink('gallery', 'image', ['gallery' => $gallery['name'], 'name' => $imageName]), 'text' => $imageName],
         ];
 
-        // Need to update count views
-        $mysql->query('UPDATE ' . prefix . '_images SET views=views+1 WHERE name=' . db_squote($imageName));
-
         // Temporaly disabled cached
         if ($this->params['cache']) {
             //$havePerm = (is_array($userROW) and (($userROW['status'] == 1) or ($userROW['status'] == 2) or ($row['author_id'] == $userROW['id'])));
@@ -436,7 +470,25 @@ class PluginGallery
             }
         }
 
-        $row = $mysql->record('SELECT * FROM ' . prefix . '_images WHERE folder=' . db_squote($gallery['name']) . ' and name=' . db_squote($imageName) . ' ORDER BY date LIMIT 1');
+        $row = $mysql->record('SELECT * FROM ' . prefix . '_images WHERE folder=' . db_squote($gallery['name']) . ' AND name=' . db_squote($imageName) . ' ORDER BY date LIMIT 1');
+
+        $debugFile = root . 'engine/cache/gallery_debug.txt';
+        file_put_contents($debugFile, "SQL query executed for image\n", FILE_APPEND);
+        file_put_contents($debugFile, "Result: " . print_r($row, true) . "\n", FILE_APPEND);
+
+        if (!is_array($row) || empty($row)) {
+            file_put_contents($debugFile, "ERROR: Image not found in DB\n", FILE_APPEND);
+            if (function_exists('Plugins\\logger')) {
+                logger('Image not found in DB: gallery=' . $gallery['name'] . ', name=' . $imageName, 'error', 'gallery.log');
+            }
+            error404();
+            return false;
+        }
+
+        file_put_contents($debugFile, "SUCCESS: Image found in DB, ID=" . $row['id'] . "\n", FILE_APPEND);
+
+        // Update views count AFTER confirming image exists
+        $mysql->query('UPDATE ' . prefix . '_images SET views=views+1 WHERE folder=' . db_squote($gallery['name']) . ' AND name=' . db_squote($imageName));
 
         $row['id'] = (int) $row['id'];
         $row['com'] = (int) $row['com'];

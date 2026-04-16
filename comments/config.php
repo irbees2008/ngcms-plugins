@@ -2,6 +2,14 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\array_get')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	}
+}
+
 use function Plugins\{array_get};
 
 //

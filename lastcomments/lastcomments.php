@@ -1,15 +1,26 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	} else {
+		die('ng-helpers plugin is required for lastcomments plugin');
+	}
+}
+
 // Modernized with ng-helpers v0.2.2 (2026)
-// - Replaced cacheRetrieveFile/cacheStoreFile with cache() helper
+// - Using cache_get/cache_put for caching
 // - Added time_ago for human-readable timestamps
 // - Added excerpt for better text truncation
 // - Added logger for operations tracking
 // - Added sanitize for data cleaning
 // - Added array_get for safe access
 // Import ng-helpers functions
-use function Plugins\{cache, time_ago, excerpt, logger, sanitize, array_get};
+use function Plugins\{cache_get, cache_put, time_ago, excerpt, logger, sanitize, array_get};
 
 define('lastcomments_version', '0.11');
 loadPluginLang('lastcomments', 'main', '', '', ':');
@@ -91,10 +102,8 @@ function lastcomments($mode = 0)
 	$cacheKey = "lastcomments_{$config['theme']}_{$config['default_lang']}_{$tpl_prefix}_{$page}";
 	if (pluginGetVariable('lastcomments', 'cache')) {
 		$cacheExpire = intval(pluginGetVariable('lastcomments', 'cacheExpire')) ?: 30;
-		// Try to get from cache using ng-helpers cache() function
-		$cacheData = cache($cacheKey, function () {
-			return null; // Cache miss, will regenerate below
-		}, $cacheExpire * 60); // Convert minutes to seconds
+		// Try to get from cache
+		$cacheData = cache_get($cacheKey);
 		if ($cacheData !== null) {
 			logger('[lastcomments] Cache hit: ' . $cacheKey, 'debug', 'lastcomments.log');
 			return $cacheData;
@@ -122,6 +131,8 @@ function lastcomments($mode = 0)
 	$number = max(1, min(50, $number));
 	$comm_length = max(10, min(500, $comm_length));
 	logger('[lastcomments] Mode: ' . $mode . ', prefix: "' . $tpl_prefix . '", number: ' . $number . ', length: ' . $comm_length, 'debug', 'lastcomments.log');
+
+	$old_locale = null;
 	if ($mode == 2) {
 		$old_locale = setlocale(LC_TIME, 0);
 		setlocale(LC_TIME, 'en_EN');
@@ -222,7 +233,7 @@ function lastcomments($mode = 0)
 			'avatar_url'    => $avatar_url,
 			'answer'        => $answer,
 			'name'          => $name,
-			'alternating'   => ($comnum % 2) ? "lastcomments_even" : "lastcomments_odd",
+			'alternating'   => ($comm_num % 2) ? "lastcomments_even" : "lastcomments_odd",
 			'rsslink'       => home . "?id=" . $row['nid'],
 			'rssdate'       => gmstrftime('%a, %d %b %Y %H:%M:%S GMT', $row['postdate']),
 		);
@@ -271,13 +282,13 @@ function lastcomments($mode = 0)
 	$tVars['lastcomments_url'] = generatePluginLink('lastcomments', null);
 	$tVars['lastcomments_url_rss'] = generatePluginLink('lastcomments', 'rss');
 	$output = $xt->render($tVars);
-	if ($mode == 2) setlocale(LC_TIME, $old_locale);
-	// Cache the output using ng-helpers cache() function
+	if ($mode == 2 && $old_locale !== null) {
+		setlocale(LC_TIME, $old_locale);
+	}
+	// Cache the output
 	if (pluginGetVariable('lastcomments', 'cache')) {
 		$cacheExpire = intval(pluginGetVariable('lastcomments', 'cacheExpire')) ?: 30;
-		cache($cacheKey, function () use ($output) {
-			return $output;
-		}, $cacheExpire * 60);
+		cache_put($cacheKey, $output, $cacheExpire);
 		logger('[lastcomments] Generated and cached: ' . strlen($output) . ' bytes, ' . $comm_num . ' comments', 'info', 'lastcomments.log');
 	}
 	return $output;

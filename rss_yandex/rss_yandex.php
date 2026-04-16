@@ -2,11 +2,22 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	} else {
+		die('ng-helpers plugin is required for rss_yandex plugin');
+	}
+}
+
 // Modernized with ng-helpers v0.2.2 (2026)
+// - Using cache_get/cache_put for caching
 // - Added logger() for enhanced logging
 // - Requires PHP 8.0+
 
-use function Plugins\{logger};
+use function Plugins\{cache_get, cache_put, logger};
 
 include_once root . "/includes/news.php";
 register_plugin_page('rss_yandex', '', 'plugin_rss_yandex', 0);
@@ -44,9 +55,7 @@ function plugin_rss_yandex_generate($catname = '')
 	$cacheExpire = pluginGetVariable('rss_yandex', 'cache') ? intval(pluginGetVariable('rss_yandex', 'cacheExpire')) * 60 : 0;
 	if ($cacheExpire > 0) {
 		$cacheKey = 'rss_yandex_' . $cacheFileName;
-		$cached = cache($cacheKey, function () {
-			return null;
-		}, $cacheExpire);
+		$cached = cache_get($cacheKey);
 		if ($cached !== null) {
 			logger('[rss_yandex] Cache hit: cat=' . ($catname ?: 'all'), 'debug', 'rss_yandex.log');
 			print $cached;
@@ -71,10 +80,22 @@ function plugin_rss_yandex_generate($catname = '')
 		$query = "select * from " . prefix . "_news where approve=1 ";
 	}
 	$query .= (($delay > 0) ? (" and ((postdate + " . intval($delay * 60) . ") < unix_timestamp(now())) ") : '');
-	$query .= " and ((postdate + " . intval($maxAge * 86400) . ") > unix_timestamp(now())) ";
+	// Фильтр по возрасту новостей - только если задан параметр news_age
+	if ($maxAge > 0) {
+		$query .= " and ((postdate + " . intval($maxAge * 86400) . ") > unix_timestamp(now())) ";
+		logger('[rss_yandex] Filtering news by age: ' . $maxAge . ' days', 'debug', 'rss_yandex.log');
+	}
 	$query .= "" . " order by " . $orderBy;
+	
+	// Логируем SQL запрос для отладки
+	logger('[rss_yandex] SQL: ' . $query, 'debug', 'rss_yandex.log');
+	
 	// Fetch SQL record
 	$sqlData = $mysql->select($query . " limit 100");
+	
+	// Логируем количество найденных новостей
+	logger('[rss_yandex] Found ' . count($sqlData) . ' news items', 'info', 'rss_yandex.log');
+	
 	// Check if enclosure is requested and used for "images" field
 	$xFList = array();
 	$encImages = array();
@@ -198,9 +219,7 @@ function plugin_rss_yandex_generate($catname = '')
 	// Save to cache
 	if ($cacheExpire > 0) {
 		$cacheKey = 'rss_yandex_' . $cacheFileName;
-		cache($cacheKey, function () use ($output) {
-			return $output;
-		}, $cacheExpire);
+		cache_put($cacheKey, $output, $cacheExpire / 60);
 		logger('[rss_yandex] Cached: cat=' . ($catname ?: 'all') . ', size=' . strlen($output), 'info', 'rss_yandex.log');
 	}
 	// Print output
