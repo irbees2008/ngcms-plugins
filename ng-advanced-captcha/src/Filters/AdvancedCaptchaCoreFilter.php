@@ -26,6 +26,14 @@ class AdvancedCaptchaCoreFilter
     }
 
     /**
+     * Добавление виджета капчи в форму восстановления пароля
+     */
+    public function lostpasswordForm(&$tVars)
+    {
+        $tVars['captcha_widget'] = $this->captcha->generateWidget('lostpassword');
+    }
+
+    /**
      * Проверка капчи при регистрации
      */
     public function registerUser($params)
@@ -41,6 +49,22 @@ class AdvancedCaptchaCoreFilter
         }
 
         logger('ng-advanced-captcha: Registration captcha verified', 'info');
+        return true;
+    }
+
+    /**
+     * Проверка капчи при восстановлении пароля
+     */
+    public function lostpassword(&$msg, &$params, &$values)
+    {
+        if (! $this->captcha->verifying('lostpassword')) {
+            $error = $this->captcha->rejectionReason();
+            $msg = $error;
+            logger('ng-advanced-captcha: Lostpassword blocked - ' . $error, 'warning');
+            return false;
+        }
+
+        logger('ng-advanced-captcha: Lostpassword captcha verified', 'info');
         return true;
     }
 }

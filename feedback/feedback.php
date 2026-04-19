@@ -4,6 +4,14 @@ if (!defined('NGCMS')) {
     die('HAL');
 }
 
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+    $ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+    if (file_exists($ngHelpersPath)) {
+        require_once $ngHelpersPath;
+    }
+}
+
 // Modified with ng-helpers v0.2.0 functions (2026)
 // - Added CSRF protection
 // - Added email/phone validation
@@ -16,78 +24,86 @@ use function Plugins\{validate_email, validate_phone, sanitize, csrf_field, vali
 
 // Wrapper functions for ng-helpers compatibility
 if (!function_exists('fb_array_get')) {
-	function fb_array_get($array, $key, $default = null) {
-		if (function_exists('Plugins\\array_get')) {
-			return \Plugins\fb_array_get($array, $key, $default);
-		}
-		return $array[$key] ?? $default;
-	}
+    function fb_array_get($array, $key, $default = null)
+    {
+        if (function_exists('Plugins\\array_get')) {
+            return \Plugins\array_get($array, $key, $default);
+        }
+        return $array[$key] ?? $default;
+    }
 }
 
 if (!function_exists('fb_sanitize')) {
-	function fb_sanitize($data, $type = 'string') {
-		if (function_exists('Plugins\\sanitize')) {
-			return \Plugins\fb_sanitize($data, $type);
-		}
-		if ($type === 'html') {
-			return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
-		}
-		return strip_tags($data);
-	}
+    function fb_sanitize($data, $type = 'string')
+    {
+        if (function_exists('Plugins\\sanitize')) {
+            return \Plugins\sanitize($data, $type);
+        }
+        if ($type === 'html') {
+            return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+        }
+        return strip_tags($data);
+    }
 }
 
 if (!function_exists('fb_logger')) {
-	function fb_logger($message, $level = 'info', $file = '') {
-		if (function_exists('Plugins\\logger')) {
-			return \Plugins\fb_logger($message, $level, $file);
-		}
-		error_log("[$level] $message");
-	}
+    function fb_logger($message, $level = 'info', $file = '')
+    {
+        if (function_exists('Plugins\\logger')) {
+            return \Plugins\logger($message, $level, $file);
+        }
+        error_log("[$level] $message");
+    }
 }
 
 if (!function_exists('fb_get_ip')) {
-	function fb_get_ip() {
-		if (function_exists('Plugins\\get_ip')) {
-			return \Plugins\fb_get_ip();
-		}
-		return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-	}
+    function fb_get_ip()
+    {
+        if (function_exists('Plugins\\get_ip')) {
+            return \Plugins\get_ip();
+        }
+        return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    }
 }
 
 if (!function_exists('fb_is_post')) {
-	function fb_is_post() {
-		if (function_exists('Plugins\\is_post')) {
-			return \Plugins\fb_is_post();
-		}
-		return $_SERVER['REQUEST_METHOD'] === 'POST';
-	}
+    function fb_is_post()
+    {
+        if (function_exists('Plugins\\is_post')) {
+            return \Plugins\is_post();
+        }
+        return $_SERVER['REQUEST_METHOD'] === 'POST';
+    }
 }
 
 if (!function_exists('fb_validate_csrf')) {
-	function fb_validate_csrf() {
-		if (function_exists('Plugins\\validate_csrf')) {
-			return \Plugins\fb_validate_csrf();
-		}
-		return true; // Skip validation if ng-helpers not loaded
-	}
+    function fb_validate_csrf()
+    {
+        if (function_exists('Plugins\\validate_csrf')) {
+            return \Plugins\validate_csrf();
+        }
+        return true; // Skip validation if ng-helpers not loaded
+    }
 }
 
 if (!function_exists('fb_csrf_field')) {
-	function fb_csrf_field() {
-		if (function_exists('Plugins\\csrf_field')) {
-			return \Plugins\fb_csrf_field();
-		}
-		return '';
-	}
+    function fb_csrf_field()
+    {
+        if (function_exists('Plugins\\csrf_field')) {
+            return \Plugins\csrf_field();
+        }
+        return '';
+    }
 }
 
 if (!function_exists('fb_validate_email')) {
-	function fb_validate_email($email) {
-		if (function_exists('Plugins\\validate_email')) {
-			return \Plugins\fb_validate_email($email);
-		}
-		return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
-	}
+    function fb_validate_email($email)
+    {
+        if (function_exists('Plugins\\validate_email')) {
+            return \Plugins\validate_email($email);
+        }
+        return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+    }
 }
 
 register_plugin_page('feedback', '', 'plugin_feedback_screen', 0);
@@ -297,13 +313,13 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '', $successText = '
     if (substr($frow['flags'], 0, 1)) {
         $tVars['flags']['jcheck'] = 1;
     }
-    // Check if we need captcha
-    if (substr($frow['flags'], 1, 1)) {
-        $tVars['flags']['captcha'] = 1;
-        $tVars['captcha_url'] = admin_url . '/captcha.php?id=feedback';
-        $tVars['captcha_rand'] = rand(00000, 99999);
-        $_SESSION['captcha.feedback'] = rand(00000, 99999);
-    }
+    // OLD captcha system - deprecated, now handled by ng-advanced-captcha plugin
+    // if (substr($frow['flags'], 1, 1)) {
+    //     $tVars['flags']['captcha'] = 1;
+    //     $tVars['captcha_url'] = admin_url . '/captcha.php?id=feedback';
+    //     $tVars['captcha_rand'] = rand(00000, 99999);
+    //     $_SESSION['captcha.feedback'] = rand(00000, 99999);
+    // }
     // Check if we need to show `select destination notification address` menu
     $em = unserialize($frow['emails']);
     if ($em === false) {
@@ -410,15 +426,15 @@ function plugin_feedback_post()
             }
         }
     }
-    // Check if captcha check if needed
-    if (substr($frow['flags'], 1, 1)) {
-        $vcode = fb_array_get($_REQUEST, 'vcode', '');
-        if ((!$vcode) || ($vcode != $_SESSION['captcha.feedback'])) {
-            // Wrong CAPTCHA code (!!!)
-            plugin_feedback_showScreen(1, $lang['feedback:sform.captcha.badcode']);
-            return;
-        }
-    }
+    // OLD captcha check - deprecated, now handled by filters
+    // if (substr($frow['flags'], 1, 1)) {
+    //     $vcode = fb_array_get($_REQUEST, 'vcode', '');
+    //     if ((!$vcode) || ($vcode != $_SESSION['captcha.feedback'])) {
+    //         // Wrong CAPTCHA code (!!!)
+    //         plugin_feedback_showScreen(1, $lang['feedback:sform.captcha.badcode']);
+    //         return;
+    //     }
+    // }
     // Check if user requested HTML message format
     $flagHTML = substr($frow['flags'], 2, 1) ? true : false;
     $flagSubj = substr($frow['flags'], 4, 1) ? true : false;
