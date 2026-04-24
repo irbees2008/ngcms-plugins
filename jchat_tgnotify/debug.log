@@ -1,11 +1,156 @@
-[2025-12-29 14:46:40] ВЫЗОВ jchat_tgnotify_send
+[2026-02-24 12:50:05] ВЫЗОВ jchat_tgnotify_send
 Данные: Array
 (
     [author] => irbees2008
-    [text] => rturturt
-    [datetime] => 2025-12-29 14:46:40
+    [text] => апрвапраоапр
+    [datetime] => 2026-02-24 12:50:05
     [ip] => 127.0.0.1
-    [url] => https://test.ru/none/pagpgoae.html
+    [url] => https://demo3.ru/
     [is_guest] => 
 )
+
+[2026-02-24 12:50:05] БЛОКИРОВАНО фильтрами
+
+[2026-02-24 12:50:12] ВЫЗОВ jchat_tgnotify_send
+Данные: Array
+(
+    [author] => irbees2008
+    [text] => еноеное
+    [datetime] => 2026-02-24 12:50:12
+    [ip] => 127.0.0.1
+    [url] => https://demo3.ru/
+    [is_guest] => 
+)
+
+[2026-02-24 12:50:12] БЛОКИРОВАНО фильтрами
+
+[2026-02-24 12:50:18] ВЫЗОВ jchat_tgnotify_send
+Данные: Array
+(
+    [author] => irbees2008
+    [text] => 😐
+    [datetime] => 2026-02-24 12:50:18
+    [ip] => 127.0.0.1
+    [url] => https://demo3.ru/
+    [is_guest] => 
+)
+
+[2026-02-24 12:50:18] БЛОКИРОВАНО фильтрами
+
+[2026-02-24 12:50:33] ВЫЗОВ jchat_tgnotify_send
+Данные: Array
+(
+    [author] => irbees2008
+    [text] => 😐
+    [datetime] => 2026-02-24 12:50:33
+    [ip] => 127.0.0.1
+    [url] => https://demo3.ru/
+    [is_guest] => 
+)
+
+[2026-02-24 12:50:33] БЛОКИРОВАНО фильтрами
+
+[2026-02-24 12:50:34] ВЫЗОВ jchat_tgnotify_send
+Данные: Array
+(
+    [author] => irbees2008
+    [text] => 😐
+    [datetime] => 2026-02-24 12:50:34
+    [ip] => 127.0.0.1
+    [url] => https://demo3.ru/
+    [is_guest] => 
+)
+
+[2026-02-24 12:50:34] БЛОКИРОВАНО фильтрами
+
+[2026-02-24 12:50:34] ВЫЗОВ jchat_tgnotify_send
+Данные: Array
+(
+    [author] => irbees2008
+    [text] => 😐
+    [datetime] => 2026-02-24 12:50:34
+    [ip] => 127.0.0.1
+    [url] => https://demo3.ru/
+    [is_guest] => 
+)
+
+[2026-02-24 12:50:34] БЛОКИРОВАНО фильтрами
+
+[2026-02-24 12:50:34] ВЫЗОВ jchat_tgnotify_send
+Данные: Array
+(
+    [author] => irbees2008
+    [text] => 😐
+    [datetime] => 2026-02-24 12:50:34
+    [ip] => 127.0.0.1
+    [url] => https://demo3.ru/
+    [is_guest] => 
+)
+
+[2026-02-24 12:50:34] БЛОКИРОВАНО фильтрами
+
+[2026-02-24 12:50:34] ВЫЗОВ jchat_tgnotify_send
+Данные: Array
+(
+    [author] => irbees2008
+    [text] => 😐
+    [datetime] => 2026-02-24 12:50:34
+    [ip] => 127.0.0.1
+    [url] => https://demo3.ru/
+    [is_guest] => 
+)
+
+[2026-02-24 12:50:34] БЛОКИРОВАНО фильтрами
+
+[2026-02-24 12:50:46] ВЫЗОВ jchat_tgnotify_send
+Данные: Array
+(
+    [author] => irbees2008
+    [text] => 🤤
+    [datetime] => 2026-02-24 12:50:46
+    [ip] => 127.0.0.1
+    [url] => https://demo3.ru/plugin/jchat/
+    [is_guest] => 
+)
+
+[2026-02-24 12:50:46] БЛОКИРОВАНО фильтрами
+
+[2026-02-24 14:12:57] ВЫЗОВ jchat_tgnotify_send
+Данные: Array
+(
+    [author] => irbees2008
+    [text] => 🤭
+    [datetime] => 2026-02-24 14:12:57
+    [ip] => 127.0.0.1
+    [url] => https://demo3.ru/plugin/jchat/
+    [is_guest] => 
+)
+
+[2026-02-24 14:12:57] БЛОКИРОВАНО фильтрами
+
+[2026-02-24 14:25:41] ВЫЗОВ jchat_tgnotify_send
+Данные: Array
+(
+    [author] => irbees2008
+    [text] => 😪
+    [datetime] => 2026-02-24 14:25:41
+    [ip] => 127.0.0.1
+    [url] => https://demo3.ru/plugin/jchat/
+    [is_guest] => 
+)
+
+[2026-02-24 14:25:41] БЛОКИРОВАНО фильтрами
+
+[2026-02-24 14:26:56] ВЫЗОВ jchat_tgnotify_send
+Данные: Array
+(
+    [author] => irbees2008
+    [text] => 💯
+    [datetime] => 2026-02-24 14:26:56
+    [ip] => 127.0.0.1
+    [url] => https://demo3.ru/
+    [is_guest] => 
+)
+
+[2026-02-24 14:26:56] БЛОКИРОВАНО фильтрами
 

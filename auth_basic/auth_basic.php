@@ -492,11 +492,8 @@ class auth_basic extends CoreAuthPlugin
 		$values['email'] = trim($values['email']);
 		LoadPluginLang('auth_basic', 'auth', '', 'auth');
 		$mode = pluginGetVariable('auth_basic', 'restorepw');
-		$logFile = root . 'engine/trash/restorepw.log';
-		@file_put_contents($logFile, date('Y-m-d H:i:s') . "\tMODE=" . var_export($mode, true) . "\tLOGIN=" . ($values['login'] ?? '') . "\tEMAIL=" . ($values['email'] ?? '') . "\n", FILE_APPEND);
 		if (!$mode) {
 			$msg = $lang['auth_norestore'];
-			@file_put_contents($logFile, date('Y-m-d H:i:s') . "\tERROR=RESTORE_DISABLED\n", FILE_APPEND);
 			$_SESSION['flash_notify'] = array(
 				'text' => $lang['auth_norestore'],
 				'type' => 'error',
@@ -507,7 +504,6 @@ class auth_basic extends CoreAuthPlugin
 		if ($mode != 'email') {
 			if (!$values['login']) {
 				$msg = $lang['auth_login_require'];
-				@file_put_contents($logFile, date('Y-m-d H:i:s') . "\tERROR=LOGIN_REQUIRED\n", FILE_APPEND);
 				$_SESSION['flash_notify'] = array(
 					'text' => $lang['auth_login_require'],
 					'type' => 'error',
@@ -519,7 +515,6 @@ class auth_basic extends CoreAuthPlugin
 		if ($mode != 'login') {
 			if (!$values['email']) {
 				$msg = $lang['auth_email_require'];
-				@file_put_contents($logFile, date('Y-m-d H:i:s') . "\tERROR=EMAIL_REQUIRED\n", FILE_APPEND);
 				$_SESSION['flash_notify'] = array(
 					'text' => $lang['auth_email_require'],
 					'type' => 'error',
@@ -530,7 +525,6 @@ class auth_basic extends CoreAuthPlugin
 		}
 		$query = 'select * from ' . uprefix . '_users where ' . implode(' and ', $px);
 		$row = $mysql->record($query);
-		@file_put_contents($logFile, date('Y-m-d H:i:s') . "\tQUERY=" . $query . "\tFOUND=" . (is_array($row) ? '1' : '0') . "\n", FILE_APPEND);
 		if (is_array($row)) {
 			$newpassword = MakeRandomPassword();
 			$mysql->query('UPDATE ' . uprefix . '_users SET newpw=' . db_squote(EncodePassword($newpassword)) . ' WHERE id=' . $row['id']);
@@ -548,13 +542,11 @@ class auth_basic extends CoreAuthPlugin
 				'text' => $lang['msgo_sent'],
 				'type' => 'success',
 			);
-			@file_put_contents($logFile, date('Y-m-d H:i:s') . "\tSENT_TO=" . $row['mail'] . "\n", FILE_APPEND);
 
 			logger('Password restore sent: user=' . sanitize($row['name']) . ', email=' . sanitize($row['mail']) . ', ip=' . get_ip(), 'info', 'auth_basic.log');
 			return 1;
 		} else {
 			$msg = $lang['auth_nouser'];
-			@file_put_contents($logFile, date('Y-m-d H:i:s') . "\tERROR=USER_NOT_FOUND\n", FILE_APPEND);
 			$_SESSION['flash_notify'] = array(
 				'text' => $lang['auth_nouser'],
 				'type' => 'error',

@@ -1,0 +1,127 @@
+# =========================================================================== #
+# NG CMS // Плагины // Информация об авторе новости                                   #
+# =========================================================================== #
+Плагин  позволяет выводить информацию из профиля пользователя автора новости на страницах новостей
+Переменные, доступные в шаблонах news.short.tpl, news.full.tpl:
+----------------------------------------
+// Для наглядности (и понимания списка доступных переменных) можно использовать TWIG функцию debugValue,
+// например так: {{ debugValue(p.news_author_info) }} - будут выведены все доступные доп. поля и их параметры/значения
+Общая струтура массива, выглядит так:
+'news_author_info' =>
+    array (
+    'info' =>
+        array (
+          'id' => '1',
+          'name' => 'admin',
+          'mail' => 'admin@test003.ru',
+          'news' => '1',
+          'status' => '1',
+          'last' => '1505172285',
+          'reg' => '1504953353',
+          'site' => '',
+          'icq' => '',
+          'where_from' => '',
+          'info' => '',
+          'avatar' => '',
+          'ip' => '127.0.0.1',
+          'xfields' => 'SER|a:1:{s:7:"uftest1";s:4:"Тест";}',
+        ),
+    'avatar' =>
+        array (
+          0 => 0,
+          1 => 'http://test003.ru/templates/default/img/user.png',
+        ),
+    'xfields' =>
+        array (
+          'uftest1' =>
+          array (
+            'value' => 'Тест',
+          ),
+        ),
+    )
+Так, например, чтобы вывести данные из xfields дополнительного поля с ID uftest1, нужно использовать блок:
+{% if pluginIsActive('news_author_info') %}
+    {% if(p.news_author_info.xfields.uftest1.value) %}
+       {{ p.news_author_info.xfields.uftest1.value }}
+    {% endif %}
+{% endif %}
+## Доступные переменные
+Структура массива данных:
+```twig
+p.news_author_info = {
+    'info':       { ... },  // Основная информация о пользователе
+    'avatar':     { ... },  // Данные аватара
+    'xfields':    { ... }   // Дополнительные поля (xfields)
+}
+```
+### 1. Основная информация (`p.news_author_info.info`)
+| Переменная       | Описание                                                                 | Пример значения           |
+|------------------|-------------------------------------------------------------------------|--------------------------|
+| `id`            | ID пользователя                                                         | `1`                      |
+| `name`          | Логин пользователя                                                      | `'admin'`                |
+| `mail`          | Email пользователя                                                      | `'admin@example.com'`    |
+| `news`          | Количество опубликованных новостей                                      | `5`                      |
+| `status`        | Статус пользователя (числовое значение)                                 | `1`                      |
+| `status_text`   | Текстовое представление статуса (требует модификации плагина)          | `'Администратор'`        |
+| `last`          | Timestamp последнего визита                                             | `1505172285`             |
+| `reg`           | Timestamp регистрации                                                   | `1504953353`             |
+| `where_from`    | Местоположение                                                          | `'Москва'`               |
+| `info`          | Дополнительная информация "О себе"                                      | `'Web-разработчик'`      |
+| `avatar`        | Имя файла аватара (устаревшее, используйте `p.news_author_info.avatar`) | `'avatar.jpg'`           |
+| `ip`            | IP-адрес                                                                | `'127.0.0.1'`            |
+| `xfields`       | Сереализованные данные xfields (используйте `p.news_author_info.xfields`)| `'SER|a:1:{...}'`        |
+### 2. Аватар (`p.news_author_info.avatar`)
+| Переменная | Описание                           | Пример значения                          |
+|------------|-----------------------------------|-----------------------------------------|
+| `[0]`      | Флаг наличия аватара (1/0)        | `1`                                     |
+| `[1]`      | URL аватара                       | `'http://site.ru/templates/avatar.jpg'` |
+### 3. Дополнительные поля (`p.news_author_info.xfields`)
+Структура для каждого xfield:
+```twig
+xfields: {
+    'FIELD_ID': {
+        'value': 'Значение поля',
+        // Для полей типа 'images':
+        'entries': [ ... ],  // Массив изображений
+        'count': N           // Количество изображений
+    }
+}
+```
+## Примеры использования
+### Вывод основной информации
+```twig
+{% if pluginIsActive('news_author_info') %}
+    Автор: {{ p.news_author_info.info.name }}
+    Статус: {{ p.news_author_info.info.status_text|default('Пользователь') }}
+    Зарегистрирован: {{ p.news_author_info.info.reg|date('d.m.Y') }}
+    {% if p.news_author_info.info.where_from %}
+        Из: {{ p.news_author_info.info.where_from }}
+    {% endif %}
+{% endif %}
+```
+### Вывод аватара
+```twig
+{% if pluginIsActive('news_author_info') and p.news_author_info.avatar[0] %}
+    <img src="{{ p.news_author_info.avatar[1] }}" alt="{{ p.news_author_info.info.name }}">
+{% endif %}
+```
+### Работа с xfields
+```twig
+{% if pluginIsActive('news_author_info') %}
+    {# Простое текстовое поле #}
+    {% if p.news_author_info.xfields.uftest1.value %}
+        Доп. поле: {{ p.news_author_info.xfields.uftest1.value }}
+    {% endif %}
+    {# Поле с изображениями #}
+    {% if p.news_author_info.xfields.images_field.count %}
+        <div class="user-images">
+            {% for image in p.news_author_info.xfields.images_field.entries %}
+                <img src="{{ image.url }}" alt="{{ image.origName }}">
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endif %}
+```
+## Требования
+- Активированный плагин `uprofile` для работы с аватарами
+- Активированный плагин `xfields` для работы с дополнительными полями

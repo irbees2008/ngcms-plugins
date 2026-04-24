@@ -24,6 +24,14 @@
 # protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	}
+}
+
 use function Plugins\{cache_get, cache_put, logger, sanitize, get_ip, str_limit, array_get, clamp};
 
 add_act('index', 'bookmarks_view');

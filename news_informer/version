@@ -1,0 +1,20 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: news_informer
+Name: Информер новостей
+Version: 1.0
+Acts: index
+File: news_informer.php
+Config: config.php
+Type: widget
+Description: Выводит блок новостей для вставки на другие сайты
+Author: Ваше имя
+Author_URI: http://example.com/
+Title: Информер новостей
+Information: Плагин выводит 5-10 последних новостей с изображениями, названиями, категориями и датами
+Preinstall: default_no
+Preinstall_vars: count="5"; cache="1"; cacheExpire="3600";
+MinEngineBuild: 2020731

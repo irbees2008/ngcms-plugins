@@ -86,16 +86,16 @@ function plugin_rss_yandex_generate($catname = '')
 		logger('[rss_yandex] Filtering news by age: ' . $maxAge . ' days', 'debug', 'rss_yandex.log');
 	}
 	$query .= "" . " order by " . $orderBy;
-	
+
 	// Логируем SQL запрос для отладки
 	logger('[rss_yandex] SQL: ' . $query, 'debug', 'rss_yandex.log');
-	
+
 	// Fetch SQL record
 	$sqlData = $mysql->select($query . " limit 100");
-	
+
 	// Логируем количество найденных новостей
 	logger('[rss_yandex] Found ' . count($sqlData) . ' news items', 'info', 'rss_yandex.log');
-	
+
 	// Check if enclosure is requested and used for "images" field
 	$xFList = array();
 	$encImages = array();

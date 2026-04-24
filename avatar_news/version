@@ -1,0 +1,13 @@
+ID: avatar_news
+Name: Avatar in News
+Version: 0.1
+Actions: news_full; avatar_news.php
+Type: plugin
+Title: Вывод аватара пользователя, который добавил новость
+Description: Вывод аватара пользователя, который добавил новость
+Information: Вывод аватара пользователя, который добавил новость
+Author: stdex
+Author_URI: http://rozard.ngdemo.ru/
+preinstall: no
+MinEngineBuild: 23b3116
+Icons: <i class="fa fa-user-o fa-3x" aria-hidden="true"></i>

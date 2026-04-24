@@ -192,7 +192,8 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                         if ($thumb) {
                             //print "THUMB_OK<br/>";
                             // If we created thumb - check if we need to transform it
-                            $stampThumb = ($data['thumbStamp'] && ($stampFileName != '')) ? 1 : 0;
+                            $hasTextStamp = !empty($config['wm_text']);
+                            $stampThumb = ($data['thumbStamp'] && ($stampFileName != '' || $hasTextStamp)) ? 1 : 0;
                             $shadowThumb = $data['thumbShadow'];
                             if ($shadowThumb || $stampThumb) {
                                 $stamp = $imanager->image_transform(
@@ -203,21 +204,41 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                                         'stamp_noerror'      => true,
                                         'shadow'             => $shadowThumb,
                                         'stampfile'          => $stampFileName,
+                                        'stamp_text'         => $config['wm_text'] ?? '',
+                                        'stamp_font'         => $config['wm_font'] ?? 'arial.ttf',
+                                        'stamp_font_size'    => $config['wm_font_size'] ?? 16,
+                                        'stamp_font_color'   => $config['wm_text_color'] ?? '#FFFFFF',
+                                        'stamp_text_opacity' => $config['wm_text_opacity'] ?? 80,
+                                        'stamp_bg_color'     => $config['wm_bg_color'] ?? '#000000',
+                                        'stamp_bg_opacity'   => $config['wm_bg_opacity'] ?? 50,
+                                        'stamp_position'     => $config['wm_position'] ?? 'bottom_right',
+                                        'stamp_tile_spacing' => $config['wm_tile_spacing'] ?? 200,
                                     ]
                                 );
                                 //print "THUMB [STAMP/SHADOW = (".$stamp.")]<br/>";
                             }
                         }
                     }
+                    $hasTextStamp = !empty($config['wm_text']);
                     if ($mkStamp || $mkShadow) {
+                        $realStamp = ($mkStamp && ($stampFileName != '' || $hasTextStamp)) ? 1 : 0;
                         $stamp = $imanager->image_transform(
                             [
                                 'image'              => $config['attach_dir'] . $up[2] . '/' . $up[1],
-                                'stamp'              => $mkStamp,
+                                'stamp'              => $realStamp,
                                 'stamp_transparency' => $config['wm_image_transition'],
                                 'stamp_noerror'      => true,
                                 'shadow'             => $mkShadow,
                                 'stampfile'          => $stampFileName,
+                                'stamp_text'         => $config['wm_text'] ?? '',
+                                'stamp_font'         => $config['wm_font'] ?? 'arial.ttf',
+                                'stamp_font_size'    => $config['wm_font_size'] ?? 16,
+                                'stamp_font_color'   => $config['wm_text_color'] ?? '#FFFFFF',
+                                'stamp_text_opacity' => $config['wm_text_opacity'] ?? 80,
+                                'stamp_bg_color'     => $config['wm_bg_color'] ?? '#000000',
+                                'stamp_bg_opacity'   => $config['wm_bg_opacity'] ?? 50,
+                                'stamp_position'     => $config['wm_position'] ?? 'bottom_right',
+                                'stamp_tile_spacing' => $config['wm_tile_spacing'] ?? 200,
                             ]
                         );
                         //print "IMG [STAMP/SHADOW = (".var_export($stamp, true).")]<br/>";
@@ -337,8 +358,8 @@ if (
             'width' => $row['width'],
             'height' => $row['height'],
             'preview' => $row['preview'] ? true : false,
-            'url' => '/uploads/dsn/' . $row['folder'] . '/' . $row['name'],
-            'thumb_url' => '/uploads/dsn/' . $row['folder'] . '/thumb/' . $row['name'],
+            'url' => $config['attach_url'] . '/' . $row['folder'] . '/' . $row['name'],
+            'thumb_url' => $config['attach_url'] . '/' . $row['folder'] . '/thumb/' . $row['name'],
             'news_title' => $row['news_title'] ? $row['news_title'] : 'Новость #' . $row['linked_id'],
             'field_id' => $row['pidentity']
         ];
@@ -725,12 +746,12 @@ class XFieldsNewsFilter extends NewsFilter
                                 'preview'     => [
                                     'width'  => $irow['p_width'],
                                     'height' => $irow['p_height'],
-                                    'url'    => '/uploads/dsn/' . $irow['folder'] . '/thumb/' . $irow['name'],
+                                    'url'    => $config['attach_url'] . '/' . $irow['folder'] . '/thumb/' . $irow['name'],
                                 ],
                                 'image'       => [
                                     'id'     => $irow['id'],
                                     'number' => $iCount,
-                                    'url'    => '/uploads/dsn/' . $irow['folder'] . '/' . $irow['name'],
+                                    'url'    => $config['attach_url'] . '/' . $irow['folder'] . '/' . $irow['name'],
                                     'width'  => $irow['width'],
                                     'height' => $irow['height'],
                                 ],
@@ -1064,7 +1085,7 @@ class XFieldsNewsFilter extends NewsFilter
                         ];
                         foreach ($imglist as $imgInfo) {
                             $tiEntry = [
-                                'url'         => ($imgInfo['storage'] ? '/uploads/dsn' : $config['images_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'],
+                                'url'         => ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'],
                                 'width'       => $imgInfo['width'],
                                 'height'      => $imgInfo['height'],
                                 'pwidth'      => $imgInfo['p_width'],
@@ -1077,7 +1098,7 @@ class XFieldsNewsFilter extends NewsFilter
                                 ],
                             ];
                             if ($imgInfo['preview']) {
-                                $tiEntry['purl'] = ($imgInfo['storage'] ? '/uploads/dsn' : $config['images_url']) . '/' . $imgInfo['folder'] . '/thumb/' . $imgInfo['name'];
+                                $tiEntry['purl'] = ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']) . '/' . $imgInfo['folder'] . '/thumb/' . $imgInfo['name'];
                             }
                             $tiVars['entries'][] = $tiEntry;
                         }
@@ -1170,149 +1191,160 @@ class XFieldsNewsFilter extends NewsFilter
 }
 // Manage uprofile modifications
 if (getPluginStatusActive('uprofile')) {
-    loadPluginLibrary('uprofile', 'lib');
-    class XFieldsUPrifileFilter extends p_uprofileFilter
-    {
-        public function editProfileForm($userID, $SQLrow, &$tvars)
+    // Ensure uprofile library is loaded
+    if (!class_exists('p_uprofileFilter')) {
+        $uprfileLibPath = root . 'plugins/uprofile/lib/uprofile.lib.php';
+        if (file_exists($uprfileLibPath)) {
+            include_once $uprfileLibPath;
+        } else {
+            loadPluginLibrary('uprofile', 'lib');
+        }
+    }
+
+    // Only define the class if parent class exists
+    if (class_exists('p_uprofileFilter')) {
+        class XFieldsUPrifileFilter extends p_uprofileFilter
         {
-            global $lang, $catz, $mysql, $config, $twig, $twigLoader;
-            //print "<pre>".var_export($lang, true)."</pre>";
-            // Load config
-            $xf = xf_configLoad();
-            if (!is_array($xf)) {
-                return false;
-            }
-            // Fetch xfields data
-            $xdata = xf_decode($SQLrow['xfields']);
-            if (!is_array($xdata)) {
-                return false;
-            }
-            $output = '';
-            $xfEntries = [];
-            $xfList = [];
-            foreach ($xf['users'] as $id => $data) {
-                if ($data['disabled']) {
-                    continue;
+            public function editProfileForm($userID, $SQLrow, &$tvars)
+            {
+                global $lang, $catz, $mysql, $config, $twig, $twigLoader;
+                //print "<pre>".var_export($lang, true)."</pre>";
+                // Load config
+                $xf = xf_configLoad();
+                if (!is_array($xf)) {
+                    return false;
                 }
-                //print "FLD: [$id]<br>\n";
-                $xfEntry = [
-                    'title'        => $data['title'],
-                    'id'           => $id,
-                    'value'        => $xdata[$id],
-                    'secure_value' => secure_html($xdata[$id]),
-                    'data'         => $data,
-                    'required'     => $lang['xfields_fld_' . ($data['required'] ? 'required' : 'optional')],
-                    'flags'        => [
-                        'required' => $data['required'] ? true : false,
-                    ],
-                ];
-                switch ($data['type']) {
-                    case 'checkbox':
-                        $val = '<input type="checkbox" id="form_xfields_' . $id . '" name="xfields[' . $id . ']" title="' . $data['title'] . '" value="1" ' . ($data['default'] ? 'checked="checked"' : '') . '"/>';
-                        $xfEntry['input'] = $val;
-                        break;
-                    case 'text':
-                        $val = '<input type="text" name="xfields[' . $id . ']"  id="form_xfields_' . $id . '" title="' . $data['title'] . '" value="' . secure_html($xdata[$id]) . '" />';
-                        $xfEntry['input'] = $val;
-                        break;
-                    case 'select':
-                        $val = '<select name="xfields[' . $id . ']" id="form_xfields_' . $id . '" >';
-                        if (!$data['required']) {
-                            $val .= '<option value="">&nbsp;</option>';
-                        }
-                        if (is_array($data['options'])) {
-                            foreach ($data['options'] as $k => $v) {
-                                $val .= '<option value="' . secure_html(($data['storekeys']) ? $k : $v) . '"' . ((($data['storekeys'] && ($xdata[$id] == $k)) || (!$data['storekeys'] && ($xdata[$id] == $v))) ? ' selected' : '') . '>' . $v . '</option>';
+                // Fetch xfields data
+                $xdata = xf_decode($SQLrow['xfields']);
+                if (!is_array($xdata)) {
+                    return false;
+                }
+                $output = '';
+                $xfEntries = [];
+                $xfList = [];
+                foreach ($xf['users'] as $id => $data) {
+                    if ($data['disabled']) {
+                        continue;
+                    }
+                    //print "FLD: [$id]<br>\n";
+                    $xfEntry = [
+                        'title'        => $data['title'],
+                        'id'           => $id,
+                        'value'        => $xdata[$id],
+                        'secure_value' => secure_html($xdata[$id]),
+                        'data'         => $data,
+                        'required'     => $lang['xfields_fld_' . ($data['required'] ? 'required' : 'optional')],
+                        'flags'        => [
+                            'required' => $data['required'] ? true : false,
+                        ],
+                    ];
+                    switch ($data['type']) {
+                        case 'checkbox':
+                            $val = '<input type="checkbox" id="form_xfields_' . $id . '" name="xfields[' . $id . ']" title="' . $data['title'] . '" value="1" ' . ($data['default'] ? 'checked="checked"' : '') . '"/>';
+                            $xfEntry['input'] = $val;
+                            break;
+                        case 'text':
+                            $val = '<input type="text" name="xfields[' . $id . ']"  id="form_xfields_' . $id . '" title="' . $data['title'] . '" value="' . secure_html($xdata[$id]) . '" />';
+                            $xfEntry['input'] = $val;
+                            break;
+                        case 'select':
+                            $val = '<select name="xfields[' . $id . ']" id="form_xfields_' . $id . '" >';
+                            if (!$data['required']) {
+                                $val .= '<option value="">&nbsp;</option>';
                             }
-                        }
-                        $val .= '</select>';
-                        $xfEntry['input'] = $val;
-                        break;
-                    case 'textarea':
-                        $val = '<textarea cols="30" rows="4" name="xfields[' . $id . ']" id="form_xfields_' . $id . '">' . $xdata[$id] . '</textarea>';
-                        $xfEntry['input'] = $val;
-                        break;
-                    case 'images':
-                        // First - show already attached images
-                        $iCount = 0;
-                        $input = '';
-                        $tVars = ['images' => []];
-                        if (is_array($SQLrow['#images'])) {
-                            foreach ($SQLrow['#images'] as $irow) {
-                                // Skip images, that are not related to current field
-                                if (($irow['plugin'] != 'xfields') || ($irow['pidentity'] != $id)) {
-                                    continue;
+                            if (is_array($data['options'])) {
+                                foreach ($data['options'] as $k => $v) {
+                                    $val .= '<option value="' . secure_html(($data['storekeys']) ? $k : $v) . '"' . ((($data['storekeys'] && ($xdata[$id] == $k)) || (!$data['storekeys'] && ($xdata[$id] == $v))) ? ' selected' : '') . '>' . $v . '</option>';
                                 }
-                                // Show attached image
-                                $iCount++;
+                            }
+                            $val .= '</select>';
+                            $xfEntry['input'] = $val;
+                            break;
+                        case 'textarea':
+                            $val = '<textarea cols="30" rows="4" name="xfields[' . $id . ']" id="form_xfields_' . $id . '">' . $xdata[$id] . '</textarea>';
+                            $xfEntry['input'] = $val;
+                            break;
+                        case 'images':
+                            // First - show already attached images
+                            $iCount = 0;
+                            $input = '';
+                            $tVars = ['images' => []];
+                            if (is_array($SQLrow['#images'])) {
+                                foreach ($SQLrow['#images'] as $irow) {
+                                    // Skip images, that are not related to current field
+                                    if (($irow['plugin'] != 'xfields') || ($irow['pidentity'] != $id)) {
+                                        continue;
+                                    }
+                                    // Show attached image
+                                    $iCount++;
+                                    $tImage = [
+                                        'number'  => $iCount,
+                                        'id'      => $id,
+                                        'preview' => [
+                                            'width'  => $irow['p_width'],
+                                            'height' => $irow['p_height'],
+                                            'url'    => $config['attach_url'] . '/' . $irow['folder'] . '/thumb/' . $irow['name'],
+                                        ],
+                                        'image'   => [
+                                            'id'     => $irow['id'],
+                                            'number' => $iCount,
+                                            'url'    => $config['attach_url'] . '/' . $irow['folder'] . '/' . $irow['name'],
+                                            'width'  => $irow['width'],
+                                            'height' => $irow['height'],
+                                        ],
+                                        'flags'   => [
+                                            'preview' => $irow['preview'] ? true : false,
+                                            'exist'   => true,
+                                        ],
+                                    ];
+                                    $tVars['images'][] = $tImage;
+                                }
+                            }
+                            // Second - show entries for allowed number of attaches
+                            for ($i = $iCount + 1; $i <= intval($data['maxCount']); $i++) {
                                 $tImage = [
-                                    'number'  => $iCount,
-                                    'id'      => $id,
-                                    'preview' => [
-                                        'width'  => $irow['p_width'],
-                                        'height' => $irow['p_height'],
-                                        'url'    => '/uploads/dsn/' . $irow['folder'] . '/thumb/' . $irow['name'],
-                                    ],
-                                    'image'   => [
-                                        'id'     => $irow['id'],
-                                        'number' => $iCount,
-                                        'url'    => '/uploads/dsn/' . $irow['folder'] . '/' . $irow['name'],
-                                        'width'  => $irow['width'],
-                                        'height' => $irow['height'],
-                                    ],
-                                    'flags'   => [
-                                        'preview' => $irow['preview'] ? true : false,
-                                        'exist'   => true,
+                                    'number' => $i,
+                                    'id'     => $id,
+                                    'flags'  => [
+                                        'exist' => false,
                                     ],
                                 ];
                                 $tVars['images'][] = $tImage;
                             }
-                        }
-                        // Second - show entries for allowed number of attaches
-                        for ($i = $iCount + 1; $i <= intval($data['maxCount']); $i++) {
-                            $tImage = [
-                                'number' => $i,
-                                'id'     => $id,
-                                'flags'  => [
-                                    'exist' => false,
-                                ],
-                            ];
-                            $tVars['images'][] = $tImage;
-                        }
-                        // Make template
-                        $xt = $twig->loadTemplate('plugins/xfields/tpl/ed_entry.image.tpl');
-                        $val = $xt->render($tVars);
-                        $xfEntry['input'] = $val;
-                        break;
-                    default:
-                        break;
+                            // Make template
+                            $xt = $twig->loadTemplate('plugins/xfields/tpl/ed_entry.image.tpl');
+                            $val = $xt->render($tVars);
+                            $xfEntry['input'] = $val;
+                            break;
+                        default:
+                            break;
+                    }
+                    $xfEntries[intval($data['area'])][] = $xfEntry;
+                    $xfList[$id] = $xfEntry;
                 }
-                $xfEntries[intval($data['area'])][] = $xfEntry;
-                $xfList[$id] = $xfEntry;
-            }
-            // Prepare configuration array
-            $tVars = [];
-            // Area 0 should always be configured
-            if (!isset($xfEntries[0])) {
-                $xfEntries[0] = [];
-            }
-            // For compatibility with old template engine, init values for blocks 0 and 1
-            $tvars['plugin_xfields_0'] = '';
-            $tvars['plugin_xfields_1'] = '';
-            foreach ($xfEntries as $k => $v) {
-                // Check if we have template for specific area, elsewhere - use basic [0] template
-                $templateName = 'plugins/xfields/tpl/uprofile.edit.' . (file_exists(root . 'plugins/xfields/tpl/uprofile.edit.' . $k . '.tpl') ? $k : '0') . '.tpl';
-                $xt = $twig->loadTemplate($templateName);
-                $tVars['entries'] = $v;
-                $tVars['entryCount'] = count($v);
-                $tVars['area'] = $k;
-                // Render block
-                $render = $xt->render($tVars);
-                $tvars['plugin_xfields_' . $k] .= $render;
-                $tvars['p']['xfields'][$k] .= $render;
-            }
-            $tvars['p']['xfields']['fields'] = $xfList;
-            /*
+                // Prepare configuration array
+                $tVars = [];
+                // Area 0 should always be configured
+                if (!isset($xfEntries[0])) {
+                    $xfEntries[0] = [];
+                }
+                // For compatibility with old template engine, init values for blocks 0 and 1
+                $tvars['plugin_xfields_0'] = '';
+                $tvars['plugin_xfields_1'] = '';
+                foreach ($xfEntries as $k => $v) {
+                    // Check if we have template for specific area, elsewhere - use basic [0] template
+                    $templateName = 'plugins/xfields/tpl/uprofile.edit.' . (file_exists(root . 'plugins/xfields/tpl/uprofile.edit.' . $k . '.tpl') ? $k : '0') . '.tpl';
+                    $xt = $twig->loadTemplate($templateName);
+                    $tVars['entries'] = $v;
+                    $tVars['entryCount'] = count($v);
+                    $tVars['area'] = $k;
+                    // Render block
+                    $render = $xt->render($tVars);
+                    $tvars['plugin_xfields_' . $k] .= $render;
+                    $tvars['p']['xfields'][$k] .= $render;
+                }
+                $tvars['p']['xfields']['fields'] = $xfList;
+                /*
                         unset($tVars['entries']);
                         unset($tVars['area']);
                         // Render general part [with JavaScript]
@@ -1321,177 +1353,179 @@ if (getPluginStatusActive('uprofile')) {
                         $xt = $twig->loadTemplate('plugins/xfields/tpl/ed_uprofile.tpl');
                         $tvars['vars']['plugin_xfields'] .= $xt->render($tVars);
             */
-            return 1;
-        }
-        public function editProfile($userID, $SQLrow, &$SQLnew)
-        {
-            global $lang, $config, $mysql, $DSlist;
-            //print "<pre>editProfile() POST VARS: ".var_export($_POST, true)."</pre>";
-            // Load config
-            $xf = xf_configLoad();
-            if (!is_array($xf)) {
                 return 1;
             }
-            $rcall = $_POST['xfields'];
-            if (!is_array($rcall)) {
-                $rcall = [];
-            }
-            // Decode previusly stored data
-            $oldFields = xf_decode($SQLrow['xfields']);
-            // Manage attached images
-            xf_modifyAttachedImages($DSlist['users'], $userID, $xf, $SQLrow['#images']);
-            $xdata = [];
-            //print "XF[users]: <pre>".var_export($xf['users'], true)."</pre>";
-            // Scan fields and check if we have attached images for fields with type 'images'
-            $haveImages = false;
-            foreach ($xf['users'] as $fid => $fval) {
-                if ($fval['type'] == 'images') {
-                    $haveImages = true;
-                    break;
+            public function editProfile($userID, $SQLrow, &$SQLnew)
+            {
+                global $lang, $config, $mysql, $DSlist;
+                //print "<pre>editProfile() POST VARS: ".var_export($_POST, true)."</pre>";
+                // Load config
+                $xf = xf_configLoad();
+                if (!is_array($xf)) {
+                    return 1;
                 }
-            }
-            if ($haveImages) {
-                // Get real ID's of attached images and print here
-                $idlist = [];
-                foreach ($mysql->select('select id, plugin, pidentity from ' . prefix . '_images where (linked_ds = ' . $DSlist['users'] . ') and (linked_id = ' . db_squote($userID) . ')') as $irec) {
-                    if ($irec['plugin'] == 'xfields') {
-                        $idlist[$irec['pidentity']][] = $irec['id'];
-                    }
+                $rcall = $_POST['xfields'];
+                if (!is_array($rcall)) {
+                    $rcall = [];
                 }
-                // Scan for fields that should be configured to have attached images
+                // Decode previusly stored data
+                $oldFields = xf_decode($SQLrow['xfields']);
+                // Manage attached images
+                xf_modifyAttachedImages($DSlist['users'], $userID, $xf, $SQLrow['#images']);
+                $xdata = [];
+                //print "XF[users]: <pre>".var_export($xf['users'], true)."</pre>";
+                // Scan fields and check if we have attached images for fields with type 'images'
+                $haveImages = false;
                 foreach ($xf['users'] as $fid => $fval) {
-                    if (($fval['type'] == 'images') && (is_array($idlist[$fid]))) {
-                        $xdata[$fid] = implode(',', $idlist[$fid]);
-                    }
-                }
-            }
-            foreach ($xf['users'] as $id => $data) {
-                // Attached images are processed in special way
-                if ($data['type'] == 'images') {
-                    continue;
-                }
-                // Skip disabled fields
-                if ($data['disabled']) {
-                    $xdata[$id] = $SQLrow[$id];
-                    continue;
-                }
-                if ($rcall[$id] != '') {
-                    $xdata[$id] = $rcall[$id];
-                } elseif ($data['required']) {
-                    msg(['type' => 'error', 'text' => str_replace('{field}', $id, $lang['xfields_msge_emptyrequired'])]);
-                    return 0;
-                }
-                // Check if we should save data into separate SQL field
-                if ($data['storage']) {
-                    $SQLnew['xfields_' . $id] = $rcall[$id];
-                }
-            }
-            $SQLnew['xfields'] = xf_encode($xdata);
-            return 1;
-        }
-        public function showProfile($userID, $SQLrow, &$tvars)
-        {
-            global $mysql, $config, $twig, $twigLoader, $parse;
-            // Try to load config. Stop processing if config was not loaded
-            if (($xf = xf_configLoad()) === false) {
-                return;
-            }
-            $fields = xf_decode($SQLrow['xfields']);
-            // Check if we have at least one `image` field and load TWIG template if any
-            if (is_array($xf['users'])) {
-                foreach ($xf['users'] as $k => $v) {
-                    if ($v['type'] == 'images') {
-                        // Yes, we have it!
-                        $conversionParams = [];
-                        $conversionConfig = [];
-                        $imagesTemplateFileName = 'plugins/xfields/tpl/profile.show.images.tpl';
-                        $twigLoader->setConversion($imagesTemplateFileName, $conversionConfig);
-                        $xtImages = $twig->loadTemplate($imagesTemplateFileName);
+                    if ($fval['type'] == 'images') {
+                        $haveImages = true;
                         break;
                     }
                 }
+                if ($haveImages) {
+                    // Get real ID's of attached images and print here
+                    $idlist = [];
+                    foreach ($mysql->select('select id, plugin, pidentity from ' . prefix . '_images where (linked_ds = ' . $DSlist['users'] . ') and (linked_id = ' . db_squote($userID) . ')') as $irec) {
+                        if ($irec['plugin'] == 'xfields') {
+                            $idlist[$irec['pidentity']][] = $irec['id'];
+                        }
+                    }
+                    // Scan for fields that should be configured to have attached images
+                    foreach ($xf['users'] as $fid => $fval) {
+                        if (($fval['type'] == 'images') && (is_array($idlist[$fid]))) {
+                            $xdata[$fid] = implode(',', $idlist[$fid]);
+                        }
+                    }
+                }
+                foreach ($xf['users'] as $id => $data) {
+                    // Attached images are processed in special way
+                    if ($data['type'] == 'images') {
+                        continue;
+                    }
+                    // Skip disabled fields
+                    if ($data['disabled']) {
+                        $xdata[$id] = $SQLrow[$id];
+                        continue;
+                    }
+                    if ($rcall[$id] != '') {
+                        $xdata[$id] = $rcall[$id];
+                    } elseif ($data['required']) {
+                        msg(['type' => 'error', 'text' => str_replace('{field}', $id, $lang['xfields_msge_emptyrequired'])]);
+                        return 0;
+                    }
+                    // Check if we should save data into separate SQL field
+                    if ($data['storage']) {
+                        $SQLnew['xfields_' . $id] = $rcall[$id];
+                    }
+                }
+                $SQLnew['xfields'] = xf_encode($xdata);
+                return 1;
             }
-            // Show extra fields if we have it
-            if (is_array($xf['users'])) {
-                foreach ($xf['users'] as $k => $v) {
-                    $kp = preg_quote($k, '#');
-                    $xfk = isset($fields[$k]) ? $fields[$k] : '';
-                    // Our behaviour depends on field type
-                    if ($v['type'] == 'images') {
-                        // Check if there're attached images
-                        if ($xfk && count($ilist = explode(',', $xfk)) && count($imglist = $mysql->select('select * from ' . prefix . '_images where id in (' . $xfk . ')'))) {
-                            //print "-xGotIMG[$k]";
-                            // Yes, get list of images
-                            $imgInfo = $imglist[0];
-                            $tvars['regx']["#\[xfield_" . $kp . "\](.*?)\[/xfield_" . $kp . "\]#is"] = '$1';
-                            $tvars['regx']["#\[nxfield_" . $kp . "\](.*?)\[/nxfield_" . $kp . "\]#is"] = '';
-                            $iname = ($imgInfo['storage'] ? '/uploads/dsn' : $config['files_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'];
-                            $tvars['vars']['[xvalue_' . $k . ']'] = $iname;
-                            // Scan for images and prepare data for template show
-                            $mode = $mode ?? ['style' => '', 'plugin' => ''];
-                            $tiVars = [
-                                'fieldName'    => $k,
-                                'fieldTitle'   => secure_html($v['title']),
-                                'fieldType'    => $v['type'],
-                                'entriesCount' => count($imglist),
-                                'entries'      => [],
-                                'execStyle'    => $mode['style'] ?? '',
-                                'execPlugin'   => $mode['plugin'] ?? '',
-                            ];
-                            foreach ($imglist as $imgInfo) {
-                                $tiEntry = [
-                                    'url'         => ($imgInfo['storage'] ? '/uploads/dsn' : $config['images_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'],
-                                    'width'       => $imgInfo['width'],
-                                    'height'      => $imgInfo['height'],
-                                    'pwidth'      => $imgInfo['p_width'],
-                                    'pheight'     => $imgInfo['p_height'],
-                                    'name'        => $imgInfo['name'],
-                                    'origName'    => secure_html($imgInfo['orig_name']),
-                                    'description' => secure_html($imgInfo['description']),
-                                    'flags'       => [
-                                        'hasPreview' => $imgInfo['preview'],
-                                    ],
+            public function showProfile($userID, $SQLrow, &$tvars)
+            {
+                global $mysql, $config, $twig, $twigLoader, $parse;
+                // Try to load config. Stop processing if config was not loaded
+                if (($xf = xf_configLoad()) === false) {
+                    return;
+                }
+                $fields = xf_decode($SQLrow['xfields']);
+                // Check if we have at least one `image` field and load TWIG template if any
+                if (is_array($xf['users'])) {
+                    foreach ($xf['users'] as $k => $v) {
+                        if ($v['type'] == 'images') {
+                            // Yes, we have it!
+                            $conversionParams = [];
+                            $conversionConfig = [];
+                            $imagesTemplateFileName = 'plugins/xfields/tpl/profile.show.images.tpl';
+                            $twigLoader->setConversion($imagesTemplateFileName, $conversionConfig);
+                            $xtImages = $twig->loadTemplate($imagesTemplateFileName);
+                            break;
+                        }
+                    }
+                }
+                // Show extra fields if we have it
+                if (is_array($xf['users'])) {
+                    foreach ($xf['users'] as $k => $v) {
+                        $kp = preg_quote($k, '#');
+                        $xfk = isset($fields[$k]) ? $fields[$k] : '';
+                        // Our behaviour depends on field type
+                        if ($v['type'] == 'images') {
+                            // Check if there're attached images
+                            if ($xfk && count($ilist = explode(',', $xfk)) && count($imglist = $mysql->select('select * from ' . prefix . '_images where id in (' . $xfk . ')'))) {
+                                //print "-xGotIMG[$k]";
+                                // Yes, get list of images
+                                $imgInfo = $imglist[0];
+                                $tvars['regx']["#\[xfield_" . $kp . "\](.*?)\[/xfield_" . $kp . "\]#is"] = '$1';
+                                $tvars['regx']["#\[nxfield_" . $kp . "\](.*?)\[/nxfield_" . $kp . "\]#is"] = '';
+                                $iname = ($imgInfo['storage'] ? $config['attach_url'] : $config['files_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'];
+                                $tvars['vars']['[xvalue_' . $k . ']'] = $iname;
+                                // Scan for images and prepare data for template show
+                                $mode = $mode ?? ['style' => '', 'plugin' => ''];
+                                $tiVars = [
+                                    'fieldName'    => $k,
+                                    'fieldTitle'   => secure_html($v['title']),
+                                    'fieldType'    => $v['type'],
+                                    'entriesCount' => count($imglist),
+                                    'entries'      => [],
+                                    'execStyle'    => $mode['style'] ?? '',
+                                    'execPlugin'   => $mode['plugin'] ?? '',
                                 ];
-                                if ($imgInfo['preview']) {
-                                    $tiEntry['purl'] = ($imgInfo['storage'] ? '/uploads/dsn' : $config['images_url']) . '/' . $imgInfo['folder'] . '/thumb/' . $imgInfo['name'];
+                                foreach ($imglist as $imgInfo) {
+                                    $tiEntry = [
+                                        'url'         => ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']) . '/' . $imgInfo['folder'] . '/' . $imgInfo['name'],
+                                        'width'       => $imgInfo['width'],
+                                        'height'      => $imgInfo['height'],
+                                        'pwidth'      => $imgInfo['p_width'],
+                                        'pheight'     => $imgInfo['p_height'],
+                                        'name'        => $imgInfo['name'],
+                                        'origName'    => secure_html($imgInfo['orig_name']),
+                                        'description' => secure_html($imgInfo['description']),
+                                        'flags'       => [
+                                            'hasPreview' => $imgInfo['preview'],
+                                        ],
+                                    ];
+                                    if ($imgInfo['preview']) {
+                                        $tiEntry['purl'] = ($imgInfo['storage'] ? $config['attach_url'] : $config['images_url']) . '/' . $imgInfo['folder'] . '/thumb/' . $imgInfo['name'];
+                                    }
+                                    $tiVars['entries'][] = $tiEntry;
                                 }
-                                $tiVars['entries'][] = $tiEntry;
+                                // TWIG based variables
+                                $tvars['p']['xfields'][$k]['entries'] = $tiVars['entries'];
+                                $tvars['p']['xfields'][$k]['count'] = count($tiVars['entries']);
+                                $xv = $xtImages->render($tiVars);
+                                $tvars['p']['xfields'][$k]['value'] = $xv;
+                                //$tvars['vars']['[xvalue_'.$k.']'] = $xv;
+                            } else {
+                                $tvars['regx']["#\[xfield_" . $kp . "\](.*?)\[/xfield_" . $kp . "\]#is"] = '';
+                                $tvars['regx']["#\[nxfield_" . $kp . "\](.*?)\[/nxfield_" . $kp . "\]#is"] = '$1';
+                            }
+                        } else {
+                            $tvars['regx']["#\[xfield_" . $kp . "\](.*?)\[/xfield_" . $kp . "\]#is"] = ($xfk == '') ? '' : '$1';
+                            $tvars['regx']["#\[nxfield_" . $kp . "\](.*?)\[/nxfield_" . $kp . "\]#is"] = ($xfk == '') ? '$1' : '';
+                            $tvars['vars']['[xvalue_' . $k . ']'] = ($v['type'] == 'textarea') ? '<br/>' . (str_replace("\n", "<br/>\n", $xfk) . (strlen($xfk) ? '<br/>' : '')) : $xfk;
+                            // 12345
+                            // Process `HTML` support feature
+                            if ((!$v['html_support']) && (($v['type'] == 'textarea') || ($v['type'] == 'text'))) {
+                                $xfk = str_replace('<', '&lt;', $xfk);
+                            }
+                            // Parse BB code [if required]
+                            if ($config['use_bbcodes'] && $v['bb_support']) {
+                                $xfk = $parse->bbcodes($xfk);
+                            }
+                            // Process formatting
+                            if (($v['type'] == 'textarea') && (!$v['noformat'])) {
+                                $xfk = (str_replace("\n", "<br/>\n", $xfk) . (strlen($xfk) ? '<br/>' : ''));
                             }
                             // TWIG based variables
-                            $tvars['p']['xfields'][$k]['entries'] = $tiVars['entries'];
-                            $tvars['p']['xfields'][$k]['count'] = count($tiVars['entries']);
-                            $xv = $xtImages->render($tiVars);
-                            $tvars['p']['xfields'][$k]['value'] = $xv;
-                            //$tvars['vars']['[xvalue_'.$k.']'] = $xv;
-                        } else {
-                            $tvars['regx']["#\[xfield_" . $kp . "\](.*?)\[/xfield_" . $kp . "\]#is"] = '';
-                            $tvars['regx']["#\[nxfield_" . $kp . "\](.*?)\[/nxfield_" . $kp . "\]#is"] = '$1';
+                            $tvars['p']['xfields'][$k]['value'] = $xfk;
                         }
-                    } else {
-                        $tvars['regx']["#\[xfield_" . $kp . "\](.*?)\[/xfield_" . $kp . "\]#is"] = ($xfk == '') ? '' : '$1';
-                        $tvars['regx']["#\[nxfield_" . $kp . "\](.*?)\[/nxfield_" . $kp . "\]#is"] = ($xfk == '') ? '$1' : '';
-                        $tvars['vars']['[xvalue_' . $k . ']'] = ($v['type'] == 'textarea') ? '<br/>' . (str_replace("\n", "<br/>\n", $xfk) . (strlen($xfk) ? '<br/>' : '')) : $xfk;
-                        // 12345
-                        // Process `HTML` support feature
-                        if ((!$v['html_support']) && (($v['type'] == 'textarea') || ($v['type'] == 'text'))) {
-                            $xfk = str_replace('<', '&lt;', $xfk);
-                        }
-                        // Parse BB code [if required]
-                        if ($config['use_bbcodes'] && $v['bb_support']) {
-                            $xfk = $parse->bbcodes($xfk);
-                        }
-                        // Process formatting
-                        if (($v['type'] == 'textarea') && (!$v['noformat'])) {
-                            $xfk = (str_replace("\n", "<br/>\n", $xfk) . (strlen($xfk) ? '<br/>' : ''));
-                        }
-                        // TWIG based variables
-                        $tvars['p']['xfields'][$k]['value'] = $xfk;
                     }
                 }
             }
         }
+
+        register_filter('plugin.uprofile', 'xfields', new XFieldsUPrifileFilter());
     }
-    register_filter('plugin.uprofile', 'xfields', new XFieldsUPrifileFilter());
 }
 class XFieldsFilterAdminCategories extends FilterAdminCategories
 {

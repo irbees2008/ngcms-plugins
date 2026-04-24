@@ -17,6 +17,14 @@
 
 <?php
 
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	}
+}
+
 use function Plugins\{logger, sanitize, get_ip, benchmark, str_limit, truncate_html, is_post};
 
 function show_comments()

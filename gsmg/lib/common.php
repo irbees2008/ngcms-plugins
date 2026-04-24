@@ -5,9 +5,7 @@
 class gsmgFilter
 {
     // Action executed when page is showed
-    function onShow(&$output)
-    {
-    }
+    function onShow(&$output) {}
 }
 
 function create_gsmg_urls()
@@ -15,7 +13,9 @@ function create_gsmg_urls()
 
     $ULIB = new urlLibrary();
     $ULIB->loadConfig();
-    $ULIB->registerCommand('gsmg', '',
+    $ULIB->registerCommand(
+        'gsmg',
+        '',
         array(
             'vars' => array(),
             'descr' => array('russian' => 'Лента gsmg'),
@@ -24,7 +24,41 @@ function create_gsmg_urls()
     $ULIB->saveConfig();
     $UHANDLER = new urlHandler();
     $UHANDLER->loadConfig();
-    $UHANDLER->registerHandler(0,
+
+    // Handler for /gsmg/ (without .xml)
+    $UHANDLER->registerHandler(
+        0,
+        array(
+            'pluginName' => 'gsmg',
+            'handlerName' => '',
+            'flagPrimary' => true,
+            'flagFailContinue' => false,
+            'flagDisabled' => false,
+            'rstyle' => array(
+                'rcmd' => '/gsmg/',
+                'regex' => '#^/gsmg/?$#',
+                'regexMap' =>
+                array(),
+                'reqCheck' =>
+                array(),
+                'setVars' =>
+                array(),
+                'genrMAP' =>
+                array(
+                    0 =>
+                    array(
+                        0 => 0,
+                        1 => '/gsmg/',
+                        2 => 0,
+                    ),
+                ),
+            ),
+        )
+    );
+
+    // Handler for /gsmg.xml (alternative access)
+    $UHANDLER->registerHandler(
+        0,
         array(
             'pluginName' => 'gsmg',
             'handlerName' => '',
@@ -35,20 +69,20 @@ function create_gsmg_urls()
                 'rcmd' => '/gsmg.xml',
                 'regex' => '#^/gsmg.xml$#',
                 'regexMap' =>
-                    array(),
+                array(),
                 'reqCheck' =>
-                    array(),
+                array(),
                 'setVars' =>
-                    array(),
+                array(),
                 'genrMAP' =>
+                array(
+                    0 =>
                     array(
-                        0 =>
-                            array(
-                                0 => 0,
-                                1 => '/gsmg.xml',
-                                2 => 0,
-                            ),
+                        0 => 0,
+                        1 => '/gsmg.xml',
+                        2 => 0,
                     ),
+                ),
             ),
         )
     );

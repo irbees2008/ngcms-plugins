@@ -1,6 +1,15 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	}
+}
+
 // Modernized with ng-helpers v0.2.2 (2026)
 // - Added array_get for safe REQUEST access
 // - Added sanitize for input cleaning

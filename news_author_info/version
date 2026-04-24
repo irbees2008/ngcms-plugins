@@ -1,0 +1,13 @@
+ID: news_author_info
+Name: News avatar info
+Version: 0.2
+Actions: news_short, news_full; news_author_info.php
+Type: plugin
+Title: Информации об авторе новости
+Description: Информации об авторе новости
+Information: Информации об авторе новости
+Author: Rostunov S U,irbees2008
+Author_URI: http://rostunov.com/
+preinstall: no
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-address-card-o fa-3x" aria-hidden="true"></i>

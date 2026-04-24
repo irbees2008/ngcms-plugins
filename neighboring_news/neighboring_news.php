@@ -22,15 +22,25 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('Galaxy in danger');
 
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	} else {
+		die('ng-helpers plugin is required for neighboring_news plugin');
+	}
+}
+
 // Modernized with ng-helpers v0.2.2 (2026)
-// - Replaced cache_get/cache_put with universal cache() function
+// - Using cache_get/cache_put for caching
 // - Enhanced logging with detailed metrics
 // - Added sanitize for data cleaning
 // - Added array_get for safe array access
 // - Improved performance and code quality
 
 // Import ng-helpers functions
-use function Plugins\{cache, logger, sanitize, array_get};
+use function Plugins\{cache_get, cache_put, logger, sanitize, array_get};
 
 class NeighboringNewsFilter extends NewsFilter
 {
@@ -62,9 +72,7 @@ class NeighboringNewsFilter extends NewsFilter
 			$cacheKey = 'neighboring_news_' . $newsID . '_' . $style . '_' . md5($SQLnews['catid']);
 
 			// Try to get from cache
-			$cached = cache($cacheKey, function () {
-				return null; // Will generate below
-			}, $cacheExpire * 60); // Convert minutes to seconds
+			$cached = cache_get($cacheKey);
 
 			if ($cached !== null) {
 				logger('[neighboring_news] Cache hit: newsid=' . $newsID . ', style=' . $style, 'debug', 'neighboring_news.log');
@@ -78,7 +86,8 @@ class NeighboringNewsFilter extends NewsFilter
 		$tpath = locatePluginTemplates(['neighboring_news', 'next_news', 'previous_news'], 'neighboring_news', pluginGetVariable('neighboring_news', 'localsource'));
 
 		// Главная категория новости
-		$fcat = array_shift(explode(',', $SQLnews['catid']));
+		$catParts = explode(',', $SQLnews['catid']);
+		$fcat = array_shift($catParts);
 		$compareStrict = intval(pluginGetVariable('neighboring_news', 'compare')) == 1;
 		$catFilter = $compareStrict ? $fcat : "'" . $SQLnews['catid'] . "'";
 
@@ -179,9 +188,7 @@ class NeighboringNewsFilter extends NewsFilter
 		if ($cacheExpire > 0 && $output) {
 			$cacheKey = 'neighboring_news_' . $newsID . '_' . $style . '_' . md5($SQLnews['catid']);
 
-			cache($cacheKey, function () use ($output) {
-				return $output;
-			}, $cacheExpire * 60);
+			cache_put($cacheKey, $output, $cacheExpire);
 
 			logger('[neighboring_news] Generated and cached: newsid=' . $newsID . ', style=' . $style . ', size=' . strlen($output) . ' bytes, has_next=' . ($rowNext ? 'yes' : 'no') . ', has_prev=' . ($rowPrev ? 'yes' : 'no'), 'info', 'neighboring_news.log');
 		} elseif (!$output) {

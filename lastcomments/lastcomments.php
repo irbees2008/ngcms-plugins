@@ -179,16 +179,24 @@ function lastcomments($mode = 0)
 		// gen avatar
 		if ($config['use_avatars']) {
 			if ($row['users_avatar']) {
-				$avatar = "<img src=\"" . avatars_url . "/" . $row['users_avatar'] . "\" alt=\"" . $row['author'] . "\" />";
 				$avatar_url = avatars_url . "/" . $row['users_avatar'];
+				// Исправление протокола на HTTPS если страница загружена через HTTPS
+				if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+					$avatar_url = preg_replace('/^http:\/\//i', 'https://', $avatar_url);
+				}
+				$avatar = "<img src=\"" . $avatar_url . "\" alt=\"" . $row['author'] . "\" />";
 			} else {
 				// If gravatar integration is active, show avatar from GRAVATAR.COM
 				if ($config['avatars_gravatar']) {
-					$avatar = '<img src="http://www.gravatar.com/avatar/' . md5(strtolower($row['mail'])) . '?s=' . $config['avatar_wh'] . '&amp;d=' . urlencode($noAvatarURL) . '" alt=""/>';
-					$avatar_url = 'http://www.gravatar.com/avatar/' . md5(strtolower($row['mail'])) . '?s=' . $config['avatar_wh'] . '&amp;d=' . urlencode($noAvatarURL);
+					$avatar_url = 'https://www.gravatar.com/avatar/' . md5(strtolower($row['mail'])) . '?s=' . $config['avatar_wh'] . '&amp;d=' . urlencode($noAvatarURL);
+					$avatar = '<img src="' . $avatar_url . '" alt=""/>';
 				} else {
-					$avatar = "<img src=\"" . $noAvatarURL . "\" alt=\"\" />";
 					$avatar_url = $noAvatarURL;
+					// Исправление протокола на HTTPS если страница загружена через HTTPS
+					if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+						$avatar_url = preg_replace('/^http:\/\//i', 'https://', $avatar_url);
+					}
+					$avatar = "<img src=\"" . $avatar_url . "\" alt=\"\" />";
 				}
 			}
 		} else {

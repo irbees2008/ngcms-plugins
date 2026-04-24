@@ -2,6 +2,14 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	}
+}
+
 // Modified with ng-helpers v0.2.0 functions (2026)
 // - Added validate_email for email field validation
 // - Added csrf_field/validate_csrf for CSRF protection

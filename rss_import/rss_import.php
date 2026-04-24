@@ -2,11 +2,22 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+    $ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+    if (file_exists($ngHelpersPath)) {
+        require_once $ngHelpersPath;
+    } else {
+        die('ng-helpers plugin is required for rss_import plugin');
+    }
+}
+
 // Modernized with ng-helpers v0.2.2 (2026)
+// - Using cache_get/cache_put for caching
 // - Added logger() for enhanced logging
 // - Requires PHP 8.0+
 
-use function Plugins\{logger};
+use function Plugins\{cache_get, cache_put, logger};
 
 add_act('index', 'rss_import_block');
 // Рендер одного блока RSS (rss1, rss2, ... ) через Twig
@@ -33,9 +44,7 @@ function rss_import_render_block($index)
     $cacheExpire = extra_get_param('rss_import', 'cache') ? intval(extra_get_param('rss_import', 'cacheExpire')) * 60 : 0;
     if ($cacheExpire > 0) {
         $cacheKey = 'rss_import_' . $cacheFileName;
-        $cached = cache($cacheKey, function () {
-            return null;
-        }, $cacheExpire);
+        $cached = cache_get($cacheKey);
         if ($cached !== null) {
             logger('[rss_import] Cache hit: block=' . $vv, 'debug', 'rss_import.log');
             return $cached;
@@ -187,9 +196,7 @@ function rss_import_render_block($index)
     $output = $xt->render($tVars);
     if ($cacheExpire > 0) {
         $cacheKey = 'rss_import_' . $cacheFileName;
-        cache($cacheKey, function () use ($output) {
-            return $output;
-        }, $cacheExpire);
+        cache_put($cacheKey, $output, $cacheExpire / 60);
         logger('[rss_import] Cached: block=' . $vv . ', size=' . strlen($output), 'info', 'rss_import.log');
     }
     return $output;

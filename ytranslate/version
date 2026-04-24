@@ -1,0 +1,16 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: ytranslate
+Name: Yandex Переводчик
+Version: 0.03
+Acts: index
+File: ytranslate.php
+Config: config.php
+Type: widget
+Description: Переводчик страниц через Yandex без виджета
+Author: irbees2008
+Author_URI: https://ngcms.org
+Title: Переводчик страниц
+Information: Добавляет переключатель языков на сайт
+Preinstall: no
