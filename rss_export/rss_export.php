@@ -100,28 +100,11 @@ function plugin_rss_export_generate($catname = '')
 		}
 	}
 	// Канонический self URL ленты
-	// Пытаемся использовать реальный URL запроса, если он совпадает с настройками сайта
-	$scheme = 'http';
-	if (
-		(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
-		(isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) ||
-		(isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
-	) {
-		$scheme = 'https';
-	}
-	$host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
-	$reqUri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
-	// Проверяем что домен совпадает с настройками сайта
-	$configHost = parse_url($config['home_url'], PHP_URL_HOST);
-	if ($host && $configHost && $host === $configHost && $reqUri) {
-		$selfUrl = rss_export_normalize_url($scheme . '://' . $host . $reqUri);
+	// Канонический self URL всегда берём из конфигурации сайта
+	if ($catname) {
+		$selfUrl = rss_export_normalize_url(rtrim($config['home_url'], '/') . '/' . $catname . '.xml');
 	} else {
-		// Используем URL из конфигурации
-		if ($catname) {
-			$selfUrl = rtrim($config['home_url'], '/') . '/' . $catname . '.xml';
-		} else {
-			$selfUrl = rtrim($config['home_url'], '/') . '/rss.xml';
-		}
+		$selfUrl = rss_export_normalize_url(rtrim($config['home_url'], '/') . '/rss.xml');
 	}
 	// Начинаем буферизацию XML вывода
 	ob_start();
@@ -222,7 +205,16 @@ function plugin_rss_export_generate($catname = '')
 		$catPattern = '(^|,)' . intval($xcat['id']) . '(,|$)';
 		$query = "select * from " . prefix . "_news where catid REGEXP " . db_squote($catPattern) . " and approve=1 " . (($delay > 0) ? (" and ((postdate + " . intval($delay * 60) . ") < unix_timestamp(now())) ") : '') . " order by " . $orderBy;
 	} else {
-		$query = "select * from " . prefix . "_news where approve=1" . (($delay > 0) ? (" and ((postdate + " . intval($delay * 60) . ") < unix_timestamp(now())) ") : '') . " order by id desc";
+		$pluginOrder = pluginGetVariable('rss_export', 'news_order');
+		$allowedOrders = array('id desc', 'id asc', 'postdate desc', 'postdate asc', 'title desc', 'title asc');
+		if (!empty($pluginOrder) && $pluginOrder !== 'auto' && in_array($pluginOrder, $allowedOrders)) {
+			$globalOrderBy = $pluginOrder;
+		} elseif (!empty($config['default_newsorder']) && in_array($config['default_newsorder'], $allowedOrders)) {
+			$globalOrderBy = $config['default_newsorder'];
+		} else {
+			$globalOrderBy = 'id desc';
+		}
+		$query = "select * from " . prefix . "_news where approve=1" . (($delay > 0) ? (" and ((postdate + " . intval($delay * 60) . ") < unix_timestamp(now())) ") : '') . " order by " . $globalOrderBy;
 	}
 	$sqlData = $mysql->select($query . " limit $limit");
 	// Подготовка изображений для enclosure
