@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin>
+  <id>avtek_callback</id>
+  <name>AVTEK Callback</name>
+  <description>Конструктор форм обратной связи: Email + Telegram, хранение заявок, экспорт, базовые интеграции CRM.</description>
+  <author>AVTEK / ChatGPT</author>
+  <version>1.0.0</version>
+  <type>plugin</type>
+  <acts>
+    <act>ppages</act>
+  </acts>
+  <file>avtek_callback.php</file>
+  <title>Форма обратной связи AVTEK</title>
+  <information>Конструктор форм (Email/Telegram), хранение заявок, экспорт. Совместимо с PHP 8+.</information>
+  <config>config.php</config>
+  <install>install.php</install>
+  <deinstall>uninstall.php</deinstall>
+</plugin>

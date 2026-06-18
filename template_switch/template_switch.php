@@ -1,8 +1,6 @@
 <?php
-
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
-
 add_act('core', 'plugin_template_switch');
 add_act('index', 'plugin_template_switch_menu');
 register_plugin_page('template_switch', '', 'template_switch_redirector', 0);
@@ -16,15 +14,26 @@ if (isset($_GET['get_description'])) {
 		exit;
 	}
 }
+// Для AJAX-запросов на получение ссылки
+if (isset($_GET['get_description'])) {
+	$template_id = intval($_GET['get_description']);
+	$description_link = pluginGetVariable('template_switch', 'profile' . $template_id . '_description_link');
+	if ($description_link) {
+		header("Location: " . $description_link);
+		exit;
+	}
+	// Если ссылки нет - возвращаем 404
+	header("HTTP/1.0 404 Not Found");
+	exit;
+}
 // Если это запрос на предпросмотр и включена selfpage
 if (isset($_GET['profile']) && pluginGetVariable('template_switch', 'selfpage')) {
 	$templateID = $_GET['profile'];
-
 	// Ищем профиль по ID
 	$sw_count = intval(pluginGetVariable('template_switch', 'count'));
 	for ($i = 1; $i <= $sw_count; $i++) {
 		if (pluginGetVariable('template_switch', 'profile' . $i . '_id') == $templateID) {
-			@setcookie('sw_template', $i, time() + 365 * 24 * 60 * 60, '/');
+			@setcookie('sw_template', $i, 0, '/'); // 0 - значит до закрытия браузера
 			break;
 		}
 	}
@@ -35,7 +44,6 @@ function plugin_template_switch()
 	// Если это запрос на предпросмотр и включена selfpage
 	if (isset($_GET['profile']) && pluginGetVariable('template_switch', 'selfpage')) {
 		$templateID = $_GET['profile'];
-
 		// Ищем профиль по ID
 		$sw_count = intval(pluginGetVariable('template_switch', 'count'));
 		for ($i = 1; $i <= $sw_count; $i++) {
@@ -45,21 +53,18 @@ function plugin_template_switch()
 				$template_name = pluginGetVariable('template_switch', 'profile' . $i . '_template');
 				$profile_id = strtolower(preg_replace('/[^a-z0-9]/', '', $template_name));
 			}
-
 			if ($profile_id == $templateID) {
-				@setcookie('sw_template', $i, time() + 365 * 24 * 60 * 60, '/');
+				@setcookie('sw_template', $i, 0, '/'); // 0 - значит до закрытия браузера
 				break;
 			}
 		}
 	}
 	// Get chosen template
 	$sw_template = $_COOKIE['sw_template'];
-
 	$sw_count = intval(pluginGetVariable('template_switch', 'count'));
 	if (!$sw_count) {
 		$sw_count = 3;
 	}
-
 	// If template is not selected, we can show default value
 	if (!$sw_template) {
 		// Check if we have default profile for this domain
@@ -82,7 +87,6 @@ function plugin_template_switch()
 			}
 		}
 	}
-
 	if (($sw_template > 0) && ($sw_template <= $sw_count) && pluginGetVariable('template_switch', 'profile' . $sw_template . '_active')) {
 		if (pluginGetVariable('template_switch', 'profile' . $sw_template . '_template')) {
 			$config['theme'] = pluginGetVariable('template_switch', 'profile' . $sw_template . '_template');
@@ -90,38 +94,48 @@ function plugin_template_switch()
 		if (pluginGetVariable('template_switch', 'profile' . $sw_template . '_lang')) {
 			$config['default_lang'] = pluginGetVariable('template_switch', 'profile' . $sw_template . '_lang');
 		}
+		// If theme was actually switched — update main template path and Twig loader so that
+		// index.php picks up the correct main.tpl and all {% include %} resolve to the right theme.
+		// Without this, main.tpl stays from the original (tpl_site) theme while tpl_url points
+		// to the switched theme → CSS/JS 403/404 errors.
+		if (defined('tpl_site') && (site_root . 'templates/' . $config['theme'] . '/') !== tpl_site) {
+			global $twigLoader, $SYSTEM_FLAGS, $TemplateCache;
+			$newTplSite = site_root . 'templates/' . $config['theme'] . '/';
+			// Tell index.php to load main.tpl from the switched theme
+			$SYSTEM_FLAGS['template.main.path'] = $newTplSite;
+			// Update Twig loader: switched theme first, original theme as fallback for missing templates,
+			// engine/plugins (root) always last
+			if (is_dir($newTplSite)) {
+				$twigLoader->setPaths([$newTplSite, tpl_site, root]);
+			}
+			// Reset variables.ini cache so templateLoadVariables() re-reads it from the switched theme.
+			// Without this, pagination/messages/etc. keep using the original theme's variables.ini.
+			unset($TemplateCache['site']['#variables']);
+		}
 	}
 }
-
 function plugin_template_switch_menu()
 {
 	global $template, $tpl, $lang;
-
 	if (isset($_GET['template_switch_frame'])) {
 		return;
 	}
-
 	if (isset($GLOBALS['template_switch_rendered']) || isset($_GET['template_switch_frame'])) {
 		return;
 	}
-
 	static $executed = false;
 	if ($executed) return;
 	$executed = true;
-
 	$GLOBALS['template_switch_rendered'] = true;
 	$list = '';
 	$sw_count = intval(pluginGetVariable('template_switch', 'count'));
 	if (!$sw_count) {
 		$sw_count = 3;
 	}
-
 	// Получаем текущий выбранный шаблон
 	$current_template = $_COOKIE['sw_template'] ?? 1;
-
 	// Получаем ссылку на описание для текущего шаблона
 	$description_link = pluginGetVariable('template_switch', 'profile' . $current_template . '_description_link');
-
 	for ($i = 1; $i <= $sw_count; $i++) {
 		if (pluginGetVariable('template_switch', 'profile' . $i . '_active')) {
 			$profileName = pluginGetVariable('template_switch', 'profile' . $i . '_name');
@@ -131,32 +145,25 @@ function plugin_template_switch_menu()
 			$list .= "<option value='$i'>" . htmlspecialchars($profileName) . "</option>\n";
 		}
 	}
-
 	LoadPluginLang('template_switch', 'main', '', 'template_switch');
-
 	$tpath = locatePluginTemplates(array('template_switch'), 'template_switch', pluginGetVariable('template_switch', 'localsource'));
 	$tpl->template('template_switch', $tpath['template_switch']);
-
 	$tvars['vars']['current_template'] = $current_template;
 	$tvars['vars']['is_frame'] = isset($_GET['template_switch_frame']);
 	$tvars['vars']['list'] = $list;
 	$tvars['vars']['description_link'] = $description_link; // Передаем ссылку в шаблон
-
 	$tpl->vars('template_switch', $tvars);
 	$template['vars']['template_switch'] = $tpl->show('template_switch');
 	register_htmlvar('plain', '{template_switch}');
 }
-
 function template_switch_redirector()
 {
 	$templateID = $_REQUEST['profile'];
-
 	// Scan for template with this ID
 	$sw_count = intval(pluginGetVariable('template_switch', 'count'));
 	if (!$sw_count) {
 		$sw_count = 3;
 	}
-
 	$templateNum = 0;
 	for ($i = 1; $i <= $sw_count; $i++) {
 		if (pluginGetVariable('template_switch', 'profile' . $i . '_id') == $templateID) {
@@ -164,10 +171,8 @@ function template_switch_redirector()
 			break;
 		}
 	}
-
 	// Set cookie with template ID
-	@setcookie('sw_template', $templateNum, time() + 365 * 24 * 60 * 60, '/');
-
+	@setcookie('sw_template', $i, 0, '/'); // 0 - значит до закрытия браузера
 	// Redirect user:
 	// if `redirect` is set - to specified URL
 	// if `redirect` is not set - to root directory of the site

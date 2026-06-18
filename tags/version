@@ -13,7 +13,7 @@ Deinstall: deinstall.php
 Type: plugin
 Description: Использование тегов и облака тегов (совместимо с PHP 8.3)
 Author: Vitaly A. Ponomarev
-Author_URI: http://ngcms.ru/
+Author_URI: http://ngcms.org/
 URI: http://no_url.com/
 Title: Облако тегов
 Information: Показывает массив ключевых слов, созданных в новости. Чем чаще ключевое слово встречается в новостях, тем сильнее выделяется данное слово в &quot;облаке&quot;. Обновлено для совместимости с PHP 8.3.

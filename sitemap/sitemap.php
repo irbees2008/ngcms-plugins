@@ -1,6 +1,6 @@
 <?php
 /*
- * sitemap for Next Generation CMS (http://ngcms.ru/)
+ * sitemap for Next Generation CMS (http://ngcms.org/)
  * Copyright (C) 2010 Alexey N. Zhukov (http://digitalplace.ru), kt2k (http://kt2k.ru/)
  * http://digitalplace.ru
  *

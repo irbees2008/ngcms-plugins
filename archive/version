@@ -14,6 +14,6 @@ Information: Отображает список месяцев, в которые
 Preinstall: no
 Preinstall_vars: maxnum="12"; counter="1"; cache="1"; cacheExpire="3600";
 Author: Vitaly A. Ponomarev
-Author_URI: http://ngcms.ru/
+Author_URI: http://ngcms.org/
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-archive fa-3x" aria-hidden="true"></i>

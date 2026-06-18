@@ -1,0 +1,18 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID:cookienotice
+Name:Уведомление о куках (Cookie Notice)
+Version: 1.0
+Acts:
+File:cookienotice.php
+Config:config.php
+Type:widget
+Description: Всплывающее уведомление об использовании файлов cookie
+Information: Показывает гостям сайта всплывающее окно с уведомлением об использовании cookie. Уведомление отображается один раз — согласие сохраняется в localStorage на заданное количество дней.
+Author: NGCMS
+Author_URI: https://ngcms.org/
+Title: Cookie Notice
+Preinstall: no
+MinEngineBuild: 3740369
+Icons: <i class="fa fa-cookie fa-3x" aria-hidden="true"></i>

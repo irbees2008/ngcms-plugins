@@ -1,0 +1,146 @@
+============================
+  PAYMENTS — Платёжные шлюзы
+============================
+
+Версия: 1.0.0
+Зависимости: basket, feedback, xfields
+
+─────────────────────────────────────────────────────────────────────────────
+ОПИСАНИЕ
+─────────────────────────────────────────────────────────────────────────────
+Плагин подключает платёжные шлюзы к корзине (basket). После оформления заказа
+через форму feedback пользователь перенаправляется на страницу выбора оплаты.
+Поддерживаемые адаптеры: Robokassa, LiqPay, Unitpay, Pay2Pay, Privat24.
+
+─────────────────────────────────────────────────────────────────────────────
+УСТАНОВКА
+─────────────────────────────────────────────────────────────────────────────
+1. Убедитесь, что установлены и настроены: xfields, feedback, basket.
+2. Установите плагин payments через панель администратора
+   (Плагины → payments → Установить).
+   Создаётся таблица: {prefix}_payments_transactions
+3. Настройте плагин (Плагины → payments → Настройки):
+   - Укажите валюту по умолчанию (ISO-код: RUB, UAH, USD)
+   - Включите нужные адаптеры и заполните ключи API
+4. В настройках плагина basket укажите форму feedback для оформления заказа.
+
+─────────────────────────────────────────────────────────────────────────────
+НАСТРОЙКА АДАПТЕРОВ
+─────────────────────────────────────────────────────────────────────────────
+Каждый адаптер настраивается в разделе «Настройки» плагина payments:
+
+  Robokassa:
+    payments_robokassa_enabled    — включить (1/0)
+    payments_robokassa_label      — название для пользователя
+    payments_robokassa_mrh_login  — логин магазина
+    payments_robokassa_mrh_pass1  — пароль 1
+    payments_robokassa_mrh_pass2  — пароль 2
+    payments_robokassa_test_mode  — тестовый режим (1/0)
+
+  LiqPay:
+    payments_liqpay_enabled       — включить
+    payments_liqpay_public_key    — public key
+    payments_liqpay_private_key   — private key
+
+  Unitpay:
+    payments_unitpay_enabled      — включить
+    payments_unitpay_public_key   — public key
+    payments_unitpay_secret_key   — secret key
+    payments_unitpay_project_id   — ID проекта
+
+  Pay2Pay:
+    payments_pay2pay_enabled      — включить
+    payments_pay2pay_shop_id      — Shop ID
+    payments_pay2pay_secret       — Secret key
+
+  Privat24:
+    payments_privat24_enabled     — включить
+    payments_privat24_merchant_id       — Merchant ID
+    payments_privat24_merchant_password — Merchant password
+
+─────────────────────────────────────────────────────────────────────────────
+URL-СТРАНИЦЫ ПЛАГИНА
+─────────────────────────────────────────────────────────────────────────────
+  /payments/pay/?order_id=N&uniqid=X           — выбор способа оплаты
+  /payments/pay/?order_id=N&uniqid=X&method=Y  — редирект на шлюз
+  /payments/success/?order_id=N                — успешная оплата
+  /payments/fail/?order_id=N                   — неудачная оплата
+  /payments/notify/?method=robokassa           — IPN-callback Robokassa
+  /payments/notify/?method=liqpay             — IPN-callback LiqPay
+  /payments/status/?order_id=N&uniqid=X        — AJAX статус заказа (JSON)
+
+─────────────────────────────────────────────────────────────────────────────
+ШАБЛОНЫ (tpl/)
+─────────────────────────────────────────────────────────────────────────────
+  tpl/pay.tpl
+    Страница выбора способа оплаты.
+    Переменные:
+      {{ order }}           — массив с данными заказа (id, total, status, …)
+      {{ order.id }}        — ID заказа
+      {{ order.total }}     — сумма заказа
+      {{ order.uniqid }}    — уникальный ключ заказа
+      {{ items }}           — массив товаров: [{title, price, count}, …]
+      {{ adapters }}        — список кодов активных адаптеров ['robokassa', …]
+
+    Пример кнопки для каждого адаптера:
+      {% for method in adapters %}
+        <a href="/payments/pay/?order_id={{ order.id }}&uniqid={{ order.uniqid }}&method={{ method }}">
+          Оплатить через {{ method }}
+        </a>
+      {% endfor %}
+
+  tpl/success.tpl
+    Страница успешной оплаты.
+    Переменные:
+      {{ order }}  — данные заказа (или null)
+
+  tpl/fail.tpl
+    Страница неудачной оплаты.
+    Переменные:
+      {{ order }}  — данные заказа (или null)
+
+─────────────────────────────────────────────────────────────────────────────
+ИНТЕГРАЦИЯ С BASKET
+─────────────────────────────────────────────────────────────────────────────
+Плагин basket при оформлении заказа (onProcessNotify) автоматически:
+1. Сохраняет заказ в таблицу basket_orders
+2. Сохраняет ID и uniqid заказа в сессию
+3. Плагин basket перенаправляет на /basket/order/?order_id=N
+
+Страница /basket/order/ содержит кнопку «Перейти к оплате» → /payments/pay/
+
+─────────────────────────────────────────────────────────────────────────────
+ДОБАВЛЕНИЕ НОВОГО АДАПТЕРА
+─────────────────────────────────────────────────────────────────────────────
+1. Создайте папку: engine/plugins/payments/adapters/{name}/
+2. Создайте файл: engine/plugins/payments/adapters/{name}/adapter.php
+3. Реализуйте две функции:
+
+   function payments_adapter_redirect(int $orderId, array $order, array $cfg): void
+   {
+       // Редирект на страницу оплаты шлюза
+       header('Location: https://gateway.example/?amount=' . $order['total']);
+   }
+
+   function payments_adapter_notify(array $data, array $cfg): void
+   {
+       // Обработка IPN-callback от шлюза
+       $orderId = intval($data['order_id']);
+       payments_mark_paid($orderId, 'mygateway', $data['transaction_id'], $data);
+       echo 'OK';
+   }
+
+4. Добавьте настройки адаптера в config.php (массив $adapterMeta).
+
+─────────────────────────────────────────────────────────────────────────────
+ПРОВЕРКА СТАТУСА ОПЛАТЫ (AJAX)
+─────────────────────────────────────────────────────────────────────────────
+GET /payments/status/?order_id=N&uniqid=X
+Ответ JSON: {"status": "new"} | {"status": "paid"} | {"status": "error"}
+
+Пример опроса из JS:
+  setInterval(() => {
+    fetch('/payments/status/?order_id={{ order.id }}&uniqid={{ order.uniqid }}')
+      .then(r => r.json())
+      .then(d => { if (d.status === 'paid') location.reload(); });
+  }, 5000);

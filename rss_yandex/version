@@ -12,7 +12,7 @@ Type: plugin
 Description: Экспорт RSS потока для Яndex (ng-helpers v0.2.2, PHP 8.0+)
 Description_EN: News export for Yandex (ng-helpers v0.2.2, PHP 8.0+)
 Author: Vitaly A. Ponomarev, NGCMS Team
-Author_URI: http://ngcms.ru/
+Author_URI: http://ngcms.org/
 Preinstall_vars: feed_title_format="site_title"; news_title="1"; news_count="30"; use_hide="1"
 Title: Экспорт RSS потока для Яndex
 Preinstall: no

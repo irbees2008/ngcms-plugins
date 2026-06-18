@@ -1,10 +1,12 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 
-class WPingerNewsfilter extends NewsFilter {
+class WPingerNewsfilter extends NewsFilter
+{
 
-	function addNewsNotify(&$tvars, $SQL, $newsid) {
+	function addNewsNotify(&$tvars, $SQL, $newsid)
+	{
 
 		if ($SQL['approve'])
 			plugin_wpinger_servicePing();
@@ -12,7 +14,8 @@ class WPingerNewsfilter extends NewsFilter {
 		return 1;
 	}
 
-	function editNewsNotify($newsID, $SQLnews, &$SQLnew, &$tvars) {
+	function editNewsNotify($newsID, $SQLnews, &$SQLnew, &$tvars)
+	{
 
 		if ($SQLnew['approve'] && !$SQLnews['approve'])
 			plugin_wpinger_servicePing();
@@ -21,7 +24,8 @@ class WPingerNewsfilter extends NewsFilter {
 	}
 
 	// Mass news modify
-	function massModifyNewsNotify($idList, $setValue, $currentData) {
+	function massModifyNewsNotify($idList, $setValue, $currentData)
+	{
 
 		if (isset($setValue['approve']) && $setValue['approve'])
 			plugin_wpinger_servicePing();
@@ -31,7 +35,8 @@ class WPingerNewsfilter extends NewsFilter {
 }
 
 register_filter('news', 'wpinger', new WPingerNewsFilter);
-function plugin_wpinger_servicePing() {
+function plugin_wpinger_servicePing()
+{
 
 	global $config;
 	// Determine SITEMAP URL
@@ -67,7 +72,7 @@ function plugin_wpinger_servicePing() {
 		$content .= '</data></array></value></param>' .
 			'</params>' .
 			'</methodCall>';
-		$RPC_Service_URL = 'http://ngcms.ru/services/RPC/01/';
+		$RPC_Service_URL = 'http://ngcms.org/services/RPC/01/';
 		$vms = $req->request('POST', $RPC_Service_URL, $content, 5);
 	} else {
 		// Generate XML content

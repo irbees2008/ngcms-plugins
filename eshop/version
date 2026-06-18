@@ -1,0 +1,19 @@
+ID: eshop
+Name: Интернет магазин
+Version: 0.6
+Actions: ppages; eshop.php
+Actions: core, twig; info_eshop.php
+Actions: index, twig; block_eshop.php
+Actions: rpc; rpc_eshop.php
+File: eshop.php
+Config: config.php
+Install: install.php
+Deinstall: uninstall.php
+Type: plugin
+Title: Интернет магазин
+Description: Организует на сайте интернет магазин
+Author: Rostunov S U
+Author_URI: http://rostunov.com
+preinstall: no
+MinEngineBuild: 23b3116
+Icons:<i class="fa fa-shopping-cart" aria-hidden="true"></i>

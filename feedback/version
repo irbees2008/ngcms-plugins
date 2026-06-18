@@ -12,7 +12,7 @@ Deinstall: uninstall.php
 Type: plugin
 Description: Генератор форм обратной связи с поддержкой ng-helpers v0.2.2: безопасный доступ к массивам через array_get(), защита от CSRF, валидация email/телефона, санитизация данных, логирование в формате logger(message, level, file)
 Author: Vitaly A. Ponomarev
-Author_URI: http://ngcms.ru
+Author_URI: http://ngcms.org
 Title: Формы обратной связи
 Information: Позволяет создавать различные формы обратной связи.
 Library: common; lib/common.php

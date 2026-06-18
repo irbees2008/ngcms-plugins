@@ -12,7 +12,7 @@ Deinstall: uninstall.php
 Type: plugin
 Description: Комментарии пользователей
 Author: Vitaly A. Ponomarev
-Author_URI: http://ngcms.ru/
+Author_URI: http://ngcms.org/
 Title: Комментарии пользователей
 Information: Универсальная система комментариев с поддержкой модулей (новости, галерея, статические страницы)
 Preinstall:no

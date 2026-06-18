@@ -1613,7 +1613,7 @@ $req = 'Перепиши следующий текст на русском яз�
 
 **Сообщество:**
 
-- NGCMS Forum: https://ngcms.ru/forum
+- NGCMS Forum: https://ngcms.org/forum
 - GitHub NGCMS: https://github.com/NG-CMS
 
 **Мониторинг статуса:**

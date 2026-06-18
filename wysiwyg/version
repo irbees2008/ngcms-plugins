@@ -11,7 +11,7 @@ Title: wysiwyg
 Description: Визуальный редактор wysiwyg
 Information:
 Author: Nail R. Davydov (ROZARD)
-Author_URI: http://ngcms.ru/
+Author_URI: http://ngcms.org/
 Preinstall: no
 MinEngineBuild: 23b3116
 Icons: <i class="fa fa-text-height fa-3x" aria-hidden="true"></i>

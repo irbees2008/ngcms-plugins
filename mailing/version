@@ -14,7 +14,7 @@ Type: plugin
 Description: Плагин для массовых email-рассылок с поддержкой сегментации, вложений, отложенной отправки и авто-рассылки новых новостей. Требует PHP 8.1+
 Description_EN: Mass mailing plugin with segmentation, attachments, scheduled sending and auto-news mailing. Requires PHP 8.1+
 Author: NGCMS Community
-Author_URI: https://ngcms.ru/
+Author_URI: https://ngcms.org/
 Title: Email Рассылки
 Information: Профессиональная система email-рассылок с очередью, отпиской, вложениями и интеграцией с Twig
 Preinstall: no

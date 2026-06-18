@@ -13,7 +13,6 @@ class OGNEWSNewsFilter extends NewsFilter
         $twTitleLen      = intval(pluginGetVariable('ognews', 'twitter_title_length')) ?: $titleLen;
         $twDescrLen      = intval(pluginGetVariable('ognews', 'twitter_description_length')) ?: $descrLen;
         $keywordsLen     = intval(pluginGetVariable('ognews', 'keywords_length')) ?: 0; // 0 = без ограничения
-
         // Функция безопасной обрезки (UTF-8)
         $trim = function ($text, $len) {
             if (!$len) return $text;
@@ -56,7 +55,7 @@ class OGNEWSNewsFilter extends NewsFilter
                     }
                     if (!empty($SQLnews['#images'])) {
                         foreach ($SQLnews['#images'] as $img_item) {
-                            register_htmlvar('plain', '<meta property="og:image" content="' . home . '/uploads/dsn/' . $img_item['folder'] . '/' . $img_item['name'] . '" />');
+                            register_htmlvar('plain', '<meta property="og:image" content="' . rtrim($config['attach_url'], '/') . '/' . $img_item['folder'] . '/' . $img_item['name'] . '" />');
                         }
                     }
                     register_htmlvar('plain', '<meta property="twitter:card" content="summary_large_image">');
@@ -64,7 +63,7 @@ class OGNEWSNewsFilter extends NewsFilter
                     register_htmlvar('plain', '<meta property="twitter:description" content="' . $twitterDescr . '">');
                     if (!empty($SQLnews['#images'])) {
                         foreach ($SQLnews['#images'] as $img_item) {
-                            register_htmlvar('plain', '<meta property="twitter:image:src" content="' . home . '/uploads/dsn/' . $img_item['folder'] . '/' . $img_item['name'] . '" />');
+                            register_htmlvar('plain', '<meta property="twitter:image:src" content="' . rtrim($config['attach_url'], '/') . '/' . $img_item['folder'] . '/' . $img_item['name'] . '" />');
                         }
                     }
                     /* if ($tvars['vars']['news']['embed']['imgCount'] > 0) {

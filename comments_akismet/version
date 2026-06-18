@@ -11,7 +11,7 @@ Config: config.php
 Type: plugin
 Description: Фильтрует спам в комментариях
 Author: wget
-Author_URI: http://ngcms.ru/forum/profile.php?id=2348
+Author_URI: http://ngcms.org/forum/profile.php?id=2348
 Title: Antispam
 Information: Фильтрует спам в комментариях
 Preinstall: no

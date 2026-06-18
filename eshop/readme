@@ -1,0 +1,801 @@
+# =========================================================================== #
+# NG CMS // Плагины // Интернет магазин                                       #
+# =========================================================================== #
+
+Установка:
+1) Залить плагин в /engine/plugins/.
+2) Залить тестовый шаблон eshop2 в /templates/, выбрать шаблон eshop2 в настройках CMS (не обязательно, если будете использовать свой).
+3) Установить плагин eshop в админке.
+4) Настроить URL'ы, если требуется.
+
+ВНИМАНИЕ: при установке плагин перезаписывает настройки URL на свои, резервная копия исходных URL сохраняется в /engine/plugins/eshop/install_tmp/backup/ 
+
+# =========================================================================== #
+
+Работа с валютами:
+1) После установки, уже существует 3 предустановленных валюты (USD, RUB, UAH).
+Основной валютой является - валюта первая по позиции в таблице валют. 
+Основная валюта:
+- эта валюта, в которой ведутся все цены продукции в админке
+- эта валюта, в которой будут отображаться все цены магазина при первом посещении пользователя.
+2) Настоятельно рекомендуется настроить для себя основную валюту до начала добавления продукции и заказов, т.к. в дальнейшем изменение основной валюты затруднительно.
+Если сначала основная валюта была RUB и был продукт с ценой 100, то при смене основной валюты на USD, абсолютное значение данного продукта останется 100, но уже USD.
+Т.е. при смене основной валюты переконвертации цен в продукции и заказах по курсу не происходит.
+
+# =========================================================================== #
+
+Работа с системами оплаты:
+Fail URL: http://sitename.ru/eshop/payment/?result=1&payment_id={payment_id}
+Result URL: http://sitename.ru/eshop/payment/?result=2&payment_id={payment_id}
+Success URL: http://sitename.ru/eshop/payment/?result=3&payment_id={payment_id}
+
+Переход на платежную страницу может быть реализован, например, через форму в шаблоне order_eshop.tpl (страница заказа).
+Пример формы:
+<form method="get" action="{{ payment.link }}" target="_blank">
+    <input type="hidden" value="{{ formEntry.id }}" name="order_id">
+    <input type="hidden" value="{{ formEntry.uniqid }}" name="order_uniqid">
+    <input type="hidden" value="{{ payment.systems[2].name }}" name="payment_id">
+    <div>
+        <button type="submit">Оплатить</button>
+    </div>
+</form>
+
+Переменные в форме:
+- payment.link - URL обработчика формы (по-умолчанию /eshop/payment/)
+- formEntry - массив с данными заказа (обязательными для передачи являются 2 параметра: id и uniqid)
+- payment.systems - массив с доступными системами оплаты (обязательным для передачи являются параметр name, который является payment_id)
+
+
+# =========================================================================== #
+
+Экспорт:
+В CSV с ";" в качестве разделителя. Первая строка - заголовки.
+
+Импорт:
+Из CSV с ";" в качестве разделителя. Первая строка - заголовки. Порядок столбцов важен:
+id;code;url;name;price;compare_price;stock;annotation;body;active;featured;stocked;meta_title;meta_keywords;meta_description;date;editdate;cat_name;cid;images;xfields_source_id;xfields_source_url
+cat_name, images - не учитывается.
+Для загрузки дополнительных изображений создать директорию в /engine/plugins/eshop/import/images/, с именем равным ID продукта и положить туда изображения.
+(Например, для продукта с ID = 438 путь будет /engine/plugins/eshop/import/images/438/)
+
+# =========================================================================== #
+
+API:
+Endpoint для API по-умолчанию: /eshop/api/v{version}/
+
+Доступные методы [v1]:
+
+1) Получение заказов
+GET /eshop/api/v1/?type=get-orders&token={token}[&order_id={order_id}&from={ГГГГ-ММ-ДД}&to={ГГГГ-ММ-ДД}]
+
+Пример ответа:
+{
+  "data": {
+    "1": {
+      "id": "1",
+      "author_id": "1",
+      "uniqid": "3a5c8edbb6",
+      "dt": "1505070388",
+      "paid": "1",
+      "type": "1",
+      "name": "admin",
+      "address": "5 South Main Street, Polar Express for 52017",
+      "phone": "7324466721",
+      "email": "",
+      "comment": "12344",
+      "ip": "127.0.0.1",
+      "total_price": "21.00",
+      "mail": "",
+      "pass": "",
+      "news": "0",
+      "status": "1",
+      "last": "1505172285",
+      "reg": "1504953353",
+      "site": "",
+      "icq": "",
+      "where_from": "",
+      "info": "",
+      "avatar": "",
+      "photo": "",
+      "activation": "",
+      "newpw": "",
+      "authcookie": ""
+    }
+  },
+  "status": "OK"
+}
+
+2) Получение товаров заказа
+GET /eshop/api/v1/?type=get-order-products&token={token}[&order_id=1&from={ГГГГ-ММ-ДД}&to={ГГГГ-ММ-ДД}]
+
+Пример ответа:
+{
+   "data":{
+      "1":{
+         "positions":[
+            {
+               "id":"1",
+               "order_id":"1",
+               "linked_id":"1",
+               "title":"p1",
+               "count":"1",
+               "price":"21.00",
+               "sum":"    21.00",
+               "xfields":{
+                  "item":{
+                     "id":"1",
+                     "url":"p1",
+                     "code":"p1",
+                     "name":"p1",
+                     "active":"1",
+                     "featured":"0",
+                     "position":"0",
+                     "curl":"test1",
+                     "category":"test1",
+                     "image_filepath":"1505070301-dodo_123.png",
+                     "v_id":"3",
+                     "v_sku":"",
+                     "v_name":"1",
+                     "v_amount":"1",
+                     "price":"21.00",
+                     "compare_price":"0.00",
+                     "stock":"5",
+                     "view_link":"\/p1.html"
+                  }
+               }
+            }
+         ],
+         "purchases":[
+
+         ],
+         "total":23
+      },
+      "2":{
+         "positions":[
+            {
+               "id":"2",
+               "order_id":"2",
+               "linked_id":"3",
+               "title":"ffffffffffffff",
+               "count":"2",
+               "price":"1.00",
+               "sum":"     2.00",
+               "xfields":{
+                  "item":{
+                     "id":"3",
+                     "url":"ffffffffffffff",
+                     "code":"fff",
+                     "name":"ffffffffffffff",
+                     "active":"1",
+                     "featured":"0",
+                     "position":"0",
+                     "curl":"sub2",
+                     "category":"sub2",
+                     "image_filepath":null,
+                     "v_id":"7",
+                     "v_sku":"",
+                     "v_name":"",
+                     "v_amount":"99",
+                     "price":"1.00",
+                     "compare_price":"2.00",
+                     "stock":"5",
+                     "view_link":"\/ffffffffffffff.html"
+                  }
+               }
+            }
+         ],
+         "purchases":[
+
+         ],
+         "total":23
+      }
+   },
+   "status":"OK"
+}
+
+3) Получние параметров продукции
+GET /eshop/api/v1/?type=get-features&token={token}
+
+Пример ответа:
+{
+  "data": [
+    {
+      "id": "1",
+      "name": "test",
+      "position": "0",
+      "ftype": "0",
+      "fdefault": "123",
+      "foptions": "",
+      "in_filter": "0",
+      "required": "0"
+    },
+    {
+      "id": "2",
+      "name": "test2",
+      "position": "0",
+      "ftype": "2",
+      "fdefault": "2",
+      "foptions": "{\"1\":\"t1\",\"2\":\"t2\"}",
+      "in_filter": "1",
+      "required": "0"
+    }
+  ],
+  "status": "OK"
+}
+
+4) Получение вариантов продукции
+GET /eshop/api/v1/?type=get-variants&token={token}[&product_id={ID}]
+
+Пример ответа:
+{
+  "data": [
+    {
+      "id": "9",
+      "product_id": "2",
+      "sku": "",
+      "name": "\u0421\u0438\u043d\u0438\u0439",
+      "price": "12.00",
+      "compare_price": "24.00",
+      "stock": "5",
+      "position": "0",
+      "amount": "88",
+      "attachment": ""
+    },
+    {
+      "id": "8",
+      "product_id": "2",
+      "sku": "",
+      "name": "\u041a\u0440\u0430\u0441\u043d\u044b\u0439",
+      "price": "11.00",
+      "compare_price": "22.00",
+      "stock": "5",
+      "position": "0",
+      "amount": "3",
+      "attachment": ""
+    }
+  ],
+  "status": "OK"
+}
+
+5) Обновление статуса заказа
+POST /eshop/api/v1/?type=update-order-statuses&token={token}
+
+Пример запроса:
+[
+  {
+    "order_id" : "1",
+    "status": "1"
+  },
+  {
+    "order_id" : "2",
+    "status": "0"
+  }
+]
+
+Пример ответа:
+{
+  "data": [
+    {
+      "id": "1",
+      "status": "OK"
+    },
+    {
+      "id": "",
+      "status": "error",
+      "message": "Item with this ID does not exist"
+    }
+  ],
+  "status": "OK"
+}
+
+6) Добавление/обновление вариантов продукции
+POST /eshop/api/v1/?type=update-variants&token={token}
+
+Пример запроса:
+[
+  {
+    "id" : "9",
+    "name": "Зеленый",
+    "count": "44",
+    "price": "1025",
+    "price_old": "2077",
+    "sku": "100012333"
+  },
+  {
+    "product_id" : "2",
+    "name": "Черный",
+    "count": "5",
+    "price": "25",
+    "price_old": "121",
+    "sku": "15112333"
+  }
+]
+
+Пример ответа:
+{
+   "data":[
+      {
+         "id":"9",
+         "status":"OK"
+      },
+      {
+         "id":"11",
+         "status":"OK"
+      }
+   ],
+   "status":"OK"
+}
+
+7) Добавление/обновление продукции
+POST /eshop/api/v1/?type=update-products&token={token}
+
+Добавление нового продукта:
+    Пример запроса:
+    [
+      {
+        "name": "Название продукта 1",
+        "short_description": "Короткое описание продукта 1",
+        "description": "Полное описание продукта 1",
+        "vendor_code": "100000123"
+      },
+      {
+        "name": "Название продукта 2",
+        "short_description": "Короткое описание продукта 2",
+        "description": "Полное описание продукта 2",
+        "vendor_code": "100000321"
+      }
+    ]
+
+    Пример ответа:
+    {
+      "data": [
+        {
+          "id": 7,
+          "status": "OK"
+        },
+        {
+          "id": 8,
+          "status": "OK"
+        }
+      ],
+      "status": "OK"
+    }
+
+Обновление существующего продукта:
+    Пример запроса:
+    [
+      {
+        "id" : "7",
+        "name": "Название продукта 12",
+        "short_description": "Короткое описание продукта 12",
+        "description": "Полное описание продукта 12",
+        "vendor_code": "100000777"
+      },
+      {
+        "id" : "8",
+        "name": "Название продукта 22",
+        "short_description": "Короткое описание продукта 22",
+        "description": "Полное описание продукта 22",
+        "vendor_code": "100000555"
+      }
+    ]
+
+    Пример ответа:
+    {
+      "data": [
+        {
+          "id": "7",
+          "status": "OK"
+        },
+        {
+          "id": "8",
+          "status": "OK"
+        }
+      ],
+      "status": "OK"
+    }
+
+8) Обновление параметров продукции
+POST /eshop/api/v1/?type=update-features&token={token}
+
+Пример запроса:
+[
+  {
+    "id" : "1",
+    "product_id": "2",
+    "value": "Текст1"
+  }
+]
+
+Пример ответа:
+{
+   "data":[
+      {
+         "id":"",
+         "status":"OK"
+      }
+   ],
+   "status":"OK"
+}
+
+
+Доступные методы [v2]:
+
+1) Получение заказов
+GET /eshop/api/v2/?type=get-orders&token={token}[&order_id={order_id}&from={ГГГГ-ММ-ДД}&to={ГГГГ-ММ-ДД}]
+
+Пример ответа:
+{
+  "data": {
+    "5": {
+      "dt": "2017-10-30 03:42:04",
+      "paid": "0",
+      "name": "fsdfs",
+      "address": "dsfsdf",
+      "phone": "fsdfsdf",
+      "email": "admin@test003.loc",
+      "comment": "",
+      "total_price": "70.00",
+      "order_id": "5",
+      "paymentType": "Наличными при получении",
+      "deliveryType": "Самовывоз",
+      "positions": [
+        {
+          "linked_id": "20",
+          "count": "3",
+          "price": "22.00",
+          "sum": "    66.00",
+          "code": "120825AG",
+          "name": "120825AG \u041a\u0430\u0431\u043b\u0443\u0447\u043a\u0430",
+          "product_id": "19604"
+        },
+        {
+          "linked_id": "21",
+          "count": "4",
+          "price": "1.00",
+          "sum": "     4.00",
+          "code": "120680AG",
+          "name": "120680AG \u041a\u0430\u0431\u043b\u0443\u0447\u043a\u0430",
+          "product_id": "19605"
+        }
+      ]
+    },
+    "6": {
+      "dt": "2017-10-30 03:38:01",
+      "paid": "1",
+      "name": "re",
+      "address": "dfgdfgdf",
+      "phone": "gfdg",
+      "email": "admin@test003.loc",
+      "comment": "",
+      "total_price": "154.00",
+      "order_id": "6",
+      "paymentType": "Банковской картой",
+      "deliveryType": "Адресная доставка курьером",
+      "positions": [
+        {
+          "linked_id": "20",
+          "count": "7",
+          "price": "22.00",
+          "sum": "   154.00",
+          "code": "120825AG",
+          "name": "120825AG \u041a\u0430\u0431\u043b\u0443\u0447\u043a\u0430",
+          "product_id": "19604"
+        }
+      ]
+    }
+  },
+  "status": "OK"
+}
+
+2) Добавление/обновление продукции
+POST /eshop/api/v2/?type=update-products&token={token}
+
+Добавление нового продукта:
+    Пример запроса:
+    {
+      "products": [
+        {
+          "id": 19604,
+          "vendor_code": "120825AG",
+          "name": "120825AG Каблучка123",
+          "short_description": "120825AG Каблучка",
+          "description": "120825AG Каблучка",
+          "price": null,
+          "price_old": 123,
+          "count": 1
+        },
+        {
+          "id": 19605,
+          "vendor_code": "120680AG",
+          "name": "120680AG Каблучка",
+          "short_description": "120680AG Каблучка",
+          "description": "120680AG Каблучка",
+          "price": null,
+          "price_old": null,
+          "count": 1
+        }
+      ]
+    }
+
+    Пример ответа:
+    {
+      "data": [
+        {
+          "id": "19604",
+          "status": "OK"
+        },
+        {
+          "id": "19605",
+          "status": "OK"
+        }
+      ],
+      "status": "OK"
+    }
+
+Обновление существующего продукта:
+    Пример запроса:
+    [
+      {
+        "id" : "7",
+        "name": "Название продукта 12",
+        "short_description": "Короткое описание продукта 12",
+        "description": "Полное описание продукта 12",
+        "vendor_code": "100000777"
+      },
+      {
+        "id" : "8",
+        "name": "Название продукта 22",
+        "short_description": "Короткое описание продукта 22",
+        "description": "Полное описание продукта 22",
+        "vendor_code": "100000555"
+      }
+    ]
+
+    Пример ответа:
+    {
+      "data": [
+        {
+          "id": "7",
+          "status": "OK"
+        },
+        {
+          "id": "8",
+          "status": "OK"
+        }
+      ],
+      "status": "OK"
+    }
+
+3) Обновление опции продукции
+POST /eshop/api/v2/?type=update-options&token={token}
+
+Пример запроса:
+{
+    "params": [
+        {
+            "id": "9052ffd1-4767-11e6-b348-00155d02ac06",
+            "product_id": 19605,
+            "name": "17,5",
+            "count": 2
+        }
+    ]
+}
+
+Пример ответа:
+{
+  "data": [
+    {
+      "id": "9052ffd1-4767-11e6-b348-00155d02ac06",
+      "status": "OK"
+    }
+  ],
+  "status": "OK"
+}
+
+
+# =========================================================================== #
+
+После установки плагина и активации и настройки ЧПУ станут доступны страницы:
+/[{alt}/][page/{page}/] - страницы категорий. (Шаблон вывода eshop.tpl)
+/{alt}.html - страницы продукции. (Шаблон вывода show_eshop.tpl)
+/eshop/search/[page/{page}/] - поиск по продукции. (Шаблон вывода search_eshop.tpl)
+/eshop/stocks/[page/{page}/] - страница акциионной продукции. (Шаблон вывода stocks_eshop.tpl)
+/eshop/compare/ - страница сравнения продукции. (Шаблон вывода compare_eshop.tpl)
+/eshop/yml_export/ - страница вывода продукции в XML. (Шаблон вывода yml_export_eshop.tpl)
+/eshop/ebasket_list/ - страница вывода корзины и формы заказа. (Шаблон вывода ebasket/list.tpl)
+/eshop/order/?id={id}&uniqid={uniqid} - страница существуюшего заказа. (Шаблон вывода order_eshop.tpl)
+/eshop/currency/?id={id} - страница смены валюты.
+/eshop/payment/?payment_id={payment_id}&order_id={order_id}&order_uniqid={order_uniqid} - страница отправки запроса на оплату и приема результата оплаты. (Шаблон вывода payment_eshop.tpl)
+/eshop/api/?type={method} - страница API запросов
+
+variables.ini - отвечает за переменные для постраничной навигации.
+comments.form_eshop.tpl - шаблон вывода формы для добавления отзывов на странице продукта.
+comments.show_eshop.tpl - о шаблон вывода списка отзывов на странице продукта.
+viewed_block_eshop.tpl -  шаблон вывода просмотренных товаров.
+likes_eshop.tpl -  шаблон вывода блока кнопки - лайк (+1).
+mail/lfeedback.tpl -  шаблон вывода письма о добавлении нового заказа.
+mail/lfeedback_comment.tpl -  шаблон вывода письма о добавлении нового отзыва.
+
+Наличие той или иной переменной в шаблоне всегда можно посмотреть через {{ debugContext(0) }}, {{ debugValue(varName) }}
+
+# =========================================================================== #
+
+Переменные, доступные в main.tpl:
+1. {{ callPlugin('eshop.show', {'number' : 10, 'mode' : 'stocked', 'template': 'block_eshop'}) }} - выводит блок товаров на главной.
+Доступные параметры:
+- number - число товаров для отображения
+- mode - режим вывода, доступны (last - самые новые, stocked - те что отмечены "Акционный", featured - те что отмечены "Рекомендованный", view - самые просматриваемые, rnd - рандом)
+- template - шаблон вывода, например если block_eshop, то это block/block_eshop.tpl (если не используется, то по-умолчанию block_eshop)
+- cat - категории из которых выводить товары (если не используется, то по-умолчанию все категории).
+- products - id продуктов, которые выводить (если не используется, то по-умолчанию все продукты).
+- cacheExpire - время жизни кеша в секундах (если не используется, то по-умолчанию без кеша).
+
+2. {{ callPlugin('eshop.show_catz_tree', {'template': 'block_cats_tree'}) }} - выводит дерево категорий. Шаблон вывода: plugins/eshop/tpl/cats_tree.tpl
+Доступные параметры:
+- template - шаблон вывода, например если block_cats_tree, то это block/block_cats_tree.tpl (если не используется, то по-умолчанию block_cats_tree)
+
+3. {{ callPlugin('eshop.total', {}) }} - выводит блок корзины с количеством и ценой. Шаблон вывода: ebasket/total.tpl
+
+4. {{ callPlugin('eshop.notify', {}) }} - выводит блоки, связанные с добавлением заказов (добавление в корзину, заказ в один клик, и.т.д).  Шаблон вывода: ebasket/notify.tpl
+
+5. {{ callPlugin('eshop.compare', {}) }} - выводит блок количества добавленных к сравнению продуктов. Шаблон вывода: compare_block_eshop.tpl
+
+6. Также в main.tpl поддерживаются страндартные TWIG блоки, которые позволяют выводить/скрывать определенные блоки в зависимости от страницы на которой находится посетитель.
+- {% if pluginIsActive('eshop') %}XXX{% endif %} - выводится если плагин eshop активирован.
+- {% if isHandler('eshop') %}XXX{% endif %} - выводится только на всех страницах плагина eshop, но не выводится на других страницах.
+- {% if isHandler('eshop:show') %}XXX{% endif %} - выводится только на всех страницах продукции плагина eshop.
+- {% if isHandler('eshop:search') %}XXX{% endif %} - выводится только на на странице /eshop/ плагина eshop.
+- {% if isHandler('eshop:stocks') %}XXX{% endif %} - выводится только на на странице /stocks/ плагина eshop.
+- {% if isHandler('eshop:compare') %}XXX{% endif %} - выводится только на на странице /compare/ плагина eshop.
+- {% if isHandler('eshop:ebasket_list') %}XXX{% endif %} - выводится только на на странице /ebasket_list/ плагина eshop.
+- {% if isHandler('eshop:order') %}XXX{% endif %} - выводится только на на странице /order/ плагина eshop.
+- {% if (handler.pluginName == 'eshop') and (handler.handlerName == '') %}XXX{% endif %} - выводится только на страницах всех категорий.
+- {% if (handler.pluginName == 'eshop') and (handler.handlerName == 'show') and (handler.params.alt == 'alt-name-product') %}XXX{% endif %} - выводится только на странице продукта с altname = alt-name-product.
+- {% if (handler.pluginName == 'eshop') and (handler.handlerName == '') and (handler.params.alt == 'alt-name-cat') %}XXX{% endif %} - выводится только на странице категории с altname = alt-name-cat.
+
+# =========================================================================== #
+
+Переменные, доступные в шаблоне profile.tpl (плагин uprofile):
+
+1. {{ debugValue(shop.orders) }} - массив с заказами текущего пользователя.
+Пример вывода блока:
+{% for order in eshop.orders %}
+    {{ order.id }}
+    {{ order.order_link }}
+    {{ order.dt|date("d.m.Y H:i") }}
+    {{ (order.total_price * system_flags.eshop.current_currency.rate_from)|number_format(2, '.', '') }}</span> {{ system_flags.eshop.current_currency.sign }}
+    {% if (order.paid == 0) %}Не оплачен{% else %}Оплачен{% endif %}
+{% endfor %}
+
+# =========================================================================== #
+
+Переменные, доступные в любых шаблонах:
+
+1. {{ debugValue(system_flags.eshop.currency) }} - массив с валютами. {{ debugValue(system_flags.eshop.current_currency) }} - массив с текущей (выбранной) валютой.
+Пример вывода блока со списком валют:
+{% for cc in system_flags.eshop.currency %}
+    <li{% if (system_flags.eshop.current_currency.id == cc.id) %} class="active"{% endif %}><a href="{{ cc.currency_link }}">{{ cc.code }}</a></li>
+{% endfor %}
+
+2. {{ system_flags.eshop.description_order }} - блок описания покупки (берется из админки), {{ system_flags.eshop.description_delivery }} - блок описания доставки (берется из админки), {{ system_flags.eshop.description_phones }} - блок телефоны магазина (берется из админки)
+
+# =========================================================================== #
+
+Часть функционала использует RPC запросы для взаимодействия клиент-сервер:
+
+1) Добавление продукции в корзину:
+rpcEshopRequest('eshop_ebasket_manage', {'action': 'add', 'ds':1, 'id':id, 'count':count, 'variant_id': variant_id }, function (resTX) {
+    document.getElementById('tinyBask').innerHTML = resTX['update'];
+});
+
+Обновление блока корзины без внесения изменений:
+rpcEshopRequest('eshop_ebasket_manage', {'action': 'update' }, function (resTX) {
+    document.getElementById('tinyBask').innerHTML = resTX['update'];
+});
+
+По умолчанию используются шаблоны: ebasket/total.tpl
+
+
+2) Удаление продукции из заказа (корзины):
+rpcEshopRequest('eshop_ebasket_manage', {'action': 'delete', 'id':id, 'linked_ds':linked_ds, 'linked_id':linked_id }, function (resTX) {
+    location.reload();
+});
+По умолчанию используются шаблоны: ebasket/list.tpl
+
+
+3) Обновление количества продукции в заказе (корзине):
+rpcEshopRequest('eshop_ebasket_manage', {'action': 'update_count',  'id':id, 'linked_ds':linked_ds, 'linked_id':linked_id,'count':count }, function (resTX) {
+    click_this.val(count);
+    
+    var total = parseFloat(count * price).toFixed(2);
+    click_this.parent().parent().parent().parent().parent().parent().find("td[class='frame-cur-sum-price frame-sum']").find("span[class='price']").text(total);
+
+    var sum = 0;
+    $("td[class='frame-cur-sum-price frame-sum'").each(function() {
+        sum = sum + parseFloat($(this).find("span[class='price']").text());
+    });
+    $("#finalAmount").text(sum.toFixed(2));
+});
+По умолчанию используются шаблоны: ebasket/list.tpl
+
+
+4) Добавление быстрого заказа:
+rpcEshopRequest('eshop_ebasket_manage', {'action': 'add_fast', 'ds':1, 'id':id, 'count':count, 'type': '2', 'name': name, 'phone': phone, 'address': address, 'variant_id': variant_id}, function (resTX) {
+    $("div#fastorder-frame").html("<label><div align='center'>Заказ добавлен. В ближайшее время вам перезвонит наш манеджер.</div></label>");
+});
+
+Добавление заказа с кнопки "Узнать о наличии":
+rpcEshopRequest('eshop_ebasket_manage', {'action': 'add_fast', 'ds':1, 'id':id, 'count':count, 'type': '3', 'name': name, 'phone': phone, 'address': address, 'variant_id': variant_id}, function (resTX) {
+    $("div#fastprice-frame").html("<label><div align='center'>Спасибо. В ближайшее время вам перезвонит наш манеджер.</div></label>");
+});
+
+По умолчанию используются шаблоны: ebasket/total.tpl, ebasket/notify.tpl
+
+
+5) Добавление / удаление продукции к сравнению:
+rpcEshopRequest('eshop_compare', {'action': 'add', 'id':id }, function (resTX) {
+    $('.compare-button').html(resTX['update']);
+});
+
+rpcEshopRequest('eshop_compare', {'action': 'remove', 'id':id }, function (resTX) {
+    $('.compare-button').html(resTX['update']);
+});
+
+По умолчанию используются шаблоны: compare_block_eshop.tpl
+
+
+6) Лайк продукции:
+rpcEshopRequest('eshop_likes_result', {'action': 'do_like', 'id' : id }, function (resTX) {
+    $(".ratebox2").html(resTX['update']);
+});
+По умолчанию используются шаблоны: likes_eshop.tpl
+
+
+7) Вывод блока просмотренной продукции:
+var page_stack = br.storage.get('page_stack');
+if(page_stack != null) {
+    page_stack_str = page_stack.join(",");
+    rpcEshopRequest('eshop_viewed', {'action': 'show', 'page_stack':page_stack_str }, function (resTX) {
+        $('#ViewedProducts').html(resTX['update']);
+    });
+}
+По умолчанию используются шаблоны: viewed_block_eshop.tpl
+
+На странице продукции (Шаблон вывода show_eshop.tpl) должено быть объявлено добавление ID продукции в localStorage:
+br.storage.prependUnique('page_stack', {{ id }}, 25);
+
+
+8) Добавление отзыва:
+rpcEshopRequest('eshop_comments_add', { 'comment_author' : $('#comment_author').val(), 'comment_email' : $('#comment_email').val(), 'comment_text' : $('#comment_text').val(), 'product_id' : {{id}} }, function (resTX) {
+    if ((resTX['data']['eshop_comments']>0)&&(resTX['data']['eshop_comments'] < 100)) {
+        $(".error_text").html("<div class='msg js-msg'><div class='error error'><span class='icon_info'></span><div class='text-el'><p>"+resTX['data']['eshop_comments_text']+"</p></div></div></div>");
+        $(".product-comment").html(""+resTX['data']['eshop_comments_show']+"");
+    } else {
+        $(".error_text").html("");
+        $("#comment_text").val("");
+        $(".product-comment").html(""+resTX['data']['eshop_comments_show']+"");
+    }
+});
+По умолчанию используются шаблоны: comments.form_eshop.tpl
+
+
+9) Вывод списка отзывов:
+rpcEshopRequest('eshop_comments_show', {'product_id' : {{id}}}, function (resTX) {
+    $(".error_text").html("");
+    $(".product-comment").html(""+resTX['data']['eshop_comments_show']+"");
+});
+По умолчанию используются шаблоны: comments.show_eshop.tpl
+
+
+10) Вывод блока с продукцией (аналог callPlugin('eshop.show'), с постраничной навигацией на AJAX):
+rpcEshopRequest('eshop_amain', {'action': 'show', 'number':8, 'mode':'last', 'page':0 }, function (resTX) {
+    if ((resTX['data']['prd_main']>0)&&(resTX['data']['prd_main'] < 100)) {
+        $("div#mainProductsPreview").html(""+resTX['data']['prd_main_text']+"");
+        $("div#mainPagesPreview").html(""+resTX['data']['prd_main_pages_text']+"");
+    } else {
+        $("div#mainProductsPreview").html(""+resTX['data']['prd_main_text']+"");
+        $("div#mainPagesPreview").html(""+resTX['data']['prd_main_pages_text']+"");
+    }
+});
+По умолчанию используются шаблоны: block/main_block_eshop.tpl, block/main_block_eshop_pages.tpl, main_variables.ini

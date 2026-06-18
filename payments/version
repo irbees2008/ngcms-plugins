@@ -1,0 +1,18 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: payments
+Name: Payments
+Version: 1.0.0
+File: payments.php
+Config: config.php
+Install: install.php
+Type: plugin
+Description: Платёжные адаптеры для магазина
+Author: copilot
+Author_URI: https://ngcms.org/
+Title: Платёжные системы
+Information: Обеспечивает приём онлайн-оплаты заказов через Robokassa, LiqPay, YooMoney, Unitpay, Pay2Pay, Privat24, FreeKassa.
+Preinstall: no
+MinEngineBuild: 111111
+Icons: <i class="fa fa-credit-card fa-3x" aria-hidden="true"></i>

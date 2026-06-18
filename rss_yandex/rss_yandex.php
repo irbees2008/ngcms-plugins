@@ -251,7 +251,7 @@ function plugin_rss_yandex_mk_header($xcat)
 	// Image
 	$imgInfo = array(
 		'url' => pluginGetVariable('rss_yandex', 'feed_image_url') ? pluginGetVariable('rss_yandex', 'feed_image_url') :
-			'http://ngcms.ru/templates/ngcms2/images/logo.png',
+			'http://ngcms.org/templates/ngcms2/images/logo.png',
 		'title' => pluginGetVariable('rss_yandex', 'feed_image_title') ? pluginGetVariable(
 			'rss_yandex',
 			'feed_image_title'
@@ -259,7 +259,7 @@ function plugin_rss_yandex_mk_header($xcat)
 		'link' => pluginGetVariable('rss_yandex', 'feed_image_link') ? pluginGetVariable(
 			'rss_yandex',
 			'feed_image_link'
-		) : 'http://ngcms.ru/',
+		) : 'http://ngcms.org/',
 	);
 	$line .= " <image>\n";
 	$line .= " <url>" . $imgInfo['url'] . "</url>\n";

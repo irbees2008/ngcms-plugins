@@ -590,7 +590,7 @@ function main()
 	foreach ($tVars as $row) {
 		//print "<pre>".var_export($row['error'], true)."</pre>";
 		if (!empty($row['error'])) {
-			$info .= '<div class="alert alert-warning">У вас ошибка! Если не получается её исправить, обратитесь на форум <a href="http://ngcms.ru/forum/viewtopic.php?id=2055" target="_blank"><b>simple_title_pro</b></a> или мне на ICQ: 209388634 или jabber: rozard@ya.ru</div>';
+			$info .= '<div class="alert alert-warning">У вас ошибка! Если не получается её исправить, обратитесь на форум <a href="http://ngcms.org/forum/viewtopic.php?id=2055" target="_blank"><b>simple_title_pro</b></a> или мне на ICQ: 209388634 или jabber: rozard@ya.ru</div>';
 			break;
 		}
 	}

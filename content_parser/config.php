@@ -71,6 +71,15 @@ function normalize_instagram_username($username)
 // Сохранение настроек плагина
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $didChannelsChange = false;
+    // Сохранение Instagram session cookie
+    if (isset($_POST['save_ig_session'])) {
+        $igSessionId = trim($_POST['ig_session_id']);
+        $igProxy = trim($_POST['ig_proxy'] ?? '');
+        pluginSetVariable('content_parser', 'ig_session_id', $igSessionId);
+        pluginSetVariable('content_parser', 'ig_proxy', $igProxy);
+        $didChannelsChange = true;
+        msg(['type' => 'info', 'message' => 'Instagram session cookie сохранён']);
+    }
     // Сохранение VK API токена
     if (isset($_POST['save_vk_token'])) {
         $vkToken = trim($_POST['vk_token']);
@@ -244,6 +253,8 @@ function automation()
             $vkGroups = [];
         }
         $vkToken = pluginGetVariable('content_parser', 'vk_token') ?: '';
+        $igSessionId = pluginGetVariable('content_parser', 'ig_session_id') ?: '';
+        $igProxy = pluginGetVariable('content_parser', 'ig_proxy') ?: '';
         // Загружаем список категорий из базы данных
         $categories = [];
         $catRows = $mysql->select("SELECT id, name FROM " . prefix . "_category ORDER BY name");
@@ -265,6 +276,8 @@ function automation()
             'ig_accounts' => $igAccounts,
             'vk_groups' => $vkGroups,
             'vk_token' => $vkToken,
+            'ig_session_id' => $igSessionId,
+            'ig_proxy' => $igProxy,
             'categories' => $categories,
         ];
         // Рендерим шаблон автоматизации

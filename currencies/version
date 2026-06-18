@@ -1,0 +1,18 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: currencies
+Name: Currencies
+Version: 1.0.0
+File: currencies.php
+Config: config.php
+Install: install.php
+Type: plugin
+Description: Мультивалютность с автокурсами ЦБ РФ
+Author: copilot
+Author_URI: https://ngcms.org/
+Title: Мультивалютность
+Information: Хранит курсы валют в БД, конвертирует цены, предоставляет переключатель валют и автообновление курсов.
+Preinstall: no
+MinEngineBuild: 111111
+Icons: <i class="fa fa-money fa-3x" aria-hidden="true"></i>

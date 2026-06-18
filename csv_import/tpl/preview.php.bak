@@ -1,0 +1,101 @@
+<?php if (!defined('NGCMS')) die('HAL'); ?>
+<div class="csv-import-preview">
+    <h2>Настройка маппинга колонок: <?= htmlspecialchars($filename) ?></h2>
+
+    <form method="post" action="?action=run">
+        <input type="hidden" name="file" value="<?= htmlspecialchars($filename) ?>">
+        <input type="hidden" name="delimiter" value="<?= htmlspecialchars($delimiter) ?>">
+        <input type="hidden" name="has_header" value="<?= $hasHeader ? 1 : 0 ?>">
+
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label>Категория по умолчанию:</label>
+                <select name="cat_id" class="form-control">
+                    <?php foreach ($cats as $id => $name): ?>
+                        <option value="<?= intval($id) ?>"><?= htmlspecialchars($name) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label>Статус:</label>
+                <select name="approve" class="form-control">
+                    <option value="1">Опубликована</option>
+                    <option value="0">Скрыта</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label>Главная страница:</label>
+                <select name="mainpage" class="form-control">
+                    <option value="1">Да</option>
+                    <option value="0">Нет</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label>&nbsp;</label><br>
+                <label><input type="checkbox" name="update_mode" value="1"> Обновлять существующие (по alt_name)</label>
+            </div>
+        </div>
+
+        <h4>Маппинг колонок CSV → поля</h4>
+        <p class="text-muted">Для каждой колонки выберите поле назначения. Поля xfields начинаются с <code>xf_</code>.</p>
+
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <?php if ($hasHeader): ?>
+                        <th>Заголовок CSV</th>
+                    <?php endif; ?>
+                    <?php foreach (array_slice($preview, 0, 3) as $pi => $row): ?>
+                        <th>Пример <?= ($pi + 1) ?></th>
+                    <?php endforeach; ?>
+                    <th>Поле назначения</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $colCount = isset($preview[0]) ? count($preview[0]) : 0;
+                $newsFields = [
+                    'skip'        => '— пропустить —',
+                    'title'       => 'Заголовок (обязательно)',
+                    'short_story' => 'Краткое описание',
+                    'full_story'  => 'Полное описание',
+                    'alt_name'    => 'Alt_name (URL)',
+                    'category'    => 'ID категории',
+                    'tags'        => 'Теги/Ключевые слова',
+                ];
+                for ($i = 0; $i < $colCount; $i++):
+                ?>
+                    <tr>
+                        <td><?= $i ?></td>
+                        <?php if ($hasHeader): ?>
+                            <td><strong><?= htmlspecialchars($preview[0][$i] ?? '') ?></strong></td>
+                        <?php endif; ?>
+                        <?php foreach (array_slice($preview, 0, 3) as $pi => $row): ?>
+                            <td class="text-muted small"><?= htmlspecialchars(mb_substr($row[$i] ?? '', 0, 40)) ?></td>
+                        <?php endforeach; ?>
+                        <td>
+                            <select name="map[<?= $i ?>]" class="form-control form-control-sm">
+                                <?php foreach ($newsFields as $val => $label): ?>
+                                    <option value="<?= htmlspecialchars($val) ?>"
+                                        <?= ($hasHeader && isset($preview[0][$i]) && strtolower($preview[0][$i]) === $val) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($label) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                                <?php foreach ($xfFields as $key => $label): ?>
+                                    <option value="xf_<?= htmlspecialchars($key) ?>"
+                                        <?= ($hasHeader && isset($preview[0][$i]) && strtolower($preview[0][$i]) === $key) ? 'selected' : '' ?>>
+                                        xfields: <?= htmlspecialchars($label) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                    </tr>
+                <?php endfor; ?>
+            </tbody>
+        </table>
+
+        <button type="submit" class="btn btn-success">Запустить импорт</button>
+        <a href="?" class="btn btn-secondary">Отмена</a>
+    </form>
+</div>

@@ -90,21 +90,20 @@ for ($i = 1; $i <= $profile_count; $i++) {
 		'value' => pluginGetVariable('template_switch', 'profile' . $i . '_description_link')
 	));
 
-	// Поле для предпросмотра (только для чтения)
-	// Поле для предпросмотра (только для чтения)
+	// Поле для предпросмотра
 	$profile_id = pluginGetVariable('template_switch', 'profile' . $i . '_id');
 	if (empty($profile_id)) {
-		// Генерируем ID из названия шаблона, если он не задан
 		$template_name = pluginGetVariable('template_switch', 'profile' . $i . '_template');
-		$profile_id = strtolower(preg_replace('/[^a-z0-9]/', '', $template_name));
+		$profile_id = $template_name;
 	}
-	$preview_url = home . '/plugin/template_switch/?profile=' . $profile_id;
+	$preview_url = home . '/?template_switch_frame=1&template=' . $i . '&profile=' . $profile_id;
+
 	array_push($cfgX, array(
 		'name' => 'profile' . $i . '_preview_link',
 		'title' => $lang['template_switch_preview_link'],
 		'descr' => $lang['template_switch_preview_link_desc'],
 		'type' => 'input',
-		'html_flags' => ' size="50" readonly',
+		'html_flags' => ' size="50" readonly id="preview_link_' . $i . '" class="form-control preview-link-input"',
 		'value' => $preview_url
 	));
 
@@ -120,7 +119,7 @@ echo <<<HTML
 <script>
 function updateProfileFields(profileNum, selectElement) {
     var profileName = selectElement.options[selectElement.selectedIndex].text;
-    var profileId = profileName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    var profileId = profileName.toLowerCase();
     
     document.getElementById('profile' + profileNum + '_name').value = profileName;
     document.getElementById('profile' + profileNum + '_id').value = profileId;
@@ -128,9 +127,44 @@ function updateProfileFields(profileNum, selectElement) {
     // Обновляем ссылку предпросмотра
     var previewField = document.querySelector('[name="profile' + profileNum + '_preview_link"]');
     if (previewField) {
-        previewField.value = window.location.origin + '/plugin/template_switch/?profile=' + profileId;
+        previewField.value = window.location.origin + '/?template_switch_frame=1&template=' + profileNum + '&profile=' + profileId;
     }
 }
+document.addEventListener("DOMContentLoaded", function() {
+        // Находим все поля с ссылками предпросмотра
+        var inputs = document.querySelectorAll(".preview-link-input");
+        
+        inputs.forEach(function(input) {
+            // Создаем контейнер для кнопок
+            var buttonContainer = document.createElement("div");
+            buttonContainer.style.marginTop = "5px";
+            
+            // Кнопка "Копировать"
+            var copyBtn = document.createElement("button");
+            copyBtn.className = "btn btn-default";
+            copyBtn.innerHTML = "<i class=\"fa fa-copy\"></i> Копировать";
+            copyBtn.onclick = function() {
+                input.select();
+                document.execCommand("copy");
+                alert("Ссылка скопирована в буфер обмена");
+            };
+            
+            // Кнопка "Перейти"
+            var openBtn = document.createElement("button");
+            openBtn.className = "btn btn-default";
+            openBtn.innerHTML = "<i class=\"fa fa-external-link\"></i> Перейти";
+            openBtn.onclick = function() {
+                window.open(input.value, "_blank");
+            };
+            
+            // Добавляем кнопки в контейнер
+            buttonContainer.appendChild(copyBtn);
+            buttonContainer.appendChild(openBtn);
+            
+            // Вставляем контейнер после поля ввода
+            input.parentNode.insertBefore(buttonContainer, input.nextSibling);
+        });
+    });
 </script>
 HTML;
 
@@ -141,7 +175,7 @@ if ($_REQUEST['action'] == 'commit') {
 		$id = $_REQUEST['profile' . $i . '_id'];
 		if (empty($id)) {
 			$template_name = $_REQUEST['profile' . $i . '_template'];
-			$_REQUEST['profile' . $i . '_id'] = strtolower(preg_replace('/[^a-z0-9]/', '', $template_name));
+			$_REQUEST['profile' . $i . '_id'] =  $template_name;
 		}
 	}
 

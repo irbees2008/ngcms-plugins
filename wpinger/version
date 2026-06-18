@@ -12,7 +12,7 @@ Type: plugin
 Title: Weblog pinger
 Description: Weblog pinged extension
 Author: Vitaly A. Ponomarev
-Author_URI: http://ngcms.ru/
+Author_URI: http://ngcms.org/
 Information: Плагин для информирования внешних систем об обновлениях на вашем сайте
 Preinstall: no
 MinEngineBuild: 23b3116

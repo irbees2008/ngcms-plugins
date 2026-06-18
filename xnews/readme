@@ -109,9 +109,9 @@
 где [!!] означает, что это обязательный параметр (кроме случая работы через ID плагина)
 Пример вызова плагина в main.tpl:
 1. Вывести блок с ID 'main'
-[TWIG]{{ callPlugin('xnews.show', { 'id': 'main'}) }}[/TWIG]
+{{ callPlugin('xnews.show', { 'id': 'main'}) }}
 2. Вывести новости из категории с ID = 15
-[TWIG]{{ callPlugin('xnews.show', { 'categoryMode' : 0, 'categories' : '15', 'template' : 'xnews1'}) }}[/TWIG]
+{{ callPlugin('xnews.show', { 'categoryMode' : 0, 'categories' : '15', 'template' : 'xnews1'}) }}
 Примеры заполнения шаблонов:
 --------------------------------------------------------------------
 entries.tpl:

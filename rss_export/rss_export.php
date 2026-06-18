@@ -1,9 +1,7 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
-
 use function Plugins\{logger, cache_get, cache_put};
-
 include_once root . "/includes/news.php";
 register_plugin_page('rss_export', '', 'plugin_rss_export', 0);
 register_plugin_page('rss_export', 'category', 'plugin_rss_export_category', 0);
@@ -291,6 +289,11 @@ function plugin_rss_export_generate($catname = '')
 					$enclosure = $xfd[pluginGetVariable('rss_export', 'xfEnclosure')];
 				}
 			}
+		}
+		// Приводим протокол enclosure к протоколу сайта
+		if ($enclosure != '') {
+			$siteProtocol = (stripos($config['home_url'], 'https://') === 0) ? 'https://' : 'http://';
+			$enclosure = preg_replace('/^https?:\/\//i', $siteProtocol, $enclosure);
 		}
 		echo "  <item>\n";
 		echo "   <title><![CDATA[" . ((pluginGetVariable('rss_export', 'news_title') == 1) && GetCategories($row['catid'], true) ? GetCategories($row['catid'], true) . ' :: ' : '') . $row['title'] . "]]></title>\n";

@@ -1,0 +1,15 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: csv_import
+Name: CSV / YML Import
+Version: 2.1.0
+Config: config.php
+Install: install.php
+Type: maintanance
+Description: Импорт товаров (новостей) из CSV и YML (Яндекс.Маркет) с маппингом колонок, xfields и загрузкой изображений
+Author: Rostunov Sergey, copilot
+Author_URI: http://rostunov.com/
+Title: Импорт CSV / YML
+Information: Загружает товары из CSV-файлов с гибким маппингом, а также из YML прайс-листов формата Яндекс.Маркет с автоматической загрузкой изображений в xfields.
+Icons: <i class="fa fa-upload fa-3x" aria-hidden="true"></i>

@@ -1,0 +1,192 @@
+<?php
+// Protect against hack attempts
+if (!defined('NGCMS')) die('HAL');
+// Modified with ng-helpers v0.2.0 functions (2026)
+// - Added array_pluck for data extraction
+// - Added array_first/array_last for selection
+// - Added cache support for similar news
+// - Added logger for debugging
+// Updated 2026-05-24: Added Twig support and modern news.* variables
+// Import ng-helpers functions
+use function Plugins\{array_pluck, array_first, array_last, cache_get, cache_put, cache_forget, logger};
+// Preload plugin tags
+load_extras('core', 'tags');
+// Load news functions library for newsFillVariables()
+include_once root . 'includes/inc/libnews.php';
+include_once("inc/similar.php");
+class SimilarNewsfilter extends NewsFilter
+{
+	function addNewsNotify(&$tvars, $SQL, $newsid)
+	{
+		global $mysql;
+		$scount = pluginGetVariable('similar', 'count');
+		$scount = (($scount < 1) || ($scount > 20)) ? 5 : $scount;
+		// Make reset for all tags for new news
+		plugin_similar_reset($newsid);
+		// Clear cache for this news
+		cache_forget("similar_news_{$newsid}");
+		logger("Similar: Reset similarity for new news #{$newsid}", 'debug', 'similar.log');
+		return 1;
+	}
+	// Make changes in DB after EditNews was successfully executed
+	function editNewsNotify($newsID, $SQLnews, &$SQLnew, &$tvars)
+	{
+		global $mysql;
+		if (!$SQLnews['approve'])
+			return 1;
+		// Reset linked news
+		plugin_similar_resetLinked($newsID);
+		// Reset news with the same tags [ AFTER actual edit - new tags ]
+		plugin_similar_reset($newsID);
+		// Clear cache for this news and linked
+		cache_forget("similar_news_{$newsID}");
+		logger("Similar: Reset similarity for edited news #{$newsID}", 'debug', 'similar.log');
+		return 1;
+	}
+	// Add {plugin_similar} variable into news
+	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
+	{
+		global $mysql, $tpl, $PFILTERS;
+		$tpath = locatePluginTemplates(array('similar', 'similar_entry'), 'similar', pluginGetVariable('similar', 'localsource'));
+		// Show similar news only in full mode
+		if ($mode['style'] == 'full') {
+			// Try to get from cache first (5 minutes)
+			$cacheKey = "similar_news_{$newsID}.txt";
+			if ($cached = cacheRetrieveFile($cacheKey, 300, 'similar')) {
+				$tvars['vars']['plugin_similar_tags'] = $cached;
+				return 1;
+			}
+			// Check if we have similar news
+			$similars = $SQLnews['similar_status'];
+			if (!$similars) {
+				$scount = pluginGetVariable('similar', 'count');
+				$scount = (($scount < 1) || ($scount > 20)) ? 5 : $scount;
+				$similars = plugin_similar_recover($newsID, $scount);
+			}
+			// Locate similar news
+			// Accroding to pcall parameter we should decide if full data export from news should be done
+			$callingParams = array();
+			// Filter for dimensions
+			$filter = '';
+			if (!($similar_enabled = intval(pluginGetVariable('similar', 'similar_enabled'))) || !($samecat_enabled = intval(pluginGetVariable('similar', 'samecat_enabled')))) {
+				if ($similar_enabled) {
+					$filter = 'and (dimension = 0)';
+				} else if ($samecat_enabled) {
+					$filter = 'and (dimension = 1)';
+				} else
+					$filter = 'and 0';
+			}
+			$query = "select n.id, n.catid, n.alt_name, n.postdate, si.id as si_id, si.dimension as si_dimension, si.newsID as si_newsID, si.refNewsID as si_refNewsID, si.refNewsQuantaty as si_refNewsQuantaty, si.refNewsTitle as si_refNewsTitle, si.refNewsDate as si_refNewsDate from " . prefix . "_similar_index si left join " . prefix . "_news n on n.id = si.refNewsID where si.newsID = " . db_squote($newsID) . ' ' . ($filter != '' ? $filter . ' ' : '') . "order by si.refNewsQuantaty desc";
+			if (pluginGetVariable('similar', 'pcall')) {
+				$query = "select n.*, si.id as si_id, si.dimension as si_dimension, si.newsID as si_newsID, si.refNewsID as si_refNewsID, si.refNewsQuantaty as si_refNewsQuantaty, si.refNewsTitle as si_refNewsTitle, si.refNewsDate as si_refNewsDate from " . prefix . "_similar_index si left join " . prefix . "_news n on n.id = si.refNewsID where si.newsID = " . db_squote($newsID) . ' ' . ($filter != '' ? $filter . ' ' : '') . "order by si.refNewsQuantaty desc";
+				$callingParams['plugin'] = 'lastnews';
+				switch (intval(pluginGetVariable('similar', 'pcall_mode'))) {
+					case 1:
+						$callingParams['style'] = 'short';
+						break;
+					case 2:
+						$callingParams['style'] = 'full';
+						break;
+					default:
+						$callingParams['style'] = 'export';
+				}
+				// Preload plugins
+				load_extras('news:show');
+				load_extras('news:show:one');
+			}
+			$similarRows = $mysql->select($query);
+			
+			// Debug output
+			echo "<!-- Similar Debug: similars={$similars}, count=" . count($similarRows) . " -->";
+			
+			if (count($similarRows)) {
+				// Load Twig for modern template rendering
+				global $twig, $config;
+				// Array for dimensions of data [ similar / same category ]
+				$result = array('', '');
+				$outputList = array();
+				foreach ($similarRows as $similar) {
+					// Execute filters [ if requested ]
+					if (pluginGetVariable('similar', 'pcall') && is_array($PFILTERS['news']))
+						foreach ($PFILTERS['news'] as $k => $v) {
+							if ($k != 'similar') $v->showNewsPre($similar['id'], $similar, $callingParams);
+						}
+					// Use newsFillVariables() to create modern news object with news.* variables
+					$tvarsEntry = newsFillVariables($similar, 0, 0, 0, []);
+					// Execute filters after variable preparation
+					if (pluginGetVariable('similar', 'pcall') && is_array($PFILTERS['news']))
+						foreach ($PFILTERS['news'] as $k => $v) {
+							if ($k != 'similar') $v->showNews($similar['id'], $similar, $tvarsEntry, $callingParams);
+						}
+					// Render template using Twig (createTemplate from file content)
+					if (file_exists($tpath['similar_entry'])) {
+						$entryTemplateFile = $tpath['similar_entry'] . 'similar_entry.tpl';
+						$templateContent = file_get_contents($entryTemplateFile);
+						$twigTemplate = $twig->createTemplate($templateContent);
+						$entryOutput = $twigTemplate->render($tvarsEntry['vars']);
+						$result[$similar['si_dimension']] .= $entryOutput;
+						$outputList[] = $entryOutput;
+					} else {
+						// Fallback to old TPL engine if Twig template not found
+						$tpl->template('similar_entry', $tpath['similar_entry']);
+						$tpl->vars('similar_entry', $tvarsEntry);
+						$result[$similar['si_dimension']] .= $tpl->show('similar_entry');
+					}
+				}
+				// Render main template
+				if (file_exists($tpath['similar'])) {
+					$similarTemplateFile = $tpath['similar'] . 'similar.tpl';
+					$mainTemplateContent = file_get_contents($similarTemplateFile);
+					$twigMainTemplate = $twig->createTemplate($mainTemplateContent);
+					$tvars['vars']['plugin_similar_tags'] = $twigMainTemplate->render(['entries' => $result[0]]);
+				} else {
+					// Fallback to old TPL engine
+					$tpl->template('similar', $tpath['similar']);
+					$tpl->vars('similar', array('vars' => array('entries' => $result[0])));
+					$tvars['vars']['plugin_similar_tags'] = $tpl->show('similar');
+				}
+
+				// Cache the result for 5 minutes
+				cacheStoreFile($cacheKey, $tvars['vars']['plugin_similar_tags'], 'similar');
+				logger("Similar: Rendered " . count($similarRows) . " similar news for #{$newsID}", 'debug', 'similar.log');
+			} else {
+				// Debug: no similar news found
+				echo "<!-- Similar Debug: No similar news found. similars={$similars}, query={$query} -->";
+				$tvars['vars']['plugin_similar_tags'] = '';
+				$tvars['vars']['plugin_similar_categ'] = '';
+				// Cache empty result too (1 minute)
+				cacheStoreFile($cacheKey, '', 'similar');
+			}
+		}
+		return 1;
+	}
+	// Mass news modify
+	function massModifyNewsNotify($idList, $setValue, $currentData)
+	{
+		// We are interested only in 'approve' field modification
+		if (!isset($setValue['approve']))
+			return 1;
+		// Turn on - call RESET()
+		if (!$setValue['approve']) {
+			plugin_similar_reset($idList);
+		} else {
+			// Turn off - call renew for all linked news
+			plugin_similar_resetLinked($idList);
+		}
+		return 1;
+	}
+	function deleteNews($newsID, $SQLnews)
+	{
+		global $mysql;
+		plugin_similar_resetLinked($newsID);
+		// Delete similarity info
+		$mysql->query("delete from " . prefix . "_similar_index where newsID = " . intval($newsID));
+		// Clear cache
+		cache_forget("similar_news_{$newsID}");
+		logger("Similar: Deleted similarity data for news #{$newsID}", 'info', 'similar.log');
+	}
+}
+// Activate plugin ONLY if plugin tags already activated
+if (getPluginStatusActive('tags')) {
+	register_filter('news', 'similar', new SimilarNewsFilter);
+}

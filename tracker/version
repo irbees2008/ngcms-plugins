@@ -14,7 +14,7 @@ Type: plugin
 Description: BitTorrent треккер
 Author: Vitaly A. Ponomarev
 MinPHPVer: 8.0
-Author_URI: http://ngcms.ru/
+Author_URI: http://ngcms.org/
 URI: http://no_url.com/
 Title: BitTorrent трекер
 Information: Позволяет превратить ваш сайт в BitTorrent трекер

@@ -1,0 +1,18 @@
+;
+; Version description file for plugin @@ Next Generation CMS
+;
+ID: compare
+Name: Compare products
+Version: 1.0.0
+File: compare.php
+Config: config.php
+Install: install.php
+Type: plugin
+Description: Сравнение товаров через cookie
+Author: copilot
+Author_URI: https://ngcms.org/
+Title: Сравнение товаров
+Information: Позволяет добавлять товары в список сравнения и отображать сравнительную таблицу по xfields.
+Preinstall: no
+MinEngineBuild: 111111
+Icons:<i class="fa fa-balance-scale fa-3x" aria-hidden="true"></i>

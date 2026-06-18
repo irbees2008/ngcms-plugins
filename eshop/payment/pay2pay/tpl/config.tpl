@@ -1,0 +1,40 @@
+<form method="post" action="admin.php?mod=extra-config&plugin=eshop&action=edit_payment&id={{ entries.name }}">
+	<div class="card-body">
+		<legend class="title">Настройки Pay2Pay</legend>
+	
+		<div class="form-row mb-3">
+			<label class="col-lg-3 col-form-label">Идентификатор магазина</label>
+			<div class="col-lg-9">
+				<input type="text" size="80" name="merchant_id" value="{{ entries.options.merchant_id }}" class="form-control"/>
+			</div>
+		</div>
+		<div class="form-row mb-3">
+			<label class="col-lg-3 col-form-label">Секретный ключ</label>
+			<div class="col-lg-9">
+				<input type="text" size="80" name="secret_key" value="{{ entries.options.secret_key }}" class="form-control"/>
+			</div>
+		</div>	
+		<div class="form-row mb-3">
+			<label class="col-lg-3 col-form-label">Скрытый ключ</label>
+			<div class="col-lg-9">
+				<input type="text" size="80" name="hidden_key" value="{{ entries.options.hidden_key }}" class="form-control"/>
+			</div>
+		</div>
+		<div class="form-row mb-3">
+			<label class="col-lg-3 col-form-label">Тестовый режим?</label>
+			<div class="col-lg-9">
+				<select name="test_mode" class="custom-select">
+                        <option value="0" {% if entries.options.test_mode == 0 %}selected{% endif %}>Нет</option>
+                        <option value="1" {% if entries.options.test_mode == 1 %}selected{% endif %}>Да</option>
+                </select>
+			</div>
+		</div>
+		
+	</div>
+
+			<div class="card-footer">
+				<div class="text-center">
+					<button type="submit" name="submit" class="btn btn-outline-warning">Сохранить..</button>
+				</div>
+			</div>
+</form>

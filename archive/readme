@@ -42,7 +42,7 @@
 {{ callPlugin('archive.show', {'maxnum' : 12, 'counter' : 1, 'tcounter' : 1, 'template': 'archive_twig'}) }}
 
 Пример (для любого не-TWIG шаблона, к примеру, для main.tpl):
-[TWIG]{{ callPlugin('archive.show', {'cacheExpire': 60 }) }}[/TWIG]
+{{ callPlugin('archive.show', {'cacheExpire': 60 }) }}
 
 Доступные переменные (передаются в качестве мессива параметров после имени 'archive.show':
 * maxnum		- кол-во отображаемых месяцев

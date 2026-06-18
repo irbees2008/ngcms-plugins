@@ -1,6 +1,6 @@
 <?php
 /*
- * bookmarks for NextGeneration CMS (http://ngcms.ru/)
+ * bookmarks for NextGeneration CMS (http://ngcms.org/)
  * Copyright (C) 2010 Alexey N. Zhukov (http://digitalplace.ru)
  * http://digitalplace.ru
  *

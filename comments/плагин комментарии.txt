@@ -1,7 +1,7 @@
-плагин комментарии 
-структура 
+плагин комментарии
+структура
 папка comments
-          папка inc 
+          папка inc
                 comments.add.php
                 <?php
 // Protect against hack attempts
@@ -317,11 +317,11 @@ class FilterComments {
 
 		return array();
 	}
-} 
+}
                 comments.show.php
                 <?php
 //
-// Copyright (C) 2006-2011 Next Generation CMS (http://ngcms.ru/)
+// Copyright (C) 2006-2011 Next Generation CMS (http://ngcms.org/)
 // Name: comments.show.php
 // Description: Routines for showing comments
 // Author: Vitaly Ponomarev, Alexey Zinchenko
@@ -1401,7 +1401,7 @@ Deinstall: uninstall.php
 Type: plugin
 Description: Комментарии пользователей
 Author: Vitaly A. Ponomarev
-Author_URI: http://ngcms.ru/
+Author_URI: http://ngcms.org/
 Title: Комментарии пользователей
 Information: Реализует функционал работы с комментариями
 Preinstall: default_no
@@ -1439,7 +1439,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const commentId = this.getAttribute('data-id');
             const commentElement = document.getElementById('comment_' + commentId);
-            
+
             if (confirm('Вы уверены, что хотите удалить этот комментарий?')) {
                 fetch('/engine/ajax/controller.php?mod=comments', {
                     method: 'POST',
@@ -1476,7 +1476,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const commentId = this.getAttribute('data-id');
             const commentElement = document.getElementById('comment_' + commentId);
             const commentText = commentElement.querySelector('.comment-text').innerHTML;
-            
+
             // Создаем форму редактирования
             const editForm = document.createElement('div');
             editForm.innerHTML = `
@@ -1486,21 +1486,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button type="button" class="btn btn-secondary cancel-edit">Отмена</button>
                 </form>
             `;
-            
+
             // Заменяем текст комментария формой
             commentElement.querySelector('.comment-text').innerHTML = '';
             commentElement.querySelector('.comment-text').appendChild(editForm);
-            
+
             // Обработка отмены редактирования
             editForm.querySelector('.cancel-edit').addEventListener('click', function() {
                 commentElement.querySelector('.comment-text').innerHTML = commentText;
             });
-            
+
             // Обработка сохранения
             editForm.querySelector('form').addEventListener('submit', function(e) {
                 e.preventDefault();
                 const newText = this.querySelector('textarea').value;
-                
+
                 fetch('/engine/ajax/controller.php?mod=comments', {
                     method: 'POST',
                     headers: {
@@ -1627,7 +1627,7 @@ cajax.runAJAX();
 }
 </script>
 
-entries.tpl  
+entries.tpl
 <li id="comment-{{ entry.id }}">
 	<div class="comment clearfix">
 		<div class="comment-avatar">

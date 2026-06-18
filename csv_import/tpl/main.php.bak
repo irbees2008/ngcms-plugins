@@ -1,0 +1,92 @@
+<?php if (!defined('NGCMS')) die('HAL'); ?>
+<div class="csv-import-main">
+    <h2>Импорт товаров: CSV / YML</h2>
+
+    <form method="post" enctype="multipart/form-data" action="?action=upload">
+        <div class="mb-3">
+            <label>Загрузить файл (CSV, YML/XML):</label><br>
+            <input type="file" name="csvfile" accept=".csv,.yml,.xml" required>
+            <button type="submit" class="btn btn-success ml-2">Загрузить</button>
+        </div>
+    </form>
+
+    <?php if ($fileList): ?>
+        <h3>CSV файлы</h3>
+        <table class="table table-bordered">
+            <tr>
+                <th>Файл</th>
+                <th>Размер</th>
+                <th>Изменён</th>
+                <th>Действия</th>
+            </tr>
+            <?php foreach ($fileList as $f): ?>
+                <tr>
+                    <td><?= htmlspecialchars($f['name']) ?></td>
+                    <td><?= htmlspecialchars($f['size']) ?></td>
+                    <td><?= htmlspecialchars($f['modified']) ?></td>
+                    <td>
+                        <form method="get" action="" style="display:inline">
+                            <input type="hidden" name="action" value="preview">
+                            <input type="hidden" name="file" value="<?= htmlspecialchars($f['name']) ?>">
+                            <label>Разделитель:
+                                <select name="delimiter">
+                                    <option value=";">; (точка с запятой)</option>
+                                    <option value=",">, (запятая)</option>
+                                    <option value="&#9;">Tab</option>
+                                </select>
+                            </label>
+                            <label><input type="checkbox" name="has_header" value="1"> Первая строка — заголовки</label>
+                            <button type="submit" class="btn btn-sm btn-primary">Настроить импорт</button>
+                        </form>
+                        <form method="post" action="?action=delete_file" style="display:inline">
+                            <input type="hidden" name="file" value="<?= htmlspecialchars($f['name']) ?>">
+                            <button type="submit" class="btn btn-sm btn-danger"
+                                onclick="return confirm('Удалить файл?')">Удалить</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </table>
+    <?php endif; ?>
+
+    <?php if (!empty($ymlFileList)): ?>
+        <h3>YML / XML файлы (Яндекс.Маркет)</h3>
+        <table class="table table-bordered">
+            <tr>
+                <th>Файл</th>
+                <th>Размер</th>
+                <th>Изменён</th>
+                <th>Действия</th>
+            </tr>
+            <?php foreach ($ymlFileList as $f): ?>
+                <tr>
+                    <td><?= htmlspecialchars($f['name']) ?></td>
+                    <td><?= htmlspecialchars($f['size']) ?></td>
+                    <td><?= htmlspecialchars($f['modified']) ?></td>
+                    <td>
+                        <form method="get" action="" style="display:inline">
+                            <input type="hidden" name="action" value="yml_preview">
+                            <input type="hidden" name="file" value="<?= htmlspecialchars($f['name']) ?>">
+                            <button type="submit" class="btn btn-sm btn-primary">Настроить YML импорт</button>
+                        </form>
+                        <form method="post" action="?action=delete_file" style="display:inline">
+                            <input type="hidden" name="file" value="<?= htmlspecialchars($f['name']) ?>">
+                            <button type="submit" class="btn btn-sm btn-danger"
+                                onclick="return confirm('Удалить файл?')">Удалить</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </table>
+    <?php endif; ?>
+
+    <?php if (!$fileList && empty($ymlFileList)): ?>
+        <p class="text-muted">Файлы не загружены</p>
+    <?php endif; ?>
+
+    <hr>
+    <h4>Справка по форматам</h4>
+    <p><strong>CSV</strong>: UTF-8 или Windows-1251. Первая строка — опционально заголовки.</p>
+    <p><strong>YML</strong>: Яндекс.Маркет прайс-лист (formát yml_catalog). Поддерживается загрузка изображений из &lt;picture&gt;.</p>
+    <p>Доступные поля xfields: <code><?= implode(', ', array_keys($xfFields)) ?></code></p>
+</div>

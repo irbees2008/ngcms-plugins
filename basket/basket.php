@@ -271,16 +271,53 @@ if (pluginGetVariable('basket', 'feedback_form')) {
 			global $mysql, $userROW;
 			// Определяем условия выборки
 			$filter = array();
+			$userId = 0;
 			if (is_array($userROW)) {
-				$filter[] = '(user_id = ' . db_squote($userROW['id']) . ')';
+				$userId   = intval($userROW['id']);
+				$filter[] = '(user_id = ' . db_squote($userId) . ')';
 			}
 			$cookieID = array_get($_COOKIE, 'ngTrackID', '');
 			if ($cookieID !== '') {
 				$filter[] = '(cookie = ' . db_squote($cookieID) . ')';
 			}
-			// Выполняем выборку
+			// Сохраняем заказ в basket_orders перед очисткой корзины
 			if (count($filter)) {
-				$stmt = $mysql->query("delete from " . prefix . "_basket where " . join(" or ", $filter));
+				$items = [];
+				$total = 0.0;
+				foreach ($mysql->select("SELECT * FROM " . prefix . "_basket WHERE " . join(" OR ", $filter), 1) as $row) {
+					$total += (float)$row['price'] * (int)$row['count'];
+					$items[] = [
+						'id'       => $row['id'],
+						'title'    => $row['title'],
+						'price'    => $row['price'],
+						'count'    => $row['count'],
+						'xfields'  => unserialize($row['linked_fld']),
+					];
+				}
+				if (count($items)) {
+					$uniqid = md5(uniqid('order_', true));
+					$mysql->query(
+						"INSERT INTO " . prefix . "_basket_orders
+						 (user_id, cookie, uniqid, total, status, items_json, contact_json, created_at)
+						 VALUES ("
+							. db_squote($userId) . ","
+							. db_squote($cookieID) . ","
+							. db_squote($uniqid) . ","
+							. db_squote(round($total, 2)) . ","
+							. "'new',"
+							. db_squote(json_encode($items)) . ","
+							. db_squote(json_encode($_POST)) . ","
+							. db_squote(time()) . ")"
+					);
+					$orderId = $mysql->insert_id();
+					logger('Order created: #' . $orderId . ', total=' . $total . ', items=' . count($items), 'info', 'basket.log');
+					// Сохраняем ID заказа в сессии для редиректа на оплату
+					$_SESSION['basket_last_order_id']     = $orderId;
+					$_SESSION['basket_last_order_uniqid'] = $uniqid;
+				}
+
+				// Очищаем корзину
+				$stmt = $mysql->query("DELETE FROM " . prefix . "_basket WHERE " . join(" OR ", $filter));
 				$deletedCount = $mysql->affected_rows($stmt);
 				logger('Feedback notify: formID=' . $formID . ', cleared=' . $deletedCount . ' items, IP=' . get_ip(), 'info', 'basket.log');
 
@@ -293,6 +330,7 @@ if (pluginGetVariable('basket', 'feedback_form')) {
 
 	register_plugin_page('basket', '', 'plugin_basket_list', 0);
 	register_plugin_page('basket', 'update', 'plugin_basket_update', 0);
+	register_plugin_page('basket', 'order', 'plugin_basket_order', 0);
 	register_filter('xfields', 'basket', new BasketXFieldsFilter);
 	register_filter('feedback', 'basket', new BasketFeedbackFilter);
 } else {
@@ -331,3 +369,42 @@ register_filter('news', 'basket', new BasketNewsFilter);
 //
 // Вызов обработчика
 add_act('index', 'plugin_basket_total');
+
+// ─── Order confirmation / payment redirect page ────────────────────────────
+function plugin_basket_order()
+{
+	global $template, $twig, $mysql;
+
+	$orderId = intval(sanitize($_REQUEST['order_id'] ?? '', 'int'));
+	$uniqid  = preg_replace('/[^a-zA-Z0-9]/', '', $_REQUEST['uniqid'] ?? '');
+
+	// If no params — try session (right after form submit)
+	if (!$orderId && !empty($_SESSION['basket_last_order_id'])) {
+		$orderId = (int)$_SESSION['basket_last_order_id'];
+		$uniqid  = $_SESSION['basket_last_order_uniqid'] ?? '';
+		unset($_SESSION['basket_last_order_id'], $_SESSION['basket_last_order_uniqid']);
+	}
+
+	if (!$orderId) {
+		redirect(generatePluginLink('basket', ''));
+	}
+
+	$order = $mysql->record("SELECT * FROM " . prefix . "_basket_orders WHERE id = " . db_squote($orderId) . " LIMIT 1");
+	if (!$order || ($uniqid && $order['uniqid'] !== $uniqid)) {
+		redirect(generatePluginLink('basket', ''));
+	}
+
+	$paymentActive = getPluginStatusInstalled('payments');
+	$payLink = $paymentActive
+		? generatePluginLink('payments', 'pay', [], ['order_id' => $orderId, 'uniqid' => $order['uniqid']])
+		: null;
+
+	$tpath = locatePluginTemplates(['order'], 'basket', pluginGetVariable('basket', 'localsource'));
+	$xt    = $twig->loadTemplate($tpath['order'] . '/order.tpl');
+	$template['vars']['mainblock'] = $xt->render([
+		'order'       => $order,
+		'items'       => json_decode($order['items_json'], true),
+		'pay_link'    => $payLink,
+		'pay_active'  => $paymentActive,
+	]);
+}

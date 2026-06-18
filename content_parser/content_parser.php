@@ -1,11 +1,8 @@
 <?php
 // Защита от прямого доступа
 if (!defined('NGCMS')) die('HAL');
-
 use function Plugins\{logger, benchmark, sanitize, get_ip, validate_url};
-
 register_plugin_page('content_parser', '', 'plugin_content_parse', 0);
-
 /**
  * Загрузка медиафайла на сервер через NGCMS upload system
  * @param string $url URL изображения или видео
@@ -15,23 +12,18 @@ register_plugin_page('content_parser', '', 'plugin_content_parse', 0);
 function downloadMediaToServer($url, $type = 'image')
 {
 	global $config;
-
 	if (empty($url)) {
 		return false;
 	}
-
 	// Загружаем классы NGCMS для работы с файлами
 	if (!class_exists('file_managment')) {
 		@include_once(root . 'includes/classes/upload.class.php');
 	}
-
 	if (!class_exists('file_managment')) {
 		return false;
 	}
-
 	// Создаем экземпляр менеджера файлов
 	$fmanager = new file_managment();
-
 	// Используем встроенную функцию загрузки по URL
 	$uploadParams = [
 		'type' => $type,
@@ -42,55 +34,44 @@ function downloadMediaToServer($url, $type = 'image')
 		'thumbnail' => 1, // Всегда создавать уменьшенную копию
 		'do_preview' => 1, // Создать превью
 	];
-
 	$result = $fmanager->file_upload($uploadParams);
-
 	// Проверяем результат
 	if (is_array($result) && isset($result['status']) && $result['status'] == 1) {
 		// Успешная загрузка - формируем путь к файлу
 		if (isset($result['data']) && is_array($result['data'])) {
 			$data = $result['data'];
-
 			// Определяем базовый путь в зависимости от типа файла
 			$baseDir = ($type == 'image') ? $config['images_dir'] : $config['files_dir'];
-
 			// Убираем корневой путь из baseDir, если он там есть
 			$baseDir = str_replace(root, '', $baseDir);
-
 			// Формируем полный путь: baseDir + category + name
 			$category = isset($data['category']) ? $data['category'] : '';
 			$name = isset($data['name']) ? $data['name'] : '';
-
 			if ($name && $type == 'image') {
 				// Формируем путь и нормализуем слэши
 				$fullPath = str_replace('\\', '/', $baseDir . $category . $name);
-
 				// Удаляем абсолютный путь диска (C:/, D:/ и т.д.) и оставляем только относительный путь от корня сайта
 				if (preg_match('#/(uploads|files)/.+$#i', $fullPath, $matches)) {
 					$fullPath = $matches[0];
 				} else {
 					$fullPath = '/' . trim($fullPath, '/');
 				}
-
 				logger('content_parser', 'Media downloaded: type=' . $type . ', url=' . sanitize($url) . ', path=' . $fullPath);
 				return $fullPath;
 			} elseif ($name) {
 				// Для файлов (не изображений) формируем путь аналогично
 				$fullPath = str_replace('\\', '/', $baseDir . $category . $name);
-
 				// Удаляем абсолютный путь диска и оставляем только относительный путь
 				if (preg_match('#/(uploads|files)/.+$#i', $fullPath, $matches)) {
 					$fullPath = $matches[0];
 				} else {
 					$fullPath = '/' . trim($fullPath, '/');
 				}
-
 				logger('content_parser', 'File downloaded: type=' . $type . ', url=' . sanitize($url) . ', path=' . $fullPath);
 				return $fullPath;
 			}
 		}
 	}
-
 	logger('content_parser', 'Media download failed: url=' . sanitize($url));
 	return false;
 }
@@ -99,8 +80,7 @@ function downloadMediaToServer($url, $type = 'image')
  */
 function parseRssFeed($rssUrl, $count)
 {
-	$startTime = benchmark();
-
+	$startTime = microtime(true);
 	// Загружаем RSS-канал через cURL (throws Exception on error)
 	try {
 		$rss = loadRssFeed($rssUrl);
@@ -108,7 +88,6 @@ function parseRssFeed($rssUrl, $count)
 		logger('content_parser', 'RSS load failed: url=' . sanitize($rssUrl) . ', error=' . $e->getMessage());
 		throw new Exception("Ошибка загрузки RSS: " . $e->getMessage());
 	}
-
 	$items = [];
 	$parsedCount = 0;
 	// Проверяем наличие тегов <item>
@@ -125,7 +104,6 @@ function parseRssFeed($rssUrl, $count)
 		$content = extractDescription($rawDescription);
 		$imageUrl = extractImageFromItem($item, $rawDescription);
 		$pubDate = strtotime((string)$item->pubDate);
-
 		// Загружаем изображение на сервер
 		if (!empty($imageUrl)) {
 			$localImage = downloadMediaToServer($imageUrl);
@@ -133,7 +111,6 @@ function parseRssFeed($rssUrl, $count)
 				$imageUrl = $localImage;
 			}
 		}
-
 		$items[] = [
 			'title' => $title,
 			'content' => $content,
@@ -142,10 +119,8 @@ function parseRssFeed($rssUrl, $count)
 		];
 		$parsedCount++;
 	}
-
-	$elapsed = benchmark($startTime);
+	$elapsed = (microtime(true) - $startTime) * 1000;
 	logger('content_parser', 'RSS parsed: url=' . sanitize($rssUrl) . ', items=' . $parsedCount . ', elapsed=' . round($elapsed, 2) . 'ms');
-
 	return $items;
 }
 function loadRssFeed($rssUrl)
@@ -157,25 +132,20 @@ function loadRssFeed($rssUrl)
 	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 	curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 	curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
-
 	$response = curl_exec($ch);
 	$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
 	if (curl_errno($ch)) {
 		$error = curl_error($ch);
 		curl_close($ch);
 		throw new Exception("Ошибка cURL при загрузке RSS: $error");
 	}
 	curl_close($ch);
-
 	if ($httpCode >= 400) {
 		throw new Exception("HTTP ошибка $httpCode при загрузке RSS канала");
 	}
-
 	if (empty($response)) {
 		throw new Exception("Пустой ответ от RSS канала");
 	}
-
 	// Преобразуем ответ в SimpleXML
 	libxml_use_internal_errors(true);
 	$rss = simplexml_load_string($response);
@@ -230,14 +200,12 @@ function normalizeInstagramUsername($username)
 	$username = preg_replace('#\s+#', '', $username);
 	return $username;
 }
-
 function normalizeVkGroup($input)
 {
 	$input = trim($input);
 	if ($input === '') {
 		return '';
 	}
-
 	// Извлекаем ID или screen_name из различных форматов URL
 	// Поддержка: club123, public123, https://vk.com/club123, https://vk.com/screenname
 	if (preg_match('#vk\.com/(club|public)(\d+)#i', $input, $m)) {
@@ -254,26 +222,21 @@ function normalizeVkGroup($input)
 		return $input;
 	}
 }
-
 function parseVkPosts($groupId, $count)
 {
 	// Получаем VK API токен из настроек
 	$vkToken = pluginGetVariable('content_parser', 'vk_token');
-
 	if (!empty($vkToken)) {
 		// Используем официальный VK API
 		return parseVkViaAPI($groupId, $count, $vkToken);
 	}
-
 	// Если токена нет, пробуем HTML парсинг (может не работать)
 	$posts = parseVkFromHtml($groupId, $count);
 	if (!empty($posts)) {
 		return $posts;
 	}
-
 	throw new Exception('VK RSS недоступен. Для парсинга VK необходимо настроить VK API токен в настройках плагина. Убедитесь, что токен сохранен через форму "Настройка VK API".');
 }
-
 function parseVkViaAPI($groupId, $count, $token)
 {
 	// Преобразуем group ID в формат для API
@@ -290,7 +253,6 @@ function parseVkViaAPI($groupId, $count, $token)
 			throw new Exception('Не удалось определить ID группы VK по screen_name: ' . $groupId);
 		}
 	}
-
 	// Вызываем wall.get API
 	$apiUrl = 'https://api.vk.com/method/wall.get';
 	$params = [
@@ -300,42 +262,32 @@ function parseVkViaAPI($groupId, $count, $token)
 		'access_token' => $token,
 		'v' => '5.131'
 	];
-
 	$url = $apiUrl . '?' . http_build_query($params);
-
 	$ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL, $url);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_TIMEOUT, 15);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-
 	$response = curl_exec($ch);
 	$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 	curl_close($ch);
-
 	if ($httpCode !== 200 || !$response) {
 		throw new Exception('Ошибка обращения к VK API (HTTP ' . $httpCode . ')');
 	}
-
 	$data = json_decode($response, true);
-
 	if (isset($data['error'])) {
 		$errorMsg = $data['error']['error_msg'] ?? 'Unknown error';
 		$errorCode = $data['error']['error_code'] ?? 'N/A';
 		throw new Exception("VK API ошибка ($errorCode): $errorMsg");
 	}
-
 	if (!isset($data['response']['items'])) {
 		throw new Exception('Некорректный ответ VK API - отсутствует поле items');
 	}
-
 	$postsCount = count($data['response']['items']);
-
 	if ($postsCount === 0) {
 		throw new Exception('VK API вернул 0 постов. Возможно, группа пустая или закрыта, либо у токена недостаточно прав (требуются права: wall, groups)');
 	}
-
 	$items = [];
 	foreach ($data['response']['items'] as $post) {
 		$text = $post['text'] ?? '';
@@ -346,7 +298,6 @@ function parseVkViaAPI($groupId, $count, $token)
 		if (empty($title)) {
 			$title = 'Пост без текста';
 		}
-
 		// Ищем изображение
 		$imageUrl = '';
 		if (isset($post['attachments'])) {
@@ -359,7 +310,6 @@ function parseVkViaAPI($groupId, $count, $token)
 				}
 			}
 		}
-
 		// Загружаем изображение на сервер
 		$localImage = $imageUrl;
 		if (!empty($imageUrl)) {
@@ -368,13 +318,11 @@ function parseVkViaAPI($groupId, $count, $token)
 				$localImage = $downloaded;
 			}
 		}
-
 		$body = '';
 		if (!empty($localImage)) {
 			$body .= '[img]' . $localImage . '[/img]' . "\n\n";
 		}
 		$body .= $text;
-
 		$items[] = [
 			'title' => secure_html($title),
 			'content' => $body,
@@ -382,10 +330,8 @@ function parseVkViaAPI($groupId, $count, $token)
 			'postdate' => $post['date'] ?? time(),
 		];
 	}
-
 	return $items;
 }
-
 function resolveVkScreenName($screenName, $token)
 {
 	$apiUrl = 'https://api.vk.com/method/utils.resolveScreenName';
@@ -394,39 +340,30 @@ function resolveVkScreenName($screenName, $token)
 		'access_token' => $token,
 		'v' => '5.131'
 	];
-
 	$url = $apiUrl . '?' . http_build_query($params);
-
 	$ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL, $url);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
 	$response = curl_exec($ch);
 	curl_close($ch);
-
 	$data = json_decode($response, true);
-
 	if (isset($data['response']['object_id']) && $data['response']['type'] === 'group') {
 		return '-' . $data['response']['object_id'];
 	}
-
 	return null;
 }
-
 function parseVkFromHtml($groupId, $count)
 {
 	// Используем VK Widget API, который доступен публично
 	// https://vk.com/dev/widget_api
-
 	// Преобразуем group ID в правильный формат
 	$ownerId = $groupId;
 	if (!preg_match('#^-?\d+$#', $ownerId)) {
 		// Это screen_name, нужно получить ID через resolve
 		$resolveUrl = 'https://vk.com/' . $groupId;
 		$html = loadHtml($resolveUrl, true);
-
 		// Ищем owner_id в HTML
 		if (preg_match('#"owner_id":(-?\d+)#', $html, $m)) {
 			$ownerId = $m[1];
@@ -434,14 +371,12 @@ function parseVkFromHtml($groupId, $count)
 			throw new Exception('Не удалось определить ID группы VK. Попробуйте указать числовой ID вместо screen_name (например, club123456)');
 		}
 	}
-
 	// Формируем URL для VK widget (публичный JSON endpoint)
 	$widgetUrl = sprintf(
 		'https://vk.com/al_community.php?act=get_posts&owner_id=%s&offset=0&count=%d&type=own',
 		$ownerId,
 		min($count, 100)
 	);
-
 	$ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL, $widgetUrl);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -455,26 +390,20 @@ function parseVkFromHtml($groupId, $count)
 	]);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-
 	$response = curl_exec($ch);
 	$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 	curl_close($ch);
-
 	if ($httpCode !== 200 || !$response) {
 		throw new Exception('VK недоступен или группа закрыта. Для закрытых групп требуется VK API токен.');
 	}
-
 	$items = [];
-
 	// VK возвращает HTML в response, парсим его
 	// Ищем посты через regex (базовый парсинг)
 	if (preg_match_all('#<div class="wall_post_text">([^<]+)#', $response, $matches)) {
 		foreach ($matches[1] as $i => $text) {
 			if ($i >= $count) break;
-
 			$text = strip_tags(html_entity_decode($text));
 			$title = mb_substr($text, 0, 100) . (mb_strlen($text) > 100 ? '...' : '');
-
 			$items[] = [
 				'title' => secure_html($title),
 				'content' => secure_html($text),
@@ -483,71 +412,81 @@ function parseVkFromHtml($groupId, $count)
 			];
 		}
 	}
-
 	if (empty($items)) {
 		throw new Exception('Не удалось получить посты VK. Возможно, группа закрыта или требуется настройка VK API с токеном доступа.');
 	}
-
 	return $items;
 }
-
-function loadInstagramJson($url)
+function igApplyProxy($ch)
+{
+	$proxy = trim(pluginGetVariable('content_parser', 'ig_proxy') ?: '');
+	if (empty($proxy)) {
+		return;
+	}
+	curl_setopt($ch, CURLOPT_PROXY, $proxy);
+	if (stripos($proxy, 'socks5') === 0) {
+		curl_setopt($ch, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
+	} elseif (stripos($proxy, 'socks4') === 0) {
+		curl_setopt($ch, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS4);
+	}
+}
+function loadInstagramJson($url, $sessionId = '')
 {
 	$ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL, $url);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_TIMEOUT, 20);
 	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-	curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36');
-	curl_setopt($ch, CURLOPT_HTTPHEADER, [
-		'Accept: application/json',
+	curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+	$headers = [
+		'Accept: */*',
+		'Accept-Language: ru-RU,ru;q=0.9,en-US;q=0.8',
 		'X-IG-App-ID: 936619743392459',
 		'X-Requested-With: XMLHttpRequest',
-	]);
+		'Referer: https://www.instagram.com/',
+		'Origin: https://www.instagram.com',
+	];
+	if (!empty($sessionId)) {
+		curl_setopt($ch, CURLOPT_COOKIE, 'sessionid=' . $sessionId);
+	}
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 	curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-
+	igApplyProxy($ch);
 	$response = curl_exec($ch);
-	if (curl_errno($ch)) {
-		curl_close($ch);
-		return false;
-	}
+	$curlErrno = curl_errno($ch);
+	$curlError = curl_error($ch);
 	$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 	curl_close($ch);
-
-	if ($code >= 400) {
-		return false;
+	if ($curlErrno) {
+		return ['_curl_error' => $curlError, '_curl_errno' => $curlErrno];
 	}
-
+	if ($code >= 400) {
+		return ['_http_error' => $code];
+	}
 	$data = json_decode($response, true);
 	return is_array($data) ? $data : false;
 }
-
 function parseInstagramFromJson($data, $count, $username)
 {
 	$items = [];
 	if (!isset($data['data']['user']['edge_owner_to_timeline_media']['edges'])) {
 		return $items;
 	}
-
 	$edges = $data['data']['user']['edge_owner_to_timeline_media']['edges'];
 	$parsed = 0;
-
 	foreach ($edges as $edge) {
 		if ($parsed >= $count) {
 			break;
 		}
-
 		$node = $edge['node'];
 		$image = isset($node['display_url']) ? $node['display_url'] : null;
 		$caption = isset($node['edge_media_to_caption']['edges'][0]['node']['text'])
 			? $node['edge_media_to_caption']['edges'][0]['node']['text']
 			: '';
 		$timestamp = isset($node['taken_at_timestamp']) ? $node['taken_at_timestamp'] : time();
-
 		$title = $caption ? mb_substr($caption, 0, 80) : ('Instagram пост @' . $username);
-
 		// Загружаем изображение на сервер
 		$localImage = $image;
 		if (!empty($image)) {
@@ -556,13 +495,11 @@ function parseInstagramFromJson($data, $count, $username)
 				$localImage = $downloaded;
 			}
 		}
-
 		$body = '';
 		if ($localImage) {
 			$body .= '[img]' . $localImage . '[/img]' . "\n\n";
 		}
 		$body .= $caption;
-
 		$items[] = [
 			'title' => secure_html($title),
 			'content' => $body,
@@ -571,7 +508,6 @@ function parseInstagramFromJson($data, $count, $username)
 		];
 		$parsed++;
 	}
-
 	return $items;
 }
 function parseInstagramPosts($username, $count)
@@ -580,24 +516,58 @@ function parseInstagramPosts($username, $count)
 	if ($username === '') {
 		throw new Exception('Некорректное имя пользователя Instagram');
 	}
-
-	// Попытка 1: JSON API (работает без авторизации)
+	// Получаем сессионный cookie из настроек плагина
+	$sessionId = trim(pluginGetVariable('content_parser', 'ig_session_id') ?: '');
+	if (empty($sessionId)) {
+		throw new Exception('Для парсинга Instagram необходимо указать Session ID в настройках плагина. Instagram заблокировал анонимный доступ с 2024 года.');
+	}
+	// Попытка 1: JSON API с авторизованным cookie
 	$jsonUrl = 'https://www.instagram.com/api/v1/users/web_profile_info/?username=' . $username;
-	$jsonData = loadInstagramJson($jsonUrl);
-	if ($jsonData !== false) {
-		return parseInstagramFromJson($jsonData, $count, $username);
+	$jsonData = loadInstagramJson($jsonUrl, $sessionId);
+	if (isset($jsonData['_curl_error'])) {
+		// Сетевая ошибка ещё на этапе JSON API — информативно бросаем
+		$lastCurlError = $jsonData['_curl_errno'] . ': ' . $jsonData['_curl_error'];
+	} elseif (isset($jsonData['_http_error'])) {
+		$lastHttpError = $jsonData['_http_error'];
+	} elseif (is_array($jsonData)) {
+		$items = parseInstagramFromJson($jsonData, $count, $username);
+		if (!empty($items)) {
+			return $items;
+		}
 	}
-
-	// Попытка 2: HTML Desktop
+	// Попытка 2: HTML с cookie (запасной вариант)
 	$profileUrl = 'https://www.instagram.com/' . $username . '/';
-	$html = loadHtml($profileUrl, true);
-	if ($html === false) {
-		// Попытка 3: HTML Mobile
-		$profileUrl = 'https://m.instagram.com/' . $username . '/';
-		$html = loadHtml($profileUrl, true);
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $profileUrl);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+	curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+	curl_setopt($ch, CURLOPT_COOKIE, 'sessionid=' . $sessionId);
+	curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: text/html', 'Accept-Language: ru-RU,ru;q=0.9']);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+	igApplyProxy($ch);
+	$html = curl_exec($ch);
+	$curlErrno = curl_errno($ch);
+	$curlError = curl_error($ch);
+	$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+	curl_close($ch);
+	if ($curlErrno) {
+		$hint = '';
+		if ($curlErrno === 6)  $hint = ' Не удалось разрешить instagram.com — скорее всего, домен заблокирован на сервере.';
+		elseif ($curlErrno === 28) $hint = ' Превышен таймаут — соединение блокируется файерволом сервера.';
+		elseif ($curlErrno === 35 || $curlErrno === 51 || $curlErrno === 60) $hint = ' Ошибка SSL.';
+		throw new Exception('Instagram недоступен: curl #' . $curlErrno . ' — ' . $curlError . '.' . $hint . ' Возможно, Instagram заблокирован на сервере хостинга.';
 	}
-	if ($html === false) {
-		throw new Exception('Не удалось загрузить профиль Instagram. На локальном сервере Instagram часто блокирует запросы. Попробуйте использовать прокси или VPN.');
+	if ($code === 401 || $code === 403) {
+		throw new Exception('Instagram отклонил запрос (HTTP ' . $code . '). Session ID недействителен или устарел. Получите новый в браузере: F12 → Application → Cookies → sessionid.');
+	}
+	if ($code === 429) {
+		throw new Exception('Instagram: слишком много запросов (HTTP 429). Подождите несколько минут и повторите.');
+	}
+	if ($html === false || $code >= 400 || empty($html)) {
+		throw new Exception('Instagram вернул HTTP ' . $code . '. Убедитесь, что instagram.com доступен с сервера хостинга.');
 	}
 	$items = [];
 	$links = [];
@@ -643,7 +613,6 @@ function parseInstagramPosts($username, $count)
 			}
 		}
 		$title = $contentText ? mb_substr($contentText, 0, 80) : ('Instagram пост @' . $username);
-
 		// Загружаем изображение на сервер
 		$localImage = $image;
 		if (!empty($image)) {
@@ -652,7 +621,6 @@ function parseInstagramPosts($username, $count)
 				$localImage = $downloaded;
 			}
 		}
-
 		$body = '';
 		if ($localImage) {
 			$body .= '[img]' . $localImage . '[/img]' . "\n\n";
@@ -717,28 +685,23 @@ function extractImageFromItem($item, $htmlDescription)
 function addNewsDirect($item)
 {
 	global $mysql, $userROW, $parse;
-
 	$category = intval($_REQUEST['category'] ?? 0);
 	$title = $_REQUEST['title'];
 	$content = $_REQUEST['ng_news_content'];
-
 	// Генерируем alt_name
 	$alt_name = mb_strtolower($parse->translit(trim($title), 1));
 	$alt_name = preg_replace(['/\./', '/(_{2,20})/', '/^(_+)/', '/(_+)$/'], ['_', '_'], $alt_name);
 	if ($alt_name == '') {
 		$alt_name = '_';
 	}
-
 	// Проверяем уникальность alt_name
 	$i = '';
 	while (is_array($mysql->record('select id from ' . prefix . '_news where alt_name = ' . db_squote($alt_name . $i) . ' limit 1'))) {
 		$i++;
 	}
 	$alt_name = $alt_name . $i;
-
 	$postdate = isset($item['postdate']) ? $item['postdate'] : time();
 	$postdate += 60 * 60 * 6; // date_adjust approximation
-
 	$SQL = [
 		'title' => $title,
 		'alt_name' => $alt_name,
@@ -758,36 +721,28 @@ function addNewsDirect($item)
 		'keywords' => '',
 		'xfields' => '',
 	];
-
 	$vnames = [];
 	$vparams = [];
 	foreach ($SQL as $k => $v) {
 		$vnames[] = $k;
 		$vparams[] = db_squote($v);
 	}
-
 	$mysql->query('insert into ' . prefix . '_news (' . implode(',', $vnames) . ') values (' . implode(',', $vparams) . ')');
 	$id = $mysql->result('SELECT LAST_INSERT_ID() as id');
-
 	if (!$id) {
 		return false;
 	}
-
 	// Добавляем в карту категорий
 	if ($category > 0) {
 		$mysql->query('insert into ' . prefix . '_news_map (newsID, categoryID, dt) values (' . db_squote($id) . ', ' . db_squote($category) . ', now())');
 	}
-
 	return $id;
 }
-
 function createContentFromRss($type, $items)
 {
 	global $SUPRESS_TEMPLATE_SHOW, $mysql;
 	$stats = ['added' => 0, 'skipped' => 0, 'errors' => []];
-
 	foreach ($items as $index => $item) {
-
 		if ($type === 'news') {
 			// Проверяем дубликат ДО попытки добавления
 			$existing = $mysql->record('SELECT id FROM ' . prefix . '_news WHERE title=' . db_squote($item['title']) . ' LIMIT 1');
@@ -795,7 +750,6 @@ function createContentFromRss($type, $items)
 				$stats['skipped']++;
 				continue; // Пропускаем и идём к следующей
 			}
-
 			// Готовим данные для добавления через addNews
 			$_REQUEST['title'] = $item['title'];
 			// Категория публикации (передаётся из запроса)
@@ -838,9 +792,7 @@ function createContentFromRss($type, $items)
 			}
 			// Добавляем новость через функцию CMS
 			include_once(root . 'includes/inc/lib_admin.php');
-
 			$added = addNews(['no.token' => true, 'no.editurl' => 1, 'no.files' => 1, 'no.meta' => 1]);
-
 			if (!$added) {
 				// ФОЛБЭК: Прямое добавление в БД
 				$addedDirect = addNewsDirect($item);
@@ -854,18 +806,15 @@ function createContentFromRss($type, $items)
 			}
 		}
 	}
-
 	return $stats;
 }
 function plugin_content_parse()
 {
 	global $SUPRESS_TEMPLATE_SHOW, $SYSTEM_FLAGS, $catmap, $userROW;
-
 	// Очищаем все буферы вывода
 	while (ob_get_level() > 0) {
 		ob_end_clean();
 	}
-
 	$SUPRESS_TEMPLATE_SHOW = 1;
 	$SUPRESS_MAINBLOCK_SHOW = 1;
 	@header('Content-type: application/json; charset=utf-8');
@@ -873,7 +822,6 @@ function plugin_content_parse()
 		'content-type'  => 'application/json; charset=utf-8',
 		'cache-control' => 'private',
 	];
-
 	try {
 		$count = (int)($_REQUEST['real_count'] ?? 0);
 		$action = $_REQUEST['actionName'] ?? '';
@@ -881,7 +829,6 @@ function plugin_content_parse()
 		$rssUrl = $_REQUEST['rss_url'] ?? '';
 		$category = intval($_REQUEST['category'] ?? 0);
 		$igUser = $_REQUEST['ig_user'] ?? '';
-
 		if ($count < 1) {
 			echo json_encode(['error' => 'Invalid count']);
 			exit();
@@ -938,24 +885,18 @@ function plugin_content_parse()
 					throw new Exception('RSS парсинг: ' . $e->getMessage());
 				}
 			}
-
 			// Прокидываем категорию
 			$_REQUEST['category'] = $category;
-
 			// Проверяем, что получены данные
 			$itemsCount = is_array($items) ? count($items) : 0;
-
 			if ($itemsCount === 0) {
 				throw new Exception('Не удалось получить посты из источника. Проверьте правильность указанных данных (URL канала, имя пользователя, токен VK API).');
 			}
-
 			// Создаем новости
 			$stats = createContentFromRss('news', $items);
-
 			if (function_exists('ob_get_level') && ob_get_level() > 0) {
 				ob_end_clean();
 			}
-
 			$response = [
 				'status' => 'success',
 				'count' => count($items),
@@ -970,13 +911,11 @@ function plugin_content_parse()
 					'type_param' => 'news'
 				]
 			];
-
 			// Добавляем ошибки, если есть
 			if (!empty($stats['errors'])) {
 				$response['errors'] = $stats['errors'];
 				$response['has_errors'] = true;
 			}
-
 			echo json_encode($response);
 		} catch (Exception $e) {
 			error_log("Ошибка в plugin_content_parse: " . $e->getMessage());

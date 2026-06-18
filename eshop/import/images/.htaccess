@@ -1,0 +1,8 @@
+#-------------------------------------------#
+#   Next generation CMS                 #
+#-------------------------------------------#
+
+<Files ~ "\.(jpg|jpeg|png|gif)$">
+   order deny,allow
+   allow from all
+</Files>

@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright (C) 2006-2011 Next Generation CMS (http://ngcms.ru/)
+// Copyright (C) 2006-2011 Next Generation CMS (http://ngcms.org/)
 // Name: comments.show.php
 // Description: Routines for showing comments
 // Author: Vitaly Ponomarev, Alexey Zinchenko

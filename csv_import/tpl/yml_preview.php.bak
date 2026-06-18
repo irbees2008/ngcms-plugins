@@ -1,0 +1,278 @@
+<?php if (!defined('NGCMS')) die('HAL'); ?>
+<div class="csv-import-yml-preview">
+    <h2>Настройка YML импорта: <?= htmlspecialchars($filename) ?></h2>
+    <?php if ($data['shop_name']): ?>
+        <p class="text-muted">Магазин: <strong><?= htmlspecialchars($data['shop_name']) ?></strong> &mdash;
+            товаров: <strong><?= count($data['offers']) ?></strong></p>
+    <?php endif; ?>
+
+    <form method="post" action="?action=yml_run">
+        <input type="hidden" name="file" value="<?= htmlspecialchars($filename) ?>">
+
+        <?php
+        // ── Helpers ──────────────────────────────────────────────────────
+        $newsTargets = [
+            'skip'        => '— пропустить —',
+            'title'       => 'Заголовок (title)',
+            'short_story' => 'Краткое описание',
+            'full_story'  => 'Полное описание',
+            'alt_name'    => 'Alt_name (URL)',
+            'tags'        => 'Теги / ключевые слова',
+        ];
+        $ymlFieldLabels = [
+            'name'               => 'Название товара (name)',
+            'price'              => 'Цена (price)',
+            'oldprice'           => 'Старая цена (oldprice)',
+            'vendor'             => 'Бренд (vendor)',
+            'model'              => 'Модель (model)',
+            'description'        => 'Описание (description)',
+            'barcode'            => 'Штрихкод (barcode)',
+            'vendorCode'         => 'Артикул (vendorCode)',
+            'count'              => 'Остаток (count)',
+            'weight'             => 'Вес (weight)',
+            'volume'             => 'Объём (volume)',
+            'typePrefix'         => 'Тип товара (typePrefix)',
+            'country_of_origin'  => 'Страна производства',
+            'url'                => 'URL товара',
+            'currencyId'         => 'Валюта (currencyId)',
+        ];
+        // Default auto-mapping heuristics
+        $autoMap = [
+            'name'          => 'title',
+            'description'   => 'short_story',
+            'vendor'        => isset($xfFields['brand']) ? 'xf_brand' : (isset($xfFields['vendor']) ? 'xf_vendor' : 'skip'),
+            'price'         => isset($xfFields['price']) ? 'xf_price' : 'skip',
+            'oldprice'      => isset($xfFields['oldprice']) ? 'xf_oldprice' : 'skip',
+            'model'         => isset($xfFields['model']) ? 'xf_model' : 'skip',
+            'barcode'       => isset($xfFields['barcode']) ? 'xf_barcode' : 'skip',
+            'vendorCode'    => isset($xfFields['vendorCode']) ? 'xf_vendorCode' : (isset($xfFields['articul']) ? 'xf_articul' : 'skip'),
+            'weight'        => isset($xfFields['weight']) ? 'xf_weight' : 'skip',
+            'count'         => isset($xfFields['count']) ? 'xf_count' : 'skip',
+        ];
+        ?>
+
+        <!-- ── 1. Standard YML fields ─────────────────────────────────── -->
+        <h4>1. Маппинг стандартных полей YML</h4>
+        <p class="text-muted">Выберите, в какое поле NGCMS попадёт каждый элемент YML.</p>
+        <table class="table table-bordered table-sm">
+            <thead>
+                <tr>
+                    <th>Поле YML</th>
+                    <th>Пример значения</th>
+                    <th>Поле NGCMS</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $exOffer = $data['offers'][0] ?? [];
+                foreach ($data['fields'] as $f):
+                    $label    = $ymlFieldLabels[$f] ?? $f;
+                    $example  = mb_substr((string)($exOffer[$f] ?? ''), 0, 60);
+                    $selected = $autoMap[$f] ?? 'skip';
+                ?>
+                    <tr>
+                        <td><code><?= htmlspecialchars($f) ?></code><br><small class="text-muted"><?= htmlspecialchars($label) ?></small></td>
+                        <td class="text-muted small"><?= htmlspecialchars($example) ?></td>
+                        <td>
+                            <select name="field_map[<?= htmlspecialchars($f) ?>]" class="form-control form-control-sm">
+                                <?php foreach ($newsTargets as $val => $lbl): ?>
+                                    <option value="<?= htmlspecialchars($val) ?>" <?= $selected === $val ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($lbl) ?></option>
+                                <?php endforeach; ?>
+                                <?php foreach ($xfFields as $xk => $xl): ?>
+                                    <option value="xf_<?= htmlspecialchars($xk) ?>"
+                                        <?= $selected === 'xf_' . $xk ? 'selected' : '' ?>>
+                                        xfields: <?= htmlspecialchars($xl) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <!-- ── 2. Param fields ────────────────────────────────────────── -->
+        <?php if ($data['params']): ?>
+            <h4>2. Маппинг &lt;param&gt; характеристик</h4>
+            <p class="text-muted">Значения &lt;param name="…"&gt; можно сохранить в xfields.</p>
+            <table class="table table-bordered table-sm">
+                <thead>
+                    <tr>
+                        <th>Param name</th>
+                        <th>Пример значения</th>
+                        <th>Поле NGCMS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($data['params'] as $pname):
+                        $example = mb_substr((string)($exOffer['params'][$pname] ?? ''), 0, 60);
+                        // Auto-map: find xfield whose key matches param name (case-insensitive, spaces→underscore)
+                        $pkey    = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '_', $pname));
+                        $pSel    = 'skip';
+                        foreach ($xfFields as $xk => $xl) {
+                            if (strtolower($xk) === $pkey) {
+                                $pSel = 'xf_' . $xk;
+                                break;
+                            }
+                        }
+                    ?>
+                        <tr>
+                            <td><code>param:<?= htmlspecialchars($pname) ?></code></td>
+                            <td class="text-muted small"><?= htmlspecialchars($example) ?></td>
+                            <td>
+                                <select name="field_map[param:<?= htmlspecialchars($pname) ?>]" class="form-control form-control-sm">
+                                    <option value="skip">— пропустить —</option>
+                                    <?php foreach ($xfFields as $xk => $xl): ?>
+                                        <option value="xf_<?= htmlspecialchars($xk) ?>"
+                                            <?= $pSel === 'xf_' . $xk ? 'selected' : '' ?>>
+                                            xfields: <?= htmlspecialchars($xl) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
+
+        <!-- ── 3. Images ──────────────────────────────────────────────── -->
+        <?php
+        // Detect offers that have pictures
+        $hasPictures = false;
+        foreach ($data['offers'] as $o) {
+            if (!empty($o['pictures'])) {
+                $hasPictures = true;
+                break;
+            }
+        }
+        // Find xfields of type 'images'
+        $imageXfOptions = [];
+        if (function_exists('xf_configLoad')) {
+            $xfc = xf_configLoad();
+            foreach ($xfc['news'] ?? [] as $k => $v) {
+                if (($v['type'] ?? '') === 'images') {
+                    $imageXfOptions[$k] = $k . ' — ' . $v['title'];
+                }
+            }
+        }
+        ?>
+        <h4>3. Изображения</h4>
+        <?php if (!$hasPictures): ?>
+            <p class="text-muted">В файле не найдены элементы &lt;picture&gt;.</p>
+        <?php else: ?>
+            <div class="card card-body mb-3">
+                <div class="form-check mb-2">
+                    <input type="checkbox" class="form-check-input" id="download_images"
+                        name="download_images" value="1" checked>
+                    <label class="form-check-label" for="download_images">
+                        Загружать изображения из &lt;picture&gt; на сервер
+                    </label>
+                </div>
+                <div class="form-row">
+                    <div class="col-md-5">
+                        <label>XField для изображений (тип: images):</label>
+                        <select name="image_xf_field" class="form-control">
+                            <option value="">— не выбрано —</option>
+                            <?php foreach ($imageXfOptions as $k => $l): ?>
+                                <option value="<?= htmlspecialchars($k) ?>"><?= htmlspecialchars($l) ?></option>
+                            <?php endforeach; ?>
+                            <?php if (!$imageXfOptions): ?>
+                                <?php foreach ($xfFields as $xk => $xl): ?>
+                                    <option value="<?= htmlspecialchars($xk) ?>"><?= htmlspecialchars($xl) ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                        <?php if (!$imageXfOptions): ?>
+                            <small class="text-warning">Поля xfields типа «images» не найдены. Убедитесь, что поле создано в настройках xfields.</small>
+                        <?php endif; ?>
+                    </div>
+                    <div class="col-md-3">
+                        <label>Макс. изображений на товар:</label>
+                        <input type="number" name="max_images" class="form-control" value="3" min="1" max="10">
+                    </div>
+                </div>
+                <p class="text-muted mt-2 mb-0"><small>
+                        Файлы сохраняются в <code>uploads/dsn/</code> и регистрируются в таблице изображений NGCMS.
+                        Повторный импорт не дублирует уже загруженные файлы.
+                    </small></p>
+            </div>
+        <?php endif; ?>
+
+        <!-- ── 4. Category mapping ────────────────────────────────────── -->
+        <?php if ($data['categories']): ?>
+            <h4>4. Маппинг категорий</h4>
+            <p class="text-muted">Выберите соответствующую категорию NGCMS для каждой категории из YML.</p>
+            <table class="table table-bordered table-sm">
+                <thead>
+                    <tr>
+                        <th>YML категория</th>
+                        <th>Категория NGCMS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($data['categories'] as $ymlId => $ymlName):
+                        // Auto-match by name
+                        $matched = 0;
+                        foreach ($cats as $cid => $cname) {
+                            if (mb_strtolower(trim($ymlName)) === mb_strtolower(trim(preg_replace('/\s*\(.*\)$/', '', $cname)))) {
+                                $matched = $cid;
+                                break;
+                            }
+                        }
+                    ?>
+                        <tr>
+                            <td><?= htmlspecialchars($ymlName) ?> <small class="text-muted">(id: <?= htmlspecialchars($ymlId) ?>)</small></td>
+                            <td>
+                                <select name="cat_map[<?= htmlspecialchars($ymlId) ?>]" class="form-control form-control-sm">
+                                    <?php foreach ($cats as $cid => $cname): ?>
+                                        <option value="<?= intval($cid) ?>" <?= $matched == $cid ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($cname) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
+
+        <!-- ── 5. Import settings ─────────────────────────────────────── -->
+        <h4>5. Параметры импорта</h4>
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label>Категория по умолчанию <small>(если не задана в маппинге)</small>:</label>
+                <select name="cat_id" class="form-control">
+                    <?php foreach ($cats as $cid => $cname): ?>
+                        <option value="<?= intval($cid) ?>"><?= htmlspecialchars($cname) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label>Статус:</label>
+                <select name="approve" class="form-control">
+                    <option value="1">Опубликована</option>
+                    <option value="0">Скрыта</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label>Главная страница:</label>
+                <select name="mainpage" class="form-control">
+                    <option value="1">Да</option>
+                    <option value="0">Нет</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label>&nbsp;</label><br>
+                <label><input type="checkbox" name="update_mode" value="1">
+                    Обновлять существующие (по alt_name)</label>
+            </div>
+        </div>
+
+        <div class="alert alert-info">
+            Будет обработано <strong><?= count($data['offers']) ?></strong> предложений.
+        </div>
+
+        <button type="submit" class="btn btn-success">Запустить YML импорт</button>
+        <a href="?" class="btn btn-secondary">Отмена</a>
+    </form>
+</div>

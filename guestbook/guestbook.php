@@ -457,7 +457,8 @@ function guestbook_block($params)
 	global $CurrentHandler, $twig, $config;
 	$count = ($params['count'] > 0) ? intval($params['count']) : 10;
 	$tVars = array(
-		'entries' => _guestbook_records('DESC', 0, $count),
+		'entries'     => _guestbook_records('DESC', 0, $count),
+		'avatars_url' => $config['avatars_url'],
 	);
 	$tpath = locatePluginTemplates(array('guestbook.block'), 'guestbook', pluginGetVariable('guestbook', 'localsource'));
 	$xt = $twig->loadTemplate($tpath['guestbook.block'] . 'guestbook.block.tpl');

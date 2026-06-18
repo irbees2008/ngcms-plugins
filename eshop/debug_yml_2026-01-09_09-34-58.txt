@@ -1,0 +1,101 @@
+URL: https://shop.ngcms.org/plugin/eshop/yml_export/
+Размер: 115524 байт
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTDXHTML1.0Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ru" lang="ru" dir="ltr">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+		<meta http-equiv="content-language" content="ru"/>
+		<meta name="generator" content="NGCMS 1.0.0"/>
+		<meta name="document-state" content="dynamic"/>
+		<script type="text/javascript" src="https://shop.ngcms.org/engine/plugins/eshop/tpl/js/breeze.min.js"></script>
+<script type="text/javascript" src="https://shop.ngcms.org/engine/plugins/eshop/tpl/js/eshop.js"></script>
+
+<script type="text/javascript">
+	function futu_alert(header, text, close, className) {
+		if (!document.getElementById('futu_alerts_holder')) {
+			var futuAlertOuter = document.createElement('div');
+			futuAlertOuter.className = 'futu_alert_outer';
+			document.body.appendChild(futuAlertOuter);
+			var futuAlertFrame = document.createElement('div');
+			futuAlertFrame.className = 'frame';
+			futuAlertOuter.appendChild(futuAlertFrame);
+			var futuAlertsHolder = document.createElement('div');
+			futuAlertsHolder.id = 'futu_alerts_holder';
+			futuAlertsHolder.className = 'futu_alerts_holder';
+			futuAlertFrame.appendChild(futuAlertsHolder);
+		}
+		var futuAlert = document.createElement('div');
+		futuAlert.className = 'futu_alert ' + className;
+		document.getElementById('futu_alerts_holder').appendChild(futuAlert);
+		futuAlert.id = 'futu_alert';
+		var futuAlertHeader = document.createElement('div');
+		futuAlertHeader.className = 'futu_alert_header';
+		futuAlert.appendChild(futuAlertHeader);
+		futuAlertHeader.innerHTML = header;
+		if (close) {
+			var futuAlertCloseButton = document.createElement('a');
+			futuAlertCloseButton.href = '#';
+			futuAlertCloseButton.className = 'futu_alert_close_button';
+			futuAlertCloseButton.onclick = function(ev) {
+				if(!ev) {
+					ev=window.event;
+				}
+				if (!document.all) ev.preventDefault(); else ev.returnValue = false;
+				document.getElementById('futu_alerts_holder').removeChild(futuAlert);
+			}
+			futuAlert.appendChild(futuAlertCloseButton);
+			var futuAlertCloseButtonIcon = document.createElement('img');
+			futuAlertCloseButtonIcon.src = '/engine/plugins/eshop_favorites/img/btn_close.gif';
+			futuAlertCloseButton.appendChild(futuAlertCloseButtonIcon);
+		}
+		var futuAlertText = document.createElement('div');
+		futuAlertText.className = 'futu_alert_text';
+		futuAlert.appendChild(futuAlertText);
+		futuAlertText.innerHTML = text;
+		futuAlert.style.position = 'relative';
+		futuAlert.style.top = '0';
+		futuAlert.style.display = 'block';
+		if (!close) {
+			/* addEvent("click",function(){
+				document.getElementById('futu_alerts_holder').removeChild(futuAlert);
+			}, document.getElementById('futu_alert'));*/
+			setTimeout(function () { document.getElementById('futu_alerts_holder').removeChild(futuAlert); }, 3000);
+		}
+	}
+	function eshop_favorites(url, product, action, isFullProduct) {
+    var ajaxeshop_favorites = new sack();
+    ajaxeshop_favorites.onShow("");
+    ajaxeshop_favorites.onComplete = function() {
+        if(ajaxeshop_favorites.response == "limit") {
+            futu_alert("Избранное", "Кажется вы исчерпали свой лимит закладок", true, "message");
+        }
+										else if(ajaxeshop_favorites.response == "notlogged"){
+											futu_alert("Избранное", "Кажется вы уже не авторизованы на сайте", true, "error");
+										}
+										else if(ajaxeshop_favorites.response == "err_add"){
+											futu_alert("Избранное", "Вы уже добавляли эту новость в закладки или новость не существует вовсе", true, "error");
+										} else {
+											elementObj = document.getElementById("eshop_favorites_" + product);
+											elementObj.innerHTML = ajaxeshop_favorites.response;
+											elementObj = document.getElementById("eshop_favorites_counter_" + product);
+											if(ajaxeshop_favorites.response.indexOf("<!-- add -->") != -1){
+												futu_alert("Избранное", "Вы добавили пост в избранное", false, "save");
+											}
+											else{
+												futu_alert("Избранное", "Вы удалили пост из избранного", false, "save");
+											}
+										}
+									};
+    ajaxeshop_favorites.setVar("product", product);
+    ajaxeshop_favorites.setVar("action", action);
+    ajaxeshop_favorites.setVar("ajax", true);
+    ajaxeshop_favorites.setVar("isFullProduct", isFullProduct ? "1" : "0");
+    ajaxeshop_favorites.requestFile = url;
+    ajaxeshop_favorites.method = "GET";
+    ajaxeshop_favorites.runAJAX();
+}
+</script>
+<link href="https://shop.ngcms.org/engine/plugins/eshop_favorites/tpl/eshop_favorites.css" rel="stylesheet" type="text/css" />
+<link href="https://shop.ngcms.org/engine/plugins/bb_media/players/HTML5player/styles.
