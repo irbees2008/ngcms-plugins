@@ -19,13 +19,14 @@ if (isset($_REQUEST['debug'])) {
     }));
     echo '</pre>';
 }
-// Defaults
-$defTitleLen       = pluginGetVariable('ognews', 'title_length')       !== null ? pluginGetVariable('ognews', 'title_length') : 200;
-$defDescrLen       = pluginGetVariable('ognews', 'description_length') !== null ? pluginGetVariable('ognews', 'description_length') : 220;
-$defTwitterTitleLen = pluginGetVariable('ognews', 'twitter_title_length') !== null ? pluginGetVariable('ognews', 'twitter_title_length') : 200;
-$defTwitterDescrLen = pluginGetVariable('ognews', 'twitter_description_length') !== null ? pluginGetVariable('ognews', 'twitter_description_length') : 220;
+// Defaults (оптимальные значения для соцсетей и SEO)
+$defTitleLen       = pluginGetVariable('ognews', 'title_length')       !== null ? pluginGetVariable('ognews', 'title_length') : 60;  // Google обрезает после ~60 символов
+$defDescrLen       = pluginGetVariable('ognews', 'description_length') !== null ? pluginGetVariable('ognews', 'description_length') : 125; // Соцсети показывают ~125 символов
+$defTwitterTitleLen = pluginGetVariable('ognews', 'twitter_title_length') !== null ? pluginGetVariable('ognews', 'twitter_title_length') : 60;
+$defTwitterDescrLen = pluginGetVariable('ognews', 'twitter_description_length') !== null ? pluginGetVariable('ognews', 'twitter_description_length') : 125;
 $defKeywordsLen    = pluginGetVariable('ognews', 'keywords_length')    !== null ? pluginGetVariable('ognews', 'keywords_length') : 0; // 0 = не ограничивать
 $defSource         = pluginGetVariable('ognews', 'description_source') !== null ? pluginGetVariable('ognews', 'description_source') : 'description';
+$defTwitterSite    = pluginGetVariable('ognews', 'twitter_site') !== null ? pluginGetVariable('ognews', 'twitter_site') : '';
 $cfg = array();
 $grp = array();
 $grp[] = array(
@@ -73,6 +74,13 @@ $grp[] = array(
     'descr'  => $lang['ognews:keywords_length_descr'],
     'type'   => 'input',
     'value'  => intval($defKeywordsLen),
+);
+$grp[] = array(
+    'name'   => 'twitter_site',
+    'title'  => 'Twitter username',
+    'descr'  => 'Ваш Twitter username (например @sitename). Оставьте пустым, если нет',
+    'type'   => 'input',
+    'value'  => $defTwitterSite,
 );
 $cfg[] = array(
     'mode'    => 'group',

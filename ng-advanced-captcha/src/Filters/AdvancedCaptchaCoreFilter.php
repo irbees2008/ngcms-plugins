@@ -67,4 +67,22 @@ class AdvancedCaptchaCoreFilter
         logger('ng-advanced-captcha: Lostpassword captcha verified', 'info');
         return true;
     }
+
+    /**
+     * Обработка после успешной регистрации пользователя
+     *
+     * @param int $userID ID зарегистрированного пользователя
+     * @param array $userRec Массив данных пользователя
+     * @return int
+     */
+    public function registerUserNotify($userID, $userRec)
+    {
+        // Очищаем данные капчи из сессии после успешной регистрации
+        if (isset($_SESSION['captcha'])) {
+            unset($_SESSION['captcha']);
+        }
+
+        logger('ng-advanced-captcha: User #' . $userID . ' registered successfully', 'info');
+        return 1;
+    }
 }
