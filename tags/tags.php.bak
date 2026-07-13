@@ -138,7 +138,7 @@ class TagsNewsfilter extends NewsFilter
 		// Recreate indexes for this news
 		if (count($tagsNewQ))
 			$mysql->query("insert into " . prefix . "_tags_index (newsID, tagID) select " . db_squote($newsid) . ", id from " . prefix . "_tags where tag in (" . join(",", $tagsNewQ) . ")");
-		tags_logger('News added with tags: newsid=' . $newsid . ', tags=' . count($tagsNew, 'info', 'tags.log') . ' (' . implode(', ', $tagsNew) . ')');
+		tags_logger('tags', 'News added with tags: newsid=' . $newsid . ', tags=' . count($tagsNew) . ' (' . implode(', ', $tagsNew) . ')');
 		return 1;
 	}
 
@@ -290,7 +290,7 @@ class TagsNewsfilter extends NewsFilter
 		if (count($tagsNewQ))
 			$mysql->query("insert into " . prefix . "_tags_index (newsID, tagID) select " . db_squote($newsID) . ", id from " . prefix . "_tags where tag in (" . join(",", $tagsNewQ) . ")");
 		if (count($tagsDiffQ))
-			tags_logger('News tags updated: newsid=' . $newsID . ', added=' . count($tagsAddQ, 'info', 'tags.log') . ', removed=' . count($tagsDelQ));
+			tags_logger('tags', 'News tags updated: newsid=' . $newsID . ', added=' . count($tagsAddQ) . ', removed=' . count($tagsDelQ));
 		return 1;
 	}
 	// Add {plugin_tags_news} variable into news
@@ -351,7 +351,7 @@ class TagsNewsfilter extends NewsFilter
 		$mysql->query("delete from " . prefix . "_tags_index where newsID = " . intval($newsID));
 		$deletedCount = $mysql->query("delete from " . prefix . "_tags where posts = 0");
 		if ($deletedCount > 0)
-			tags_logger('News deleted: newsid=' . $newsID . ', cleaned unused tags: ' . $deletedCount, 'info', 'tags.log');
+			tags_logger('tags', 'News deleted: newsid=' . $newsID . ', cleaned unused tags: ' . $deletedCount);
 		return 1;
 	}
 	// Mass news modify

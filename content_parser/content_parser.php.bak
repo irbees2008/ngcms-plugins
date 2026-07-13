@@ -62,7 +62,7 @@ function downloadMediaToServer($url, $type = 'image')
                 } else {
                     $fullPath = '/' . trim($fullPath, '/');
                 }
-                logger('Media downloaded: type=' . $type . ', url=' . sanitize($url, 'info', 'content_parser.log') . ', path=' . $fullPath);
+                logger('content_parser', 'Media downloaded: type=' . $type . ', url=' . sanitize($url) . ', path=' . $fullPath);
                 return $fullPath;
             } elseif ($name) {
                 // Для файлов (не изображений) формируем путь аналогично
@@ -73,12 +73,12 @@ function downloadMediaToServer($url, $type = 'image')
                 } else {
                     $fullPath = '/' . trim($fullPath, '/');
                 }
-                logger('File downloaded: type=' . $type . ', url=' . sanitize($url, 'info', 'content_parser.log') . ', path=' . $fullPath);
+                logger('content_parser', 'File downloaded: type=' . $type . ', url=' . sanitize($url) . ', path=' . $fullPath);
                 return $fullPath;
             }
         }
     }
-    logger('Media download failed: url=' . sanitize($url, 'info', 'content_parser.log'));
+    logger('content_parser', 'Media download failed: url=' . sanitize($url));
     return false;
 }
 /**
@@ -91,7 +91,7 @@ function parseRssFeed($rssUrl, $count)
     try {
         $rss = loadRssFeed($rssUrl);
     } catch (Exception $e) {
-        logger('RSS load failed: url=' . sanitize($rssUrl, 'info', 'content_parser.log') . ', error=' . $e->getMessage());
+        logger('content_parser', 'RSS load failed: url=' . sanitize($rssUrl) . ', error=' . $e->getMessage());
         throw new Exception("Ошибка загрузки RSS: " . $e->getMessage());
     }
     $items = [];
@@ -126,7 +126,7 @@ function parseRssFeed($rssUrl, $count)
         $parsedCount++;
     }
     $elapsed = (microtime(true) - $startTime) * 1000;
-    logger('RSS parsed: url=' . sanitize($rssUrl, 'info', 'content_parser.log') . ', items=' . $parsedCount . ', elapsed=' . round($elapsed, 2) . 'ms');
+    logger('content_parser', 'RSS parsed: url=' . sanitize($rssUrl) . ', items=' . $parsedCount . ', elapsed=' . round($elapsed, 2) . 'ms');
     return $items;
 }
 function loadRssFeed($rssUrl)

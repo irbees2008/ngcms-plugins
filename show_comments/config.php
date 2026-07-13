@@ -55,7 +55,7 @@ function show_comments()
 	$res = $mysql->record($query, 1);
 	$total = $res['cnt'];
 
-	logger('show_comments', 'Loading comments list: total=' . $total . ', perpage=' . $perpage . ', order=' . $order);
+	logger('Loading comments list: total=' . $total . ', perpage=' . $perpage . ', order=' . $order, 'info', 'show_comments.log');
 	// Проверяем передан ли номер текущей страницы
 	if (isset($_GET['page'])) {
 		$page = (int)$_GET['page'];
@@ -127,7 +127,7 @@ function show_comments()
 	echo '<script>$("tr:odd").css("background-color", "#f7fbff");</script>';
 
 	$elapsed = benchmark($startTime);
-	logger('show_comments', 'Comments list rendered: items=' . count($result) . ', elapsed=' . round($elapsed, 2) . 'ms');
+	logger('Comments list rendered: items=' . count($result, 'info', 'show_comments.log') . ', elapsed=' . round($elapsed, 2) . 'ms');
 
 	$type = is_post() ? $_POST['type'] : null;
 	if (!empty($type)) {
@@ -159,7 +159,7 @@ function show_comments()
 				$mysql->query("update " . uprefix . "_users set com=" . $row['cnt'] . " where id = " . $row['author_id']);
 			}
 
-			logger('show_comments', 'Comments deleted: count=' . count($type) . ', ip=' . get_ip());
+			logger('Comments deleted: count=' . count($type, 'info', 'show_comments.log') . ', ip=' . get_ip());
 			echo "<META HTTP-EQUIV='Refresh' Content='0'>";
 		}
 	}

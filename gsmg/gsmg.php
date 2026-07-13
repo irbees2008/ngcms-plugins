@@ -52,7 +52,7 @@ function plugin_gsmg_screen()
     $SUPRESS_MAINBLOCK_SHOW = 1;
 
     // Log sitemap generation start
-    gsmg_logger('gsmg', sprintf('Sitemap generation started from IP: %s', gsmg_get_ip()), 'info', 'gsmg.log');
+    gsmg_logger(sprintf('Sitemap generation started from IP: %s', gsmg_get_ip()), 'info', 'gsmg.log');
 
     @header('Content-type: text/xml; charset=utf-8');
     $SYSTEM_FLAGS['http.headers'] = array(
@@ -63,7 +63,7 @@ function plugin_gsmg_screen()
     if (extra_get_param('gsmg', 'cache')) {
         $cacheData = cacheRetrieveFile('sitemap_index.xml', extra_get_param('gsmg', 'cacheExpire'), 'gsmg');
         if ($cacheData != false) {
-            gsmg_logger('gsmg', 'Sitemap served from cache', 'info', 'gsmg.log');
+            gsmg_logger('Sitemap served from cache', 'info', 'gsmg.log');
             print $cacheData;
             return;
         }
@@ -205,9 +205,9 @@ function plugin_gsmg_screen()
         $filePath = dirname(root) . "/" . $fileName;
 
         if (file_put_contents($filePath, $content) !== false) {
-            gsmg_logger('gsmg', sprintf('Sitemap part saved: %s (URLs: %d)', $fileName, substr_count($content, '<url>')), 'info', 'gsmg.log');
+            gsmg_logger(sprintf('Sitemap part saved: %s (URLs: %d)', $fileName, substr_count($content, '<url>')), 'info', 'gsmg.log');
         } else {
-            gsmg_logger('gsmg', sprintf('Failed to save sitemap part: %s', $fileName), 'error', 'gsmg.log');
+            gsmg_logger(sprintf('Failed to save sitemap part: %s', $fileName), 'error', 'gsmg.log');
         }
         $sitemapIndex .= "  <sitemap>\n";
         $sitemapIndex .= "    <loc>" . $config['home_url'] . "/{$fileName}</loc>\n";
@@ -220,9 +220,9 @@ function plugin_gsmg_screen()
     // Сохраняем в кэш (если включён)
     if (extra_get_param('gsmg', 'cache')) {
         cacheStoreFile('sitemap_index.xml', $sitemapIndex, 'gsmg');
-        gsmg_logger('gsmg', 'Sitemap index cached successfully', 'info', 'gsmg.log');
+        gsmg_logger('Sitemap index cached successfully', 'info', 'gsmg.log');
     }
 
     // Log completion
-    gsmg_logger('gsmg', sprintf('Sitemap generation completed. Total parts: %d', count($sitemapParts)), 'info', 'gsmg.log');
+    gsmg_logger(sprintf('Sitemap generation completed. Total parts: %d', count($sitemapParts, 'info', 'gsmg.log')), 'info', 'gsmg.log');
 }

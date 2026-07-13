@@ -37,7 +37,7 @@ function basket_add_item($linked_ds, $linked_id, $title, $price, $count, $xfld =
 	$xt = $twig->loadTemplate('plugins/basket/total.tpl');
 
 	// Логируем добавление
-	logger('Item added: id=' . $linked_id . ', price=' . formatMoney($price, 'info', 'basket.log') . ', count=' . $count);
+	logger('basket', 'Item added: id=' . $linked_id . ', price=' . formatMoney($price) . ', count=' . $count);
 
 	return array(
 		'status' => 1,

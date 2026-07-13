@@ -46,14 +46,14 @@ class NSchedNewsFilter extends NewsFilter
             );
             if ($publishDate) {
                 $SQL['nsched_activate'] = $publishDate->getTimestamp();
-                logger('Scheduled activation: newsID will be assigned, timestamp=' . $SQL['nsched_activate'] . ', date=' . $_REQUEST['nsched_activate'], 'info', 'nsched.log');
+                logger('nsched', 'Scheduled activation: newsID will be assigned, timestamp=' . $SQL['nsched_activate'] . ', date=' . $_REQUEST['nsched_activate']);
                 if (pluginGetVariable('nsched', 'sync_dates')) {
                     $SQL['postdate'] = $SQL['nsched_activate'];
                     $SQL['editdate'] = $SQL['nsched_activate'];
                 }
             } else {
                 $SQL['nsched_activate'] = self::EMPTY_DATETIME;
-                logger('Invalid activate date format: ' . $_REQUEST['nsched_activate'], 'error', 'nsched.log');
+                logger('nsched', 'Invalid activate date format: ' . $_REQUEST['nsched_activate'], 'error');
             }
         }
         // Добавляем обработку даты деактивации
@@ -65,10 +65,10 @@ class NSchedNewsFilter extends NewsFilter
             );
             if ($unpublishDate) {
                 $SQL['nsched_deactivate'] = $unpublishDate->getTimestamp();
-                logger('Scheduled deactivation: newsID will be assigned, timestamp=' . $SQL['nsched_deactivate'] . ', date=' . $_REQUEST['nsched_deactivate'], 'info', 'nsched.log');
+                logger('nsched', 'Scheduled deactivation: newsID will be assigned, timestamp=' . $SQL['nsched_deactivate'] . ', date=' . $_REQUEST['nsched_deactivate']);
             } else {
                 $SQL['nsched_deactivate'] = self::EMPTY_DATETIME;
-                logger('Invalid deactivate date format: ' . $_REQUEST['nsched_deactivate'], 'error', 'nsched.log');
+                logger('nsched', 'Invalid deactivate date format: ' . $_REQUEST['nsched_deactivate'], 'error');
             }
         }
         return 1;
@@ -87,14 +87,14 @@ class NSchedNewsFilter extends NewsFilter
             );
             if ($publishDate) {
                 $SQLnew['nsched_activate'] = $publishDate->getTimestamp();
-                logger('Updated activation schedule: newsID=' . $newsID . ', timestamp=' . $SQLnew['nsched_activate'] . ', date=' . $_REQUEST['nsched_activate'], 'info', 'nsched.log');
+                logger('nsched', 'Updated activation schedule: newsID=' . $newsID . ', timestamp=' . $SQLnew['nsched_activate'] . ', date=' . $_REQUEST['nsched_activate']);
                 if (pluginGetVariable('nsched', 'sync_dates')) {
                     $SQLnew['postdate'] = $SQLnew['nsched_activate'];
                     $SQLnew['editdate'] = $SQLnew['nsched_activate'];
                 }
             } else {
                 $SQLnew['nsched_activate'] = self::EMPTY_DATETIME;
-                logger('Invalid activate date format during edit: newsID=' . $newsID . ', date=' . $_REQUEST['nsched_activate'], 'error', 'nsched.log');
+                logger('nsched', 'Invalid activate date format during edit: newsID=' . $newsID . ', date=' . $_REQUEST['nsched_activate'], 'error');
             }
         }
         // Добавляем обработку даты деактивации
@@ -106,10 +106,10 @@ class NSchedNewsFilter extends NewsFilter
             );
             if ($unpublishDate) {
                 $SQLnew['nsched_deactivate'] = $unpublishDate->getTimestamp();
-                logger('Updated deactivation schedule: newsID=' . $newsID . ', timestamp=' . $SQLnew['nsched_deactivate'] . ', date=' . $_REQUEST['nsched_deactivate'], 'info', 'nsched.log');
+                logger('nsched', 'Updated deactivation schedule: newsID=' . $newsID . ', timestamp=' . $SQLnew['nsched_deactivate'] . ', date=' . $_REQUEST['nsched_deactivate']);
             } else {
                 $SQLnew['nsched_deactivate'] = self::EMPTY_DATETIME;
-                logger('Invalid deactivate date format during edit: newsID=' . $newsID . ', date=' . $_REQUEST['nsched_deactivate'], 'error', 'nsched.log');
+                logger('nsched', 'Invalid deactivate date format during edit: newsID=' . $newsID . ', date=' . $_REQUEST['nsched_deactivate'], 'error');
             }
         }
         return 1;
@@ -161,40 +161,40 @@ function plugin_nsched_cron()
     // Start benchmark
     $startTime = microtime(true);
     $startMemory = memory_get_usage();
-    logger('CRON execution started at ' . date('Y-m-d H:i:s', 'info', 'nsched.log'));
+    logger('nsched', 'CRON execution started at ' . date('Y-m-d H:i:s'));
     // 1. Установка часового пояса для MySQL
     $timezone = $config['timezone'] ?? 'Asia/Almaty';
     $dt = new DateTime('now', new DateTimeZone($timezone));
     $mysql->query("SET time_zone = '" . $dt->format('P') . "'");
     // 2. Логирование старта
-    logger('Server Time: ' . date('Y-m-d H:i:s', 'info', 'nsched.log') . ', MySQL Time: ' . $mysql->result("SELECT NOW()") . ', MySQL Timestamp: ' . $mysql->result("SELECT UNIX_TIMESTAMP()"));
+    logger('nsched', 'Server Time: ' . date('Y-m-d H:i:s') . ', MySQL Time: ' . $mysql->result("SELECT NOW()") . ', MySQL Timestamp: ' . $mysql->result("SELECT UNIX_TIMESTAMP()"));
     // 3. Публикация новостей (nsched_activate)
     $activateQuery = "SELECT id, nsched_activate, FROM_UNIXTIME(nsched_activate) as activate_time
                      FROM " . prefix . "_news
                      WHERE nsched_activate > 0
                      AND nsched_activate <= UNIX_TIMESTAMP()
                      AND approve = 0";
-    logger('Searching for news to activate...', 'info', 'nsched.log');
+    logger('nsched', 'Searching for news to activate...');
     $newsToActivate = $mysql->select($activateQuery);
     if ($newsToActivate && count($newsToActivate)) {
-        logger('Found ' . count($newsToActivate, 'info', 'nsched.log') . ' news to activate');
+        logger('nsched', 'Found ' . count($newsToActivate) . ' news to activate');
         $mysql->query("START TRANSACTION");
         try {
             foreach ($newsToActivate as $news) {
-                logger('Activating news: id=' . $news['id'] . ', scheduled=' . $news['activate_time'], 'info', 'nsched.log');
+                logger('nsched', 'Activating news: id=' . $news['id'] . ', scheduled=' . $news['activate_time']);
                 $mysql->query("UPDATE " . prefix . "_news SET
                     approve = 1,
                     nsched_activate = 0
                     WHERE id = " . $news['id']);
             }
             $mysql->query("COMMIT");
-            logger('Successfully activated ' . count($newsToActivate, 'info', 'nsched.log') . ' news');
+            logger('nsched', 'Successfully activated ' . count($newsToActivate) . ' news');
         } catch (Exception $e) {
             $mysql->query("ROLLBACK");
-            logger('Activation ERROR: ' . $e->getMessage(), 'error', 'nsched.log');
+            logger('nsched', 'Activation ERROR: ' . $e->getMessage(), 'error');
         }
     } else {
-        logger('No news to activate', 'info', 'nsched.log');
+        logger('nsched', 'No news to activate');
     }
     // 4. Снятие с публикации (nsched_deactivate)
     $deactivateQuery = "SELECT id, nsched_deactivate, FROM_UNIXTIME(nsched_deactivate) as deactivate_time
@@ -202,30 +202,30 @@ function plugin_nsched_cron()
                        WHERE nsched_deactivate > 0
                        AND nsched_deactivate <= UNIX_TIMESTAMP()
                        AND approve = 1";
-    logger('Searching for news to deactivate...', 'info', 'nsched.log');
+    logger('nsched', 'Searching for news to deactivate...');
     $newsToDeactivate = $mysql->select($deactivateQuery);
     if ($newsToDeactivate && count($newsToDeactivate)) {
-        logger('Found ' . count($newsToDeactivate, 'info', 'nsched.log') . ' news to deactivate');
+        logger('nsched', 'Found ' . count($newsToDeactivate) . ' news to deactivate');
         $mysql->query("START TRANSACTION");
         try {
             foreach ($newsToDeactivate as $news) {
-                logger('Deactivating news: id=' . $news['id'] . ', scheduled=' . $news['deactivate_time'], 'info', 'nsched.log');
+                logger('nsched', 'Deactivating news: id=' . $news['id'] . ', scheduled=' . $news['deactivate_time']);
                 $mysql->query("UPDATE " . prefix . "_news SET
                     approve = 0,
                     nsched_deactivate = 0
                     WHERE id = " . $news['id']);
             }
             $mysql->query("COMMIT");
-            logger('Successfully deactivated ' . count($newsToDeactivate, 'info', 'nsched.log') . ' news');
+            logger('nsched', 'Successfully deactivated ' . count($newsToDeactivate) . ' news');
         } catch (Exception $e) {
             $mysql->query("ROLLBACK");
-            logger('Deactivation ERROR: ' . $e->getMessage(), 'error', 'nsched.log');
+            logger('nsched', 'Deactivation ERROR: ' . $e->getMessage(), 'error');
         }
     } else {
-        logger('No news to deactivate', 'info', 'nsched.log');
+        logger('nsched', 'No news to deactivate');
     }
     // 5. Финализация с benchmark
     $elapsed = round((microtime(true) - $startTime) * 1000, 2);
     $memoryUsed = round((memory_get_usage() - $startMemory) / 1024, 2);
-    logger('CRON finished: elapsed=' . $elapsed . 'ms, memory=' . $memoryUsed . 'KB', 'info', 'nsched.log');
+    logger('nsched', 'CRON finished: elapsed=' . $elapsed . 'ms, memory=' . $memoryUsed . 'KB');
 }

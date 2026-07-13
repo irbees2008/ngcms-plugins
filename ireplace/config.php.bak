@@ -40,15 +40,15 @@ if (array_get($_REQUEST, 'action', '') == 'commit') {
 		switch ($area) {
 			case 'news':
 				$query = "update " . prefix . "_news set content = replace(content, " . db_squote($src) . ", " . db_squote($dest) . ")";
-				logger('Replace in NEWS: "' . $src . '" -> "' . $dest . '"', 'info', 'ireplace.log');
+				logger('ireplace', 'Replace in NEWS: "' . $src . '" -> "' . $dest . '"');
 				break;
 			case 'static':
 				$query = "update " . prefix . "_static set content = replace(content, " . db_squote($src) . ", " . db_squote($dest) . ")";
-				logger('Replace in STATIC: "' . $src . '" -> "' . $dest . '"', 'info', 'ireplace.log');
+				logger('ireplace', 'Replace in STATIC: "' . $src . '" -> "' . $dest . '"');
 				break;
 			case 'comments':
 				$query = "update " . prefix . "_comments set text = replace(text, " . db_squote($src) . ", " . db_squote($dest) . ")";
-				logger('Replace in COMMENTS: "' . $src . '" -> "' . $dest . '"', 'info', 'ireplace.log');
+				logger('ireplace', 'Replace in COMMENTS: "' . $src . '" -> "' . $dest . '"');
 				break;
 		}
 		if (!$query) {
@@ -63,10 +63,10 @@ if (array_get($_REQUEST, 'action', '') == 'commit') {
 		$result = $mysql->select($query);
 		$count = $mysql->affected_rows($mysql->connect);
 		if ($count) {
-			logger('Success: ' . $count . ' rows affected in area: ' . $area, 'info', 'ireplace.log');
+			logger('ireplace', 'Success: ' . $count . ' rows affected in area: ' . $area);
 			msg(array("type" => "info", "info" => str_replace('{count}', $count, $lang['ireplace:info.done'])));
 		} else {
-			logger('No changes: 0 rows affected in area: ' . $area, 'info', 'ireplace.log');
+			logger('ireplace', 'No changes: 0 rows affected in area: ' . $area);
 			msg(array("type" => "info", "info" => $lang['ireplace:info.nochange']));
 		}
 	}

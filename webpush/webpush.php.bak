@@ -20,7 +20,7 @@ function webpush_inject_code(): void
     $enabled = pluginGetVariable('webpush', 'enabled');
     if (!$enabled) {
         $template['vars']['webpush'] = '<!-- WebPush: disabled -->';
-        logger('Plugin disabled in config', 'info', 'webpush.log');
+        logger('webpush', 'Plugin disabled in config');
         return;
     }
 
@@ -28,7 +28,7 @@ function webpush_inject_code(): void
     $showButton = pluginGetVariable('webpush', 'show_button');
     if (!$showButton) {
         $template['vars']['webpush'] = '<!-- WebPush: button hidden -->';
-        logger('Button hidden in config', 'info', 'webpush.log');
+        logger('webpush', 'Button hidden in config');
         return;
     }
 
@@ -40,7 +40,7 @@ function webpush_inject_code(): void
 
     if (!isset($tpath['webpush'])) {
         $template['vars']['webpush'] = '<!-- WebPush: template not found -->';
-        logger('Template not found: ' . var_export($tpath, true, 'info', 'webpush.log'));
+        logger('webpush', 'Template not found: ' . var_export($tpath, true));
         return;
     }
 
@@ -54,23 +54,23 @@ function webpush_inject_code(): void
     ];
 
     // Логируем для отладки
-    logger(sprintf(
+    logger('webpush', sprintf(
         'Injecting code: enabled=%d, showButton=%d, template=%s, IP=%s',
         $enabled,
         $showButton,
         $tpath['webpush'],
         get_ip()
-    ), 'info', 'webpush.log');
+    ));
 
     // Генерируем HTML через Twig
     try {
         $xt = $twig->loadTemplate($tpath['webpush'] . 'webpush.tpl');
         $template['vars']['webpush'] = $xt->render($tvars);
 
-        logger('Code injected successfully', 'info', 'webpush.log');
+        logger('webpush', 'Code injected successfully');
     } catch (Exception $e) {
         $template['vars']['webpush'] = '<!-- WebPush: Error rendering template: ' . htmlspecialchars($e->getMessage()) . ' -->';
-        logger('Error rendering template: ' . $e->getMessage(), 'error', 'webpush.log');
+        logger('webpush', 'Error rendering template: ' . $e->getMessage());
     }
 }
 
@@ -90,7 +90,7 @@ function webpush_send_notification(string $title, string $body, string $url = '/
 
     // Проверяем, включен ли плагин
     if (!pluginGetVariable('webpush', 'enabled')) {
-        logger('Send notification cancelled: plugin disabled', 'info', 'webpush.log');
+        logger('webpush', 'Send notification cancelled: plugin disabled');
         return ['ok' => false, 'error' => 'Plugin disabled'];
     }
 
@@ -100,14 +100,14 @@ function webpush_send_notification(string $title, string $body, string $url = '/
     $vapidSubject = pluginGetVariable('webpush', 'vapid_subject');
 
     if (empty($vapidPublic) || empty($vapidPrivate)) {
-        logger('Send notification failed: VAPID keys not configured', 'info', 'webpush.log');
+        logger('webpush', 'Send notification failed: VAPID keys not configured');
         return ['ok' => false, 'error' => 'VAPID keys not configured'];
     }
 
     // Подключаем библиотеку Web Push
     $autoload = __DIR__ . '/lib/vendor/autoload.php';
     if (!file_exists($autoload)) {
-        logger('Send notification failed: library not found', 'info', 'webpush.log');
+        logger('webpush', 'Send notification failed: library not found');
         return ['ok' => false, 'error' => 'Library not found'];
     }
 
@@ -144,7 +144,7 @@ function webpush_send_notification(string $title, string $body, string $url = '/
     try {
         $webPush = new \Minishlink\WebPush\WebPush($auth);
     } catch (\Exception $e) {
-        logger('WebPush init error: ' . $e->getMessage(), 'error', 'webpush.log');
+        logger('webpush', 'WebPush init error: ' . $e->getMessage());
         return ['ok' => false, 'error' => 'Init failed: ' . $e->getMessage()];
     }
 
@@ -166,7 +166,7 @@ function webpush_send_notification(string $title, string $body, string $url = '/
     }
 
     if (empty($subscriptions)) {
-        logger('Send notification cancelled: no subscriptions', 'info', 'webpush.log');
+        logger('webpush', 'Send notification cancelled: no subscriptions');
         return ['ok' => true, 'sent' => 0, 'message' => 'No subscriptions'];
     }
 
@@ -206,7 +206,7 @@ function webpush_send_notification(string $title, string $body, string $url = '/
             }
         }
     } catch (\Exception $e) {
-        logger('Send error: ' . $e->getMessage(), 'error', 'webpush.log');
+        logger('webpush', 'Send error: ' . $e->getMessage());
         return ['ok' => false, 'error' => 'Send failed: ' . $e->getMessage()];
     }
 
@@ -219,9 +219,9 @@ function webpush_send_notification(string $title, string $body, string $url = '/
         }
     }
 
-    logger(sprintf(
+    logger('webpush', sprintf(
         'Push sent: title="%s", sent=%d, removed=%d, total=%d',
-        substr($title, 0, 50, 'info', 'webpush.log'),
+        substr($title, 0, 50),
         $sent,
         $removed,
         count($subscriptions)
@@ -262,12 +262,12 @@ function webpush_get_stats(): array
     $rec = $mysql->record("SELECT COUNT(*) as cnt FROM " . prefix . "_webpush_subscriptions WHERE created >= " . $week);
     $stats['week'] = (int)($rec['cnt'] ?? 0);
 
-    /*logger(sprintf(
+    /*logger('webpush', sprintf(
         'Stats requested: total=%d, today=%d, week=%d, IP=%s',
         $stats['total'],
         $stats['today'],
         $stats['week'],
-        get_ip(, 'info', 'webpush.log')
+        get_ip()
     ));*/
 
     return $stats;
@@ -321,10 +321,10 @@ class WebPushNewsFilter extends NewsFilter
         $result = webpush_send_notification($title, $body, $url);
 
         if ($result['ok'] && function_exists('Plugins\logger')) {
-            \Plugins\logger(sprintf(
+            \Plugins\logger('webpush', sprintf(
                 'Auto-sent for news #%d: "%s", sent=%d',
                 $newsID,
-                mb_substr($title, 0, 50, 'info', 'webpush.log'),
+                mb_substr($title, 0, 50),
                 $result['sent'] ?? 0
             ));
         }
@@ -341,19 +341,17 @@ class WebPushNewsFilter extends NewsFilter
                 mailing_autonews_queue_single($newsID, $SQLnews);
 
                 if (function_exists('Plugins\logger')) {
-                    \Plugins\logger(sprintf(
+                    \Plugins\logger('webpush', sprintf(
                         'Mailing integration: queued email for news #%d',
-                        $newsID,
-                        'info',
-                        'webpush.log'
+                        $newsID
                     ));
                 }
             } catch (Exception $e) {
                 if (function_exists('Plugins\logger')) {
-                    \Plugins\logger(sprintf(
+                    \Plugins\logger('webpush', sprintf(
                         'Mailing integration error: %s',
                         $e->getMessage()
-                    ), 'error', 'webpush.log');
+                    ));
                 }
             }
         }

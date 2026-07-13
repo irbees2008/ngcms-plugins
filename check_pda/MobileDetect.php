@@ -4,7 +4,7 @@ use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
 use function Plugins\{logger, cache_get, cache_put, get_ip};
 
-require_once 'lib/Mobile_Detect.php';
+require_once __DIR__ . '/lib/Mobile_Detect.php';
 
 class Twig_Extension_MobileDetect extends AbstractExtension
 {
@@ -23,7 +23,7 @@ class Twig_Extension_MobileDetect extends AbstractExtension
         $isTablet = $this->detector->isTablet();
         $deviceType = $isTablet ? 'tablet' : ($isMobile ? 'mobile' : 'desktop');
 
-        logger('check_pda', 'Device detected: ' . $deviceType . ', IP=' . get_ip() . ', UA=' . substr($userAgent, 0, 100));
+        logger('Device detected: ' . $deviceType . ', IP=' . get_ip() . ', UA=' . substr($userAgent, 0, 100), 'info', 'check_pda.log');
     }
 
     /**
@@ -72,7 +72,7 @@ class Twig_Extension_MobileDetect extends AbstractExtension
 
         // Cache for 24 hours (devices list doesn't change often)
         cache_put($cacheKey, $availableDevices, 86400);
-        logger('check_pda', 'Available devices list cached: ' . count($availableDevices) . ' devices');
+        logger('Available devices list cached: ' . count($availableDevices) . ' devices', 'info', 'check_pda.log');
 
         return $availableDevices;
     }

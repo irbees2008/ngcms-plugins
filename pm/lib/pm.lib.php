@@ -27,13 +27,13 @@ use function Plugins\{sanitize, str_limit, logger, get_ip};
 class pm
 {
 
-	function __construct()
-	{
+    function __construct()
+    {
 
-		LoadPluginLang('pm', 'main', '', '', ':');
-	}
+        LoadPluginLang('pm', 'main', '', '', ':');
+    }
 
-	/* params:
+    /* params:
 	 *
 	 *		$to_user: ID or NAME
 	 *		$from_username: ID
@@ -46,76 +46,76 @@ class pm
 	 *		-5: if user not found
 	 *		 0: all rigth, message was send
 	 */
-	function sendMsg($to_user, $from_username, $title, $message, $mail_from = false, $saveoutbox = 0)
-	{
+    function sendMsg($to_user, $from_username, $title, $message, $mail_from = false, $saveoutbox = 0)
+    {
 
-		global $lang, $mysql, $config;
+        global $lang, $mysql, $config;
 
-		// Sanitize and limit inputs
-		$title = sanitize($title, 'string');
-		$message = sanitize($message, 'string');
-		$title = str_limit($title, pluginGetVariable('pm', 'title_length'));
-		$message = str_limit($message, pluginGetVariable('pm', 'message_length'));
+        // Sanitize and limit inputs
+        $title = sanitize($title, 'string');
+        $message = sanitize($message, 'string');
+        $title = str_limit($title, pluginGetVariable('pm', 'title_length'));
+        $message = str_limit($message, pluginGetVariable('pm', 'message_length'));
 
-		if (strlen($title) > pluginGetVariable('pm', 'title_length'))
-			return -1;
-		if (!$title)
-			return -2;
-		if (strlen($message) > pluginGetVariable('pm', 'message_length'))
-			return -3;
-		if (!$message)
-			return -4;
-		$to_user = trim($to_user);
-		if (!$to_user || (!$torow = $mysql->record("SELECT * FROM " . uprefix . "_users WHERE " . (is_numeric($to_user) ? "id = " . db_squote($to_user) : "name = " . db_squote($to_user)))))
-			return -5;
-		$title = secure_html($title);
-		$message = secure_html($message);
-		$time = time() + ($config['date_adjust'] * 60);
-		# if all right
-		$mysql->query("INSERT INTO " . prefix . "_pm (from_id, to_id, date, subject, message, folder)
+        if (strlen($title) > pluginGetVariable('pm', 'title_length'))
+            return -1;
+        if (!$title)
+            return -2;
+        if (strlen($message) > pluginGetVariable('pm', 'message_length'))
+            return -3;
+        if (!$message)
+            return -4;
+        $to_user = trim($to_user);
+        if (!$to_user || (!$torow = $mysql->record("SELECT * FROM " . uprefix . "_users WHERE " . (is_numeric($to_user) ? "id = " . db_squote($to_user) : "name = " . db_squote($to_user)))))
+            return -5;
+        $title = secure_html($title);
+        $message = secure_html($message);
+        $time = time() + ($config['date_adjust'] * 60);
+        # if all right
+        $mysql->query("INSERT INTO " . prefix . "_pm (from_id, to_id, date, subject, message, folder)
 					   VALUES (" . db_squote($from_username) . ", " . db_squote($torow['id']) . ", " . db_squote($time) . ", " . db_squote($title) . ", " . db_squote($message) . ", 'inbox')");
-		$id = $mysql->result("SELECT LAST_INSERT_ID() as id");
-		# save message in outbox if needed
-		if ($saveoutbox)
-			$mysql->query("INSERT INTO " . prefix . "_pm (from_id, to_id, date, subject, message, folder)
+        $id = $mysql->result("SELECT LAST_INSERT_ID() as id");
+        # save message in outbox if needed
+        if ($saveoutbox)
+            $mysql->query("INSERT INTO " . prefix . "_pm (from_id, to_id, date, subject, message, folder)
 					   VALUES (" . db_squote($from_username) . ", " . db_squote($torow['id']) . ", " . db_squote($time) . ", " . db_squote($title) . ", " . db_squote($message) . ", 'outbox')");
-		# update pm counters
-		$mysql->query("UPDATE " . uprefix . "_users SET `pm_all` = `pm_all` + 1, `pm_unread` = `pm_unread` + 1 WHERE `id` = " . db_squote($torow['id']));
+        # update pm counters
+        $mysql->query("UPDATE " . uprefix . "_users SET `pm_all` = `pm_all` + 1, `pm_unread` = `pm_unread` + 1 WHERE `id` = " . db_squote($torow['id']));
 
-		// Log PM sending
-		logger('pm', 'PM sent: from=' . $from_username . ', to=' . $torow['id'] . ' (' . $torow['name'] . '), saveoutbox=' . ($saveoutbox ? 'yes' : 'no') . ', IP=' . get_ip());
+        // Log PM sending
+        logger('PM sent: from=' . $from_username . ', to=' . $torow['id'] . ' (' . $torow['name'] . '), saveoutbox=' . ($saveoutbox ? 'yes' : 'no') . ', IP=' . get_ip(), 'info', 'pm.log');
 
-		// Telegram notification
-		if (getPluginStatusActive('jchat_tgnotify')) {
-			@include_once(root . 'plugins/jchat_tgnotify/jchat_tgnotify.php');
-			if (function_exists('ngcms_tg_notify')) {
-				// Получаем имя отправителя
-				$fromUser = $mysql->record("SELECT name FROM " . uprefix . "_users WHERE id = " . db_squote($from_username));
-				$fromName = $fromUser ? $fromUser['name'] : 'User #' . $from_username;
+        // Telegram notification
+        if (getPluginStatusActive('jchat_tgnotify')) {
+            @include_once(root . 'plugins/jchat_tgnotify/jchat_tgnotify.php');
+            if (function_exists('ngcms_tg_notify')) {
+                // Получаем имя отправителя
+                $fromUser = $mysql->record("SELECT name FROM " . uprefix . "_users WHERE id = " . db_squote($from_username));
+                $fromName = $fromUser ? $fromUser['name'] : 'User #' . $from_username;
 
-				ngcms_tg_notify('pm', [
-					'title'    => 'Личное сообщение: ' . $title,
-					'author'   => $fromName . ' → ' . $torow['name'],
-					'text'     => strip_tags($message),
-					'url'      => generatePluginLink('pm', null, ['pmid' => $id, 'action' => 'read'], [], false, true),
-					'datetime' => date('Y-m-d H:i:s', $time),
-				]);
-			}
-		}
+                ngcms_tg_notify('pm', [
+                    'title'    => 'Личное сообщение: ' . $title,
+                    'author'   => $fromName . ' → ' . $torow['name'],
+                    'text'     => strip_tags($message),
+                    'url'      => generatePluginLink('pm', null, ['pmid' => $id, 'action' => 'read'], [], false, true),
+                    'datetime' => date('Y-m-d H:i:s', $time),
+                ]);
+            }
+        }
 
-		# send email if needed
-		if ($torow['pm_email'] && $torow['mail']) {
-			$msg_link = generatePluginLink('pm', null, array('pmid' => $id, 'action' => 'read'), array(), false, true);
-			$set_link = generatePluginLink('pm', null, array('action' => 'set'), array(), false, true);
-			sendEmailMessage(
-				$torow['mail'],
-				$lang['pm:email_subject'],
-				str_replace(array('{message}', '{url}', '{url-2}'), array($message, $msg_link, $set_link), $lang['pm:email_body']),
-				false,
-				$mail_from
-			);
-		}
+        # send email if needed
+        if ($torow['pm_email'] && $torow['mail']) {
+            $msg_link = generatePluginLink('pm', null, array('pmid' => $id, 'action' => 'read'), array(), false, true);
+            $set_link = generatePluginLink('pm', null, array('action' => 'set'), array(), false, true);
+            sendEmailMessage(
+                $torow['mail'],
+                $lang['pm:email_subject'],
+                str_replace(array('{message}', '{url}', '{url-2}'), array($message, $msg_link, $set_link), $lang['pm:email_body']),
+                false,
+                $mail_from
+            );
+        }
 
-		return 0;
-	}
+        return 0;
+    }
 }

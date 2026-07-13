@@ -367,7 +367,7 @@ function pm_delete()
         $ids = array_map('intval', $selected_pm);
         $mysql->query("DELETE FROM " . prefix . "_pm WHERE `id` IN (" . join(',', $ids) . ") AND ((`from_id`=" . db_squote($userROW['id']) . " AND `folder`='outbox') OR (`to_id`=" . db_squote($userROW['id']) . ") AND `folder`='inbox')");
         $mysql->query("UPDATE " . uprefix . "_users SET `pm_sync` = 0 WHERE `id` = " . db_squote($userROW['id']));
-        logger('pm', 'Bulk delete: user=' . $userROW['id'] . ', count=' . count($ids) . ', location=' . $location . ', IP=' . get_ip());
+        logger('Bulk delete: user=' . $userROW['id'] . ', count=' . count($ids) . ', location=' . $location . ', IP=' . get_ip(), 'info', 'pm.log');
         if (session_status() == PHP_SESSION_NONE) {
             @session_start();
         }
@@ -394,7 +394,7 @@ function pm_delete()
                 else
                     $mysql->query("UPDATE " . uprefix . "_users SET `pm_all` = `pm_all` - 1, `pm_unread` = `pm_unread` - 1 WHERE `id` = " . db_squote($userROW['id']));
             }
-            logger('pm', 'Delete: pmid=' . $pmid . ', user=' . $userROW['id'] . ', folder=' . $row['folder'] . ', IP=' . get_ip());
+            logger('Delete: pmid=' . $pmid . ', user=' . $userROW['id'] . ', folder=' . $row['folder'] . ', IP=' . get_ip(), 'info', 'pm.log');
             if (session_status() == PHP_SESSION_NONE) {
                 @session_start();
             }
