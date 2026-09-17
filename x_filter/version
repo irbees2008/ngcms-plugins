@@ -1,7 +1,6 @@
 ;
 ; Version description file for plugin @@ Next Generation CMS
 ;
-
 ID: x_filter
 Version: 0.1.0
 File: x_filter.php
@@ -19,5 +18,3 @@ Description: Фильтр новостей по категориям и допо
 Information: Фильтр новостей по категориям и дополнительным полям.
 Author: rusiq
 Author_URI: https://github.com/russsiq
-MinEngineBuild: 23b3116
-Icons: <i class="fa fa-filter fa-3x" aria-hidden="true"></i>
