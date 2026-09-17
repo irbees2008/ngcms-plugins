@@ -44,7 +44,7 @@ $languages = [
 array_push($gMain, ['type' => 'select', 'name' => 'default_language', 'title' => 'Язык по умолчанию', 'descr' => 'Используется если автоопределение не сработало', 'values' => $languages, 'value' => pluginGetVariable($plugin, 'default_language') ?: 'auto']);
 
 array_push($gMain, ['type' => 'input', 'name' => 'temperature', 'title' => 'Temperature', 'descr' => '0.0–1.0, креативность. По умолчанию 0.7', 'value' => $temp]);
-array_push($gMain, ['type' => 'input', 'name' => 'timeout', 'title' => 'Таймаут запроса (сек)', 'descr' => 'HTTP таймаут для запроса к API. По умолчанию 20 сек.', 'value' => pluginGetVariable($plugin, 'timeout') ?: '20']);
+array_push($gMain, ['type' => 'input', 'name' => 'timeout', 'title' => 'Таймаут запроса (сек)', 'descr' => 'HTTP таймаут для запроса к API. По умолчанию 20 сек, максимум 50 сек (иначе сервер вернёт 504 Gateway Timeout раньше, чем ответит ИИ).', 'value' => pluginGetVariable($plugin, 'timeout') ?: '20']);
 
 array_push($cfg, ['mode' => 'group', 'title' => '<b>Основные настройки</b>', 'entries' => $gMain]);
 

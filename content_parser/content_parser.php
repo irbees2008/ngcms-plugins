@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Защита от прямого доступа
 if (!defined('NGCMS')) die('HAL');
 
@@ -7,6 +7,12 @@ use function Plugins\benchmark;
 use function Plugins\sanitize;
 use function Plugins\get_ip;
 use function Plugins\validate_url;
+
+// Подключаем модуль MadelineProto для Telegram (если установлен)
+$madelineProtoFile = __DIR__ . '/telegram_madelineproto.php';
+if (file_exists($madelineProtoFile)) {
+    require_once $madelineProtoFile;
+}
 
 register_plugin_page('content_parser', '', 'plugin_content_parse', 0);
 /**
@@ -199,13 +205,6 @@ function loadHtml($url, $ignoreSSL = false)
     }
     return $response;
 }
-function normalizeInstagramUsername($username)
-{
-    $username = trim($username);
-    $username = preg_replace('#^@#', '', $username);
-    $username = preg_replace('#\s+#', '', $username);
-    return $username;
-}
 function normalizeVkGroup($input)
 {
     $input = trim($input);
@@ -285,6 +284,9 @@ function parseVkViaAPI($groupId, $count, $token)
     if (isset($data['error'])) {
         $errorMsg = $data['error']['error_msg'] ?? 'Unknown error';
         $errorCode = $data['error']['error_code'] ?? 'N/A';
+        if ($errorCode == 27) {
+            throw new Exception('VK API ошибка (27): токен сообщества не может читать стену (wall.get). Нужен пользовательский токен с правом "wall" — см. подсказку под полем токена на вкладке VK.');
+        }
         throw new Exception("VK API ошибка ($errorCode): $errorMsg");
     }
     if (!isset($data['response']['items'])) {
@@ -310,8 +312,11 @@ function parseVkViaAPI($groupId, $count, $token)
             foreach ($post['attachments'] as $att) {
                 if ($att['type'] === 'photo' && isset($att['photo']['sizes'])) {
                     $sizes = $att['photo']['sizes'];
-                    $largest = end($sizes);
-                    $imageUrl = $largest['url'] ?? '';
+                    // end() требует переменную по ссылке
+                    if (!empty($sizes)) {
+                        $largest = end($sizes);
+                        $imageUrl = $largest['url'] ?? '';
+                    }
                     break;
                 }
             }
@@ -423,223 +428,432 @@ function parseVkFromHtml($groupId, $count)
     }
     return $items;
 }
-function igApplyProxy($ch)
+
+/**
+ * Нормализация имени Telegram канала
+ * @param string $input Имя канала или URL
+ * @return string Нормализованное имя канала
+ */
+function normalizeTelegramChannel($input)
 {
-    $proxy = trim(pluginGetVariable('content_parser', 'ig_proxy') ?: '');
-    if (empty($proxy)) {
-        return;
+    $input = trim($input);
+    if ($input === '') {
+        return '';
     }
-    curl_setopt($ch, CURLOPT_PROXY, $proxy);
-    if (stripos($proxy, 'socks5') === 0) {
-        curl_setopt($ch, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
-    } elseif (stripos($proxy, 'socks4') === 0) {
-        curl_setopt($ch, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS4);
+
+    // Убираем @ в начале
+    $input = preg_replace('#^@#', '', $input);
+
+    // Извлекаем имя канала из различных форматов URL
+    // Поддержка: @channel, t.me/channel, https://t.me/channel, https://t.me/s/channel
+    if (preg_match('#t\.me/s/([a-zA-Z0-9_]+)#i', $input, $m)) {
+        return $m[1];
+    } elseif (preg_match('#t\.me/([a-zA-Z0-9_]+)#i', $input, $m)) {
+        return $m[1];
     }
+
+    // Просто имя канала
+    return preg_replace('#[^a-zA-Z0-9_]#', '', $input);
 }
-function loadInstagramJson($url, $sessionId = '')
+
+/**
+ * Парсинг постов из публичного Telegram канала
+ * @param string $channelName Имя канала
+ * @param int $count Количество постов
+ * @return array Массив постов
+ */
+function parseTelegramChannel($channelName, $count)
 {
+    $channelName = normalizeTelegramChannel($channelName);
+    if ($channelName === '') {
+        throw new Exception('Некорректное имя канала Telegram');
+    }
+
+    // Проверяем настройки плагина: использовать ли MadelineProto
+    $useMadelineProto = pluginGetVariable('content_parser', 'tg_use_madelineproto');
+    $hasApiCredentials = pluginGetVariable('content_parser', 'tg_api_id') && pluginGetVariable('content_parser', 'tg_api_hash');
+    $madelineProtoInstalled = function_exists('isMadelineProtoInstalled') && isMadelineProtoInstalled();
+
+    logger(
+        'Telegram parsing mode check: use_madelineproto=' . ($useMadelineProto ? 'yes' : 'no') .
+            ', has_credentials=' . ($hasApiCredentials ? 'yes' : 'no') .
+            ', installed=' . ($madelineProtoInstalled ? 'yes' : 'no'),
+        'info',
+        'content_parser.log'
+    );
+
+    // Если MadelineProto включен, есть API credentials и библиотека установлена - используем его
+    if ($useMadelineProto && $hasApiCredentials && $madelineProtoInstalled) {
+        try {
+            logger('Using MadelineProto for Telegram parsing: channel=' . $channelName, 'info', 'content_parser.log');
+            return parseTelegramChannelWithAuth($channelName, $count);
+        } catch (\Throwable $e) {
+            // Если MadelineProto не сработал, падаем обратно на веб-парсинг
+            logger('MadelineProto failed, falling back to web parsing: ' . $e->getMessage(), 'warning', 'content_parser.log');
+        }
+    } elseif (!$madelineProtoInstalled) {
+        logger('MadelineProto not installed, using web parsing (public channels only)', 'info', 'content_parser.log');
+    }
+
+    // Используем веб-парсинг (публичная embed-версия канала)
+    logger('Using web parsing for channel: ' . $channelName, 'info', 'content_parser.log');
+    return parseTelegramChannelViaWeb($channelName, $count);
+}
+
+/**
+ * Парсинг Telegram через веб-версию (без авторизации, только публичные каналы)
+ * @param string $channelName Имя канала
+ * @param int $count Количество постов
+ * @return array Массив постов
+ */
+function parseTelegramChannelViaWeb($channelName, $count)
+{
+    $startTime = microtime(true);
+
+    // Используем публичную embed-версию канала (не требует авторизации)
+    $url = 'https://t.me/s/' . $channelName;
+
+    logger('Telegram parsing: channel=' . $channelName . ', url=' . $url, 'debug', 'content_parser.log');
+
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_TIMEOUT, 20);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
-    $headers = [
-        'Accept: */*',
-        'Accept-Language: ru-RU,ru;q=0.9,en-US;q=0.8',
-        'X-IG-App-ID: 936619743392459',
-        'X-Requested-With: XMLHttpRequest',
-        'Referer: https://www.instagram.com/',
-        'Origin: https://www.instagram.com',
-    ];
-    if (!empty($sessionId)) {
-        curl_setopt($ch, CURLOPT_COOKIE, 'sessionid=' . $sessionId);
-    }
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    igApplyProxy($ch);
-    $response = curl_exec($ch);
-    $curlErrno = curl_errno($ch);
-    $curlError = curl_error($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    if ($curlErrno) {
-        return ['_curl_error' => $curlError, '_curl_errno' => $curlErrno];
-    }
-    if ($code >= 400) {
-        return ['_http_error' => $code];
-    }
-    $data = json_decode($response, true);
-    return is_array($data) ? $data : false;
-}
-function parseInstagramFromJson($data, $count, $username)
-{
-    $items = [];
-    if (!isset($data['data']['user']['edge_owner_to_timeline_media']['edges'])) {
-        return $items;
-    }
-    $edges = $data['data']['user']['edge_owner_to_timeline_media']['edges'];
-    $parsed = 0;
-    foreach ($edges as $edge) {
-        if ($parsed >= $count) {
-            break;
-        }
-        $node = $edge['node'];
-        $image = isset($node['display_url']) ? $node['display_url'] : null;
-        $caption = isset($node['edge_media_to_caption']['edges'][0]['node']['text'])
-            ? $node['edge_media_to_caption']['edges'][0]['node']['text']
-            : '';
-        $timestamp = isset($node['taken_at_timestamp']) ? $node['taken_at_timestamp'] : time();
-        $title = $caption ? mb_substr($caption, 0, 80) : ('Instagram пост @' . $username);
-        // Загружаем изображение на сервер
-        $localImage = $image;
-        if (!empty($image)) {
-            $downloaded = downloadMediaToServer($image);
-            if ($downloaded !== false) {
-                $localImage = $downloaded;
-            }
-        }
-        $body = '';
-        if ($localImage) {
-            $body .= '[img]' . $localImage . '[/img]' . "\n\n";
-        }
-        $body .= $caption;
-        $items[] = [
-            'title' => secure_html($title),
-            'content' => $body,
-            'image' => $localImage,
-            'postdate' => $timestamp,
-        ];
-        $parsed++;
-    }
-    return $items;
-}
-function parseInstagramPosts($username, $count)
-{
-    $username = normalizeInstagramUsername($username);
-    if ($username === '') {
-        throw new Exception('Некорректное имя пользователя Instagram');
-    }
-    // Получаем сессионный cookie из настроек плагина
-    $sessionId = trim(pluginGetVariable('content_parser', 'ig_session_id') ?: '');
-    if (empty($sessionId)) {
-        throw new Exception('Для парсинга Instagram необходимо указать Session ID в настройках плагина. Instagram заблокировал анонимный доступ с 2024 года.');
-    }
-    // Попытка 1: JSON API с авторизованным cookie
-    $jsonUrl = 'https://www.instagram.com/api/v1/users/web_profile_info/?username=' . $username;
-    $jsonData = loadInstagramJson($jsonUrl, $sessionId);
-    if (isset($jsonData['_curl_error'])) {
-        // Сетевая ошибка ещё на этапе JSON API — информативно бросаем
-        $lastCurlError = $jsonData['_curl_errno'] . ': ' . $jsonData['_curl_error'];
-    } elseif (isset($jsonData['_http_error'])) {
-        $lastHttpError = $jsonData['_http_error'];
-    } elseif (is_array($jsonData)) {
-        $items = parseInstagramFromJson($jsonData, $count, $username);
-        if (!empty($items)) {
-            return $items;
-        }
-    }
-    // Попытка 2: HTML с cookie (запасной вариант)
-    $profileUrl = 'https://www.instagram.com/' . $username . '/';
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $profileUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
-    curl_setopt($ch, CURLOPT_COOKIE, 'sessionid=' . $sessionId);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: text/html', 'Accept-Language: ru-RU,ru;q=0.9']);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    igApplyProxy($ch);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36');
+    curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate, br');
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language: ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+    ]);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+
     $html = curl_exec($ch);
     $curlErrno = curl_errno($ch);
     $curlError = curl_error($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+
     if ($curlErrno) {
         $hint = '';
-        if ($curlErrno === 6)  $hint = ' Не удалось разрешить instagram.com — скорее всего, домен заблокирован на сервере.';
-        elseif ($curlErrno === 28) $hint = ' Превышен таймаут — соединение блокируется файерволом сервера.';
-        elseif ($curlErrno === 35 || $curlErrno === 51 || $curlErrno === 60) $hint = ' Ошибка SSL.';
-        throw new Exception('Instagram недоступен: curl #' . $curlErrno . ' — ' . $curlError . '.' . $hint . ' Возможно, Instagram заблокирован на сервере хостинга.');
-    }
-    if ($code === 401 || $code === 403) {
-        throw new Exception('Instagram отклонил запрос (HTTP ' . $code . '). Session ID недействителен или устарел. Получите новый в браузере: F12 → Application → Cookies → sessionid.');
-    }
-    if ($code === 429) {
-        throw new Exception('Instagram: слишком много запросов (HTTP 429). Подождите несколько минут и повторите.');
-    }
-    if ($html === false || $code >= 400 || empty($html)) {
-        throw new Exception('Instagram вернул HTTP ' . $code . '. Убедитесь, что instagram.com доступен с сервера хостинга.');
-    }
-    $items = [];
-    $links = [];
-    if (preg_match_all('#href=\"(/p/[A-Za-z0-9_-]+/)\"#', $html, $m)) {
-        $links = array_unique($m[1]);
-    }
-    // Поддержка Reels
-    if (preg_match_all('#href=\"(/reel/[A-Za-z0-9_-]+/)\"#', $html, $mr)) {
-        $links = array_unique(array_merge($links, $mr[1]));
-    }
-    if (empty($links) && preg_match_all('#\"shortcode\":\"([A-Za-z0-9_-]+)\"#', $html, $m2)) {
-        foreach ($m2[1] as $sc) {
-            $links[] = '/p/' . $sc . '/';
+        if ($curlErrno === 6) {
+            $hint = ' Не удалось разрешить t.me — возможно, Telegram заблокирован на сервере.';
+        } elseif ($curlErrno === 28) {
+            $hint = ' Превышен таймаут — соединение блокируется.';
         }
-        $links = array_unique($links);
+        throw new Exception('Telegram недоступен: curl #' . $curlErrno . ' — ' . $curlError . '.' . $hint);
     }
-    if (empty($links)) {
-        throw new Exception('Не удалось найти посты Instagram у пользователя');
+
+    logger('Telegram HTTP response: code=' . $httpCode . ', size=' . strlen($html), 'debug', 'content_parser.log');
+
+    if ($httpCode === 404) {
+        throw new Exception('Канал @' . $channelName . ' не найден. Проверьте правильность имени канала.');
     }
+
+    if ($httpCode >= 400) {
+        throw new Exception('Ошибка доступа к Telegram: HTTP ' . $httpCode);
+    }
+
+    if (empty($html)) {
+        throw new Exception('Пустой ответ от Telegram');
+    }
+
+    // Проверяем, что канал существует (проверяем несколько маркеров)
+    $hasTitle = stripos($html, 'tgme_page_title') !== false;
+    $hasChannel = stripos($html, 'tgme_channel_info') !== false;
+    $hasPosts = stripos($html, 'tgme_widget_message') !== false;
+
+    logger('Telegram HTML markers: title=' . ($hasTitle ? 'yes' : 'no') . ', channel=' . ($hasChannel ? 'yes' : 'no') . ', posts=' . ($hasPosts ? 'yes' : 'no'), 'debug', 'content_parser.log');
+
+    // Проверяем признаки приватного канала
+    if (stripos($html, 'tgme_page_additional') !== false && stripos($html, 'private channel') !== false) {
+        $madelineProtoStatus = function_exists('isMadelineProtoInstalled') && isMadelineProtoInstalled()
+            ? 'установлена'
+            : 'НЕ УСТАНОВЛЕНА';
+        throw new Exception(
+            'Канал @' . $channelName . ' является приватным. ' .
+                'Веб-парсинг работает только с публичными каналами. ' .
+                'Для приватных каналов установите MadelineProto (composer install) и настройте API. ' .
+                'Статус MadelineProto: ' . $madelineProtoStatus
+        );
+    }
+
+    if (!$hasTitle && !$hasChannel && !$hasPosts) {
+        // Сохраняем начало HTML для диагностики
+        $htmlPreview = mb_substr(strip_tags($html), 0, 200);
+        logger('Telegram unexpected HTML: ' . $htmlPreview, 'warning', 'content_parser.log');
+
+        $madelineProtoStatus = function_exists('isMadelineProtoInstalled') && isMadelineProtoInstalled()
+            ? 'установлена'
+            : 'НЕ УСТАНОВЛЕНА (установите через: cd lib/MadelineProto-8 && composer install)';
+
+        throw new Exception(
+            'Не удалось распознать страницу канала @' . $channelName . '. ' .
+                'Возможные причины: 1) Канал приватный (нужна MadelineProto), ' .
+                '2) Канал не существует, 3) Telegram изменил структуру страницы, ' .
+                '4) Блокировка доступа. ' .
+                'Статус MadelineProto: ' . $madelineProtoStatus
+        );
+    }
+
+    $items = [];
+
+    // Парсим посты через DOMDocument
+    libxml_use_internal_errors(true);
+    $dom = new DOMDocument();
+    $dom->loadHTML('<?xml encoding="UTF-8">' . $html);
+    libxml_clear_errors();
+
+    $xpath = new DOMXPath($dom);
+
+    // Находим все посты (div с классом tgme_widget_message)
+    $postNodes = $xpath->query('//div[contains(@class, "tgme_widget_message")]');
+
+    if ($postNodes->length === 0) {
+        throw new Exception('Не удалось найти посты в канале. Возможно, канал пустой.');
+    }
+
     $parsed = 0;
-    foreach ($links as $path) {
+    foreach ($postNodes as $postNode) {
         if ($parsed >= $count) {
             break;
         }
-        $postUrl = 'https://www.instagram.com' . $path;
-        $postHtml = loadHtml($postUrl, true);
-        if ($postHtml === false) {
-            continue;
+
+        // Извлекаем текст поста
+        $textNodes = $xpath->query('.//div[contains(@class, "tgme_widget_message_text")]', $postNode);
+        $text = '';
+        if ($textNodes->length > 0) {
+            $text = trim($textNodes->item(0)->textContent);
         }
-        $image = null;
-        $contentText = '';
-        $postDate = time();
-        if (preg_match('#<meta property=\"og:image\" content=\"([^\"]+)\"#i', $postHtml, $mi)) {
-            $image = $mi[1];
+
+        // Если текста нет, пропускаем пост
+        if (empty($text)) {
+            // Проверяем, может быть это медиа-пост без текста
+            $mediaNodes = $xpath->query('.//a[contains(@class, "tgme_widget_message_photo_wrap")]', $postNode);
+            if ($mediaNodes->length === 0) {
+                continue;
+            }
+            $text = 'Медиа пост';
         }
-        if (preg_match('#<meta property=\"og:description\" content=\"([^\"]+)\"#i', $postHtml, $md)) {
-            $contentText = html_entity_decode($md[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Генерируем заголовок (первые 100 символов текста)
+        $title = mb_substr($text, 0, 100);
+        if (mb_strlen($text) > 100) {
+            $title .= '...';
         }
-        if (preg_match('#datetime=\"([^\"]+)\"#i', $postHtml, $dt)) {
-            $ts = strtotime($dt[1]);
-            if ($ts) {
-                $postDate = $ts;
+        if (empty($title)) {
+            $title = 'Telegram пост';
+        }
+
+        // Извлекаем изображение
+        $imageUrl = '';
+        $imageNodes = $xpath->query('.//a[contains(@class, "tgme_widget_message_photo_wrap")]', $postNode);
+        if ($imageNodes->length > 0) {
+            $style = $imageNodes->item(0)->getAttribute('style');
+            if (preg_match("#background-image:url\('([^']+)'\)#", $style, $m)) {
+                $imageUrl = $m[1];
             }
         }
-        $title = $contentText ? mb_substr($contentText, 0, 80) : ('Instagram пост @' . $username);
+
+        // Если не нашли в style, ищем в img
+        if (empty($imageUrl)) {
+            $imgNodes = $xpath->query('.//img[@class="tgme_widget_message_photo"]', $postNode);
+            if ($imgNodes->length > 0) {
+                $imageUrl = $imgNodes->item(0)->getAttribute('src');
+            }
+        }
+
+        // Извлекаем дату
+        $postDate = time();
+        $dateNodes = $xpath->query('.//time', $postNode);
+        if ($dateNodes->length > 0) {
+            $datetime = $dateNodes->item(0)->getAttribute('datetime');
+            if ($datetime) {
+                $ts = strtotime($datetime);
+                if ($ts) {
+                    $postDate = $ts;
+                }
+            }
+        }
+
         // Загружаем изображение на сервер
-        $localImage = $image;
-        if (!empty($image)) {
-            $downloaded = downloadMediaToServer($image);
+        $localImage = '';
+        if (!empty($imageUrl)) {
+            $downloaded = downloadMediaToServer($imageUrl);
             if ($downloaded !== false) {
                 $localImage = $downloaded;
+            } else {
+                // Если не удалось загрузить, используем оригинальный URL
+                $localImage = $imageUrl;
             }
         }
+
+        // Формируем контент
         $body = '';
-        if ($localImage) {
+        if (!empty($localImage)) {
             $body .= '[img]' . $localImage . '[/img]' . "\n\n";
         }
-        $body .= $contentText;
+        $body .= $text;
+
         $items[] = [
             'title' => secure_html($title),
             'content' => $body,
             'image' => $localImage,
             'postdate' => $postDate,
         ];
+
         $parsed++;
     }
+
+    if (empty($items)) {
+        throw new Exception('Не удалось извлечь посты из канала');
+    }
+
+    $elapsed = (microtime(true) - $startTime) * 1000;
+    logger('Telegram parsed: channel=' . $channelName . ', items=' . $parsed . ', elapsed=' . round($elapsed, 2) . 'ms', 'info', 'content_parser.log');
+
+    return $items;
+}
+
+/**
+ * Разрешает относительный URL (href/src) в абсолютный на основе базового адреса страницы
+ */
+function resolveSiteUrl($base, $relative)
+{
+    $relative = trim($relative);
+    if ($relative === '') {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $relative)) {
+        return $relative;
+    }
+    $baseParts = parse_url($base);
+    if (!$baseParts || empty($baseParts['host'])) {
+        return $relative;
+    }
+    $scheme = $baseParts['scheme'] ?? 'https';
+    $host = $baseParts['host'];
+    $port = isset($baseParts['port']) ? ':' . $baseParts['port'] : '';
+    if (strpos($relative, '//') === 0) {
+        return $scheme . ':' . $relative;
+    }
+    if (strpos($relative, '/') === 0) {
+        return $scheme . '://' . $host . $port . $relative;
+    }
+    $basePath = $baseParts['path'] ?? '/';
+    $basePath = substr($basePath, 0, strrpos($basePath, '/') + 1);
+    return $scheme . '://' . $host . $port . $basePath . $relative;
+}
+/**
+ * Парсинг новостей с произвольного сайта по id/классу блока
+ * @param string $url Адрес страницы со списком новостей
+ * @param string $selector id или class блока новости (например: "news-item" или "#news" или ".card")
+ * @param int $count Количество новостей для парсинга
+ */
+function parseSiteNews($url, $selector, $count)
+{
+    $startTime = microtime(true);
+    $html = loadHtml($url);
+    if ($html === false || empty($html)) {
+        throw new Exception('Не удалось загрузить страницу сайта: ' . sanitize($url, 'info', 'content_parser.log'));
+    }
+
+    $selector = trim($selector);
+    $isId = false;
+    if (strpos($selector, '#') === 0) {
+        $isId = true;
+        $selector = substr($selector, 1);
+    } elseif (strpos($selector, '.') === 0) {
+        $selector = substr($selector, 1);
+    }
+    if ($selector === '') {
+        throw new Exception('Не указан id или class блока новости');
+    }
+
+    libxml_use_internal_errors(true);
+    $dom = new DOMDocument();
+    $dom->loadHTML('<?xml encoding="UTF-8">' . $html);
+    libxml_clear_errors();
+    $xpath = new DOMXPath($dom);
+
+    if ($isId) {
+        $nodes = $xpath->query('//*[@id="' . $selector . '"]');
+    } else {
+        $nodes = $xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " ' . $selector . ' ")]');
+    }
+
+    if ($nodes === false || $nodes->length === 0) {
+        throw new Exception('Блоки новостей по указанному id/class не найдены на странице');
+    }
+
+    $items = [];
+    $parsed = 0;
+    foreach ($nodes as $node) {
+        if ($parsed >= $count) {
+            break;
+        }
+        $nodeXpath = new DOMXPath($dom);
+        // Заголовок: первый заголовочный тег или ссылка внутри блока
+        $title = '';
+        $headingNode = $nodeXpath->query('.//h1|.//h2|.//h3|.//h4|.//h5|.//h6', $node)->item(0);
+        if ($headingNode) {
+            $title = trim($headingNode->textContent);
+        }
+        $linkNode = $nodeXpath->query('.//a[@href]', $node)->item(0);
+        if ($title === '' && $linkNode) {
+            $title = trim($linkNode->textContent);
+        }
+        if ($title === '') {
+            $title = trim(mb_substr($node->textContent, 0, 100));
+        }
+        if ($title === '') {
+            $parsed++;
+            continue;
+        }
+        // Изображение
+        $imageUrl = '';
+        $imgNode = $nodeXpath->query('.//img[@src]', $node)->item(0);
+        if ($imgNode) {
+            $src = $imgNode->getAttribute('data-src') ?: $imgNode->getAttribute('src');
+            $imageUrl = resolveSiteUrl($url, $src);
+        }
+        // Дата публикации
+        $postDate = time();
+        $timeNode = $nodeXpath->query('.//time[@datetime]', $node)->item(0);
+        if ($timeNode) {
+            $ts = strtotime($timeNode->getAttribute('datetime'));
+            if ($ts !== false) {
+                $postDate = $ts;
+            }
+        }
+        // Контент — текст блока целиком (без заголовка)
+        $content = trim($node->textContent);
+        if ($content === '') {
+            $content = $title;
+        }
+        if (!empty($imageUrl)) {
+            $localImage = downloadMediaToServer($imageUrl);
+            if ($localImage !== false) {
+                $imageUrl = $localImage;
+            }
+        }
+        $items[] = [
+            'title' => secure_html($title),
+            'content' => secure_html($content),
+            'image' => $imageUrl,
+            'postdate' => $postDate,
+        ];
+        $parsed++;
+    }
+
+    if (empty($items)) {
+        throw new Exception('Не удалось извлечь ни одной новости из найденных блоков');
+    }
+
+    $elapsed = (microtime(true) - $startTime) * 1000;
+    logger('Site parsed: url=' . sanitize($url, 'info', 'content_parser.log') . ', selector=' . $selector . ', items=' . count($items) . ', elapsed=' . round($elapsed, 2) . 'ms', 'info', 'content_parser.log');
+
     return $items;
 }
 function extractDescription($description)
@@ -691,21 +905,59 @@ function extractImageFromItem($item, $htmlDescription)
 function addNewsDirect($item)
 {
     global $mysql, $userROW, $parse;
+
+    logger('addNewsDirect called', 'info', 'content_parser.log');
+
+    // Проверяем наличие необходимых глобальных переменных
+    if (!is_array($userROW) || empty($userROW['id'])) {
+        logger('$userROW not initialized or empty', 'error', 'content_parser.log');
+        return false;
+    }
+
     $category = intval($_REQUEST['category'] ?? 0);
     $title = $_REQUEST['title'];
     $content = $_REQUEST['ng_news_content'];
+
+    logger('addNewsDirect params: category=' . $category . ', title_length=' . mb_strlen($title) . ', content_length=' . mb_strlen($content), 'info', 'content_parser.log');
+
+    // Проверяем наличие $parse
+    if (!is_object($parse)) {
+        logger('$parse not initialized, creating new instance', 'warning', 'content_parser.log');
+        if (class_exists('parse')) {
+            $parse = new parse();
+        } else {
+            logger('parse class not found, using simple transliteration', 'warning', 'content_parser.log');
+            // Простая транслитерация
+            $alt_name = mb_strtolower($title);
+            $alt_name = preg_replace('/[^a-z0-9_-]/u', '_', $alt_name);
+        }
+    }
+
     // Генерируем alt_name
-    $alt_name = mb_strtolower($parse->translit(trim($title), 1));
-    $alt_name = preg_replace(['/\./', '/(_{2,20})/', '/^(_+)/', '/(_+)$/'], ['_', '_'], $alt_name);
+    if (!isset($alt_name)) {
+        try {
+            $alt_name = mb_strtolower($parse->translit(trim($title), 1));
+        } catch (\Throwable $e) {
+            logger('translit error: ' . $e->getMessage() . ', using fallback', 'warning', 'content_parser.log');
+            $alt_name = mb_strtolower($title);
+            $alt_name = preg_replace('/[^a-z0-9_-]/u', '_', $alt_name);
+        }
+    }
+    // Массивы должны быть в переменных для PHP 8+
+    $patterns = ['/\./', '/(_{2,20})/', '/^(_+)/', '/(_+)$/'];
+    $replacements = ['_', '_', '', ''];
+    $alt_name = preg_replace($patterns, $replacements, $alt_name);
     if ($alt_name == '') {
         $alt_name = '_';
     }
     // Проверяем уникальность alt_name
     $i = '';
-    while (is_array($mysql->record('select id from ' . prefix . '_news where alt_name = ' . db_squote($alt_name . $i) . ' limit 1'))) {
+    $checkAltName = $alt_name . $i;
+    while (is_array($mysql->record('select id from ' . prefix . '_news where alt_name = ' . db_squote($checkAltName) . ' limit 1'))) {
         $i++;
+        $checkAltName = $alt_name . $i;
     }
-    $alt_name = $alt_name . $i;
+    $alt_name = $checkAltName;
     $postdate = isset($item['postdate']) ? $item['postdate'] : time();
     $postdate += 60 * 60 * 6; // date_adjust approximation
     $SQL = [
@@ -731,36 +983,73 @@ function addNewsDirect($item)
     $vparams = [];
     foreach ($SQL as $k => $v) {
         $vnames[] = $k;
-        $vparams[] = db_squote($v);
+        // Сохраняем результат db_squote в переменную (PHP 8+ требует переменную по ссылке)
+        $quotedValue = db_squote($v);
+        $vparams[] = $quotedValue;
     }
-    $mysql->query('insert into ' . prefix . '_news (' . implode(',', $vnames) . ') values (' . implode(',', $vparams) . ')');
-    $id = $mysql->result('SELECT LAST_INSERT_ID() as id');
-    if (!$id) {
+
+    logger('Executing INSERT query with ' . count($vnames) . ' fields', 'info', 'content_parser.log');
+
+    try {
+        $mysql->query('insert into ' . prefix . '_news (' . implode(',', $vnames) . ') values (' . implode(',', $vparams) . ')');
+        $id = $mysql->result('SELECT LAST_INSERT_ID() as id');
+
+        logger('INSERT result: ID=' . ($id ?: 'NULL'), 'info', 'content_parser.log');
+
+        if (!$id) {
+            logger('Failed to get LAST_INSERT_ID', 'error', 'content_parser.log');
+            return false;
+        }
+
+        // Добавляем в карту категорий
+        if ($category > 0) {
+            $quotedId = db_squote($id);
+            $quotedCategory = db_squote($category);
+            $mysql->query('insert into ' . prefix . '_news_map (newsID, categoryID, dt) values (' . $quotedId . ', ' . $quotedCategory . ', now())');
+            logger('Added to category map: newsID=' . $id . ', categoryID=' . $category, 'info', 'content_parser.log');
+        }
+
+        logger('addNewsDirect success: ID=' . $id, 'info', 'content_parser.log');
+        return $id;
+    } catch (\Throwable $e) {
+        logger('addNewsDirect SQL error: ' . $e->getMessage(), 'error', 'content_parser.log');
         return false;
     }
-    // Добавляем в карту категорий
-    if ($category > 0) {
-        $mysql->query('insert into ' . prefix . '_news_map (newsID, categoryID, dt) values (' . db_squote($id) . ', ' . db_squote($category) . ', now())');
-    }
-    return $id;
 }
 function createContentFromRss($type, $items)
 {
     global $SUPRESS_TEMPLATE_SHOW, $mysql;
     $stats = ['added' => 0, 'skipped' => 0, 'errors' => []];
+
+    logger('createContentFromRss called: type=' . $type . ', items=' . count($items), 'info', 'content_parser.log');
+
     foreach ($items as $index => $item) {
+        logger('Processing item ' . ($index + 1) . ': title=' . ($item['title'] ?? 'N/A'), 'info', 'content_parser.log');
+
         if ($type === 'news') {
             // Проверяем дубликат ДО попытки добавления
-            $existing = $mysql->record('SELECT id FROM ' . prefix . '_news WHERE title=' . db_squote($item['title']) . ' LIMIT 1');
+            $itemTitle = $item['title'];
+            $quotedTitle = db_squote($itemTitle);
+            $existing = $mysql->record('SELECT id FROM ' . prefix . '_news WHERE title=' . $quotedTitle . ' LIMIT 1');
             if ($existing) {
+                logger('Item skipped (duplicate): ' . $item['title'], 'info', 'content_parser.log');
                 $stats['skipped']++;
                 continue; // Пропускаем и идём к следующей
             }
+
+            logger('Item is not duplicate, attempting to add...', 'info', 'content_parser.log');
             // Готовим данные для добавления через addNews
             $_REQUEST['title'] = $item['title'];
             // Категория публикации (передаётся из запроса)
             $_REQUEST['category'] = intval($_REQUEST['category'] ?? 0);
             $_POST['category'] = $_REQUEST['category'];
+            // Инициализируем xfields сразу (для избежания ошибок "Undefined array key")
+            if (!isset($_REQUEST['xfields']) || !is_array($_REQUEST['xfields'])) {
+                $_REQUEST['xfields'] = [];
+            }
+            if (!isset($_POST['xfields']) || !is_array($_POST['xfields'])) {
+                $_POST['xfields'] = [];
+            }
             // Не разрешаем HTML, используем BBCode
             $_REQUEST['flag_HTML'] = 0;
             $_REQUEST['flag_RAW'] = 0;
@@ -773,11 +1062,11 @@ function createContentFromRss($type, $items)
             // Не публиковать (черновик)
             $_REQUEST['approve'] = -1;
             $_REQUEST['mainpage'] = 1;
+            $_REQUEST['favorite'] = 0;
+            $_REQUEST['pinned'] = 0;
+            $_REQUEST['catpinned'] = 0;
             $_REQUEST['postdate'] = $item['postdate'];
-            // Заполняем обязательные xfields, если настроены
-            if (!is_array($_REQUEST['xfields'])) {
-                $_REQUEST['xfields'] = [];
-            }
+
             // Подгружаем конфиг xfields и проставляем дефолты для обязательных полей
             if (file_exists(root . 'engine/plugins/xfields/lib/common.php')) {
                 include_once(root . 'engine/plugins/xfields/lib/common.php');
@@ -796,14 +1085,30 @@ function createContentFromRss($type, $items)
                     }
                 }
             }
+
+            logger('Calling addNews with: title=' . $_REQUEST['title'] . ', category=' . $_REQUEST['category'] . ', approve=' . $_REQUEST['approve'], 'info', 'content_parser.log');
+
             // Добавляем новость через функцию CMS
             include_once(root . 'includes/inc/lib_admin.php');
-            $added = addNews(['no.token' => true, 'no.editurl' => 1, 'no.files' => 1, 'no.meta' => 1]);
+
+            try {
+                $added = addNews(['no.token' => true, 'no.editurl' => 1, 'no.files' => 1, 'no.meta' => 1]);
+                logger('addNews returned: ' . ($added ? 'true (ID=' . $added . ')' : 'false'), 'info', 'content_parser.log');
+            } catch (\Throwable $e) {
+                logger('addNews exception: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(), 'error', 'content_parser.log');
+                $added = false;
+            }
+
             if (!$added) {
+                logger('Fallback to addNewsDirect...', 'info', 'content_parser.log');
                 // ФОЛБЭК: Прямое добавление в БД
                 $addedDirect = addNewsDirect($item);
+
+                logger('addNewsDirect returned: ' . ($addedDirect ? 'true (ID=' . $addedDirect . ')' : 'false'), 'info', 'content_parser.log');
+
                 if (!$addedDirect) {
                     $stats['errors'][] = 'Не удалось добавить: ' . $item['title'];
+                    logger('Failed to add item: ' . $item['title'], 'error', 'content_parser.log');
                     continue; // Пропускаем и идём к следующей
                 }
                 $stats['added']++;
@@ -812,6 +1117,9 @@ function createContentFromRss($type, $items)
             }
         }
     }
+
+    logger('createContentFromRss finished: added=' . $stats['added'] . ', skipped=' . $stats['skipped'] . ', errors=' . count($stats['errors']), 'info', 'content_parser.log');
+
     return $stats;
 }
 function plugin_content_parse()
@@ -834,7 +1142,6 @@ function plugin_content_parse()
         $source = $_REQUEST['source'] ?? 'rss';
         $rssUrl = $_REQUEST['rss_url'] ?? '';
         $category = intval($_REQUEST['category'] ?? 0);
-        $igUser = $_REQUEST['ig_user'] ?? '';
         if ($count < 1) {
             echo json_encode(['error' => 'Invalid count']);
             exit();
@@ -866,12 +1173,7 @@ function plugin_content_parse()
             exit();
         }
         try {
-            if ($source === 'instagram') {
-                if (!$igUser) {
-                    throw new Exception('Не указан Instagram пользователь');
-                }
-                $items = parseInstagramPosts($igUser, $count);
-            } elseif ($source === 'vk') {
+            if ($source === 'vk') {
                 $vkGroup = $_REQUEST['vk_group'] ?? '';
                 if (!$vkGroup) {
                     throw new Exception('Не указана группа VK');
@@ -881,6 +1183,26 @@ function plugin_content_parse()
                     throw new Exception('Некорректный идентификатор группы VK');
                 }
                 $items = parseVkPosts($vkId, $count);
+            } elseif ($source === 'telegram') {
+                $tgChannel = $_REQUEST['tg_channel'] ?? '';
+                if (!$tgChannel) {
+                    throw new Exception('Не указан канал Telegram');
+                }
+                $tgChannel = normalizeTelegramChannel($tgChannel);
+                if (!$tgChannel) {
+                    throw new Exception('Некорректное имя канала Telegram');
+                }
+                $items = parseTelegramChannel($tgChannel, $count);
+            } elseif ($source === 'site') {
+                $siteUrl = trim($_REQUEST['site_url'] ?? '');
+                $siteSelector = trim($_REQUEST['site_selector'] ?? '');
+                if (!$siteUrl || !validate_url($siteUrl)) {
+                    throw new Exception('Некорректный URL сайта');
+                }
+                if (!$siteSelector) {
+                    throw new Exception('Не указан id или class блока новости');
+                }
+                $items = parseSiteNews($siteUrl, $siteSelector, $count);
             } else {
                 if (empty($rssUrl)) {
                     throw new Exception('Invalid RSS URL');
@@ -896,32 +1218,48 @@ function plugin_content_parse()
             // Проверяем, что получены данные
             $itemsCount = is_array($items) ? count($items) : 0;
             if ($itemsCount === 0) {
-                throw new Exception('Не удалось получить посты из источника. Проверьте правильность указанных данных (URL канала, имя пользователя, токен VK API).');
+                // ОТЛАДКА: Добавляем информацию о том, что вернула функция
+                $debugMsg = 'Не удалось получить посты из источника. ';
+                $debugMsg .= 'Проверьте правильность указанных данных (URL канала, имя пользователя, токен VK API). ';
+
+                throw new Exception($debugMsg);
             }
             // Создаем новости
             $stats = createContentFromRss('news', $items);
             if (function_exists('ob_get_level') && ob_get_level() > 0) {
                 ob_end_clean();
             }
+
+            // Формируем HTML для уведомлений в стиле NGCMS msg()
+            $successMsg = '<div class="ok" style="margin: 15px 0; padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">';
+            $successMsg .= '✅ <strong>Парсинг завершен!</strong><br>';
+            $successMsg .= 'Добавлено: <strong>' . $stats['added'] . '</strong>, ';
+            $successMsg .= 'Пропущено: <strong>' . $stats['skipped'] . '</strong>';
+
+            if (!empty($stats['errors'])) {
+                $successMsg .= ', Ошибок: <strong>' . count($stats['errors']) . '</strong>';
+            }
+            $successMsg .= '</div>';
+
+            // Если есть ошибки, показываем их отдельно
+            if (!empty($stats['errors'])) {
+                $errorList = array_slice($stats['errors'], 0, 5); // Показываем первые 5 ошибок
+                $successMsg .= '<div class="warning" style="margin: 15px 0; padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px; color: #856404;">';
+                $successMsg .= '⚠️ <strong>Ошибки парсинга:</strong><br>';
+                $successMsg .= implode('<br>', array_map('htmlspecialchars', $errorList));
+                if (count($stats['errors']) > 5) {
+                    $successMsg .= '<br>... и еще ' . (count($stats['errors']) - 5) . ' ошибок';
+                }
+                $successMsg .= '</div>';
+            }
+
             $response = [
                 'status' => 'success',
-                'count' => count($items),
                 'added' => $stats['added'],
                 'skipped' => $stats['skipped'],
-                'action' => $action,
-                'source' => $source,
-                'debug' => [
-                    'items_received' => count($items),
-                    'first_item_title' => isset($items[0]['title']) ? $items[0]['title'] : 'N/A',
-                    'category' => $category,
-                    'type_param' => 'news'
-                ]
+                'msg' => $successMsg
             ];
-            // Добавляем ошибки, если есть
-            if (!empty($stats['errors'])) {
-                $response['errors'] = $stats['errors'];
-                $response['has_errors'] = true;
-            }
+
             echo json_encode($response);
         } catch (Exception $e) {
             error_log("Ошибка в plugin_content_parse: " . $e->getMessage());

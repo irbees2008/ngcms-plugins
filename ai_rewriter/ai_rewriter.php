@@ -226,6 +226,16 @@ if (!function_exists('ai_rewriter_rewrite')) {
         if ($timeout <= 0) {
             $timeout = 20;
         }
+        // Nginx/PHP-FPM в OpenServer по умолчанию рвёт соединение через 60 сек
+        // (504 Gateway Timeout), поэтому не даём HTTP-запросу превысить безопасный запас
+        if ($timeout > 50) {
+            logger('Timeout capped from ' . $timeout . ' to 50s to avoid 504 Gateway Timeout', 'warning', 'ai_rewriter.log');
+            $timeout = 50;
+        }
+        // Поднимаем лимит выполнения PHP, чтобы он не оборвал запрос раньше, чем curl
+        if (function_exists('set_time_limit')) {
+            @set_time_limit($timeout + 15);
+        }
 
         if (!$provider) {
             logger('Rewrite skipped: provider not configured', 'info', 'ai_rewriter.log');

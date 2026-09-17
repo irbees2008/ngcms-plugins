@@ -36,16 +36,14 @@ class AdvancedCaptchaCoreFilter
     /**
      * Проверка капчи при регистрации
      */
-    public function registerUser($params)
+    public function registerUser($params, &$msg = '')
     {
         if (! $this->captcha->verifying('register')) {
             $error = $this->captcha->rejectionReason();
+            $msg = $error; // Устанавливаем сообщение об ошибке
             notify('error', $error);
             logger('ng-advanced-captcha: Registration blocked - ' . $error, 'warning');
-            return [
-                'status' => 0,
-                'errorText' => $error,
-            ];
+            return false; // КРИТИЧНО: возвращаем false для блокировки
         }
 
         logger('ng-advanced-captcha: Registration captcha verified', 'info');

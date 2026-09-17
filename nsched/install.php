@@ -32,6 +32,11 @@ if ($_REQUEST['action'] == 'commit') {
     // If submit requested, do config save
     global $mysql, $config;
 
+    // MySQL 8 strict mode (NO_ZERO_DATE) блокирует UPDATE/ALTER на строках с '0000-00-00 00:00:00',
+    // а при ALTER c пересборкой таблицы проверяются вообще все datetime-поля строки
+    $originalSqlMode = $mysql->result('SELECT @@SESSION.sql_mode');
+    $mysql->query("SET SESSION sql_mode = ''");
+
     // Сначала очищаем проблемные datetime значения перед изменением структуры (только если поля существуют)
     try {
         // Проверяем существование полей
@@ -55,6 +60,8 @@ if ($_REQUEST['action'] == 'commit') {
     if (fixdb_plugin_install($plugin, $db_update, 'install', '')) {
         plugin_mark_installed($plugin);
     }
+
+    $mysql->query("SET SESSION sql_mode = '" . $originalSqlMode . "'");
 } else {
     generate_install_page($plugin, $lang[$plugin . ':description']);
 }

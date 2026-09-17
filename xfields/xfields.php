@@ -127,8 +127,14 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                         if (!$xf) {
                             continue;
                         }
-                        //print "NEED TO DEL [$key]<br/>\n";
-                        $fmanager->file_delete(['type' => 'image', 'id' => $key]);
+                        // Keep the physical file while another image record references it.
+                        $deletedImage = $mysql->record('select folder, name, storage from ' . prefix . '_images where id = ' . intval($key));
+                        $keepFile = false;
+                        if ($deletedImage) {
+                            $sameImage = $mysql->record('select count(*) as cnt from ' . prefix . '_images where id <> ' . intval($key) . ' and folder = ' . db_squote($deletedImage['folder']) . ' and name = ' . db_squote($deletedImage['name']) . ' and storage = ' . intval($deletedImage['storage']));
+                            $keepFile = !empty($sameImage['cnt']);
+                        }
+                        $fmanager->file_delete(['type' => 'image', 'id' => $key, 'keep_file' => $keepFile]);
                     }
                 }
             }
@@ -273,30 +279,19 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                     if (!$sourceImage) {
                         continue;
                     }
-                    // Source file paths - use correct directory based on storage flag
-                    $sourceBaseDir = $sourceImage['storage'] ? $config['files_dir'] . '/dsn' : $config['attach_dir'];
-                    $sourcePath = $sourceBaseDir . '/' . $sourceImage['folder'] . '/' . $sourceImage['name'];
-                    $sourceThumbPath = $sourceBaseDir . '/' . $sourceImage['folder'] . '/thumb/' . $sourceImage['name'];
+                    // Reuse the source record's physical file instead of copying it.
+                    $sourceFolder = $sourceImage['folder'];
+                    $sourcePath = $config['attach_dir'] . '/' . $sourceFolder . '/' . $sourceImage['name'];
+                    $sourceThumbPath = $config['attach_dir'] . '/' . $sourceFolder . '/thumb/' . $sourceImage['name'];
                     if (!file_exists($sourcePath)) {
                         continue;
                     }
-                    // Target DSN path
-                    $dsnPath = sprintf('%04d/%02d', floor($newsID / 1000) * 1000, floor($newsID / 100) * 100);
-                    $targetDir = $config['attach_dir'] . $dsnPath;
-                    if (!is_dir($targetDir)) {
-                        @mkdir($targetDir, 0777, true);
-                    }
-                    if (!is_dir($targetDir . '/thumb')) {
-                        @mkdir($targetDir . '/thumb', 0777);
-                    }
-                    // Copy main file
-                    $targetPath = $targetDir . '/' . $sourceImage['name'];
-                    if (!copy($sourcePath, $targetPath)) {
-                        continue;
-                    }
-                    // Copy thumbnail if exists
-                    if ($sourceImage['preview'] && file_exists($sourceThumbPath)) {
-                        @copy($sourceThumbPath, $targetDir . '/thumb/' . $sourceImage['name']);
+                    $hasPreview = file_exists($sourceThumbPath);
+                    $previewWidth = $hasPreview ? (int)$sourceImage['p_width'] : 0;
+                    $previewHeight = $hasPreview ? (int)$sourceImage['p_height'] : 0;
+                    if ($hasPreview && is_array($previewSize = $imanager->get_size($sourceThumbPath))) {
+                        $previewWidth = (int)$previewSize[1];
+                        $previewHeight = (int)$previewSize[2];
                     }
                     // Get description from form
                     $description = '';
@@ -307,7 +302,7 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                     $mysql->query('insert into ' . prefix . '_images (name, orig_name, folder, date, user, category, linked_ds, linked_id, plugin, pidentity, description, width, height, preview, p_width, p_height, stamp, storage) values ' .
                         '(' . db_squote($sourceImage['name']) . ', ' .
                         db_squote($sourceImage['orig_name']) . ', ' .
-                        db_squote($dsnPath) . ', ' .
+                        db_squote($sourceFolder) . ', ' .
                         db_squote(time()) . ', ' .
                         db_squote($sourceImage['user']) . ', ' .
                         db_squote($sourceImage['category']) . ', ' .
@@ -318,10 +313,10 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                         db_squote($description) . ', ' .
                         intval($sourceImage['width']) . ', ' .
                         intval($sourceImage['height']) . ', ' .
-                        intval($sourceImage['preview']) . ', ' .
-                        intval($sourceImage['p_width']) . ', ' .
-                        intval($sourceImage['p_height']) . ', ' .
-                        intval($sourceImage['stamp']) . ', 1)');
+                        intval($hasPreview) . ', ' .
+                        $previewWidth . ', ' .
+                        $previewHeight . ', ' .
+                        intval($sourceImage['stamp']) . ', ' . intval($sourceImage['storage']) . ')');
                 }
             }
         }
@@ -350,6 +345,11 @@ if (
     // Get images with news info
     $images = [];
     foreach ($mysql->select('select i.*, n.title as news_title from ' . prefix . '_images i left join ' . prefix . '_news n on (i.linked_ds = 1 and i.linked_id = n.id) ' . $where . ' order by i.date desc limit 200') as $row) {
+        $imageBaseDir = $row['storage'] ? $config['attach_dir'] : $config['images_dir'];
+        $imageBaseUrl = $row['storage'] ? $config['attach_url'] : $config['images_url'];
+        $imagePath = $imageBaseDir . '/' . $row['folder'] . '/' . $row['name'];
+        $thumbPath = $imageBaseDir . '/' . $row['folder'] . '/thumb/' . $row['name'];
+        $hasPreview = is_file($thumbPath);
         $images[] = [
             'id' => $row['id'],
             'name' => $row['name'],
@@ -357,9 +357,9 @@ if (
             'description' => $row['description'],
             'width' => $row['width'],
             'height' => $row['height'],
-            'preview' => $row['preview'] ? true : false,
-            'url' => $config['attach_url'] . '/' . $row['folder'] . '/' . $row['name'],
-            'thumb_url' => $config['attach_url'] . '/' . $row['folder'] . '/thumb/' . $row['name'],
+            'preview' => $hasPreview,
+            'url' => $imageBaseUrl . '/' . $row['folder'] . '/' . $row['name'],
+            'thumb_url' => $hasPreview ? $imageBaseUrl . '/' . $row['folder'] . '/thumb/' . $row['name'] : $imageBaseUrl . '/' . $row['folder'] . '/' . $row['name'],
             'news_title' => $row['news_title'] ? $row['news_title'] : 'Новость #' . $row['linked_id'],
             'field_id' => $row['pidentity']
         ];
@@ -740,23 +740,26 @@ class XFieldsNewsFilter extends NewsFilter
                             }
                             // Show attached image
                             $iCount++;
+                            $imageBaseDir = $irow['storage'] ? $config['attach_dir'] : $config['images_dir'];
+                            $imageBaseUrl = $irow['storage'] ? $config['attach_url'] : $config['images_url'];
+                            $hasPreview = is_file($imageBaseDir . '/' . $irow['folder'] . '/thumb/' . $irow['name']);
                             $tImage = [
                                 'number'      => $iCount,
                                 'id'          => $id,
                                 'preview'     => [
                                     'width'  => $irow['p_width'],
                                     'height' => $irow['p_height'],
-                                    'url'    => $config['attach_url'] . '/' . $irow['folder'] . '/thumb/' . $irow['name'],
+                                    'url'    => $hasPreview ? $imageBaseUrl . '/' . $irow['folder'] . '/thumb/' . $irow['name'] : $imageBaseUrl . '/' . $irow['folder'] . '/' . $irow['name'],
                                 ],
                                 'image'       => [
                                     'id'     => $irow['id'],
                                     'number' => $iCount,
-                                    'url'    => $config['attach_url'] . '/' . $irow['folder'] . '/' . $irow['name'],
+                                    'url'    => $imageBaseUrl . '/' . $irow['folder'] . '/' . $irow['name'],
                                     'width'  => $irow['width'],
                                     'height' => $irow['height'],
                                 ],
                                 'flags'       => [
-                                    'preview' => $irow['preview'] ? true : false,
+                                    'preview' => $hasPreview,
                                     'exist'   => true,
                                 ],
                                 'description' => secure_html($irow['description']),

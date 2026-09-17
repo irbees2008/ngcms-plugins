@@ -161,13 +161,13 @@ function plugin_nsched_cron()
     // Start benchmark
     $startTime = microtime(true);
     $startMemory = memory_get_usage();
-    logger('CRON execution started at ' . date('Y-m-d H:i:s', 'info', 'nsched.log'));
+    logger('CRON execution started at ' . date('Y-m-d H:i:s'), 'info', 'nsched.log');
     // 1. Установка часового пояса для MySQL
     $timezone = $config['timezone'] ?? 'Asia/Almaty';
     $dt = new DateTime('now', new DateTimeZone($timezone));
     $mysql->query("SET time_zone = '" . $dt->format('P') . "'");
     // 2. Логирование старта
-    logger('Server Time: ' . date('Y-m-d H:i:s', 'info', 'nsched.log') . ', MySQL Time: ' . $mysql->result("SELECT NOW()") . ', MySQL Timestamp: ' . $mysql->result("SELECT UNIX_TIMESTAMP()"));
+    logger('Server Time: ' . date('Y-m-d H:i:s') . ', MySQL Time: ' . $mysql->result("SELECT NOW()") . ', MySQL Timestamp: ' . $mysql->result("SELECT UNIX_TIMESTAMP()"), 'info', 'nsched.log');
     // 3. Публикация новостей (nsched_activate)
     $activateQuery = "SELECT id, nsched_activate, FROM_UNIXTIME(nsched_activate) as activate_time
                      FROM " . prefix . "_news
@@ -177,7 +177,7 @@ function plugin_nsched_cron()
     logger('Searching for news to activate...', 'info', 'nsched.log');
     $newsToActivate = $mysql->select($activateQuery);
     if ($newsToActivate && count($newsToActivate)) {
-        logger('Found ' . count($newsToActivate, 'info', 'nsched.log') . ' news to activate');
+        logger('Found ' . count($newsToActivate) . ' news to activate', 'info', 'nsched.log');
         $mysql->query("START TRANSACTION");
         try {
             foreach ($newsToActivate as $news) {
@@ -188,7 +188,7 @@ function plugin_nsched_cron()
                     WHERE id = " . $news['id']);
             }
             $mysql->query("COMMIT");
-            logger('Successfully activated ' . count($newsToActivate, 'info', 'nsched.log') . ' news');
+            logger('Successfully activated ' . count($newsToActivate) . ' news', 'info', 'nsched.log');
         } catch (Exception $e) {
             $mysql->query("ROLLBACK");
             logger('Activation ERROR: ' . $e->getMessage(), 'error', 'nsched.log');
@@ -205,7 +205,7 @@ function plugin_nsched_cron()
     logger('Searching for news to deactivate...', 'info', 'nsched.log');
     $newsToDeactivate = $mysql->select($deactivateQuery);
     if ($newsToDeactivate && count($newsToDeactivate)) {
-        logger('Found ' . count($newsToDeactivate, 'info', 'nsched.log') . ' news to deactivate');
+        logger('Found ' . count($newsToDeactivate) . ' news to deactivate', 'info', 'nsched.log');
         $mysql->query("START TRANSACTION");
         try {
             foreach ($newsToDeactivate as $news) {
@@ -216,7 +216,7 @@ function plugin_nsched_cron()
                     WHERE id = " . $news['id']);
             }
             $mysql->query("COMMIT");
-            logger('Successfully deactivated ' . count($newsToDeactivate, 'info', 'nsched.log') . ' news');
+            logger('Successfully deactivated ' . count($newsToDeactivate) . ' news', 'info', 'nsched.log');
         } catch (Exception $e) {
             $mysql->query("ROLLBACK");
             logger('Deactivation ERROR: ' . $e->getMessage(), 'error', 'nsched.log');
