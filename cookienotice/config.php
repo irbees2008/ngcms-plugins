@@ -1,5 +1,9 @@
 <?php
 if (!defined('NGCMS')) die('HAL');
+if (!getPluginStatusActive('cookienotice')) {
+    msg(['type' => 'error', 'text' => 'Плагин отключен.']);
+    return;
+}
 pluginsLoadConfig();
 LoadPluginLang('cookienotice', 'config', '', '', ':');
 $cfg  = array();
