@@ -1,5 +1,9 @@
 <?php
 if (!defined('NGCMS')) die('HAL');
+if (!getPluginStatusActive('filecleaner')) {
+    msg(['type' => 'error', 'text' => 'Плагин отключен.']);
+    return;
+}
 
 pluginsLoadConfig();
 LoadPluginLang('filecleaner', 'config', '', '', ':');
@@ -38,8 +42,21 @@ function filecleaner_type(string $path): string
 
 function filecleaner_url(string $path): string
 {
-    $parts = array_map('rawurlencode', explode('/', filecleaner_normalize($path)));
-    return rtrim((string)home, '/') . '/uploads/' . implode('/', $parts);
+    global $config;
+    $path = filecleaner_normalize($path);
+    $roots = [
+        'avatars' => ['avatars_dir', 'avatars_url'],
+        'files' => ['files_dir', 'files_url'],
+        'dsn' => ['attach_dir', 'attach_url'],
+        'images' => ['images_dir', 'images_url'],
+    ];
+    foreach ($roots as $folder => $keys) {
+        $prefix = $folder . '/';
+        if (strpos($path, $prefix) === 0 && !empty($config[$keys[1]])) {
+            return rtrim((string)$config[$keys[1]], '/') . '/' . implode('/', array_map('rawurlencode', explode('/', substr($path, strlen($prefix)))));
+        }
+    }
+    return rtrim((string)home, '/') . '/uploads/' . implode('/', array_map('rawurlencode', explode('/', $path)));
 }
 
 function filecleaner_token(): string
@@ -169,6 +186,7 @@ function filecleaner_render(array $toasts = []): void
     $uploadsRoot = realpath(filecleaner_root());
     foreach ($scan['files'] as $file) {
         $relativePath = filecleaner_normalize((string)($file['path'] ?? ''));
+        if (!filecleaner_is_allowed_relative($relativePath)) continue;
         $physicalPath = $uploadsRoot === false ? false : realpath($uploadsRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath));
         if (!$physicalPath || !is_file($physicalPath) || strpos($physicalPath, $uploadsRoot . DIRECTORY_SEPARATOR) !== 0) continue;
         $file['path'] = $relativePath;

@@ -184,12 +184,46 @@ filecleaner_register_source('eshop_category_images', static function (): array {
 
 function filecleaner_root(): string
 {
+    global $config;
+    $baseRoot = rtrim(dirname(__DIR__, 3), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'uploads';
+    $paths = [];
+    foreach (['files_dir', 'avatars_dir', 'attach_dir', 'images_dir'] as $key) {
+        if (!empty($config[$key])) {
+            $path = realpath((string)$config[$key]);
+            if ($path !== false && is_dir($path)) $paths[] = dirname($path);
+        }
+    }
+    if (!$paths) return $baseRoot;
+    $root = $paths[0];
+    foreach ($paths as $path) {
+        if (strcasecmp(rtrim($path, DIRECTORY_SEPARATOR), rtrim($root, DIRECTORY_SEPARATOR)) !== 0) return $baseRoot;
+    }
+    return $root;
+}
+
+function filecleaner_base_root(): string
+{
     return rtrim(dirname(__DIR__, 3), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'uploads';
+}
+
+function filecleaner_is_allowed_relative(string $relative): bool
+{
+    $relative = filecleaner_normalize($relative);
+    $root = realpath(filecleaner_root());
+    $baseRoot = realpath(filecleaner_base_root());
+    if ($root !== false && $baseRoot !== false && strcasecmp($root, $baseRoot) === 0) {
+        return $relative !== 'multi' && strpos($relative, 'multi/') !== 0;
+    }
+    return true;
 }
 
 function filecleaner_storage(string $name): string
 {
+    global $multiDomainName;
     $dir = __DIR__ . DIRECTORY_SEPARATOR . 'data';
+    $siteKey = isset($multiDomainName) && $multiDomainName !== '' ? (string)$multiDomainName : 'main';
+    $siteKey = preg_replace('/[^a-z0-9_.-]+/i', '_', $siteKey);
+    if ($siteKey !== 'main') $dir .= DIRECTORY_SEPARATOR . $siteKey;
     if (!is_dir($dir)) {
         @mkdir($dir, 0755, true);
     }
@@ -212,7 +246,7 @@ function filecleaner_available_dirs(): array
     foreach ($iterator as $directory) {
         if (!$directory->isDir() || $directory->isLink()) continue;
         $relative = filecleaner_normalize(substr($directory->getPathname(), strlen($root) + 1));
-        if ($relative !== '') $dirs[$relative] = 'uploads/' . $relative . '/';
+        if ($relative !== '' && filecleaner_is_allowed_relative($relative)) $dirs[$relative] = $relative . '/';
     }
     ksort($dirs, SORT_NATURAL | SORT_FLAG_CASE);
     return $dirs;
@@ -332,7 +366,7 @@ function filecleaner_scan(): array
             foreach ($iterator as $file) {
                 if (!$file->isFile() || $file->isLink()) continue;
                 $relative = filecleaner_normalize(substr($file->getPathname(), strlen($root) + 1));
-                if ($relative === '' || filecleaner_is_excluded($relative, $cfg)) continue;
+                if ($relative === '' || !filecleaner_is_allowed_relative($relative) || filecleaner_is_excluded($relative, $cfg)) continue;
                 $physical[$relative] = ['path' => $relative, 'size' => (int)$file->getSize(), 'mtime' => (int)$file->getMTime()];
             }
         }
@@ -389,7 +423,7 @@ function filecleaner_scan_step(int $batchSize = 500): array
                 foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($scanPath, FilesystemIterator::SKIP_DOTS)) as $file) {
                     if (!$file->isFile() || $file->isLink()) continue;
                     $relative = filecleaner_normalize(substr($file->getPathname(), strlen($root) + 1));
-                    if ($relative === '' || filecleaner_is_excluded($relative, $cfg)) continue;
+                    if ($relative === '' || !filecleaner_is_allowed_relative($relative) || filecleaner_is_excluded($relative, $cfg)) continue;
                     $physical[$relative] = ['path' => $relative, 'size' => (int)$file->getSize(), 'mtime' => (int)$file->getMTime()];
                 }
             }
@@ -463,7 +497,7 @@ function filecleaner_delete(string $relative): array
     foreach ($scan['files'] as $entry) {
         if (filecleaner_normalize((string)($entry['path'] ?? '')) === $relative) $candidate = $entry;
     }
-    if (!$root || !$candidate || $candidate['status'] !== 'unused' || ($fullPath && strpos($fullPath, $root . DIRECTORY_SEPARATOR) !== 0)) {
+    if (!$root || !filecleaner_is_allowed_relative($relative) || !$candidate || $candidate['status'] !== 'unused' || ($fullPath && strpos($fullPath, $root . DIRECTORY_SEPARATOR) !== 0)) {
         return [false, 'Файл не прошёл повторную проверку безопасности.'];
     }
     if (!$fullPath || !is_file($fullPath)) {
