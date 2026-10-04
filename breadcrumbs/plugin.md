@@ -1,0 +1,218 @@
+﻿---
+id: "breadcrumbs"
+icons: "<i class=\"fa fa-angle-double-right fa-3x\" aria-hidden=\"true\"></i>"
+name: "«Хлебные крошки»"
+version: "1.4"
+acts: "index"
+file: "breadcrumbs.php"
+config: "config.php"
+type: "plugin"
+description: "Показывает посетителю его местонахождение на сайте"
+author: "Alexey N. Zhukov (Wolverine),irbees2008,copliot"
+author_uri: "http://digitalplace.ru/"
+minenginebuild: "23b3116"
+preinstall: "no"
+---
+
+# =========================================================================== #
+# NG CMS // Плагин "Хлебные крошки" (Breadcrumbs)                            #
+# =========================================================================== #
+## Что это такое?
+Breadcrumbs (англ. «Хлебные крошки») — навигационная цепочка, показывающая путь
+от главной страницы до текущей страницы сайта.
+Пример отображения:
+┌─────────────────────────────────────────────────┐
+│ Главная / Новости / Технологии / Название статьи │
+└─────────────────────────────────────────────────┘
+## Для чего нужны?
+✓ Помогают пользователям понять, где они находятся на сайте
+✓ Упрощают навигацию — можно быстро вернуться на уровень выше
+✓ Улучшают SEO — поисковики лучше понимают структуру сайта
+✓ Поддерживают микроразметку Schema.org для расширенных сниппетов
+## Установка и настройка
+### 1. Включение плагина
+После активации плагина добавьте в шаблон main.tpl переменную:
+```twig
+{{ breadcrumbs }}
+```
+Рекомендуемое расположение — сразу после шапки сайта, перед основным контентом.
+### 2. Настройки в админ-панели
+**Скрывать на главной странице**
+- Да — breadcrumbs не будут отображаться на главной странице
+- Нет — будет показываться только "Главная страница" (по умолчанию)
+**Показывать полный путь категорий**
+- Да — показывает все родительские категории (Главная > Родитель > Подкатегория > Текущая)
+- Нет — показывает только прямой путь (по умолчанию)
+**Источник шаблона**
+- Шаблон сайта — использует файл из папки темы сайта
+- Шаблон плагина — использует встроенный шаблон из папки плагина
+## Как работает на разных страницах
+### Главная страница
+```
+Главная страница
+```
+(или скрыто, если включена соответствующая настройка)
+### Категория новостей
+```
+Главная / Технологии
+```
+### Просмотр новости
+```
+Главная / Технологии / Название новости
+```
+### Статическая страница
+```
+Главная / О компании
+```
+### Профиль пользователя
+```
+Главная / Пользователи / Иванов Иван
+```
+### Архив новостей
+```
+Главная / 2026 / Январь / 15
+```
+## Шаблоны
+### Файл шаблона
+`engine/plugins/breadcrumbs/tpl/breadcrumbs.tpl`
+### Доступные переменные Twig
+**{{ location }}** — массив с элементами пути (кроме последнего)
+Структура каждого элемента:
+- `url` — ссылка на страницу
+- `title` — название страницы
+- `link` — полная HTML-разметка ссылки
+Пример:
+```twig
+{% for loc in location %}
+    <a href="{{ loc.url }}">{{ loc.title }}</a>
+{% endfor %}
+```
+**{{ location_last }}** — название текущей страницы (без ссылки)
+Пример:
+```twig
+<span class="current">{{ location_last }}</span>
+```
+### Пример простого шаблона
+```twig
+<nav class="breadcrumbs">
+    {% for loc in location %}
+        <a href="{{ loc.url }}">{{ loc.title }}</a>
+        <span class="separator">›</span>
+    {% endfor %}
+    {% if location_last %}
+        <span class="current">{{ location_last }}</span>
+    {% endif %}
+</nav>
+```
+## Для разработчиков плагинов
+### Интеграция своего плагина с Breadcrumbs
+Если ваш плагин создает собственные страницы, вы можете добавить их в цепочку
+навигации через глобальный флаг `$SYSTEM_FLAGS`.
+### Базовая интеграция
+```php
+global $SYSTEM_FLAGS;
+// Простой случай — один уровень вложенности
+$SYSTEM_FLAGS['info']['breadcrumbs'] = [
+    [
+        'link' => 'https://site.ru/my-plugin/',
+        'text' => 'Мой плагин'
+    ]
+];
+```
+Результат на сайте:
+```
+Главная / Мой плагин / Текущая страница
+```
+### Многоуровневая навигация
+```php
+global $SYSTEM_FLAGS;
+// Несколько уровней вложенности
+$SYSTEM_FLAGS['info']['breadcrumbs'] = [
+    [
+        'link' => 'https://site.ru/catalog/',
+        'text' => 'Каталог'
+    ],
+    [
+        'link' => 'https://site.ru/catalog/electronics/',
+        'text' => 'Электроника'
+    ],
+    [
+        'link' => 'https://site.ru/catalog/electronics/phones/',
+        'text' => 'Телефоны'
+    ]
+];
+```
+Результат на сайте:
+```
+Главная / Каталог / Электроника / Телефоны / Название товара
+```
+### Важные моменты
+1. **Порядок элементов** — от корневого к вложенному
+2. **Последний элемент** — не включайте текущую страницу в массив,
+   она берется из `$SYSTEM_FLAGS['info']['title']['item']`
+3. **Формат ссылок** — используйте полные URL или generateLink()
+4. **Установка флага** — делайте это до вызова шаблона
+### Пример для плагина каталога товаров
+```php
+function catalog_show_product($productId) {
+    global $SYSTEM_FLAGS, $mysql;
+    // Получаем данные товара
+    $product = $mysql->record("SELECT * FROM products WHERE id = " . intval($productId));
+    $category = $mysql->record("SELECT * FROM categories WHERE id = " . intval($product['category_id']));
+    // Формируем breadcrumbs
+    $breadcrumbs = [];
+    // Добавляем категорию
+    $breadcrumbs[] = [
+        'link' => generateLink('catalog', 'category', ['id' => $category['id']]),
+        'text' => $category['name']
+    ];
+    // Если есть родительская категория
+    if ($category['parent_id']) {
+        $parent = $mysql->record("SELECT * FROM categories WHERE id = " . intval($category['parent_id']));
+        array_unshift($breadcrumbs, [
+            'link' => generateLink('catalog', 'category', ['id' => $parent['id']]),
+            'text' => $parent['name']
+        ]);
+    }
+    // Добавляем корневой раздел каталога
+    array_unshift($breadcrumbs, [
+        'link' => generateLink('catalog', 'main'),
+        'text' => 'Каталог товаров'
+    ]);
+    // Устанавливаем breadcrumbs
+    $SYSTEM_FLAGS['info']['breadcrumbs'] = $breadcrumbs;
+    // Устанавливаем название текущей страницы
+    $SYSTEM_FLAGS['info']['title']['item'] = $product['name'];
+    // ... остальной код плагина
+}
+```
+### Микроразметка Schema.org
+Плагин автоматически добавляет микроразметку BreadcrumbList согласно стандарту
+Schema.org. Это улучшает отображение в поисковой выдаче Google.
+Пример сгенерированной разметки:
+```html
+<ul itemscope itemtype="http://schema.org/BreadcrumbList">
+    <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+        <a itemprop="item" href="/"><span itemprop="name">Главная</span></a>
+        <meta itemprop="position" content="1" />
+    </li>
+    <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+        <a itemprop="item" href="/news/"><span itemprop="name">Новости</span></a>
+        <meta itemprop="position" content="2" />
+    </li>
+    <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+        <span itemprop="name">Текущая страница</span>
+        <meta itemprop="position" content="3" />
+    </li>
+</ul>
+```
+## Кэширование
+Плагин использует встроенное кэширование для повышения производительности.
+Результат кэшируется на 5 минут для каждой уникальной страницы.
+При изменении структуры категорий или настроек плагина рекомендуется очистить кэш:
+- Админ-панель → Настройки → Очистка кэша
+- Или удалить файлы из `engine/cache/`
+## Поддержка
+Версия: 1.3 (с поддержкой ng-helpers v0.2.0)
+Совместимость: NG CMS 1.0.0
+По вопросам работы плагина обращайтесь на форум https://ngcms.org

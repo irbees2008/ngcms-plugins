@@ -122,7 +122,9 @@ function plugin_zboard_install($action)
     );
     switch ($action) {
         case 'confirm':
-            generate_install_page('zboard', file_get_contents(__DIR__ . '/readme'));
+            $pluginDocumentation = (string) file_get_contents(__DIR__ . '/plugin.md');
+            $pluginDocumentation = preg_replace('/\A---\s*\r?\n.*?\r?\n---(?:\r?\n|\z)/s', '', $pluginDocumentation);
+            generate_install_page('zboard', $pluginDocumentation);
             break;
         case 'autoapply':
         case 'apply':

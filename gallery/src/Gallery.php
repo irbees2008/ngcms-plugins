@@ -102,6 +102,10 @@ class PluginGallery
             0,
             pluginGetVariable('gallery', 'skin')
         );
+        if (empty($tPath['category'])) {
+            $template['vars']['plugin_gallery_category'] = '';
+            return;
+        }
         // Register skin assets
         if (function_exists('gallery_register_skin_assets')) {
             gallery_register_skin_assets(pluginGetVariable('gallery', 'skin'), 'page_index');

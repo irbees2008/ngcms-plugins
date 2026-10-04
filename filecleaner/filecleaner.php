@@ -113,10 +113,18 @@ filecleaner_register_source('xfields_attachments', static function (): array {
     global $mysql;
     $records = [];
     foreach (['files', 'images'] as $table) {
-        $rows = $mysql->select('SELECT folder, name, storage FROM ' . prefix . '_' . $table . ' WHERE plugin = "xfields" AND linked_ds > 0 AND linked_id > 0', 1) ?: [];
+        $fields = $table === 'images' ? 'folder, name, storage, preview' : 'folder, name, storage';
+        $rows = $mysql->select('SELECT ' . $fields . ' FROM ' . prefix . '_' . $table . ' WHERE plugin = "xfields" AND linked_ds > 0 AND linked_id > 0', 1) ?: [];
         foreach ($rows as $row) {
             $path = filecleaner_db_file_path($row, $table);
             if ($path !== '') $records[] = ['path' => $path, 'status' => 'used', 'source' => 'xfields_attachments'];
+            if ($table === 'images' && !empty($row['preview'])) {
+                $root = !empty($row['storage']) ? 'dsn' : 'images';
+                $folder = trim((string)($row['folder'] ?? ''), '/\\');
+                $name = trim((string)($row['name'] ?? ''), '/\\');
+                $thumbPath = filecleaner_normalize($root . '/' . $folder . '/thumb/' . $name);
+                if ($thumbPath !== '') $records[] = ['path' => $thumbPath, 'status' => 'used', 'source' => 'xfields_attachments'];
+            }
         }
     }
     return $records;
@@ -260,7 +268,7 @@ function filecleaner_selected_dirs(): array
 
 function filecleaner_mask_options(): array
 {
-    return ['*.ico', '*.svg', '*.tmp', '*.bak', '*.log'];
+    return ['.htaccess', '*.ico', '*.svg', '*.tmp', '*.bak', '*.log'];
 }
 
 function filecleaner_protected_paths(): array
@@ -284,6 +292,7 @@ function filecleaner_config(): array
     $days = in_array($days, [0, 1, 3, 7, 14, 30, 60, 90], true) ? $days : 30;
     $excludedDirs = preg_split('/\R+/', (string)pluginGetVariable('filecleaner', 'excluded_dirs'), -1, PREG_SPLIT_NO_EMPTY) ?: [];
     $excludedMasks = preg_split('/\R+/', (string)pluginGetVariable('filecleaner', 'excluded_masks'), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    if (!in_array('.htaccess', $excludedMasks, true)) $excludedMasks[] = '.htaccess';
     $maskOptions = filecleaner_mask_options();
     return [
         'protect_days' => $days,

@@ -1,0 +1,140 @@
+﻿---
+id: "code_highlight"
+icons: "<i class=\"fa fa-code fa-3x\" aria-hidden=\"true\"></i>"
+name: "Подсветка кода"
+version: "1.3.0"
+acts: "news_full, twig"
+file: "code_highlight.php"
+config: "config.php"
+type: "plugin"
+description: "Позволяет выделять синтаксис кода в новостях"
+author: "ИИ + Stanislav"
+actions:
+  - "twig; code_highlight/code_highlight.php"
+minenginebuild: "23b3116"
+title: "Подсветка кода"
+preinstall: "no"
+---
+
+NG CMS — Плагин: Подсветка синтаксиса кода (code_highlight)
+Дата: 2025-10-14
+Описание
+- Плагин интегрирует SyntaxHighlighter 3.0.83 для подсветки кода в новостях и статических страницах NG CMS.
+- Поддерживает локальные файлы из папки плагина или загрузку с CDN (cdnjs), выбор темы оформления и включение/отключение отдельных «кистей» (языков).
+- Вставка кода через BBCode [code]...[/code] и [code=язык]...[/code]; удобная кнопка с выпадающим списком языков в редакторе новости.
+- Ассеты подключаются только на полной новости (экономит ресурсы на списках/категориях).
+Возможности
+- SyntaxHighlighter 3.0.83: подключение CSS/JS, инициализация на DOMContentLoaded.
+- Источник ассетов:
+	- CDN (по умолчанию) — через cdnjs.cloudflare.com.
+	- Локально — из папки плагина engine/plugins/code_highlight/{styles|scripts|images}.
+- Темы: Default, Django, Eclipse, Emacs, FadeToGrey, MDUltra, Midnight, RDark.
+- Управляемые кисти (языки) — можно включать/отключать.
+- Кнопка «Копировать в буфер» в тулбаре блока подсветки.
+- Twig-хелперы для шаблонов: code_highlight.brushEnabled и code_highlight.hasAnyEnabled (см. раздел «Переменные/хелперы Twig» ниже).
+Требования
+- NG CMS: сборка не ниже MinEngineBuild, указанного в файле version (для этого плагина: 23b3116).
+- PHP 7.4+ (рекомендация ядра).
+Установка и активация
+1) Скопируйте папку плагина в engine/plugins/code_highlight.
+2) Активируйте плагин в админке NG CMS → Плагины → code_highlight.
+3) Откройте «Настройки» плагина и при необходимости измените параметры (описано ниже).
+Конфигурация (Админка → Плагины → code_highlight → Настройки)
+- Использовать CDN (use_cdn)
+	- 1 (Да, по умолчанию) — ассеты берутся с cdnjs.cloudflare.com.
+	- 0 (Нет) — ассеты подключаются из локальной папки плагина.
+- Тема (theme)
+	- Default (по умолчанию), Django, Eclipse, Emacs, FadeToGrey, MDUltra, Midnight, RDark.
+- Кисти (включение/отключение языков)
+	- Базовые: JavaScript, PHP, SQL, HTML/XML, CSS, Plain.
+	- Дополнительные: Bash, Python, Java, C#, C/C++, Delphi, Diff/Patch, Ruby, Perl, VB/VB.Net, PowerShell, Scala, Groovy.
+Значения по умолчанию (если настройки ещё не сохранены)
+- use_cdn = 1 (включено).
+- theme = Default.
+- Все кисти считаются включёнными.
+Поддерживаемые языки и алиасы
+- js, javascript, node, nodejs → jscript (кисть SyntaxHighlighter: JScript)
+- php → php
+- sql, mysql, pgsql, postgres → sql
+- xml, html, xhtml, xslt, svg → xml
+- css, scss, sass, less → css
+- plain, text, txt → plain
+- bash, shell, sh, zsh → bash
+- python, py → python
+- java → java
+- c#, csharp, cs → csharp
+- c++, cpp, c → cpp
+- delphi, pascal → delphi
+- diff, patch → diff
+- ruby, rb → ruby
+- perl, pl → perl
+- vb, vbnet, vba → vb
+- powershell, ps, ps1 → powershell
+- scala → scala
+- groovy → groovy
+Использование в контенте (BBCode)
+- Без указания языка:
+	[code]
+	... ваш код ...
+	[/code]
+- С указанием языка (используйте алиасы из списка выше):
+	[code=php]
+	echo 'Hello';
+	[/code]
+Примечания
+- Парсер NG CMS конвертирует BBCode [code] и [code=язык] в <pre class="brush: ...">, что совместимо с SyntaxHighlighter.
+- Внутри блоков <pre> автоматически убираются лишние <br />, чтобы не ломать подсветку.
+Переменные/хелперы Twig
+1) Проверка активности плагина
+	{% if pluginIsActive('code_highlight') %}
+		... элементы UI, зависящие от плагина ...
+	{% endif %}
+2) Проверка наличия хотя бы одной активной «кисти» (языка)
+	{% if callPlugin('code_highlight.hasAnyEnabled', {}) %}
+		... показывать выпадающий список языков ...
+	{% endif %}
+3) Проверка конкретной «кисти» (учитывает алиасы)
+	{% if callPlugin('code_highlight.brushEnabled', {'name':'php'}) %}
+		<a class="dropdown-item" href="#" onclick="insertCodeBrush('php', {{ area }}); return false;">PHP</a>
+	{% endif %}
+	Алиасы: js/javascript/node → jscript; html/xhtml/xml → xml; mysql/pgsql/postgres → sql; c/c++ → cpp; c#/cs → csharp; text/txt → plain; и т.д.
+Заметки
+ - Если настройка для кисти ещё не сохранена в конфиге плагина — хелперы возвращают true (по умолчанию «включено»).
+ - Плагин регистрирует свои Twig-функции (brushEnabled, hasAnyEnabled) в `code_highlight.php` и объявляет действие `twig` в `version`, поэтому функции доступны в шаблонах.
+Интеграция с редактором новости
+- В шаблоне редактора (`engine/skins/default3/tpl/qt_news.tpl`) добавлена кнопка с выпадающим списком языков.
+- Список динамически фильтруется с помощью callPlugin('code_highlight.brushEnabled', {name: '...'}) — пользователю показываются только активные в плагине языки.
+- Вставка происходит как BBCode [code=язык]...[/code], с нормализацией алиасов (например, html → xml, js → jscript и т.д.).
+Где и когда подключаются ассеты
+- Подключение CSS/JS выполняется только на полной новости через фильтр `CodeHighlightNewsFilter` (NewsFilter → showNews при mode.style == 'full').
+- Это снижает нагрузку на списках новостей/категориях.
+- Если требуется подключать глобально на всех страницах — можно перенести регистрацию HTML-вставок (register_htmlvar) в другой фильтр/место шаблонов. Делайте это осознанно, т.к. увеличится количество подключаемых ресурсов.
+Кнопка «Копировать в буфер»
+- В тулбаре блока SyntaxHighlighter добавляется кнопка с иконкой.
+- Работает через браузерный Clipboard API; при успехе показывает «галочку», при ошибке — «крестик», затем возвращает исходную иконку.
+Расширение и кастомизация
+- Добавление новой «кисти» (языка):
+	1) Для локального режима положите соответствующий скрипт shBrush*.js в `engine/plugins/code_highlight/scripts`.
+	2) Пропишите его в карте `$mapLocal` в `code_highlight.php` (и при желании в CDN-карте `$map`).
+	3) Добавьте чекбокс в `config.php` (секция генерации `$cfgX`) и алиасы в хелпере `code_highlight_twig_brushEnabled`.
+	4) При необходимости добавьте пункт в выпадающий список редактора (`qt_news.tpl`).
+- Добавление темы: разместите CSS в `styles/` и при необходимости добавьте в список тем в `config.php`.
+Отладка и известные проблемы
+- «Список языков в редакторе пустой»:
+	- Убедитесь, что плагин code_highlight активирован.
+	- Откройте настройки плагина и сохраните (пересобираются конфиги), обновите страницу.
+	- Проверьте, что в `engine/plugins/code_highlight/version` есть строка `Actions: twig; code_highlight/code_highlight.php`.
+	- Движок на случай расхождения конфигов пробует подгружать файл плагина автоматически для Twig, но корректная запись в version предпочтительнее.
+- «Подсветка не срабатывает»:
+	- Проверьте, что блоки генерируются как `<pre class="brush: ...">` (парсер BBCode актуален).
+	- Убедитесь, что на странице загружаются CSS/JS SyntaxHighlighter (через CDN или локально).
+	- Если используете локальный режим — проверьте наличие соответствующих shBrush*.js файлов.
+- «Иконка копирования не работает»:
+	- Некоторые браузеры накладывают ограничения на Clipboard API при отсутствии HTTPS или пользовательского взаимодействия.
+История изменений
+- См. файл `engine/plugins/code_highlight/history`.
+Авторы и благодарности
+- Автор плагина: команда NG CMS; доработки: ИИ + Stanislav.
+- Основано на SyntaxHighlighter 3.0.83 (Copyright Alex Gorbatchev).
+Лицензия
+- Используйте в рамках лицензий NG CMS и сторонних библиотек (SyntaxHighlighter).
