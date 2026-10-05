@@ -2,6 +2,8 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
+LoadPluginLang('helloworld', 'config', '', '', ':');
+
 function plugin_helloworld_install($action)
 {
     // Таблица для счётчика посещений страницы плагина
@@ -19,7 +21,7 @@ function plugin_helloworld_install($action)
 
     switch ($action) {
         case 'confirm':
-            generate_install_page('helloworld', 'Будет установлена таблица счётчика посещений.');
+            generate_install_page('helloworld', $lang['helloworld:install_description']);
             break;
         case 'autoapply':
         case 'apply':

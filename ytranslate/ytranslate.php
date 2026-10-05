@@ -1,19 +1,22 @@
 <?php
 if (!defined('NGCMS')) die('HAL');
+LoadPluginLang('ytranslate', 'main', '', 'ytranslate', ':');
 
 function ytranslate_languages()
 {
+    global $lang;
+
     return array(
-        'ru' => 'Русский',
-        'uk' => 'Украинский',
-        'be' => 'Белорусский',
-        'kk' => 'Казахский',
-        'uz' => 'Узбекский',
-        'ky' => 'Кыргызский',
-        'tg' => 'Таджикский',
-        'en' => 'Английский',
-        'de' => 'Немецкий',
-        'zh' => 'Китайский'
+        'ru' => $lang['ytranslate:language_russian'],
+        'uk' => $lang['ytranslate:language_ukrainian'],
+        'be' => $lang['ytranslate:language_belarusian'],
+        'kk' => $lang['ytranslate:language_kazakh'],
+        'uz' => $lang['ytranslate:language_uzbek'],
+        'ky' => $lang['ytranslate:language_kyrgyz'],
+        'tg' => $lang['ytranslate:language_tajik'],
+        'en' => $lang['ytranslate:language_english'],
+        'de' => $lang['ytranslate:language_german'],
+        'zh' => $lang['ytranslate:language_chinese']
     );
 }
 
@@ -282,7 +285,7 @@ ytranslate_country_endpoint();
 
 function plugin_ytranslate_show($params)
 {
-    global $twig;
+    global $twig, $lang;
     pluginsLoadConfig();
     $position = isset($params['position']) ? $params['position'] : 'fixed';
     $theme = isset($params['theme']) ? $params['theme'] : 'light';
@@ -299,6 +302,12 @@ function plugin_ytranslate_show($params)
         'theme' => $theme,
         'default_lang' => $defaultLang,
         'langs' => $langs,
+        'messages' => array(
+            'translating' => $lang['ytranslate:status_translating'],
+            'error_prefix' => $lang['ytranslate:error_prefix'],
+            'error_unavailable' => $lang['ytranslate:error_unavailable'],
+            'error_translation_failed' => $lang['ytranslate:error_translation_failed']
+        ),
         'auto_ip' => (int)pluginGetVariable('ytranslate', 'auto_ip'),
         'endpoint' => isset($params['endpoint']) ? $params['endpoint'] : '',
         'tpl_url' => tpl_url

@@ -13,19 +13,19 @@
 </script>
 <div class="comment">
 	<h3>
-		<span>Редактирование объявления</span>
+		<span>{{ lang['zboard']['ui_edit_title'] }}</span>
 	</h3>
 	<form method="post" action="" class="comment-form" name="form" enctype="multipart/form-data">
 		<ul class="comment-author">
 			<li class="item clearfix">
 				<input type="text" class="form-control" name="announce_name" value="{{announce_name}}" tabindex="1">
-				<label>Заголовок объявления
+				<label>{{ lang['zboard']['ui_announcement_title'] }}
 					<i>(*)</i>
 				</label>
 			</li>
 			<li class="item clearfix">
 				<input type="text" class="form-control" name="author" value="{{author}}" tabindex="1">
-				<label>Автор
+				<label>{{ lang['zboard']['ui_author'] }}
 					<i>(*)</i>
 				</label>
 			</li>
@@ -33,7 +33,7 @@
 				<select name="announce_period">
 					{{list_period}}
 				</select>
-				<label>Период объявления
+				<label>{{ lang['zboard']['ui_period'] }}
 					<i>(*)</i>
 				</label>
 			</li>
@@ -41,20 +41,20 @@
 				<select name="cat_id">
 					{{options}}
 				</select>
-				<label>Категория
+				<label>{{ lang['zboard']['ui_category'] }}
 					<i>(*)</i>
 				</label>
 			</li>
 		</ul>
 		<span class="textarea">
-			<label>Описание объявления
+			<label>{{ lang['zboard']['ui_description'] }}
 				<i>(*)</i>
 			</label><br/><br/>
 			<textarea type="text" id="content_description" name="announce_description" tabindex="4">{{announce_description}}</textarea>
 		</span>
 		<span class="textarea">
-			<label>Контакты
-				<i>(телефон)</i>
+			<label>{{ lang['zboard']['ui_contacts'] }}
+				<i>({{ lang['zboard']['ui_phone'] }})</i>
 			</label>
 			<input type="text" class="form-control" id="announce_contacts" name="announce_contacts" value="{{announce_contacts}}"/>
 		</span>
@@ -87,13 +87,13 @@ count++;
 $('.fix').capty({cWrapper: 'capty-tile', height: 36, opacity: .6});
 });
 				</script>
-				<label>Прикрепить изображения</label><br/><br/>
+				<label>{{ lang['zboard']['ui_attach_images'] }}</label><br/><br/>
 				<input type="hidden" id="txtdes" name="txtdes" value="{{id}}"/>
 				<div id="queue"></div>
 				<input id="file_upload" name="file_upload" type="file" multiple="true">
 			</li>
 			<li class="item clearfix">
-				<label>Прикрепленные изображения</label><br/><br/>
+				<label>{{ lang['zboard']['ui_attached_images'] }}</label><br/><br/>
 				<table>
 					<tr>
 						{% for entry in entriesImg %}
@@ -109,10 +109,10 @@ $('.fix').capty({cWrapper: 'capty-tile', height: 36, opacity: .6});
 			</li>
 		</ul>
 		<span class="submit">
-			<button name="submit" type="submit" tabindex="5" onclick="javascript:$('#file_upload').uploadifive('upload')">Отправить</button>
+			<button name="submit" type="submit" tabindex="5" onclick="javascript:$('#file_upload').uploadifive('upload')">{{ lang['zboard']['ui_submit'] }}</button>
 		</span>
 		<span class="submit">
-			<button tabindex="5" type="reset">Сброс</button>
+			<button tabindex="5" type="reset">{{ lang['zboard']['ui_reset'] }}</button>
 		</span>
 	</form>
 </div>

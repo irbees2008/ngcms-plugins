@@ -40,7 +40,7 @@ function zboard_header_show()
     } else {
         $page = $_REQUEST['page'];
     }
-    $pageNo = isset($page) ? str_replace('%count%', intval($page), '/ Страница %count%') : '';
+    $pageNo = isset($page) ? str_replace('%count%', intval($page), $lang['zboard']['ui_page_number']) : '';
     switch ($CurrentHandler['handlerName']) {
         case '':
             $titles = str_replace(
@@ -390,14 +390,14 @@ function vip_zboard($params)
             $template['vars']['pages'] = '';
         } else {
             header('HTTP/1.1 403 Forbidden');
-            $SYSTEM_FLAGS['info']['title']['others'] = 'Вы не являетесь автором этого объявления';
+            $SYSTEM_FLAGS['info']['title']['others'] = $lang['zboard']['ui_not_owner'];
             $xt = $twig->loadTemplate($tpath['no_access'] . 'no_access.tpl');
             $tVars['vars']['home'] = home;
             $template['vars']['mainblock'] .= $xt->render($tVars);
         }
     } else {
         header('HTTP/1.1 403 Forbidden');
-        $SYSTEM_FLAGS['info']['title']['others'] = 'Доступ разрешен только авторизированным';
+        $SYSTEM_FLAGS['info']['title']['others'] = $lang['zboard']['ui_login_required'];
         $xt = $twig->loadTemplate($tpath['no_access'] . 'no_access.tpl');
         $tVars['vars']['home'] = home;
         $template['vars']['mainblock'] .= $xt->render($tVars);
@@ -405,7 +405,7 @@ function vip_zboard($params)
 }
 function del_zboard($params)
 {
-    global $userROW, $mysql;
+    global $userROW, $mysql, $lang;
     $id = isset($params['id']) ? abs(intval($params['id'])) : abs(intval($_REQUEST['id']));
     if (empty($id)) {
         redirect_zboard(link_zboard_list());
@@ -422,16 +422,16 @@ function del_zboard($params)
             }
             $mysql->query("delete from " . prefix . "_zboard_images where zid = " . db_squote($id) . "");
             $mysql->query('delete from ' . prefix . '_zboard where id = ' . db_squote($id));
-            $_SESSION['zboard']['info'] = 'Объявление удалено.';
+            $_SESSION['zboard']['info'] = $lang['zboard']['ui_announcement_deleted'];
             generate_entries_cnt_cache(true);
             generate_catz_cache(true);
             redirect_zboard(link_zboard_list());
         } else {
-            $_SESSION['zboard']['info'] = 'Вы пытаетесь удалить не свое объявление.';
+            $_SESSION['zboard']['info'] = $lang['zboard']['ui_delete_other_announcement'];
             redirect_zboard(link_zboard_list());
         }
     } else {
-        $_SESSION['zboard']['info'] = 'У вас нет прав для удаления объявлений.';
+        $_SESSION['zboard']['info'] = $lang['zboard']['ui_delete_permission_denied'];
         redirect_zboard(link_zboard());
     }
 }
@@ -444,7 +444,7 @@ function edit_zboard($params)
     $tpath = locatePluginTemplates(array('edit_zboard', 'no_access'), 'zboard', pluginGetVariable('zboard', 'localsource'), pluginGetVariable('zboard', 'localskin'));
     $xt = $twig->loadTemplate($tpath['edit_zboard'] . 'edit_zboard.tpl');
     $SYSTEM_FLAGS['info']['title']['group'] = $lang['zboard']['name_plugin'];
-    $SYSTEM_FLAGS['info']['title']['others'] = 'Редактирование';
+    $SYSTEM_FLAGS['info']['title']['others'] = $lang['zboard']['ui_editing'];
     $id = isset($params['id']) ? abs(intval($params['id'])) : abs(intval($_REQUEST['id']));
     if (empty($id)) {
         redirect_zboard(link_zboard());
@@ -471,34 +471,34 @@ function edit_zboard($params)
                 $SQL['editdate'] = time() + ($config['date_adjust'] * 60);
                 $SQL['announce_name'] = input_filter_com($_REQUEST['announce_name']);
                 if (empty($SQL['announce_name']))
-                    $error_text[] = 'Название объявления пустое';
+                    $error_text[] = $lang['zboard']['validation_title_required'];
                 $SQL['author'] = input_filter_com($_REQUEST['author']);
                 if (empty($SQL['author']))
-                    $error_text[] = 'Поле автор не заполнено';
+                    $error_text[] = $lang['zboard']['validation_author_required'];
                 $SQL['announce_period'] = input_filter_com($_REQUEST['announce_period']);
                 if (!empty($SQL['announce_period'])) {
                     if (!in_array($SQL['announce_period'], explode("|", pluginGetVariable('zboard', 'list_period')))) {
-                        $error_text[] = 'Поле период задано неверно ' . $SQL['announce_period'];
+                        $error_text[] = $lang['zboard']['validation_period_invalid'] . ': ' . $SQL['announce_period'];
                     }
                 } else {
-                    $error_text[] = 'Поле период не заполнено';
+                    $error_text[] = $lang['zboard']['validation_period_required'];
                 }
                 $SQL['cat_id'] = intval($_REQUEST['cat_id']);
                 if (!empty($SQL['cat_id'])) {
                     $cat = $mysql->result('SELECT 1 FROM ' . prefix . '_zboard_cat WHERE id = \'' . $SQL['cat_id'] . '\' LIMIT 1');
                     if (empty($cat)) {
-                        $error_text[] = 'Такой категории не существует';
+                        $error_text[] = $lang['zboard']['validation_category_missing'];
                     }
                 } else {
-                    $error_text[] = 'Вы не выбрали категорию';
+                    $error_text[] = $lang['zboard']['validation_category_required'];
                 }
                 $SQL['announce_description'] = str_replace(array("\r\n", "\r"), "\n", input_filter_com($_REQUEST['announce_description']));
                 if (empty($SQL['announce_description'])) {
-                    $error_text[] = 'Нет описания к объявлению';
+                    $error_text[] = $lang['zboard']['validation_description_required'];
                 }
                 $SQL['announce_contacts'] = str_replace(array("\r\n", "\r"), "\n", input_filter_com($_REQUEST['announce_contacts']));
                 if (empty($SQL['announce_contacts'])) {
-                    $error_text[] = 'Нет контактов к объявлению';
+                    $error_text[] = $lang['zboard']['validation_contacts_required'];
                 }
                 //$SQL['active'] = $_REQUEST['announce_activeme'];
                 $SQL['active'] = 0;
@@ -581,14 +581,14 @@ function edit_zboard($params)
             $template['vars']['pages'] = '';
         } else {
             header('HTTP/1.1 403 Forbidden');
-            $SYSTEM_FLAGS['info']['title']['others'] = 'Вы не являетесь автором этого объявления';
+            $SYSTEM_FLAGS['info']['title']['others'] = $lang['zboard']['ui_not_owner'];
             $xt = $twig->loadTemplate($tpath['no_access'] . 'no_access.tpl');
             $tVars['vars']['home'] = home;
             $template['vars']['mainblock'] .= $xt->render($tVars);
         }
     } else {
         header('HTTP/1.1 403 Forbidden');
-        $SYSTEM_FLAGS['info']['title']['others'] = 'Доступ разрешен только авторизированным';
+        $SYSTEM_FLAGS['info']['title']['others'] = $lang['zboard']['ui_login_required'];
         $xt = $twig->loadTemplate($tpath['no_access'] . 'no_access.tpl');
         $tVars['vars']['home'] = home;
         $template['vars']['mainblock'] .= $xt->render($tVars);
@@ -621,34 +621,34 @@ function expend_zboard($params)
             $SQL['editdate'] = time() + ($config['date_adjust'] * 60);
             $SQL['announce_name'] = input_filter_com($_REQUEST['announce_name']);
             if (empty($SQL['announce_name']))
-                $error_text[] = 'Название объявления пустое';
+                $error_text[] = $lang['zboard']['validation_title_required'];
             $SQL['author'] = input_filter_com($_REQUEST['author']);
             if (empty($SQL['author']))
-                $error_text[] = 'Поле автор не заполнено';
+                $error_text[] = $lang['zboard']['validation_author_required'];
             $SQL['announce_period'] = input_filter_com($_REQUEST['announce_period']);
             if (!empty($SQL['announce_period'])) {
                 if (!in_array($SQL['announce_period'], explode("|", pluginGetVariable('zboard', 'list_period')))) {
-                    $error_text[] = 'Поле период задано неверно ' . $SQL['announce_period'];
+                    $error_text[] = $lang['zboard']['validation_period_invalid'] . ': ' . $SQL['announce_period'];
                 }
             } else {
-                $error_text[] = 'Поле период не заполнено';
+                $error_text[] = $lang['zboard']['validation_period_required'];
             }
             $SQL['cat_id'] = intval($_REQUEST['cat_id']);
             if (!empty($SQL['cat_id'])) {
                 $cat = $mysql->result('SELECT 1 FROM ' . prefix . '_zboard_cat WHERE id = \'' . $SQL['cat_id'] . '\' LIMIT 1');
                 if (empty($cat)) {
-                    $error_text[] = 'Такой категории не существует';
+                    $error_text[] = $lang['zboard']['validation_category_missing'];
                 }
             } else {
-                $error_text[] = 'Вы не выбрали категорию';
+                $error_text[] = $lang['zboard']['validation_category_required'];
             }
             $SQL['announce_description'] = str_replace(array("\r\n", "\r"), "\n", input_filter_com($_REQUEST['announce_description']));
             if (empty($SQL['announce_description'])) {
-                $error_text[] = 'Нет описания к объявлению';
+                $error_text[] = $lang['zboard']['validation_description_required'];
             }
             $SQL['announce_contacts'] = str_replace(array("\r\n", "\r"), "\n", input_filter_com($_REQUEST['announce_contacts']));
             if (empty($SQL['announce_contacts'])) {
-                $error_text[] = 'Нет контактов к объявлению';
+                $error_text[] = $lang['zboard']['validation_contacts_required'];
             }
             //$SQL['active'] = $_REQUEST['announce_activeme'];
             $SQL['active'] = 0;
@@ -730,13 +730,14 @@ function expend_zboard($params)
     } else {
         header('HTTP/1.1 403 Forbidden');
         $xt = $twig->loadTemplate($tpath['no_access'] . 'no_access.tpl');
-        $SYSTEM_FLAGS['info']['title']['others'] = 'Вы не являетесь автором этого объявления';
+        $SYSTEM_FLAGS['info']['title']['others'] = $lang['zboard']['ui_not_owner'];
         $tVars['vars']['home'] = home;
         $template['vars']['mainblock'] .= $xt->render($tVars);
     }
 }
 function zboard_upload_files($files_del)
 {
+    global $lang;
     $max_file_size = pluginGetVariable('zboard', 'max_file_size') * 1024 * 1024;
     $extensions = array_map('trim', explode(',', pluginGetVariable('zboard', 'ext_file')));
     if (isset($_FILES['plugin_files']['name']) && !empty($_FILES['plugin_files']['name'])) {
@@ -752,33 +753,34 @@ function zboard_upload_files($files_del)
                             unlink(files_dir . 'zboard/' . $files_del);
                         }
                         if (file_exists(files_dir . 'zboard/' . $Ffile))
-                            $error_text = 'Такой файл уже существует';
+                            $error_text = $lang['zboard']['ui_upload_file_exists'];
                         else
                             unlink(files_dir . 'zboard/' . $files_del);
                         if (empty($error_text)) {
                             if (move_uploaded_file($_FILES['plugin_files']['tmp_name'], files_dir . 'zboard/' . $Ffile)) {
                                 chmod(files_dir . 'zboard/' . $Ffile, 0644);
                             } else {
-                                $error_text = 'Загрузка не удалась';
+                                $error_text = $lang['zboard']['ui_upload_failed'];
                             }
                         }
                     } else {
-                        $error_text = 'Нет прав на запись';
+                        $error_text = $lang['zboard']['ui_upload_no_write'];
                     }
                 } else {
-                    $error_text = 'Размер файла больше допустимого';
+                    $error_text = $lang['zboard']['ui_upload_file_too_large'];
                 }
             } else {
-                $error_text = 'Запрещеное расширение';
+                $error_text = $lang['zboard']['ui_upload_extension_forbidden'];
             }
         } else {
-            $error_text = 'Файл не загружен';
+            $error_text = $lang['zboard']['ui_upload_file_missing'];
         }
     }
     return array($Ffile, $error_text);
 }
 function zboard_upload_images($images_del, $w, $h, $quality = 100)
 {
+    global $lang;
     $max_image_size = pluginGetVariable('zboard', 'max_image_size') * 1024 * 1024;
     $extensions = array_map('trim', explode(',', pluginGetVariable('zboard', 'ext_image')));
     if (isset($_FILES['plugin_images']['name']) && !empty($_FILES['plugin_images']['name'])) {
@@ -856,22 +858,26 @@ function zboard_upload_images($images_del, $w, $h, $quality = 100)
                                 chmod($dir_image, 0644);
                                 chmod(images_dir . 'zboard/thumb/' . $new, 0644);
                             } else {
-                                $error_text = 'Ошибка при сохранении';
+                                    $error_text = $lang['zboard']['ui_upload_image_save_failed'];
                             }
                         } else {
-                            $error_text = 'Размер изображения больше чем ' . pluginGetVariable('template', 'width') . ' на ' . pluginGetVariable('template', 'height');
+                            $error_text = str_replace(
+                                array('{width}', '{height}'),
+                                array(pluginGetVariable('template', 'width'), pluginGetVariable('template', 'height')),
+                                $lang['zboard']['ui_upload_dimensions']
+                            );
                         }
                     } else {
-                        $error_text = 'Загруженый файл не является изображением';
+                        $error_text = $lang['zboard']['ui_upload_not_image'];
                     }
                 } else {
-                    $error_text = 'Размер файла больше допустимого';
+                    $error_text = $lang['zboard']['ui_upload_file_too_large'];
                 }
             } else {
-                $error_text = 'Недопустимое разщирение';
+                $error_text = $lang['zboard']['ui_upload_extension_invalid'];
             }
         } else {
-            $error_text = 'Изображение не загружено';
+            $error_text = $lang['zboard']['ui_upload_image_missing'];
         }
     }
     return array($new, $error_text);
@@ -911,8 +917,8 @@ function list_zboard($params)
         $count = $mysql->result('SELECT COUNT(id) FROM ' . prefix . '_zboard WHERE active = \'1\' and author_id = \'' . intval($userROW['id']) . '\'');
         $countPages = ceil($count / $limitCount);
         if ($countPages < $pageNo) {
-            notify('error', 'Подстраницы не существует');
-            return '<div class="alert alert-danger">Подстраницы не существует</div>';
+            notify('error', $lang['zboard']['ui_subpage_missing']);
+            return '<div class="alert alert-danger">' . $lang['zboard']['ui_subpage_missing'] . '</div>';
         }
         if ($countPages > 1 && $countPages >= $pageNo) {
             $paginationParams = checkLinkAvailable('zboard', '') ?
@@ -1020,7 +1026,7 @@ function list_zboard($params)
         $template['vars']['mainblock'] .= $xt->render($tVars);
     } else {
         header('HTTP/1.1 403 Forbidden');
-        $SYSTEM_FLAGS['info']['title']['others'] = 'Доступ разрешен только авторизированным';
+        $SYSTEM_FLAGS['info']['title']['others'] = $lang['zboard']['ui_login_required'];
         $xt = $twig->loadTemplate($tpath['no_access'] . 'no_access.tpl');
         $tVars['vars']['home'] = home;
         $template['vars']['mainblock'] .= $xt->render($tVars);
@@ -1142,13 +1148,13 @@ function zboard($params)
     if (!$limitStart)    $limitStart = ($pageNo - 1) * $limitCount;
     $count = $mysql->result('SELECT COUNT(id) FROM ' . prefix . '_zboard WHERE active = \'1\' ' . $sorting);
     if ($count == 0) {
-        notify('info', 'В данной категории пока что нету объявлений');
-        return '<div class="alert alert-info">В данной категории пока что нету объявлений</div>';
+        notify('info', $lang['zboard']['ui_category_empty']);
+        return '<div class="alert alert-info">' . $lang['zboard']['ui_category_empty'] . '</div>';
     }
     $countPages = ceil($count / $limitCount);
     if ($countPages < $pageNo) {
-        notify('error', 'Подстраницы не существует');
-        return '<div class="alert alert-danger">Подстраницы не существует</div>';
+        notify('error', $lang['zboard']['ui_subpage_missing']);
+        return '<div class="alert alert-danger">' . $lang['zboard']['ui_subpage_missing'] . '</div>';
     }
     if ($countPages > 1 && $countPages >= $pageNo) {
         $paginationParams = checkLinkAvailable('zboard', '') ?
@@ -1301,8 +1307,8 @@ function search_zboard($params)
             $search_in = 'all';
         $search = substr($keywords, 0, 64);
         if (strlen($search) < 3) {
-            notify('error', 'Слишком короткое слово');
-            $output = '<div class="alert alert-danger">Слишком короткое слово</div>';
+            notify('error', $lang['zboard']['ui_search_short']);
+            $output = '<div class="alert alert-danger">' . $lang['zboard']['ui_search_short'] . '</div>';
         }
         $keywords = array();
         $get_url = $search;
@@ -1341,8 +1347,8 @@ function search_zboard($params)
         $count = $mysql->result($sql_count);
         $countPages = ceil($count / $limitCount);
         if ($countPages < $pageNo) {
-            notify('error', 'Подстраницы не существует');
-            $output = '<div class="alert alert-danger">Подстраницы не существует</div>';
+            notify('error', $lang['zboard']['ui_subpage_missing']);
+            $output = '<div class="alert alert-danger">' . $lang['zboard']['ui_subpage_missing'] . '</div>';
         }
         if ($pageNo < 1) $pageNo = 1;
         if (!isset($limitStart)) $limitStart = ($pageNo - 1) * $limitCount;
@@ -1397,8 +1403,9 @@ function search_zboard($params)
             );
         }
         if (empty($row_two)) {
-            notify('info', 'По вашему запросу <b>' . $get_url . '</b> ничего не найдено');
-            $output = '<div class="alert alert-info">По вашему запросу <b>' . $get_url . '</b> ничего не найдено</div>';
+            $noResults = str_replace('{query}', $get_url, $lang['zboard']['ui_no_results']);
+            notify('info', $noResults);
+            $output = '<div class="alert alert-info">' . $noResults . '</div>';
         }
     } else {
         $cats_data = array();
@@ -1652,31 +1659,31 @@ function send_zboard()
         $error_text = array();
         if (isset($_REQUEST['submit'])) {
             $announce_name = input_filter_com($_REQUEST['announce_name']);
-            if (empty($announce_name)) $error_text[] = 'Заголовок объявления не заполнен';
+            if (empty($announce_name))             $error_text[] = $lang['zboard']['validation_title_required'];
             $author = input_filter_com($_REQUEST['author']);
-            if (empty($author)) $error_text[] = 'Поле автор не заполнено';
+            if (empty($author)) $error_text[] = $lang['zboard']['validation_author_required'];
             if (isset($userROW) && !empty($userROW)) {
                 $email = $userROW['mail'];
             } elseif (empty($userROW) && !empty($_REQUEST['author_email'])) {
                 $email = secure_html($_REQUEST['author_email']);
                 if (!(filter_var($email, FILTER_VALIDATE_EMAIL))) {
-                    $error_text[] = 'В поле Email введен неправильный email';
+                    $error_text[] = $lang['zboard']['validation_email_invalid'];
                 }
             } else {
-                $error_text[] = 'Поле Email не заполнено';
+                $error_text[] = $lang['zboard']['validation_email_required'];
             }
             $announce_description = str_replace(array("\r\n", "\r"), "\n", input_filter_com($_REQUEST['announce_description']));
             if (empty($announce_description)) {
-                $error_text[] = 'Поле с объявлением не заполнено';
+                $error_text[] = $lang['zboard']['validation_description_required'];
             }
             $announce_contacts = str_replace(array("\r\n", "\r"), "\n", input_filter_com($_REQUEST['announce_contacts']));
             if (empty($announce_contacts)) {
-                $error_text[] = 'Поле с контактами не заполнено';
+                $error_text[] = $lang['zboard']['validation_contacts_required'];
             } else {
                 // Серверная валидация: допускаем формат +X (XXX) XXX-XX-XX и E.164
                 $telClean = preg_replace('~[\s\-\(\)]~', '', $announce_contacts);
                 if (!preg_match('~^\+[0-9]{10,15}$~', $telClean)) {
-                    $error_text[] = 'Телефон должен быть в формате +кодстраны (код оператора) XXX-XX-XX';
+                    $error_text[] = $lang['zboard']['validation_phone'];
                 }
             }
             $find_url_msg = $announce_name . ' ' . $author . ' ' . $announce_description;
@@ -1684,15 +1691,15 @@ function send_zboard()
             //preg_match_all("@(?:(?:https?|ftp|telnet)://(?:[а-яА-ЯёЁa-zA-Z0-9_-]{1,32}(?::[а-яА-ЯёЁa-zA-Z0-9_-]{1,32})?@)?)?(?:(?:[а-яА-ЯёЁa-zA-Z0-9_-]{1,128}\.)+(?:ru|su|рф|com|net|org|mil|edu|arpa|gov|biz|info|aero|inc|name|[a-z]{2})|(?!0)(?:(?!0[^.]|255)[0-9]{1,3}\.){3}(?!0|255)[0-9]{1,3})(?:/[а-яА-ЯёЁa-zA-Z0-9_.,_@%&?+=\~/-]*)?(?:#[^ '\"&]*)?@", $find_url_msg, $find_url);
             //preg_match_all("@((https?://)?([-\w]+\.[-\w\.]+)+\w(:\d+)?(/([-\w/_\.]*(\?\S+)?)?)*)@", $find_url_msg, $find_url);
             if ($find_url[0]) {
-                $error_text[] = "В полях сообщения нельзя использовать ссылки!";
+                $error_text[] = $lang['zboard']['validation_links_forbidden'];
             }
             $announce_period = input_filter_com($_REQUEST['announce_period']);
             if (!empty($announce_period)) {
                 if (!in_array($announce_period, explode("|", pluginGetVariable('zboard', 'list_period')))) {
-                    $error_text[] = 'Такого слова нет ' . $announce_period;
+                    $error_text[] = $lang['zboard']['validation_period_invalid'] . ': ' . $announce_period;
                 }
             } else {
-                $error_text[] = 'Не указан период';
+                $error_text[] = $lang['zboard']['validation_period_required'];
             }
             if (pluginGetVariable('zboard', 'use_recaptcha')) {
                 $resp = recaptcha_check_answer(
@@ -1703,17 +1710,17 @@ function send_zboard()
                 );
                 if (!$resp->is_valid) {
                     // What happens when the CAPTCHA was entered incorrectly
-                    $error_text[] = "Проверочный код введен неправильно.";
+                    $error_text[] = $lang['zboard']['validation_captcha'];
                 }
             }
             $cat_id = intval($_REQUEST['cat_id']);
             if (!empty($cat_id)) {
                 $cat = $mysql->result('SELECT 1 FROM ' . prefix . '_zboard_cat WHERE id = \'' . $cat_id . '\' LIMIT 1');
                 if (empty($cat)) {
-                    $error_text[] = 'Такой категории не существует';
+                    $error_text[] = $lang['zboard']['validation_category_missing'];
                 }
             } else {
-                $error_text[] = 'Вы не выбрали категорию';
+                $error_text[] = $lang['zboard']['validation_category_required'];
             }
             if (empty($error_text)) {
                 $mysql->query('INSERT INTO ' . prefix . '_zboard (date, editdate, announce_name, author, author_id, author_email, announce_period, announce_description, announce_contacts, cat_id, active)
@@ -1752,7 +1759,7 @@ function send_zboard()
                             pluginGetVariable('zboard', 'template_mail')
                         );
                         foreach ($mysql->select('select * from ' . prefix . '_users WHERE status = 1') as $row) {
-                            zzMail($row['mail'], 'Добавлено новое объявление, требующее проверки и активации', $body, '', false, 'text/html');
+                            zzMail($row['mail'], $lang['zboard']['ui_new_announcement_mail_title'], $body, '', false, 'text/html');
                         }
                     }
                 }
@@ -1822,7 +1829,7 @@ function send_zboard()
         $template['vars']['mainblock'] .= $xt->render($tVars);
     } else {
         header('HTTP/1.1 403 Forbidden');
-        $SYSTEM_FLAGS['info']['title']['others'] = 'Доступ разрешен только авторизированным';
+        $SYSTEM_FLAGS['info']['title']['others'] = $lang['zboard']['ui_login_required'];
         $xt = $twig->loadTemplate($tpath['no_access'] . 'no_access.tpl');
         $tVars['vars']['home'] = home;
         $template['vars']['mainblock'] .= $xt->render($tVars);

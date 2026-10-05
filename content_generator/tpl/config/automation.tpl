@@ -30,25 +30,25 @@
 <div class="row mt-2">
 	<div class="col-12 mb-4">
 		<form method="post" class="card p-3" style="border:1px solid #ced4da;">
-			<h5>Настройки генератора</h5>
+			<h5>{{ lang['settings_title'] }}</h5>
 			<div class="form-row" style="display:flex;gap:20px;flex-wrap:wrap;">
 				<div style="min-width:200px;">
-					<label>Количество новостей</label>
+					<label>{{ lang['news_count'] }}</label>
 					<input type="number" class="form-control" name="news_count" min="1" max="100000" value="{{ news_count }}">
 				</div>
 				<div style="min-width:200px;">
-					<label>Количество статических страниц</label>
+					<label>{{ lang['static_count'] }}</label>
 					<input type="number" class="form-control" name="static_count" min="1" max="100000" value="{{ static_count }}">
 				</div>
 				<div style="min-width:200px;">
-					<label>Максимум за один запуск (лимит)</label>
+					<label>{{ lang['max_allowed'] }}</label>
 					<input type="number" class="form-control" name="max_allowed" min="1" max="100000" value="{{ max_allowed }}">
 				</div>
 			</div>
 			<input type="hidden" name="save" value="1">
 			<div class="mt-3">
-				<button type="submit" class="btn btn-success">Сохранить настройки</button>
-				<small class="text-muted ml-3">После сохранения используйте кнопки запуска ниже.</small>
+				<button type="submit" class="btn btn-success">{{ lang['save_settings'] }}</button>
+				<small class="text-muted ml-3">{{ lang['after_save'] }}</small>
 			</div>
 		</form>
 	</div>
@@ -56,13 +56,13 @@
 		<form action="" method="post" name="generate_news">
 			<input type="hidden" name="actionName" value="generate_news">
 			<div class="card">
-				<div class="card-header">Новости</div>
+				<div class="card-header">{{ lang['news'] }}</div>
 				<div class="card-body">
 					<div class="list mb-2">
-						Будет создано (новостей):
+						{{ lang['will_create_news'] }}
 						<strong>{{ news_count }}</strong>
 					</div>
-					<div class="list text-muted" style="font-size:12px;">Лимит за запуск:
+					<div class="list text-muted" style="font-size:12px;">{{ lang['run_limit'] }}
 						{{ max_allowed }}</div>
 					<div class="list">
 						<div class="progressbar">
@@ -73,7 +73,7 @@
 					<div class="message"></div>
 				</div>
 				<div class="card-footer">
-					<input type="submit" name="submit" value="Начать!" class="btn btn-outline-primary">
+					<input type="submit" name="submit" value="{{ lang['start'] }}" class="btn btn-outline-primary">
 				</div>
 			</div>
 		</form>
@@ -82,13 +82,13 @@
 		<form action="" method="post" name="generate_static">
 			<input type="hidden" name="actionName" value="generate_static">
 			<div class="card">
-				<div class="card-header">Статьи</div>
+				<div class="card-header">{{ lang['static_pages'] }}</div>
 				<div class="card-body">
 					<div class="list mb-2">
-						Будет создано (статических):
+						{{ lang['will_create_static'] }}
 						<strong>{{ static_count }}</strong>
 					</div>
-					<div class="list text-muted" style="font-size:12px;">Лимит за запуск:
+					<div class="list text-muted" style="font-size:12px;">{{ lang['run_limit'] }}
 						{{ max_allowed }}</div>
 					<div class="list">
 						<div class="progressbar">
@@ -99,7 +99,7 @@
 					<div class="message"></div>
 				</div>
 				<div class="card-footer">
-					<input type="submit" name="submit" value="Начать!" class="btn btn-outline-primary">
+					<input type="submit" name="submit" value="{{ lang['start'] }}" class="btn btn-outline-primary">
 				</div>
 			</div>
 		</form>
@@ -133,7 +133,7 @@ rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script
 			progressbar.show().progressbar({
 			value: false,
 			complete: function () {
-			progressLabel.text("Готово!");
+			progressLabel.text("{{ lang['complete'] }}");
 			}
 			});
 			$.ajax({
@@ -148,16 +148,16 @@ rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script
 				console.log('Server response:', response);
 				progressbar.progressbar("value", 100);
 				if (response.error) {
-					showMessage('error', 'Ошибка: ' + response.error);
+					showMessage('error', '{{ lang['error_prefix'] }}' + response.error);
 				} else if (response.status === 'success') {
-					let msg = 'Создано: ' + (response.generated || 0) + ' из ' + response.count;
+					let msg = '{{ lang['created_prefix'] }}' + (response.generated || 0) + ' {{ lang['of'] }} ' + response.count;
 					showMessage('success', msg);
 				}
 			},
 			error: function (xhr, status, error) {
-			console.error("Ошибка AJAX:", error);
+			console.error("{{ lang['ajax_error_prefix'] }}", error);
 			console.log("XHR response:", xhr.responseText);
-			showMessage('error', `Произошла ошибка: ${error}`);
+			showMessage('error', '{{ lang['ajax_error_prefix'] }}' + error);
 			},
 			complete: function () {
 			finishProcess();

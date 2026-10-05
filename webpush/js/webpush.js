@@ -11,9 +11,20 @@
 
   const endpoint =
     btn.dataset.endpoint || "/engine/plugins/webpush/endpoint.php";
-  const subscribeText = btn.dataset.subscribeText || "Включить уведомления";
-  const unsubscribeText =
-    btn.dataset.unsubscribeText || "Отключить уведомления";
+  const subscribeText = btn.dataset.subscribeText || "Enable notifications";
+  const unsubscribeText = btn.dataset.unsubscribeText || "Disable notifications";
+  const messages = {
+    errorNoSupport: btn.dataset.errorNoSupport || "Your browser does not support push notifications",
+    errorPermission: btn.dataset.errorPermission || "Please allow notifications in your browser settings",
+    errorHttps: btn.dataset.errorHttps || "Push notifications require HTTPS",
+    errorKey: btn.dataset.errorKey || "Error: public key is not configured",
+    errorServiceWorker: btn.dataset.errorServiceWorker || "Failed to register the Service Worker",
+    errorSubscribe: btn.dataset.errorSubscribe || "Failed to subscribe: ",
+    errorUnsubscribe: btn.dataset.errorUnsubscribe || "Failed to unsubscribe: ",
+    errorUnknown: btn.dataset.errorUnknown || "unknown error",
+    subscribed: btn.dataset.subscribedMessage || "You are subscribed to notifications",
+    unsubscribed: btn.dataset.unsubscribedMessage || "You have unsubscribed from notifications",
+  };
   const publicKeyFromButton = btn.dataset.publicKey || "";
   const messageEl = document.getElementById("webpush-message");
 
@@ -85,7 +96,7 @@
    */
   async function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) {
-      showMessage("Ваш браузер не поддерживает push-уведомления", true);
+      showMessage(messages.errorNoSupport, true);
       return null;
     }
 
@@ -109,7 +120,7 @@
       return registration;
     } catch (error) {
       console.error("Service Worker registration failed:", error);
-      showMessage("Ошибка регистрации Service Worker", true);
+      showMessage(messages.errorServiceWorker, true);
       return null;
     }
   }
@@ -137,7 +148,7 @@
     try {
       // Проверяем HTTPS
       if (location.protocol !== "https:" && location.hostname !== "localhost") {
-        showMessage("Push-уведомления работают только по HTTPS", true);
+        showMessage(messages.errorHttps, true);
         return;
       }
 
@@ -150,7 +161,7 @@
 
       if (permission !== "granted") {
         showMessage(
-          "Необходимо разрешить уведомления в настройках браузера",
+          messages.errorPermission,
           true
         );
         return;
@@ -160,7 +171,7 @@
       const publicKey = await getPublicKey();
 
       if (!publicKey) {
-        showMessage("Ошибка: публичный ключ не настроен", true);
+        showMessage(messages.errorKey, true);
         console.error("VAPID public key is empty");
         return;
       }
@@ -184,16 +195,16 @@
 
       if (result.ok) {
         updateButton(true);
-        showMessage("Вы подписаны на уведомления");
+        showMessage(messages.subscribed);
       } else {
         showMessage(
-          "Ошибка подписки: " + (result.error || "неизвестная ошибка"),
+          messages.errorSubscribe + (result.error || messages.errorUnknown),
           true
         );
       }
     } catch (error) {
       console.error("Subscribe error:", error);
-      showMessage("Ошибка при подписке: " + error.message, true);
+      showMessage(messages.errorSubscribe + error.message, true);
     }
   }
 
@@ -221,10 +232,10 @@
       await subscription.unsubscribe();
 
       updateButton(false);
-      showMessage("Вы отписались от уведомлений");
+      showMessage(messages.unsubscribed);
     } catch (error) {
       console.error("Unsubscribe error:", error);
-      showMessage("Ошибка при отписке: " + error.message, true);
+      showMessage(messages.errorUnsubscribe + error.message, true);
     }
   }
 

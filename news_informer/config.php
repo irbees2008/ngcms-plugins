@@ -19,10 +19,10 @@ array_push($cfgX, array(
 ));
 array_push($cfgX, array(
     'name' => 'mode',
-    'title' => "Режим работы",
-    'descr' => "<b>Автоматически</b> - плагин выводится автоматически<br /><b>TWIG</b> - вывод только через TWIG функцию",
+    'title' => $lang['news_informer:mode'],
+    'descr' => $lang['news_informer:mode#desc'],
     'type' => 'select',
-    'values' => array('0' => 'Автоматически', '1' => 'TWIG'),
+    'values' => array('0' => $lang['news_informer:mode.auto'], '1' => $lang['news_informer:mode.twig']),
     'value' => intval(pluginGetVariable('news_informer', 'mode'))
 ));
 array_push($cfg, array('mode' => 'group', 'title' => $lang['news_informer:group.config'], 'entries' => $cfgX));
@@ -32,7 +32,7 @@ array_push($cfgX, array(
     'title' => $lang['news_informer:localsource'],
     'descr' => $lang['news_informer:localsource#desc'],
     'type' => 'select',
-    'values' => array('0' => 'Шаблон сайта', '1' => 'Плагин'),
+    'values' => array('0' => $lang['news_informer:localsource.site'], '1' => $lang['news_informer:localsource.plugin']),
     'value' => intval(pluginGetVariable('news_informer', 'localsource'))
 ));
 array_push($cfg, array('mode' => 'group', 'title' => $lang['news_informer:group.source'], 'entries' => $cfgX));
@@ -42,7 +42,7 @@ array_push($cfgX, array(
     'title' => $lang['news_informer:cache'],
     'descr' => $lang['news_informer:cache#desc'],
     'type' => 'select',
-    'values' => array('1' => 'Да', '0' => 'Нет'),
+    'values' => array('1' => $lang['news_informer:option_yes'], '0' => $lang['news_informer:option_no']),
     'value' => intval(pluginGetVariable('news_informer', 'cache'))
 ));
 array_push($cfgX, array(
@@ -59,22 +59,22 @@ $cfgX = array();
 $embedUrl = home . '/engine/?mod=extra-config&plugin=news_informer&action=embed';
 array_push($cfgX, array(
     'name' => 'embed_code',
-    'title' => "Код для вставки",
+    'title' => $lang['news_informer:embed_code'],
     'descr' => '
         <div style="margin-bottom:15px;">
-            <h4>JavaScript вариант:</h4>
+            <h4>' . $lang['news_informer:embed.javascript_title'] . '</h4>
             <textarea style="width:100%; height:50px; font-family:monospace;" onclick="this.select();"><script src="' . $embedUrl . '"></script></textarea>
-            <p>Просто вставьте этот код в HTML страницы, где должен отображаться информер.</p>
+            <p>' . $lang['news_informer:embed.javascript_help'] . '</p>
         </div>
         <div>
-            <h4>Iframe вариант:</h4>
+            <h4>' . $lang['news_informer:embed.iframe_title'] . '</h4>
             <textarea style="width:100%; height:50px; font-family:monospace;" onclick="this.select();"><iframe src="' . $embedUrl . '&mode=html" width="300" height="500" frameborder="0" scrolling="auto"></iframe></textarea>
-            <p>Используйте этот вариант, если JavaScript недоступен.</p>
+            <p>' . $lang['news_informer:embed.iframe_help'] . '</p>
         </div>
     ',
     'type' => 'static',
 ));
-array_push($cfg, array('mode' => 'group', 'title' => 'Код для вставки на другие сайты', 'entries' => $cfgX));
+array_push($cfg, array('mode' => 'group', 'title' => $lang['news_informer:group.embed'], 'entries' => $cfgX));
 // RUN
 if ($_REQUEST['action'] == 'commit') {
     // If submit requested, do config save

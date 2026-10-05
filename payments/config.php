@@ -2,7 +2,8 @@
 if (!defined('NGCMS')) die('HAL');
 
 pluginsLoadConfig();
-LoadPluginLang('payments', 'config', '', '', '#');
+LoadPluginLang('payments', 'config', '', '', ':');
+global $lang;
 
 $pluginDir = __DIR__;
 $adapters  = [];
@@ -15,65 +16,64 @@ $cfg = [];
 
 // ─── General section ───────────────────────────────────────────────────────
 array_push($cfg, [
-    'descr' => 'Плагин обеспечивает интеграцию платёжных шлюзов с корзиной (basket). '
-        . 'Каждый адаптер активируется отдельно и настраивается ключами соответствующего сервиса.',
+    'descr' => $lang['payments:config.description'],
 ]);
 array_push($cfg, [
     'name'  => 'currency',
     'type'  => 'input',
-    'title' => 'Валюта по умолчанию',
-    'descr' => 'ISO-код валюты (UAH, RUB, USD…)',
+    'title' => $lang['payments:config.currency'],
+    'descr' => $lang['payments:config.currency_help'],
     'value' => pluginGetVariable('payments', 'currency') ?: 'RUB',
 ]);
 array_push($cfg, [
     'name'  => 'success_redirect',
     'type'  => 'input',
-    'title' => 'Redirect после успешной оплаты',
-    'descr' => 'URL или пусто — будет использована страница /payments/success/',
+    'title' => $lang['payments:config.success_redirect'],
+    'descr' => $lang['payments:config.success_redirect_help'],
     'value' => pluginGetVariable('payments', 'success_redirect'),
 ]);
 array_push($cfg, [
     'name'  => 'fail_redirect',
     'type'  => 'input',
-    'title' => 'Redirect после неудачной оплаты',
-    'descr' => 'URL или пусто — будет использована страница /payments/fail/',
+    'title' => $lang['payments:config.fail_redirect'],
+    'descr' => $lang['payments:config.fail_redirect_help'],
     'value' => pluginGetVariable('payments', 'fail_redirect'),
 ]);
 
 // ─── Per-adapter sections ──────────────────────────────────────────────────
 $adapterMeta = [
     'liqpay'    => ['title' => 'LiqPay', 'fields' => [
-        ['name' => 'public_key',  'title' => 'Public key'],
-        ['name' => 'private_key', 'title' => 'Private key'],
+        ['name' => 'public_key',  'title' => $lang['payments:config.field.public_key']],
+        ['name' => 'private_key', 'title' => $lang['payments:config.field.private_key']],
     ]],
     'robokassa' => ['title' => 'Robokassa', 'fields' => [
-        ['name' => 'mrh_login', 'title' => 'Логин магазина'],
-        ['name' => 'mrh_pass1', 'title' => 'Password 1'],
-        ['name' => 'mrh_pass2', 'title' => 'Password 2'],
-        ['name' => 'test_mode', 'title' => 'Тестовый режим', 'type' => 'select', 'values' => [0 => 'Нет', 1 => 'Да']],
+        ['name' => 'mrh_login', 'title' => $lang['payments:config.field.store_login']],
+        ['name' => 'mrh_pass1', 'title' => $lang['payments:config.field.password_1']],
+        ['name' => 'mrh_pass2', 'title' => $lang['payments:config.field.password_2']],
+        ['name' => 'test_mode', 'title' => $lang['payments:config.test_mode'], 'type' => 'select', 'values' => [0 => $lang['payments:config.option_no'], 1 => $lang['payments:config.option_yes']]],
     ]],
     'unitpay'   => ['title' => 'Unitpay', 'fields' => [
-        ['name' => 'public_key',  'title' => 'Public key'],
-        ['name' => 'secret_key',  'title' => 'Secret key'],
-        ['name' => 'project_id',  'title' => 'ID проекта'],
+        ['name' => 'public_key',  'title' => $lang['payments:config.field.public_key']],
+        ['name' => 'secret_key',  'title' => $lang['payments:config.field.secret_key']],
+        ['name' => 'project_id',  'title' => $lang['payments:config.field.project_id']],
     ]],
     'pay2pay'   => ['title' => 'Pay2Pay', 'fields' => [
-        ['name' => 'shop_id',  'title' => 'Shop ID'],
-        ['name' => 'secret',   'title' => 'Secret key'],
+        ['name' => 'shop_id',  'title' => $lang['payments:config.field.shop_id']],
+        ['name' => 'secret',   'title' => $lang['payments:config.field.secret_key']],
     ]],
-    'privat24'  => ['title' => 'Privat24 (Приват24)', 'fields' => [
-        ['name' => 'merchant_id',       'title' => 'Merchant ID'],
-        ['name' => 'merchant_password', 'title' => 'Merchant password'],
+    'privat24'  => ['title' => 'Privat24', 'fields' => [
+        ['name' => 'merchant_id',       'title' => $lang['payments:config.field.merchant_id']],
+        ['name' => 'merchant_password', 'title' => $lang['payments:config.field.merchant_password']],
     ]],
-    'yoomoney'  => ['title' => 'ЮMoney (YooMoney)', 'fields' => [
-        ['name' => 'shop_id',      'title' => 'shopId'],
-        ['name' => 'secret_key',   'title' => 'Secret key'],
-        ['name' => 'return_url',   'title' => 'Return URL'],
+    'yoomoney'  => ['title' => 'YooMoney', 'fields' => [
+        ['name' => 'shop_id',      'title' => $lang['payments:config.field.shop_id']],
+        ['name' => 'secret_key',   'title' => $lang['payments:config.field.secret_key']],
+        ['name' => 'return_url',   'title' => $lang['payments:config.field.return_url']],
     ]],
     'freekassa' => ['title' => 'FreeKassa', 'fields' => [
-        ['name' => 'merchant_id', 'title' => 'Merchant ID'],
-        ['name' => 'secret1',     'title' => 'Secret word 1'],
-        ['name' => 'secret2',     'title' => 'Secret word 2'],
+        ['name' => 'merchant_id', 'title' => $lang['payments:config.field.merchant_id']],
+        ['name' => 'secret1',     'title' => $lang['payments:config.field.secret_word_1']],
+        ['name' => 'secret2',     'title' => $lang['payments:config.field.secret_word_2']],
     ]],
 ];
 
@@ -82,15 +82,15 @@ foreach ($adapterMeta as $adapterName => $meta) {
     array_push($cfgX, [
         'name'   => $adapterName . '_enabled',
         'type'   => 'select',
-        'title'  => 'Включить ' . $meta['title'],
-        'values' => [0 => 'Нет', 1 => 'Да'],
+        'title'  => $lang['payments:config.enable_adapter'] . ' ' . $meta['title'],
+        'values' => [0 => $lang['payments:config.option_no'], 1 => $lang['payments:config.option_yes']],
         'value'  => pluginGetVariable('payments', $adapterName . '_enabled'),
     ]);
     array_push($cfgX, [
         'name'  => $adapterName . '_label',
         'type'  => 'input',
-        'title' => 'Название для пользователя',
-        'descr' => 'Отображается в форме выбора способа оплаты',
+        'title' => $lang['payments:config.adapter_label'],
+        'descr' => $lang['payments:config.adapter_label_help'],
         'value' => pluginGetVariable('payments', $adapterName . '_label') ?: $meta['title'],
     ]);
     foreach ($meta['fields'] as $f) {

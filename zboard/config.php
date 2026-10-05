@@ -16,6 +16,11 @@ use function Plugins\{notify, logger};
 pluginsLoadConfig();
 LoadPluginLang('zboard', 'config', '', '', '#');
 include_once(dirname(__FILE__) . '/cache.php');
+function zboard_config_lang($key)
+{
+	global $lang;
+	return $lang['zboard'][$key];
+}
 // Безопасно получаем действие из запроса, чтобы избежать Notice: Undefined index
 $action = isset($_REQUEST['action']) ? $_REQUEST['action'] : '';
 switch ($action) {
@@ -115,20 +120,20 @@ function cat_edit()
 		$parent_id = intval($_REQUEST['parent']);
 		$cat_name = input_filter_com($_REQUEST['cat_name']);
 		if (empty($cat_name)) {
-			$error_text[] = '?Название категории не задано';
+			$error_text[] = zboard_config_lang('admin_category_name_required');
 		}
 		$description = input_filter_com($_REQUEST['description']);
 		if (empty($description)) {
-			$error_text[] = 'Описание категории не задано';
+			$error_text[] = zboard_config_lang('admin_category_description_required');
 		}
 		$keywords = input_filter_com($_REQUEST['keywords']);
 		if (empty($keywords)) {
-			$error_text[] = 'Ключевые слова не заданы';
+			$error_text[] = zboard_config_lang('admin_category_keywords_required');
 		}
 		//$position = intval($_REQUEST['position']);
 		$position = 1;
 		if (empty($position)) {
-			$error_text[] = 'Не задана позиция';
+			$error_text[] = zboard_config_lang('admin_position_required');
 		}
 		if (empty($error_text)) {
 			//	position = '.intval($position).'
@@ -169,7 +174,7 @@ function cat_edit()
 	$tvars['vars'] = array(
 		'active' => !empty($count) ? '[ ' . $count . ' ]' : '',
 		'entries' => $tpl->show('send_cat'),
-		'global' => 'Редактировать категорию'
+		'global' => zboard_config_lang('admin_edit_category')
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);
@@ -228,20 +233,20 @@ function send_cat($params)
 		$cat_name = input_filter_com($_REQUEST['cat_name']);
 		$parent_id = isset($_REQUEST['parent']) ? intval($_REQUEST['parent']) : 0;
 		if (empty($cat_name)) {
-			$error_text[] = 'Название категории не задано';
+			$error_text[] = zboard_config_lang('admin_category_name_required');
 		}
 		$description = input_filter_com($_REQUEST['description']);
 		if (empty($description)) {
-			$error_text[] = 'Описание категории не задано';
+			$error_text[] = zboard_config_lang('admin_category_description_required');
 		}
 		$keywords = input_filter_com($_REQUEST['keywords']);
 		if (empty($keywords)) {
-			$error_text[] = 'Ключевые слова не заданы';
+			$error_text[] = zboard_config_lang('admin_category_keywords_required');
 		}
 		//$position = intval($_REQUEST['position']);
 		$position = 1;
 		if (empty($position)) {
-			$error_text[] = 'Не задана позиция';
+			$error_text[] = zboard_config_lang('admin_position_required');
 		}
 		if (empty($error_text)) {
 			$mysql->query('INSERT INTO ' . prefix . '_zboard_cat (cat_name, description, keywords, parent_id, position)
@@ -282,7 +287,7 @@ function send_cat($params)
 	$tvars['vars'] = array(
 		'active' => !empty($count) ? '[ ' . $count . ' ]' : '',
 		'entries' => $tpl->show('send_cat'),
-		'global' => 'Добавить категорию'
+		'global' => zboard_config_lang('admin_add_category')
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);
@@ -315,7 +320,7 @@ function list_cat()
 	$tvars['vars'] = array(
 		'active' => !empty($count) ? '[ ' . $count . ' ]' : '',
 		'entries' => $tpl->show('list_cat'),
-		'global' => 'Список категорий'
+		'global' => zboard_config_lang('admin_categories_list')
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);
@@ -329,7 +334,7 @@ function list_order()
 	foreach ($mysql->select('SELECT *, po.id as id, zb.id as zid from ' . prefix . '_zboard_pay_order po LEFT JOIN ' . prefix . '_zboard zb  ON po.zid = zb.id ORDER BY po.id ASC') as $row) {
 		$gvars['vars'] = array(
 			'id' => $row['id'],
-			'dt' => (empty($row['dt'])) ? 'Дата не указана' : date(pluginGetVariable('zboard', 'date'), $row['dt']),
+			'dt' => (empty($row['dt'])) ? zboard_config_lang('admin_date_missing') : date(pluginGetVariable('zboard', 'date'), $row['dt']),
 			'price' => $row['amount'] . " " . $row['currency'],
 			'discr' => $row['description'],
 			'status' => $row['status'],
@@ -346,7 +351,7 @@ function list_order()
 	$tvars['vars'] = array(
 		'active' => !empty($count) ? '[ ' . $count . ' ]' : '',
 		'entries' => $tpl->show('list_order'),
-		'global' => 'Прайс'
+		'global' => zboard_config_lang('admin_prices')
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);
@@ -375,7 +380,7 @@ function list_price()
 	$tvars['vars'] = array(
 		'active' => !empty($count) ? '[ ' . $count . ' ]' : '',
 		'entries' => $tpl->show('list_price'),
-		'global' => 'Прайс'
+		'global' => zboard_config_lang('admin_prices')
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);
@@ -393,10 +398,10 @@ function send_price($params)
 		$price = input_filter_com($_REQUEST['price']);
 		$time = intval($_REQUEST['time']);
 		if (empty($price)) {
-			$error_text[] = 'Прайс не задан';
+			$error_text[] = zboard_config_lang('admin_price_required');
 		}
 		if (empty($time)) {
-			$error_text[] = 'Время не задано';
+			$error_text[] = zboard_config_lang('admin_time_required');
 		}
 		if (empty($error_text)) {
 			$mysql->query('INSERT INTO ' . prefix . '_zboard_pay_price (time, price)
@@ -428,7 +433,7 @@ function send_price($params)
 	$tvars['vars'] = array(
 		'active' => !empty($count) ? '[ ' . $count . ' ]' : '',
 		'entries' => $tpl->show('send_price'),
-		'global' => 'Добавить категорию'
+		'global' => zboard_config_lang('admin_add_price')
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);
@@ -446,10 +451,10 @@ function price_edit()
 		$time = intval($_REQUEST['time']);
 		$price = input_filter_com($_REQUEST['price']);
 		if (empty($price)) {
-			$error_text[] = 'Прайс не задан';
+			$error_text[] = zboard_config_lang('admin_price_required');
 		}
 		if (empty($time)) {
-			$error_text[] = 'Время не задано';
+			$error_text[] = zboard_config_lang('admin_time_required');
 		}
 		if (empty($error_text)) {
 			//	position = '.intval($position).'
@@ -481,7 +486,7 @@ function price_edit()
 	$tvars['vars'] = array(
 		'active' => !empty($count) ? '[ ' . $count . ' ]' : '',
 		'entries' => $tpl->show('send_price'),
-		'global' => 'Редактировать прайс'
+		'global' => zboard_config_lang('admin_edit_price')
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);
@@ -492,11 +497,12 @@ function price_del()
 	global $mysql;
 	$id = intval($_REQUEST['id']);
 	if (empty($id)) {
-		notify('error', 'Ошибка, вы не выбрали что хотите удалить');
-		return '<div class="alert alert-danger">Ошибка, вы не выбрали что хотите удалить</div>';
+		$error = zboard_config_lang('admin_select_delete_target');
+		notify('error', $error);
+		return '<div class="alert alert-danger">' . $error . '</div>';
 	}
 	$mysql->query("delete from " . prefix . "_zboard_pay_price where id = {$id}");
-	notify('success', 'Прайс удален');
+	notify('success', zboard_config_lang('admin_price_deleted'));
 	logger('zboard price deleted, id: ' . $id, 'info');
 }
 function url()
@@ -513,10 +519,10 @@ function url()
 				array(
 					'vars' =>
 					array(
-						'cat' => array('matchRegex' => '\d+', 'descr' => array('russian' => 'Категории')),
-						'page' => array('matchRegex' => '\d{1,4}', 'descr' => array('russian' => 'Постраничная навигация'))
+						'cat' => array('matchRegex' => '\d+', 'descr' => array('russian' => 'Категории', 'english' => 'Categories')),
+						'page' => array('matchRegex' => '\d{1,4}', 'descr' => array('russian' => 'Постраничная навигация', 'english' => 'Page navigation'))
 					),
-					'descr'	=> array('russian' => 'Главная страница'),
+					'descr'	=> array('russian' => 'Главная страница', 'english' => 'Home page'),
 				)
 			);
 			$ULIB->registerCommand(
@@ -525,9 +531,9 @@ function url()
 				array(
 					'vars' =>
 					array(
-						'id' => array('matchRegex' => '\d+', 'descr' => array('russian' => 'ID объявления')),
+						'id' => array('matchRegex' => '\d+', 'descr' => array('russian' => 'ID объявления', 'english' => 'Announcement ID')),
 					),
-					'descr'	=> array('russian' => 'Ссылка на объявление'),
+					'descr'	=> array('russian' => 'Ссылка на объявление', 'english' => 'Announcement link'),
 				)
 			);
 			$ULIB->registerCommand(
@@ -536,7 +542,7 @@ function url()
 				array(
 					'vars' =>
 					array(),
-					'descr'	=> array('russian' => 'Добавить объявлдение'),
+					'descr'	=> array('russian' => 'Добавить объявлдение', 'english' => 'Submit an announcement'),
 				)
 			);
 			$ULIB->registerCommand(
@@ -545,7 +551,7 @@ function url()
 				array(
 					'vars' =>
 					array(),
-					'descr'	=> array('russian' => 'Поиск по объявлениям'),
+					'descr'	=> array('russian' => 'Поиск по объявлениям', 'english' => 'Search announcements'),
 				)
 			);
 			$ULIB->registerCommand(
@@ -554,9 +560,9 @@ function url()
 				array(
 					'vars' =>
 					array(
-						'page' => array('matchRegex' => '\d{1,4}', 'descr' => array('russian' => 'Постраничная навигация'))
+						'page' => array('matchRegex' => '\d{1,4}', 'descr' => array('russian' => 'Постраничная навигация', 'english' => 'Page navigation'))
 					),
-					'descr'	=> array('russian' => 'Список объявлений добавленных пользователем'),
+					'descr'	=> array('russian' => 'Список объявлений добавленных пользователем', 'english' => 'User-submitted announcements'),
 				)
 			);
 			$ULIB->registerCommand(
@@ -565,9 +571,9 @@ function url()
 				array(
 					'vars' =>
 					array(
-						'id' => array('matchRegex' => '\d+', 'descr' => array('russian' => 'ID объявления')),
+						'id' => array('matchRegex' => '\d+', 'descr' => array('russian' => 'ID объявления', 'english' => 'Announcement ID')),
 					),
-					'descr'	=> array('russian' => 'Ссылка для редактирования'),
+					'descr'	=> array('russian' => 'Ссылка для редактирования', 'english' => 'Edit link'),
 				)
 			);
 			$ULIB->registerCommand(
@@ -576,9 +582,9 @@ function url()
 				array(
 					'vars' =>
 					array(
-						'id' => array('matchRegex' => '\d+', 'descr' => array('russian' => 'ID объявления')),
+						'id' => array('matchRegex' => '\d+', 'descr' => array('russian' => 'ID объявления', 'english' => 'Announcement ID')),
 					),
-					'descr'	=> array('russian' => 'Ссылка для удаления'),
+					'descr'	=> array('russian' => 'Ссылка для удаления', 'english' => 'Delete link'),
 				)
 			);
 			$ULIB->registerCommand(
@@ -587,10 +593,10 @@ function url()
 				array(
 					'vars' =>
 					array(
-						'id' => array('matchRegex' => '\d+', 'descr' => array('russian' => 'ID объявления')),
-						'hashcode' => array('matchRegex' => '.+?', 'descr' => array('russian' => 'Hashcode объявления')),
+						'id' => array('matchRegex' => '\d+', 'descr' => array('russian' => 'ID объявления', 'english' => 'Announcement ID')),
+						'hashcode' => array('matchRegex' => '.+?', 'descr' => array('russian' => 'Hashcode объявления', 'english' => 'Announcement hash')),
 					),
-					'descr'	=> array('russian' => 'Ссылка для продления'),
+					'descr'	=> array('russian' => 'Ссылка для продления', 'english' => 'Renewal link'),
 				)
 			);
 			$ULIB->saveConfig();
@@ -1006,7 +1012,7 @@ function url()
 		redirect_zboard('?mod=extra-config&plugin=zboard&action=url');
 	}
 	$url = pluginGetVariable('zboard', 'url');
-	$url = '<option value="0" ' . (empty($url) ? 'selected' : '') . '>Нет</option><option value="1" ' . (!empty($url) ? 'selected' : '') . '>Да</option>';
+	$url = '<option value="0" ' . (empty($url) ? 'selected' : '') . '>' . zboard_config_lang('admin_no') . '</option><option value="1" ' . (!empty($url) ? 'selected' : '') . '>' . zboard_config_lang('admin_yes') . '</option>';
 	$pvars['vars']['info'] = $url;
 	$count = $mysql->result('SELECT COUNT(id) FROM ' . prefix . '_zboard WHERE active = \'0\' ');
 	$tpl->template('url', $tpath['config/url'] . 'config');
@@ -1014,7 +1020,7 @@ function url()
 	$tvars['vars'] = array(
 		'active' => !empty($count) ? '[ ' . $count . ' ]' : '',
 		'entries' => $tpl->show('url'),
-		'global' => 'Настройка ЧПУ'
+		'global' => zboard_config_lang('admin_url_title')
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);
@@ -1035,13 +1041,13 @@ function list_announce()
 	foreach ($mysql->select('SELECT * from ' . prefix . '_zboard ORDER BY editdate DESC LIMIT ' . $start_from . ', ' . $news_per_page) as $row) {
 		switch ($row['active']) {
 			case 1:
-				$active = 'Да';
+				$active = zboard_config_lang('admin_yes');
 				break;
 			case 0:
-				$active = 'Нет';
+				$active = zboard_config_lang('admin_no');
 				break;
 			default:
-				$active = 'Ошибка';
+				$active = zboard_config_lang('admin_error');
 		}
 		foreach ($mysql->select('SELECT id, cat_name FROM ' . prefix . '_zboard_cat where id=' . $row['cat_id'] . '') as $cat) {
 			$options = $cat['cat_name'];
@@ -1054,7 +1060,7 @@ function list_announce()
 			'announce_contacts' => $row['announce_contacts'],
 			'vip_added'				=>	$row['vip_added'],
 			'vip_expired'			=>	$row['vip_expired'],
-			'date' => (empty($row['date'])) ? 'Дата не указана' : date(pluginGetVariable('zboard', 'date'), $row['date']),
+			'date' => (empty($row['date'])) ? zboard_config_lang('admin_date_missing') : date(pluginGetVariable('zboard', 'date'), $row['date']),
 			'category' => $options,
 			'active' => $active,
 			'author' => $row['author'],
@@ -1081,7 +1087,7 @@ function list_announce()
 	$tvars['vars'] = array(
 		'active' => !empty($count) ? '[ ' . $count . ' ]' : '',
 		'entries' => $tpl->show('list_announce'),
-		'global' => 'Список объявлений'
+		'global' => zboard_config_lang('admin_announcements_list')
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);
@@ -1113,34 +1119,34 @@ function edit_announce()
 			$SQL['editdate'] = time() + ($config['date_adjust'] * 60);
 			$SQL['announce_name'] = input_filter_com($_REQUEST['announce_name']);
 			if (empty($SQL['announce_name']))
-				$error_text[] = 'Название объявления пустое';
+				$error_text[] = zboard_config_lang('admin_announcement_name_empty');
 			$SQL['author'] = input_filter_com($_REQUEST['author']);
 			if (empty($SQL['author']))
-				$error_text[] = 'Поле автор не заполнено';
+				$error_text[] = zboard_config_lang('admin_author_required');
 			$SQL['announce_period'] = input_filter_com($_REQUEST['announce_period']);
 			if (!empty($SQL['announce_period'])) {
 				if (!in_array($SQL['announce_period'], explode("|", pluginGetVariable('zboard', 'list_period')))) {
-					$error_text[] = 'Поле период задано неверно ' . $SQL['announce_period'];
+					$error_text[] = zboard_config_lang('admin_period_invalid') . ' ' . $SQL['announce_period'];
 				}
 			} else {
-				$error_text[] = 'Поле период не заполнено';
+				$error_text[] = zboard_config_lang('admin_period_required');
 			}
 			$SQL['cat_id'] = intval($_REQUEST['cat_id']);
 			if (!empty($SQL['cat_id'])) {
 				$cat = $mysql->result('SELECT 1 FROM ' . prefix . '_zboard_cat WHERE id = \'' . $SQL['cat_id'] . '\' LIMIT 1');
 				if (empty($cat)) {
-					$error_text[] = 'Такой категории не существует';
+					$error_text[] = zboard_config_lang('admin_category_missing');
 				}
 			} else {
-				$error_text[] = 'Вы не выбрали категорию';
+				$error_text[] = zboard_config_lang('admin_category_required');
 			}
 			$SQL['announce_description'] = str_replace(array("\r\n", "\r"), "\n", input_filter_com($_REQUEST['announce_description']));
 			if (empty($SQL['announce_description'])) {
-				$error_text[] = 'Нет описания к объявлению';
+				$error_text[] = zboard_config_lang('admin_description_required');
 			}
 			$SQL['announce_contacts'] = str_replace(array("\r\n", "\r"), "\n", input_filter_com($_REQUEST['announce_contacts']));
 			if (empty($SQL['announce_contacts'])) {
-				$error_text[] = 'Нет контактов к объявлению';
+				$error_text[] = zboard_config_lang('admin_contacts_required');
 			}
 			$SQL['active'] = $_REQUEST['announce_activeme'];
 			if (isset($SQLi) && is_array($SQLi)) {
@@ -1197,7 +1203,7 @@ function edit_announce()
 			'error' => $error_input,
 		);
 	} else {
-		msg(array("type" => "error", "text" => "Вы выбрали неверное id"));
+		msg(array("type" => "error", "text" => zboard_config_lang('admin_invalid_id')));
 	}
 	$entriesImg = '';
 	foreach ($mysql->select('select * from ' . prefix . '_zboard_images where zid=' . $id . '') as $row2) {
@@ -1239,7 +1245,7 @@ function edit_announce()
 		'active' => !empty($count) ? '[ ' . $count . ' ]' : '',
 		'entries' => $tpl->show('edit_announce'),
 		'entriesImg' => $tpl->show('list_images'),
-		'global' => 'Редактирование: ' . $row['announce_name']
+		'global' => zboard_config_lang('admin_edit_announcement_prefix') . ' ' . $row['announce_name']
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);
@@ -1268,12 +1274,13 @@ function cat_name_del()
 	global $mysql;
 	$id = intval($_REQUEST['id']);
 	if (empty($id)) {
-		notify('error', 'Ошибка, вы не выбрали что хотите удалить');
-		return '<div class="alert alert-danger">Ошибка, вы не выбрали что хотите удалить</div>';
+			$error = zboard_config_lang('admin_select_delete_target');
+			notify('error', $error);
+			return '<div class="alert alert-danger">' . $error . '</div>';
 	}
 	$mysql->query("delete from " . prefix . "_zboard_cat where id = {$id}");
 	generate_catz_cache(true);
-	notify('success', 'Категория удалена');
+	notify('success', zboard_config_lang('admin_category_deleted'));
 	logger('zboard category deleted, id: ' . $id, 'info');
 }
 function modify()
@@ -1282,8 +1289,9 @@ function modify()
 	$selected_news = $_REQUEST['selected_files'];
 	$subaction	=	$_REQUEST['subaction'];
 	if (empty($selected_news)) {
-		notify('error', 'Ошибка, вы не выбрали объявление');
-		return '<div class="alert alert-danger">Ошибка, вы не выбрали объявление</div>';
+		$error = zboard_config_lang('admin_announcement_not_selected');
+		notify('error', $error);
+		return '<div class="alert alert-danger">' . $error . '</div>';
 	}
 	switch ($subaction) {
 		case 'mass_approve':
@@ -1302,7 +1310,7 @@ function modify()
 					set ' . $active . '
 					WHERE id = ' . db_squote($id) . '
 					');
-			$result = 'Объявления Активированы/Деактивированы';
+			$result = zboard_config_lang('admin_announce_status_changed');
 		}
 		if (isset($del)) {
 			foreach ($mysql->select('select * from ' . prefix . '_zboard_images where zid=' . db_squote($id) . '') as $row2) {
@@ -1311,7 +1319,7 @@ function modify()
 			}
 			$mysql->query("delete from " . prefix . "_zboard_images where zid = " . db_squote($id) . "");
 			$mysql->query('delete from ' . prefix . '_zboard where id = ' . db_squote($id));
-			$result = 'Объявления удалены';
+			$result = zboard_config_lang('admin_announcements_deleted');
 		}
 	}
 	generate_entries_cnt_cache(true);
@@ -1432,9 +1440,9 @@ function main()
 	$admin_count = pluginGetVariable('zboard', 'admin_count');
 	$date = pluginGetVariable('zboard', 'date');
 	$notice_mail = pluginGetVariable('zboard', 'notice_mail');
-	$notice_mail = '<option value="0" ' . ($notice_mail == 0 ? 'selected' : '') . '>Нет</option><option value="1" ' . ($notice_mail == 1 ? 'selected' : '') . '>Да</option>';
+	$notice_mail = '<option value="0" ' . ($notice_mail == 0 ? 'selected' : '') . '>' . zboard_config_lang('admin_no') . '</option><option value="1" ' . ($notice_mail == 1 ? 'selected' : '') . '>' . zboard_config_lang('admin_yes') . '</option>';
 	$send_guest = pluginGetVariable('zboard', 'send_guest');
-	$send_guest = '<option value="0" ' . ($send_guest == 0 ? 'selected' : '') . '>Нет</option><option value="1" ' . ($send_guest == 1 ? 'selected' : '') . '>Да</option>';
+	$send_guest = '<option value="0" ' . ($send_guest == 0 ? 'selected' : '') . '>' . zboard_config_lang('admin_no') . '</option><option value="1" ' . ($send_guest == 1 ? 'selected' : '') . '>' . zboard_config_lang('admin_yes') . '</option>';
 	$template_mail = pluginGetVariable('zboard', 'template_mail');
 	$description = pluginGetVariable('zboard', 'description');
 	$keywords = pluginGetVariable('zboard', 'keywords');
@@ -1443,23 +1451,23 @@ function main()
 	$info_send = pluginGetVariable('zboard', 'info_send');
 	$info_edit = pluginGetVariable('zboard', 'info_edit');
 	$use_recaptcha = pluginGetVariable('zboard', 'use_recaptcha');
-	$use_recaptcha = '<option value="0" ' . ($use_recaptcha == 0 ? 'selected' : '') . '>Нет</option><option value="1" ' . ($use_recaptcha == 1 ? 'selected' : '') . '>Да</option>';
+	$use_recaptcha = '<option value="0" ' . ($use_recaptcha == 0 ? 'selected' : '') . '>' . zboard_config_lang('admin_no') . '</option><option value="1" ' . ($use_recaptcha == 1 ? 'selected' : '') . '>' . zboard_config_lang('admin_yes') . '</option>';
 	$views_count = pluginGetVariable('zboard', 'views_count');
-	$views_count = '<option value="0" ' . ($views_count == 0 ? 'selected' : '') . '>Нет</option><option value="1" ' . ($views_count == 1 ? 'selected' : '') . '>Да</option><option value="2" ' . ($views_count == 2 ? 'selected' : '') . '>Отложенное</option>';
+	$views_count = '<option value="0" ' . ($views_count == 0 ? 'selected' : '') . '>' . zboard_config_lang('admin_no') . '</option><option value="1" ' . ($views_count == 1 ? 'selected' : '') . '>' . zboard_config_lang('admin_yes') . '</option><option value="2" ' . ($views_count == 2 ? 'selected' : '') . '>' . zboard_config_lang('admin_deferred') . '</option>';
 	$use_expired = pluginGetVariable('zboard', 'use_expired');
-	$use_expired = '<option value="0" ' . ($use_expired == 0 ? 'selected' : '') . '>Нет</option><option value="1" ' . ($use_expired == 1 ? 'selected' : '') . '>Да</option>';
+	$use_expired = '<option value="0" ' . ($use_expired == 0 ? 'selected' : '') . '>' . zboard_config_lang('admin_no') . '</option><option value="1" ' . ($use_expired == 1 ? 'selected' : '') . '>' . zboard_config_lang('admin_yes') . '</option>';
 	$public_key = pluginGetVariable('zboard', 'public_key');
 	$private_key = pluginGetVariable('zboard', 'private_key');
 	$pay2pay_merchant_id = pluginGetVariable('zboard', 'pay2pay_merchant_id');
 	$pay2pay_secret_key = pluginGetVariable('zboard', 'pay2pay_secret_key');
 	$pay2pay_hidden_key = pluginGetVariable('zboard', 'pay2pay_hidden_key');
 	$pay2pay_test_mode = pluginGetVariable('zboard', 'pay2pay_test_mode');
-	$pay2pay_test_mode = '<option value="0" ' . ($pay2pay_test_mode == 0 ? 'selected' : '') . '>Нет</option><option value="1" ' . ($pay2pay_test_mode == 1 ? 'selected' : '') . '>Да</option>';
+	$pay2pay_test_mode = '<option value="0" ' . ($pay2pay_test_mode == 0 ? 'selected' : '') . '>' . zboard_config_lang('admin_no') . '</option><option value="1" ' . ($pay2pay_test_mode == 1 ? 'selected' : '') . '>' . zboard_config_lang('admin_yes') . '</option>';
 	$robokassa_login = pluginGetVariable('zboard', 'robokassa_login');
 	$robokassa_pass1 = pluginGetVariable('zboard', 'robokassa_pass1');
 	$robokassa_pass2 = pluginGetVariable('zboard', 'robokassa_pass2');
 	$robokassa_is_test_val = pluginGetVariable('zboard', 'robokassa_is_test');
-	$robokassa_is_test = '<option value="0" ' . ($robokassa_is_test_val == 0 ? 'selected' : '') . '>Нет</option><option value="1" ' . ($robokassa_is_test_val == 1 ? 'selected' : '') . '>Да</option>';
+	$robokassa_is_test = '<option value="0" ' . ($robokassa_is_test_val == 0 ? 'selected' : '') . '>' . zboard_config_lang('admin_no') . '</option><option value="1" ' . ($robokassa_is_test_val == 1 ? 'selected' : '') . '>' . zboard_config_lang('admin_yes') . '</option>';
 	/*
 	if(empty($max_image_size))
 		msg(array("type" => "error", "text" => "Критическая ошибка <br /> Размер для изображений не указан"), 1);
@@ -1512,7 +1520,7 @@ function main()
 	$tvars['vars'] = array(
 		'active' => !empty($count) ? '[ ' . $count . ' ]' : '',
 		'entries' => $tpl->show('general.from'),
-		'global' => 'Общие'
+		'global' => zboard_config_lang('admin_general')
 	);
 	$tpl->template('main', $tpath['config/main'] . 'config');
 	$tpl->vars('main', $tvars);
@@ -1536,27 +1544,27 @@ function zboard_upload_files($files_del)
 						if ($files_del == $Ffile)
 							unlink(files_dir . 'zboard/' . $files_del);
 						if (file_exists(files_dir . 'zboard/' . $Ffile))
-							$error_text = 'Такой файл уже существует';
+							$error_text = zboard_config_lang('admin_file_exists');
 						else
 							unlink(files_dir . 'zboard/' . $files_del);
 						if (empty($error_text)) {
 							if (move_uploaded_file($_FILES['plugin_files']['tmp_name'], files_dir . 'zboard/' . $Ffile)) {
 								chmod(files_dir . 'zboard/' . $Ffile, 0644);
 							} else {
-								$error_text = 'Загрузка не удалась';
+								$error_text = zboard_config_lang('admin_upload_failed');
 							}
 						}
 					} else {
-						$error_text = 'Нет прав на запись';
+						$error_text = zboard_config_lang('admin_write_permission');
 					}
 				} else {
-					$error_text = 'Размер файла больше допустимого';
+					$error_text = zboard_config_lang('admin_file_too_large');
 				}
 			} else {
-				$error_text = 'Запрещеное расширение';
+				$error_text = zboard_config_lang('admin_extension_forbidden');
 			}
 		} else {
-			$error_text = 'Файл не загружен';
+			$error_text = zboard_config_lang('admin_file_not_uploaded');
 		}
 	}
 	return array($Ffile, $error_text);
@@ -1642,22 +1650,26 @@ function zboard_upload_images($images_del, $w, $h, $quality = 100)
 								chmod($dir_image, 0644);
 								chmod(images_dir . 'zboard/thumb/' . $new, 0644);
 							} else {
-								$error_text = 'Ошибка при сохранении';
+									$error_text = zboard_config_lang('admin_image_save_failed');
 							}
 						} else {
-							$error_text = 'Размер изображения больше чем ' . pluginGetVariable('zboard', 'width') . ' ?? ' . pluginGetVariable('zboard', 'height');
+							$error_text = str_replace(
+								array('{width}', '{height}'),
+								array(pluginGetVariable('zboard', 'width'), pluginGetVariable('zboard', 'height')),
+								zboard_config_lang('admin_image_dimensions_exceeded')
+							);
 						}
 					} else {
-						$error_text = 'Загруженый файл не является изображением';
+						$error_text = zboard_config_lang('admin_not_an_image');
 					}
 				} else {
-					$error_text = 'Размер файла больше допустимого';
+					$error_text = zboard_config_lang('admin_file_too_large');
 				}
 			} else {
-				$error_text = 'Недопустимое расширение';
+				$error_text = zboard_config_lang('admin_extension_invalid');
 			}
 		} else {
-			$error_text = 'Изображение не загружено';
+			$error_text = zboard_config_lang('admin_image_not_uploaded');
 		}
 	}
 	return array($new, $error_text);

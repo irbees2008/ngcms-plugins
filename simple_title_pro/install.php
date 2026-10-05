@@ -2,8 +2,12 @@
 if (!defined('NGCMS')) {
 	die('HAL');
 }
+LoadPluginLang('simple_title_pro', 'config', '', '', '#');
+
 function plugin_simple_title_pro_install($action)
 {
+	global $lang;
+	$locale = $lang['simple_title_pro'];
 	$checkVer = explode('.', substr(engineVersion, 0, 5));
 	if (($checkVer['0'] == 0 && $checkVer['1'] == 9 && $checkVer['2'] >= 3) || $checkVer['0'] >= 1)
 		$check = true;
@@ -26,19 +30,18 @@ function plugin_simple_title_pro_install($action)
 	switch ($action) {
 		case 'confirm':
 			if ($check)
-				generate_install_page('simple_title_pro', 'Тыкай установить');
+				generate_install_page('simple_title_pro', $locale['install.confirm']);
 			else
-				msg(array("type" => "error", "message" => "Версия CMS не соответствует допустимой<br />У вас установлена " . $checkVer['0'] . "." . $checkVer['1'] . "." . $checkVer['2'] . ". Требуется 0.9.3 или выше!"));
+				msg(array("type" => "error", "message" => sprintf(
+					$locale['install.version_error'],
+					$checkVer['0'] . "." . $checkVer['1'] . "." . $checkVer['2']
+				)));
 			break;
 		case 'autoapply':
 		case 'apply':
 			if (fixdb_plugin_install('simple_title_pro', $db_update, 'install', ($action == 'autoapply') ? true : false)) {
 				plugin_mark_installed('simple_title_pro');
-				$_SESSION['simple_title_pro']['info'] = 'Вы зашли в настройки в первый раз.<br/>
-				Инструкции к этому плагину не предусмотрено, все настройки раскиданы по разделам и не сложно понять что к чему<br />
-				Работает на базе данных использует кеширование. Кэш отключить нельзя, кеш расчитан на сутки, но можно уставить и на большее время. Для удобства: при редактировании кэш к этой записи будет автоматически обновлен!<br/>
-				По ошибка, неточностям обращаться на страницу на форуме или мне на ICQ: 209388634 или jabber: rozard@ngcms.org
-				';
+				$_SESSION['simple_title_pro']['info'] = $locale['install.first_info'];
 			} else {
 				return false;
 			}
@@ -47,7 +50,7 @@ function plugin_simple_title_pro_install($action)
 				'n_title'      => '%home% / %cat% / %title%  [/ %num%]',
 				'm_title'      => '%home% %num%',
 				'static_title' => '%home% / %static%',
-				'num_title'    => 'Страница %count%',
+				'num_title'    => $locale['install.page_number_title'],
 				'o_title'      => '%home% / %other% %html% [/ %num%]',
 				'e_title'      => '%home% / %other%',
 				'html_secure'  => '/ %html%',

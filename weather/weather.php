@@ -1,9 +1,11 @@
 <?php
 if (!defined('NGCMS')) die('HAL');
 
+LoadPluginLang('weather', 'main', '', '', ':');
+
 function plugin_weather_show($params)
 {
-    global $config, $twig, $twigLoader;
+    global $config, $twig, $lang;
 
     // Получаем параметры
     $api_key = pluginGetVariable('weather', 'api_key');
@@ -24,14 +26,16 @@ function plugin_weather_show($params)
     }
 
     // Получаем данные о погоде
-    $weather_data = get_weather_data($city, $api_key, $units);
+    $weather_language = ($config['default_lang'] == 'english') ? 'en' : 'ru';
+    $weather_data = get_weather_data($city, $api_key, $units, $weather_language);
 
     if (!$weather_data) {
-        return 'Не удалось получить данные о погоде';
+        return $lang['weather:error'];
     }
 
     // Добавляем единицы измерения
     $weather_data['units'] = ($units == 'metric') ? '°C' : '°F';
+    $weather_data['wind_unit'] = ($units == 'metric') ? $lang['weather:wind_unit_metric'] : $lang['weather:wind_unit_imperial'];
 
     // Готовим шаблон
     $tpath = locatePluginTemplates(array($template_name), 'weather', pluginGetVariable('weather', 'localsource'));
@@ -40,6 +44,11 @@ function plugin_weather_show($params)
     $template = $twig->loadTemplate($tpath[$template_name] . $template_name . '.tpl');
     $output = $template->render(array(
         'weather' => $weather_data,
+        'lang' => array(
+            'title' => $lang['weather:title'],
+            'humidity' => $lang['weather:humidity'],
+            'wind' => $lang['weather:wind']
+        ),
         'tpl_url' => tpl_url
     ));
 
@@ -51,9 +60,9 @@ function plugin_weather_show($params)
     return $output;
 }
 
-function get_weather_data($city, $api_key, $units)
+function get_weather_data($city, $api_key, $units, $language = 'ru')
 {
-    $url = "http://api.openweathermap.org/data/2.5/weather?q=" . urlencode($city) . "&appid=" . $api_key . "&units=" . $units . "&lang=ru";
+    $url = "http://api.openweathermap.org/data/2.5/weather?q=" . urlencode($city) . "&appid=" . $api_key . "&units=" . $units . "&lang=" . $language;
 
     $response = @file_get_contents($url);
     if (!$response) return false;

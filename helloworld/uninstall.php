@@ -3,6 +3,7 @@
 if (!defined('NGCMS')) die('HAL');
 
 pluginsLoadConfig();
+LoadPluginLang('helloworld', 'config', '', '', ':');
 
 $db_update = array(
     array(
@@ -16,5 +17,5 @@ if ($_REQUEST['action'] == 'commit') {
         plugin_mark_deinstalled('helloworld');
     }
 } else {
-    generate_install_page('helloworld', 'Плагин будет удалён, таблица счётчика удалена.', 'deinstall');
+    generate_install_page('helloworld', $lang['helloworld:uninstall_description'], 'deinstall');
 }

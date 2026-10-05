@@ -15,7 +15,7 @@ function payments_adapter_redirect(int $orderId, array $order, array $cfg): void
     $secretKey = $cfg['secret_key'] ?? '';
     $currency  = pluginGetVariable('payments', 'currency') ?: 'RUB';
     $amount    = number_format((float)$order['total'], 2, '.', '');
-    $desc      = 'Заказ #' . $orderId;
+    $desc      = payments_order_description($orderId);
     $account   = (string)$orderId;
 
     $signature = hash('sha256', implode('{up}', [$account, $currency, $desc, $amount, $secretKey]));

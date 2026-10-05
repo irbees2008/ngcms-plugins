@@ -1,12 +1,12 @@
 <div class="news-informer">
-	<h3>Последние новости</h3>
+	<h3>{{ lang.last_news }}</h3>
 	<div class="news-informer-list">
 		{% for entry in entries %}
 			{% include localPath(0) ~ "entries.tpl" %}
 		{% endfor %}
 	</div>
 	<div class="news-informer-footer">
-		<a href="{{ home }}">Все новости</a>
+		<a href="{{ home }}">{{ lang.all_news }}</a>
 	</div>
 </div>
 <style>

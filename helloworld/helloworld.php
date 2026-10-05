@@ -5,7 +5,7 @@ if (!defined('NGCMS')) die('HAL');
 // Основная страница плагина
 function plugin_helloworld_screen()
 {
-    global $mysql, $tpl, $template;
+    global $mysql, $tpl, $template, $lang;
     LoadPluginLang('helloworld', 'site');
 
     // Инкремент счётчика (id = 1)
@@ -15,8 +15,9 @@ function plugin_helloworld_screen()
     // Локализация и шаблон
     $tpath = locatePluginTemplates(array('helloworld'), 'helloworld', 1);
     $tvars = array();
-    $tvars['vars']['title'] = $lang = $GLOBALS['lang']['helloworld_page_title'] ?? 'HelloWorld';
-    $tvars['vars']['body'] = $GLOBALS['lang']['helloworld_page_body'] ?? 'Demo plugin body';
+    $tvars['vars']['title'] = $lang['helloworld_page_title'] ?? 'HelloWorld';
+    $tvars['vars']['body'] = $lang['helloworld_page_body'] ?? 'Demo plugin body';
+    $tvars['vars']['hits_label'] = $lang['helloworld_hits_label'] ?? 'Page views:';
     $tvars['vars']['hits'] = intval($rec['cnt']);
 
     $tpl->template('helloworld', $tpath['helloworld']);

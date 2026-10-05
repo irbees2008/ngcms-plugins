@@ -18,7 +18,7 @@ function mailing_handle_unsubscribe(string $token): void
     $token = trim($token);
 
     if (strlen($token) < 16) {
-        mailing_render_simple_page('Ошибка', 'Некорректная ссылка отписки.');
+        mailing_render_simple_page(mailing_lang('page_error'), mailing_lang('unsub_invalid'));
         exit;
     }
 
@@ -26,12 +26,12 @@ function mailing_handle_unsubscribe(string $token): void
     $rec = $db->record("SELECT * FROM {$tblUnsub} WHERE token = '" . db_squote($token) . "' LIMIT 1");
 
     if (!$rec) {
-        mailing_render_simple_page('Ошибка', 'Ссылка отписки не найдена или устарела.');
+        mailing_render_simple_page(mailing_lang('page_error'), mailing_lang('unsub_not_found'));
         exit;
     }
 
     if ((int)$rec['unsub_at'] > 0) {
-        mailing_render_simple_page('Готово', 'Вы уже отписаны от рассылки.');
+        mailing_render_simple_page(mailing_lang('page_done'), mailing_lang('unsub_already_done'));
         exit;
     }
 
@@ -39,7 +39,7 @@ function mailing_handle_unsubscribe(string $token): void
     $recId = (int)$rec['id'];
     $db->query("UPDATE {$tblUnsub} SET unsub_at = {$unsubTime} WHERE id = {$recId}");
 
-    mailing_render_simple_page('Готово', 'Вы отписались от рассылки. Спасибо!');
+    mailing_render_simple_page(mailing_lang('page_done'), mailing_lang('unsub_done'));
     exit;
 }
 
@@ -51,10 +51,11 @@ function mailing_render_simple_page(string $title, string $message): void
     header('Content-Type: text/html; charset=UTF-8');
     $titleEsc = mailing_h($title);
     $messageEsc = mailing_h($message);
+    $htmlLang = mailing_h(mailing_lang('html_lang', 'ru'));
 
     echo <<<HTML
 <!doctype html>
-<html lang="ru">
+<html lang="{$htmlLang}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -148,8 +149,8 @@ function mailing_prepare_email_html($html, $unsubUrl)
     }, $html);
 
     // Append footer if no unsub link exists
-    if (stripos($html, 'UNSUB_URL') === false && stripos($html, 'отпис') === false) {
-        $html .= '<hr><p style="font-size:12px;color:#666;">Чтобы отписаться от рассылки, нажмите: <a href="' . mailing_h($unsubUrl) . '">отписаться</a></p>';
+    if (stripos($html, 'UNSUB_URL') === false && stripos($html, 'отпис') === false && stripos($html, 'unsubscribe') === false) {
+        $html .= '<hr><p style="font-size:12px;color:#666;">' . mailing_h(mailing_lang('email_unsubscribe_prompt')) . ' <a href="' . mailing_h($unsubUrl) . '">' . mailing_h(mailing_lang('unsubscribe')) . '</a></p>';
     }
     return $html;
 }
@@ -158,7 +159,7 @@ function mailing_prepare_email_text($text, $html, $unsubUrl)
 {
     $text = trim((string)$text);
     if (!$text) $text = strip_tags($html);
-    $text .= "\n\nОтписаться: " . $unsubUrl . "\n";
+    $text .= "\n\n" . mailing_lang('email_unsubscribe_text') . ': ' . $unsubUrl . "\n";
     return $text;
 }
 
@@ -375,10 +376,10 @@ function mailing_autonews_scan_and_queue()
         $link  = mailing_base_url() . '/?newsid=' . $nid;
 
         $html  = '<h2>' . mailing_h($title) . '</h2>';
-        $html .= '<p><a href="' . mailing_h($link) . '" target="_blank" rel="noopener">Читать на сайте</a></p>';
+        $html .= '<p><a href="' . mailing_h($link) . '" target="_blank" rel="noopener">' . mailing_h(mailing_lang('read_on_site')) . '</a></p>';
         $html .= '<hr>';
         $html .= '<div>' . mailing_sanitize_html($n['short'] ?: $n['content']) . '</div>';
-        $html .= '<p>Видео: {YOUTUBE:}</p>'; // placeholder example
+        $html .= '<p>' . mailing_h(mailing_lang('video_label')) . ': {YOUTUBE:}</p>';
 
         $segment = array(
             'send_at'     => mailing_now(),
@@ -388,7 +389,7 @@ function mailing_autonews_scan_and_queue()
             'auto_news_id' => $nid,
         );
 
-        $cid = mailing_create_campaign_and_queue('Авторассылка: ' . $title, $title, $html, '', $segment);
+        $cid = mailing_create_campaign_and_queue(mailing_lang('auto_news_prefix') . ': ' . $title, $title, $html, '', $segment);
 
         // Mark as processed
         $lastId = $nid;

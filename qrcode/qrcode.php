@@ -1,11 +1,13 @@
 <?php
 if (!defined('NGCMS')) die('HAL');
 
+LoadPluginLang('qrcode', 'main', '', '', ':');
+
 class QRcodeNewsFilter extends NewsFilter
 {
 	function showNews($newsID, $SQLnews, &$tvars, $mode = array())
 	{
-		global $config, $twig, $tpl;
+		global $config, $twig, $tpl, $lang;
 
 		require_once __DIR__ . '/phpqrcode/qrlib.php';
 
@@ -35,7 +37,10 @@ class QRcodeNewsFilter extends NewsFilter
 		$tVars = [
 			'qrcode' => $qrData,
 			'title' => $SQLnews['title'],
-			'size' => $size
+			'size' => $size,
+			'lang' => [
+				'alt_prefix' => $lang['qrcode:alt_prefix'],
+			],
 		];
 
 		if (class_exists('Twig\Environment')) {

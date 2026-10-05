@@ -2,9 +2,12 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
+LoadPluginLang('webpush', 'config', '', 'webpush', ':');
+LoadPluginLang('webpush', 'site', '', 'webpush', ':');
+
 function plugin_webpush_install(string $action): bool
 {
-    global $config;
+    global $config, $lang;
 
     $root = dirname(__DIR__, 3);
     $confDir = $root . '/engine/conf/extras/webpush';
@@ -33,14 +36,7 @@ function plugin_webpush_install(string $action): bool
         case 'confirm':
             generate_install_page(
                 'webpush',
-                '<p>Будет создана таблица для хранения подписок на Web Push уведомления.</p>' .
-                    '<p><strong>Важно:</strong></p>' .
-                    '<ul>' .
-                    '<li>Web Push работает только по HTTPS (кроме localhost)</li>' .
-                    '<li>Требуется установить Composer пакет: <code>composer require minishlink/web-push</code></li>' .
-                    '<li>Service Worker будет автоматически скопирован в корень сайта (<code>/webpush-sw.js</code>).</li>' .
-                    '<li>После установки выполните генерацию VAPID ключей через send.php?action=genkeys&secret=...</li>' .
-                    '</ul>'
+                $lang['webpush:install_confirm']
             );
             break;
 
@@ -57,7 +53,7 @@ function plugin_webpush_install(string $action): bool
                 extra_set_param('webpush', 'vapid_subject', 'mailto:admin@' . ($config['home_url'] ?? 'example.com'));
                 extra_set_param('webpush', 'default_icon', '/uploads/webpush/icon.png');
                 extra_set_param('webpush', 'default_badge', '/uploads/webpush/badge.png');
-                extra_set_param('webpush', 'subscribe_text', 'Включить уведомления');
+                extra_set_param('webpush', 'subscribe_text', $lang['webpush:subscribe_text']);
                 extra_set_param('webpush', 'show_button', 1);
                 extra_set_param('webpush', 'send_secret', bin2hex(random_bytes(16)));
                 extra_commit_changes();

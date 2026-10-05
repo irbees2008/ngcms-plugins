@@ -13,7 +13,7 @@ function payments_adapter_redirect(int $orderId, array $order, array $cfg): void
     $shopId = $cfg['shop_id'] ?? '';
     $secret = $cfg['secret']  ?? '';
     $amount = number_format((float)$order['total'], 2, '.', '');
-    $desc   = 'Заказ #' . $orderId;
+    $desc   = payments_order_description($orderId);
 
     $sign = md5($shopId . ':' . $orderId . ':' . $amount . ':' . $secret);
 

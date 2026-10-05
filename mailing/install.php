@@ -10,13 +10,14 @@
 if (!defined('NGCMS')) die('HAL');
 
 pluginsLoadConfig();
+LoadPluginLang('mailing', 'main', '', '', ':');
 
 /**
  * Функция установки плагина
  */
 function plugin_mailing_install($action)
 {
-    global $mysql;
+    global $mysql, $lang;
     // Описание таблиц для создания
     $db_update = array(
         // Таблица кампаний
@@ -91,18 +92,18 @@ function plugin_mailing_install($action)
     switch ($action) {
         case 'confirm':
             // Страница подтверждения установки
-            $info = '<b>Плагин Email-рассылки v2.0</b><br/><br/>';
-            $info .= 'Будут созданы следующие таблицы:<br/>';
-            $info .= '• <b>mailing_campaigns</b> - кампании рассылок<br/>';
-            $info .= '• <b>mailing_queue</b> - очередь отправки писем<br/>';
-            $info .= '• <b>mailing_attachments</b> - вложения к письмам<br/>';
-            $info .= '• <b>mailing_unsub</b> - отписки пользователей<br/><br/>';
-            $info .= 'Возможности:<br/>';
-            $info .= '✓ Массовые рассылки с сегментацией<br/>';
-            $info .= '✓ Вложения файлов<br/>';
-            $info .= '✓ Отложенная отправка<br/>';
-            $info .= '✓ Авто-рассылка новостей<br/>';
-            $info .= '✓ Интеграция с Twig<br/>';
+            $info = '<b>' . $lang['mailing:install_title'] . '</b><br/><br/>';
+            $info .= $lang['mailing:install_tables_intro'] . '<br/>';
+            $info .= '• <b>mailing_campaigns</b> - ' . $lang['mailing:install_campaigns_table'] . '<br/>';
+            $info .= '• <b>mailing_queue</b> - ' . $lang['mailing:install_queue_table'] . '<br/>';
+            $info .= '• <b>mailing_attachments</b> - ' . $lang['mailing:install_attachments_table'] . '<br/>';
+            $info .= '• <b>mailing_unsub</b> - ' . $lang['mailing:install_unsub_table'] . '<br/><br/>';
+            $info .= $lang['mailing:install_features'] . '<br/>';
+            $info .= '✓ ' . $lang['mailing:install_feature_campaigns'] . '<br/>';
+            $info .= '✓ ' . $lang['mailing:install_feature_attachments'] . '<br/>';
+            $info .= '✓ ' . $lang['mailing:install_feature_scheduling'] . '<br/>';
+            $info .= '✓ ' . $lang['mailing:install_feature_autonews'] . '<br/>';
+            $info .= '✓ ' . $lang['mailing:install_feature_twig'] . '<br/>';
             generate_install_page('mailing', $info);
             break;
 

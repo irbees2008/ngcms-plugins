@@ -93,39 +93,176 @@ function currencies_format(float $price, string $baseCurrency = ''): string
     return number_format($converted, 2, '.', ' ') . ' ' . $symbol;
 }
 
-// ─── Update rates from CBR (Central Bank of Russia) ───────────────────────
-function currencies_update_rates_cbr(): bool
+function currencies_parse_rate_factors(string $source, string $response): ?array
+{
+    $factors = [];
+    if ($source === 'cbr') {
+        $doc = @simplexml_load_string($response);
+        if (!$doc) {
+            logger('CBR rate update failed: invalid XML', 'error', 'currencies.log');
+            return null;
+        }
+        $factors['RUB'] = 1.0;
+        foreach ($doc->Valute as $valute) {
+            $code = strtoupper((string)$valute->CharCode);
+            $nominal = (int)(string)$valute->Nominal;
+            $value = (float)str_replace(',', '.', (string)$valute->Value);
+            $rublesPerUnit = $value / max(1, $nominal);
+            if ($code !== '' && $rublesPerUnit > 0) {
+                $factors[$code] = 1 / $rublesPerUnit;
+            }
+        }
+    } elseif ($source === 'nbu') {
+        $rates = json_decode($response, true);
+        if (!is_array($rates) || !$rates) {
+            logger('NBU rate update failed: invalid JSON response', 'error', 'currencies.log');
+            return null;
+        }
+        $factors['UAH'] = 1.0;
+        foreach ($rates as $rate) {
+            $code = strtoupper((string)($rate['cc'] ?? ''));
+            $hryvniasPerUnit = (float)($rate['rate'] ?? 0);
+            if ($code !== '' && $hryvniasPerUnit > 0) {
+                $factors[$code] = 1 / $hryvniasPerUnit;
+            }
+        }
+    } elseif ($source === 'nbk') {
+        $doc = @simplexml_load_string($response);
+        if (!$doc) {
+            logger('NBK rate update failed: invalid XML', 'error', 'currencies.log');
+            return null;
+        }
+        $factors['KZT'] = 1.0;
+        foreach ($doc->channel->item as $item) {
+            $code = strtoupper((string)$item->title);
+            $nominal = max(1, (int)(string)$item->quant);
+            $tengePerUnit = (float)str_replace(',', '.', (string)$item->description) / $nominal;
+            if ($code !== '' && $tengePerUnit > 0) {
+                $factors[$code] = 1 / $tengePerUnit;
+            }
+        }
+    } elseif ($source === 'ecb') {
+        $doc = @simplexml_load_string($response);
+        if (!$doc) {
+            logger('ECB rate update failed: invalid XML', 'error', 'currencies.log');
+            return null;
+        }
+        $factors['EUR'] = 1.0;
+        foreach ($doc->Cube->Cube->Cube as $rate) {
+            $code = strtoupper((string)$rate['currency']);
+            $unitsPerEuro = (float)(string)$rate['rate'];
+            if ($code !== '' && $unitsPerEuro > 0) {
+                $factors[$code] = $unitsPerEuro;
+            }
+        }
+    } else {
+        return null;
+    }
+
+    return count($factors) > 1 ? $factors : null;
+}
+
+function currencies_fetch_rate_factors(string $source): ?array
+{
+    $sources = [
+        'cbr' => 'https://www.cbr.ru/scripts/XML_daily.asp',
+        'nbu' => 'https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json',
+        'nbk' => 'https://nationalbank.kz/rss/rates_all.xml',
+        'ecb' => 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml',
+    ];
+    if (!isset($sources[$source])) {
+        return null;
+    }
+
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 15,
+            'user_agent' => 'NGCMS currencies plugin',
+        ],
+    ]);
+    $response = @file_get_contents($sources[$source], false, $context);
+    if ($response === false) {
+        logger(strtoupper($source) . ' rate update failed: cannot fetch rate feed', 'error', 'currencies.log');
+        return null;
+    }
+
+    return currencies_parse_rate_factors($source, $response);
+}
+
+function currencies_normalize_rate_factors(array $factors, string $baseCurrency): ?array
+{
+    $baseCurrency = strtoupper($baseCurrency);
+    $baseFactor = (float)($factors[$baseCurrency] ?? 0);
+    if ($baseFactor <= 0) {
+        return null;
+    }
+
+    $rates = [];
+    foreach ($factors as $code => $factor) {
+        $factor = (float)$factor;
+        if ($factor > 0) {
+            $rates[strtoupper($code)] = $factor / $baseFactor;
+        }
+    }
+
+    return $rates;
+}
+
+function currencies_update_rates_from_source(string $source): bool
 {
     global $mysql;
-
-    $xml = @file_get_contents('https://www.cbr.ru/scripts/XML_daily.asp');
-    if (!$xml) {
-        logger('CBR rate update failed: cannot fetch URL', 'error', 'currencies.log');
+    $baseCurrency = strtoupper(pluginGetVariable('currencies', 'base') ?: 'RUB');
+    $factors = currencies_fetch_rate_factors($source);
+    if (!is_array($factors)) {
+        return false;
+    }
+    $rates = currencies_normalize_rate_factors($factors, $baseCurrency);
+    if (!is_array($rates)) {
+        logger(strtoupper($source) . ' rate update failed: base currency is not provided by the source', 'error', 'currencies.log');
         return false;
     }
 
-    $doc = @simplexml_load_string($xml);
-    if (!$doc) {
-        logger('CBR rate update failed: invalid XML', 'error', 'currencies.log');
+    $currencies = $mysql->select("SELECT code FROM " . prefix . "_currencies", 1);
+    if (!$currencies) {
+        logger(strtoupper($source) . ' rate update failed: no currencies found', 'error', 'currencies.log');
         return false;
     }
 
     $updated = 0;
-    foreach ($doc->Valute as $valute) {
-        $code     = (string)$valute->CharCode;
-        $nominal  = (int)(string)$valute->Nominal;
-        $valueStr = str_replace(',', '.', (string)$valute->Value);
-        $rate     = (float)$valueStr / max(1, $nominal);
-
-        $exists = $mysql->record("SELECT id FROM " . prefix . "_currencies WHERE code = " . db_squote($code) . " LIMIT 1");
-        if ($exists) {
-            $mysql->query("UPDATE " . prefix . "_currencies SET rate=" . db_squote($rate) . ", updated_at=" . db_squote(time()) . " WHERE code=" . db_squote($code));
+    $failed = false;
+    foreach ($currencies as $currency) {
+        $code = strtoupper((string)$currency['code']);
+        if (!isset($rates[$code])) {
+            continue;
+        }
+        $result = $mysql->query(
+            "UPDATE " . prefix . "_currencies SET rate=" . db_squote($rates[$code]) .
+            ", updated_at=" . db_squote(time()) . " WHERE code=" . db_squote($code)
+        );
+        if ($result === false) {
+            $failed = true;
+        } else {
             $updated++;
         }
     }
 
-    logger("CBR rates updated: $updated currencies", 'info', 'currencies.log');
-    return true;
+    logger(strtoupper($source) . " rates updated: $updated currencies", 'info', 'currencies.log');
+    return $updated > 0 && !$failed;
+}
+
+function currencies_update_rates(): bool
+{
+    $source = pluginGetVariable('currencies', 'rate_source') ?: 'cbr';
+    if ($source === 'manual') {
+        return false;
+    }
+
+    return currencies_update_rates_from_source($source);
+}
+
+function currencies_update_rates_cbr(): bool
+{
+    return currencies_update_rates_from_source('cbr');
 }
 
 // ─── Inject active currency into all page template vars ───────────────────
@@ -145,7 +282,7 @@ add_act('index', 'currencies_template_inject');
 function plugin_currencies_cron($isSysCron, $handler)
 {
     $source = pluginGetVariable('currencies', 'rate_source') ?: 'cbr';
-    if ($source === 'cbr') {
-        currencies_update_rates_cbr();
+    if ($source !== 'manual') {
+        currencies_update_rates();
     }
 }

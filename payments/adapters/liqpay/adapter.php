@@ -12,6 +12,8 @@ include_once __DIR__ . '/LiqPay.php';
  */
 function payments_adapter_redirect(int $orderId, array $order, array $cfg): void
 {
+    global $lang;
+
     $publicKey  = $cfg['public_key'] ?? '';
     $privateKey = $cfg['private_key'] ?? '';
     $currency   = pluginGetVariable('payments', 'currency') ?: 'UAH';
@@ -21,7 +23,7 @@ function payments_adapter_redirect(int $orderId, array $order, array $cfg): void
         'action'      => 'pay',
         'amount'      => number_format((float)$order['total'], 2, '.', ''),
         'currency'    => $currency,
-        'description' => 'Заказ #' . $orderId,
+        'description' => payments_order_description($orderId),
         'order_id'    => 'order_' . $orderId,
         'version'     => '3',
         'result_url'  => home . '/payments/notify/?method=liqpay&result=2',
@@ -29,8 +31,8 @@ function payments_adapter_redirect(int $orderId, array $order, array $cfg): void
     ]);
 
     // Output LiqPay form and auto-submit
-    echo '<!DOCTYPE html><html><head><title>Оплата...</title></head><body>'
-        . '<p>Перенаправление на страницу оплаты...</p>'
+    echo '<!DOCTYPE html><html><head><title>' . htmlspecialchars($lang['payments:redirect.title'], ENT_QUOTES, 'UTF-8') . '</title></head><body>'
+        . '<p>' . htmlspecialchars($lang['payments:redirecting'], ENT_QUOTES, 'UTF-8') . '</p>'
         . $html
         . '<script>document.forms[0].submit();</script>'
         . '</body></html>';

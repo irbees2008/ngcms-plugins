@@ -1,15 +1,12 @@
-<h4>Список кампаний</h4>
+<h4>{{ lang.campaign_list }}</h4>
 
 {% if entries %}
 	{% if not hasStats %}
 		<div class="alert alert-warning">
-			<b>Столбцы статистики не найдены в БД.</b>
-			Показатели
-					отправки/доставки рассчитываются по очереди. Рекомендуется
-					выполнить миграцию из файла
+			<b>{{ lang.stats_columns_missing }}</b>
+			{{ lang.stats_fallback_notice }}
 			<code>migration_stats.sql</code>
-			или
-					переустановить плагин, чтобы добавить поля.
+			{{ lang.stats_migration_or_reinstall }}
 		</div>
 	{% endif %}
 	<div class="table-responsive">
@@ -17,11 +14,11 @@
 			<thead>
 				<tr>
 					<th>ID</th>
-					<th>Тема</th>
-					<th>Статус</th>
-					<th>Время отправки</th>
-					<th>Очередь</th>
-					<th>Статистика</th>
+					<th>{{ lang.subject }}</th>
+					<th>{{ lang.status }}</th>
+					<th>{{ lang.send_time }}</th>
+					<th>{{ lang.queue }}</th>
+					<th>{{ lang.statistics }}</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -35,21 +32,21 @@
 						<td>{{ campaign.send_at_formatted }}</td>
 						<td>
 							<small>
-								Всего:
+								{{ lang.total }}:
 								{{ campaign.queue_total }}<br>
-								Отправлено:
+								{{ lang.sent }}:
 								<span class="text-success">{{ campaign.queue_sent }}</span><br>
-								Ошибок:
+								{{ lang.errors }}:
 								<span class="text-danger">{{ campaign.queue_failed }}</span>
 							</small>
 						</td>
 						<td>
 							<small>
-								📤 Отправлено:
+								📤 {{ lang.sent }}:
 								<strong class="text-primary">{{ campaign.sent_count }}</strong><br>
-								✅ Доставлено:
+								✅ {{ lang.delivered }}:
 								<strong class="text-success">{{ campaign.delivered_count }}</strong><br>
-								❌ Не доставлено:
+								❌ {{ lang.not_delivered }}:
 								<strong class="text-danger">{{ campaign.failed_count }}</strong>
 							</small>
 						</td>
@@ -60,11 +57,11 @@
 	</div>
 
 	<div class="alert alert-info">
-		<strong>Совет:</strong>
-		Чтобы прогнать очередь вручную, откройте вкладку CRON или включите обработку по посещениям в настройках.
+		<strong>{{ lang.tip }}:</strong>
+		{{ lang.tip_detail }}
 	</div>
 {% else %}
 	<div class="alert alert-warning">
-		Пока нет кампаний. Создайте первую рассылку во вкладке "Создать рассылку".
+		{{ lang.no_campaigns }}
 	</div>
 {% endif %}

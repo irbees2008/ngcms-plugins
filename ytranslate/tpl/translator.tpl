@@ -50,7 +50,7 @@
 		restoreOriginal();
 		var items = pageTextNodes().map(function (node) { return {node: node, text: node.nodeValue}; });
 		originalNodes = items;
-		setActive(target, 'Перевод...');
+		setActive(target, {{ translator.messages.translating|json_encode|raw }});
 		translating = true;
 		var batches = [];
 		for (var i = 0; i < items.length; i += 40) batches.push(items.slice(i, i + 40));
@@ -65,7 +65,7 @@
 					if (!response.ok) throw new Error('HTTP ' + response.status);
 					return response.json();
 				}).then(function (data) {
-					if (!data.success || !Array.isArray(data.texts)) throw new Error(data.error || 'Translation failed');
+					if (!data.success || !Array.isArray(data.texts)) throw new Error(data.error || {{ translator.messages.error_translation_failed|json_encode|raw }});
 					data.texts.forEach(function (text, index) {
 						var item = batch[index];
 						item.node.nodeValue = item.text.match(/^\s*/)[0] + text + item.text.match(/\s*$/)[0];
@@ -73,7 +73,7 @@
 				});
 			});
 		});
-		chain.catch(function (error) { restoreOriginal(); setActive(ytranslate.source, 'Ошибка: ' + (error.message || 'перевод недоступен')); }).then(function () { translating = false; });
+		chain.catch(function (error) { restoreOriginal(); setActive(ytranslate.source, {{ translator.messages.error_prefix|json_encode|raw }} + (error.message || {{ translator.messages.error_unavailable|json_encode|raw }})); }).then(function () { translating = false; });
 	}
 
 	function detectByIp() {

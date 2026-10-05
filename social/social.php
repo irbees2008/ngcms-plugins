@@ -76,6 +76,7 @@ class socialNewsFilter extends NewsFilter
 			$skin = 'default';
 		}
 		$tpath = locatePluginTemplates(array('social'), 'social', $localsource, $skin);
+        $tVars = array(
             'home' => $config['home_url'],
             'entries' => $entries
         );

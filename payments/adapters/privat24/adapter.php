@@ -23,7 +23,7 @@ function payments_adapter_redirect(int $orderId, array $order, array $cfg): void
             . '</merchant>'
             . '<purchase>'
             . '<order><merchant_order_id>' . $orderId . '</merchant_order_id>'
-            . '<description>Заказ #' . $orderId . '</description>'
+            . '<description>' . htmlspecialchars(payments_order_description($orderId), ENT_XML1, 'UTF-8') . '</description>'
             . '<currency>' . htmlspecialchars($currency, ENT_XML1) . '</currency>'
             . '<amount>' . $amount . '</amount>'
             . '</order>'

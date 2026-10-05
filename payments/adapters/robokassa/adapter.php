@@ -15,7 +15,7 @@ function payments_adapter_redirect(int $orderId, array $order, array $cfg): void
     $isTest = !empty($cfg['test_mode']) ? 1 : 0;
 
     $amount  = number_format((float)$order['total'], 2, '.', '');
-    $desc    = 'Заказ #' . $orderId;
+    $desc    = payments_order_description($orderId);
     $currency = pluginGetVariable('payments', 'currency') ?: 'RUB';
 
     $crc = md5("{$login}:{$amount}:{$orderId}:{$currency}:{$pass1}");

@@ -16,7 +16,7 @@
 					</a>
 				</li>
 				<li class="breadcrumb-item">
-					<a href="admin.php?mod=extras">Управление плагинами</a>
+					<a href="admin.php?mod=extras">{{ lang.admin_plugins }}</a>
 				</li>
 				<li class="breadcrumb-item active" aria-current="page">Mailing</li>
 			</ol>
@@ -26,14 +26,14 @@
 
 <div class="container mt-5">
 	<div class="card">
-		<h5 class="card-header">Email рассылки</h5>
+		<h5 class="card-header">{{ lang.email_campaigns }}</h5>
 		<div class="card-body">
 			<div class="btn-group mb-3" role="group">
-				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=mailing&action=settings" class="btn btn-outline-success">Настройки</a>
-				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=mailing&action=compose" class="btn btn-outline-success">Создать рассылку</a>
-				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=mailing&action=campaigns" class="btn btn-outline-success">Кампании</a>
-				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=mailing&action=cron" class="btn btn-outline-success">CRON</a>
-				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=mailing&action=upgrade" class="btn btn-outline-success">Обновить схему</a>
+				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=mailing&action=settings" class="btn btn-outline-success">{{ lang.settings }}</a>
+				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=mailing&action=compose" class="btn btn-outline-success">{{ lang.create_campaign }}</a>
+				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=mailing&action=campaigns" class="btn btn-outline-success">{{ lang.campaigns }}</a>
+				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=mailing&action=cron" class="btn btn-outline-success">{{ lang.cron }}</a>
+				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=mailing&action=upgrade" class="btn btn-outline-success">{{ lang.upgrade_schema }}</a>
 			</div>
 
 			{{ entries }}

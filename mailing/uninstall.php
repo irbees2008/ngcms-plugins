@@ -10,6 +10,7 @@
 if (!defined('NGCMS')) die('HAL');
 
 pluginsLoadConfig();
+LoadPluginLang('mailing', 'main', '', '', ':');
 
 // Описание таблиц для удаления
 $db_update = array(
@@ -51,13 +52,13 @@ if ($_REQUEST['action'] == 'commit') {
     }
 } else {
     // Показываем страницу подтверждения
-    $info = '<b>Внимание!</b> Будут удалены следующие данные:<br/><br/>';
-    $info .= '• Таблица <b>mailing_campaigns</b> (все кампании рассылок)<br/>';
-    $info .= '• Таблица <b>mailing_queue</b> (очередь отправки)<br/>';
-    $info .= '• Таблица <b>mailing_attachments</b> (вложения)<br/>';
-    $info .= '• Таблица <b>mailing_unsub</b> (отписки)<br/>';
-    $info .= '• Все загруженные файлы вложений<br/><br/>';
-    $info .= '<b>Это действие необратимо!</b>';
+    $info = '<b>' . $lang['mailing:uninstall_warning'] . '</b><br/><br/>';
+    $info .= '• ' . $lang['mailing:uninstall_campaigns'] . '<br/>';
+    $info .= '• ' . $lang['mailing:uninstall_queue'] . '<br/>';
+    $info .= '• ' . $lang['mailing:uninstall_attachments'] . '<br/>';
+    $info .= '• ' . $lang['mailing:uninstall_unsub'] . '<br/>';
+    $info .= '• ' . $lang['mailing:uninstall_files'] . '<br/><br/>';
+    $info .= '<b>' . $lang['mailing:uninstall_irreversible'] . '</b>';
 
     generate_install_page($plugin, $info, 'deinstall');
 }

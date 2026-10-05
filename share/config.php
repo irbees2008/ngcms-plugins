@@ -96,7 +96,10 @@ foreach ($networks as $key => $title) {
         'name' => 'network_' . $key,
         'title' => $title,
         'type' => 'select',
-        'values' => array('1' => 'Да', '0' => 'Нет'),
+        'values' => array(
+            '1' => $lang['share:option.yes'],
+            '0' => $lang['share:option.no'],
+        ),
         'value' => intval(pluginGetVariable('share', 'network_' . $key)) ?: '1',
     ));
 }

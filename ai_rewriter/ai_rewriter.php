@@ -2,6 +2,9 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
+global $lang;
+LoadPluginLang('ai_rewriter', 'main', '', '', ':');
+
 use function Plugins\{logger, sanitize, benchmark, cache_get, cache_put, validate_url};
 
 // Simple HTTP client using cURL
@@ -305,7 +308,7 @@ if (!function_exists('ai_rewriter_rewrite')) {
         $systemPromptTemplate = pluginGetVariable('ai_rewriter', 'system_prompt') ?: $defaultPrompt;
 
         // Replace {язык} placeholder with detected language
-        $sys = str_replace('{язык}', $langName . ' языке', $systemPromptTemplate);
+        $sys = str_replace('{язык}', $langName, $systemPromptTemplate);
 
         // Build user prompt
         $req = 'Перепиши следующий текст с целевой уникальностью ~' . max(0, min(100, $orig ?: 60)) . '%. ' .
@@ -411,6 +414,8 @@ register_filter('news', 'ai_rewriter', new AIRewriterNewsFilter);
 // RPC: rewrite preview (no save)
 function ai_rewriter_rpc_rewrite($params = null)
 {
+    global $lang;
+
     // Security: rpcRegisterFunction(..., true) требует авторизации администратора
     // Дополнительная проверка не требуется - встроенная защита NGCMS
 
@@ -423,7 +428,7 @@ function ai_rewriter_rpc_rewrite($params = null)
     }
     if (!mb_strlen(trim($text))) {
         logger('RPC error: empty text', 'warning', 'ai_rewriter.log');
-        return ['status' => 0, 'errorCode' => 100, 'errorText' => 'Пустой текст'];
+        return ['status' => 0, 'errorCode' => 100, 'errorText' => $lang['ai_rewriter:empty_text']];
     }
     logger('RPC rewrite request: length=' . mb_strlen($text) . ' chars', 'info', 'ai_rewriter.log');
     list($ok, $res) = ai_rewriter_rewrite($text);

@@ -4,6 +4,7 @@
  * Полностью переписан: навигация, AdminLTE-стиль, исправлен SQL запрос категорий
  */
 if (!defined('NGCMS')) die('HAL');
+LoadPluginLang('csv_import', 'config', '', '', ':');
 pluginsLoadConfig();
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -55,47 +56,59 @@ function csvimport_get_categories(): array
 {
 	global $mysql;
 	$rows   = $mysql->select("SELECT id, alt, name FROM " . prefix . "_category ORDER BY name", 1) ?: [];
-	$result = [0 => '— без категории —'];
+	$result = [0 => csvimport_lang('category_none')];
 	foreach ($rows as $row) {
-		$result[(int)$row['id']] = htmlspecialchars($row['name']) . ' (' . htmlspecialchars($row['alt']) . ')';
+		$result[(int)$row['id']] = $row['name'] . ' (' . $row['alt'] . ')';
 	}
 	return $result;
 }
 
-/**
- * Выводит breadcrumb + nav-tabs по образцу AdminLTE / ads_pro.
- * @param string $active  '' = Файлы, 'settings' = Настройки
- */
-function csvimport_nav(string $active): void
+function csvimport_lang(string $key): string
 {
-	$base = 'admin.php?mod=extra-config&plugin=csv_import';
-	$tabs = [
-		''         => '<i class="fa fa-upload mr-1"></i>Файлы',
-		'settings' => '<i class="fa fa-cog mr-1"></i>Настройки',
-	];
-	echo '<div class="container-fluid">';
-	echo   '<div class="row mb-2">';
-	echo     '<div class="col-sm-6">';
-	echo       '<h1 class="m-0 text-dark" style="padding:20px 0 0 0;">CSV / YML Импорт</h1>';
-	echo     '</div>';
-	echo     '<div class="col-sm-6">';
-	echo       '<ol class="breadcrumb float-sm-right">';
-	echo         '<li class="breadcrumb-item"><a href="admin.php"><i class="fa fa-home"></i></a></li>';
-	echo         '<li class="breadcrumb-item"><a href="admin.php?mod=extras">Плагины</a></li>';
-	echo         '<li class="breadcrumb-item active">CSV / YML Импорт</li>';
-	echo       '</ol>';
-	echo     '</div>';
-	echo   '</div>';
-	echo '</div>';
-	echo '<ul class="nav nav-tabs nav-fill mb-3 d-md-flex d-block" role="tablist">';
-	foreach ($tabs as $key => $label) {
-		$cls = ($active === $key) ? 'active' : '';
-		$url = $base . ($key ? '&action=' . rawurlencode($key) : '');
-		echo '<li class="nav-item">';
-		echo   '<a href="' . $url . '" class="nav-link ' . $cls . '">' . $label . '</a>';
-		echo '</li>';
+	global $lang;
+	$fullKey = 'csv_import:' . $key;
+	if (!isset($lang[$fullKey])) {
+		throw new RuntimeException('Missing csv_import language key: ' . $key);
 	}
-	echo '</ul>';
+
+	return $lang[$fullKey];
+}
+
+function csvimport_get_default_settings(): array
+{
+	return [
+		'default_delimiter' => pluginGetVariable('csv_import', 'default_delimiter') ?: ';',
+		'default_approve' => (string)(pluginGetVariable('csv_import', 'default_approve') ?? '1'),
+		'default_mainpage' => (string)(pluginGetVariable('csv_import', 'default_mainpage') ?? '1'),
+		'yml_image_xfield' => (string)(pluginGetVariable('csv_import', 'yml_image_xfield') ?? ''),
+		'yml_max_images' => (string)(pluginGetVariable('csv_import', 'yml_max_images') ?? '3'),
+	];
+}
+
+/**
+ * Render a plugin page inside the shared configuration layout.
+ */
+function csvimport_render_page(string $template, array $variables, string $active): void
+{
+	global $twig, $lang, $PHP_SELF;
+	$mainKey = 'config/main';
+	$viewKey = 'config/' . $template;
+	$tpath = locatePluginTemplates([$mainKey, $viewKey], 'csv_import', 1);
+	if (empty($tpath[$mainKey]) || empty($tpath[$viewKey])) {
+		die($lang['csv_import:error_templates_missing']);
+	}
+
+	$variables['lang'] = $lang;
+	$view = $twig->loadTemplate($tpath[$viewKey] . $viewKey . '.tpl');
+	$entries = $view->render($variables);
+	$layout = $twig->loadTemplate($tpath[$mainKey] . $mainKey . '.tpl');
+	echo $layout->render([
+		'active' => $active,
+		'current_title' => $lang['csv_import:title'],
+		'entries' => $entries,
+		'lang' => $lang,
+		'php_self' => $PHP_SELF,
+	]);
 }
 
 // ─── Upload dir ────────────────────────────────────────────────────────────
@@ -155,17 +168,31 @@ function csvimport_page_main(string $uploadDir): void
 		];
 	}
 	$xfFields = csvimport_get_xf_fields();
-	csvimport_nav('');
-	include __DIR__ . '/tpl/main.php';
+	$settings = csvimport_get_default_settings();
+	csvimport_render_page('files', [
+		'fileList' => $fileList,
+		'ymlFileList' => $ymlFileList,
+		'xfFields' => $xfFields,
+		'settings' => $settings,
+	], 'files');
 }
 
 // ─── Page: настройки ───────────────────────────────────────────────────────
 function csvimport_page_settings(): void
 {
+	global $lang;
 	$xfImageFields = csvimport_get_xf_image_fields();
-	$cats          = csvimport_get_categories();
-	csvimport_nav('settings');
-	include __DIR__ . '/tpl/settings.php';
+	$settings = csvimport_get_default_settings();
+	$delimiterOptions = [
+		['value' => ';', 'label' => $lang['csv_import:delimiter_semicolon']],
+		['value' => ',', 'label' => $lang['csv_import:delimiter_comma']],
+		['value' => "\t", 'label' => $lang['csv_import:delimiter_tab']],
+	];
+	csvimport_render_page('settings', [
+		'xfImageFields' => $xfImageFields,
+		'settings' => $settings,
+		'delimiterOptions' => $delimiterOptions,
+	], 'settings');
 }
 
 // ─── Action: сохранить настройки ───────────────────────────────────────────
@@ -179,33 +206,30 @@ function csvimport_action_settings_save(): void
 		}
 	}
 	pluginsSaveConfig();
-	msg(['type' => 'ok', 'text' => 'Настройки сохранены']);
-	$xfImageFields = csvimport_get_xf_image_fields();
-	$cats          = csvimport_get_categories();
-	csvimport_nav('settings');
-	include __DIR__ . '/tpl/settings.php';
+	msg(['type' => 'ok', 'text' => csvimport_lang('msg_settings_saved')]);
+	csvimport_page_settings();
 }
 
 // ─── Action: upload CSV / YML ───────────────────────────────────────────────
 function csvimport_action_upload(string $uploadDir): void
 {
 	if (empty($_FILES['csvfile']['tmp_name'])) {
-		msg(['type' => 'error', 'text' => 'Файл не выбран']);
+		msg(['type' => 'error', 'text' => csvimport_lang('msg_file_not_selected')]);
 		csvimport_page_main($uploadDir);
 		return;
 	}
 	$origName = basename($_FILES['csvfile']['name']);
 	if (!preg_match('/\.(csv|yml|xml)$/i', $origName)) {
-		msg(['type' => 'error', 'text' => 'Разрешены только .csv и .yml/.xml файлы']);
+		msg(['type' => 'error', 'text' => csvimport_lang('msg_file_type_invalid')]);
 		csvimport_page_main($uploadDir);
 		return;
 	}
 	$safeName = preg_replace('/[^a-zA-Z0-9_\-.]/', '_', $origName);
 	$dest     = $uploadDir . $safeName;
 	if (!move_uploaded_file($_FILES['csvfile']['tmp_name'], $dest)) {
-		msg(['type' => 'error', 'text' => 'Ошибка загрузки файла']);
+		msg(['type' => 'error', 'text' => csvimport_lang('msg_upload_failed')]);
 	} else {
-		msg(['type' => 'ok', 'text' => 'Файл загружен: ' . $safeName]);
+		msg(['type' => 'ok', 'text' => sprintf(csvimport_lang('msg_file_uploaded'), $safeName)]);
 	}
 	csvimport_page_main($uploadDir);
 }
@@ -216,7 +240,7 @@ function csvimport_action_preview(string $uploadDir): void
 	$filename  = basename($_REQUEST['file'] ?? '');
 	$path      = $uploadDir . $filename;
 	if (!$filename || !file_exists($path)) {
-		msg(['type' => 'error', 'text' => 'Файл не найден']);
+		msg(['type' => 'error', 'text' => csvimport_lang('msg_file_not_found')]);
 		csvimport_page_main($uploadDir);
 		return;
 	}
@@ -224,11 +248,42 @@ function csvimport_action_preview(string $uploadDir): void
 	$hasHeader = !empty($_REQUEST['has_header']);
 	$rows      = csvimport_read_csv($path, $delimiter);
 	$preview   = array_slice($rows, 0, 5);
-	$headers   = $hasHeader && isset($rows[0]) ? $rows[0] : array_keys($rows[0] ?? []);
 	$cats      = csvimport_get_categories();
 	$xfFields  = csvimport_get_xf_fields();
-	csvimport_nav('');
-	include __DIR__ . '/tpl/preview.php';
+	$newsFields = [
+		'skip' => csvimport_lang('csv_skip'),
+		'title' => csvimport_lang('csv_title_required'),
+		'short_story' => csvimport_lang('csv_short_story'),
+		'full_story' => csvimport_lang('csv_full_story'),
+		'alt_name' => csvimport_lang('csv_alt_name'),
+		'category' => csvimport_lang('csv_category_id'),
+		'tags' => csvimport_lang('csv_tags'),
+	];
+	$columns = [];
+	$columnCount = isset($preview[0]) ? count($preview[0]) : 0;
+	for ($i = 0; $i < $columnCount; $i++) {
+		$header = $hasHeader ? strtolower(trim($preview[0][$i] ?? '')) : '';
+		$samples = [];
+		foreach (array_slice($preview, 0, 3) as $row) {
+			$samples[] = mb_substr($row[$i] ?? '', 0, 40);
+		}
+		$columns[] = [
+			'index' => $i,
+			'header' => $preview[0][$i] ?? '',
+			'selected' => $header,
+			'samples' => $samples,
+		];
+	}
+	csvimport_render_page('preview', [
+		'filename' => $filename,
+		'delimiter' => $delimiter,
+		'hasHeader' => $hasHeader,
+		'cats' => $cats,
+		'xfFields' => $xfFields,
+		'newsFields' => $newsFields,
+		'columns' => $columns,
+		'settings' => csvimport_get_default_settings(),
+	], 'files');
 }
 
 // ─── Action: run CSV import ─────────────────────────────────────────────────
@@ -238,7 +293,7 @@ function csvimport_action_run(string $uploadDir): void
 	$filename = basename($_POST['file'] ?? '');
 	$path     = $uploadDir . $filename;
 	if (!$filename || !file_exists($path)) {
-		msg(['type' => 'error', 'text' => 'Файл не найден']);
+		msg(['type' => 'error', 'text' => csvimport_lang('msg_file_not_found')]);
 		csvimport_page_main($uploadDir);
 		return;
 	}
@@ -261,7 +316,7 @@ function csvimport_action_run(string $uploadDir): void
 		}
 	}
 	if (!isset($newsMap['title'])) {
-		msg(['type' => 'error', 'text' => 'Не задан столбец для поля "Заголовок"']);
+		msg(['type' => 'error', 'text' => csvimport_lang('msg_csv_title_mapping_required')]);
 		csvimport_page_main($uploadDir);
 		return;
 	}
@@ -327,7 +382,7 @@ function csvimport_action_run(string $uploadDir): void
 			xf_saveNewsData($newsId, $xfData);
 		}
 	}
-	msg(['type' => 'ok', 'text' => "Импорт завершён. Создано: $created, обновлено: $updated, ошибок: $errors"]);
+	msg(['type' => 'ok', 'text' => sprintf(csvimport_lang('msg_import_summary'), $created, $updated, $errors)]);
 	csvimport_page_main($uploadDir);
 }
 
@@ -338,7 +393,7 @@ function csvimport_action_delete(string $uploadDir): void
 	$path     = $uploadDir . $filename;
 	if ($filename && file_exists($path) && preg_match('/\.(csv|yml|xml)$/i', $filename)) {
 		@unlink($path);
-		msg(['type' => 'ok', 'text' => 'Файл удалён']);
+		msg(['type' => 'ok', 'text' => csvimport_lang('msg_file_deleted')]);
 	}
 	csvimport_page_main($uploadDir);
 }
@@ -459,7 +514,7 @@ function csvimport_action_yml_preview(string $uploadDir): void
 	$filename = basename($_REQUEST['file'] ?? '');
 	$path     = $uploadDir . $filename;
 	if (!$filename || !file_exists($path)) {
-		msg(['type' => 'error', 'text' => 'Файл не найден']);
+		msg(['type' => 'error', 'text' => csvimport_lang('msg_file_not_found')]);
 		csvimport_page_main($uploadDir);
 		return;
 	}
@@ -467,14 +522,100 @@ function csvimport_action_yml_preview(string $uploadDir): void
 	if ($data === null) {
 		$errors = libxml_get_errors();
 		$errMsg = $errors ? ': ' . $errors[0]->message : '';
-		msg(['type' => 'error', 'text' => 'Ошибка разбора YML файла' . $errMsg]);
+		msg(['type' => 'error', 'text' => csvimport_lang('msg_yml_parse_error') . $errMsg]);
 		csvimport_page_main($uploadDir);
 		return;
 	}
 	$cats     = csvimport_get_categories();
 	$xfFields = csvimport_get_xf_fields();
-	csvimport_nav('');
-	include __DIR__ . '/tpl/yml_preview.php';
+	$newsTargets = [
+		'skip' => csvimport_lang('skip'),
+		'title' => csvimport_lang('yml_target_title'),
+		'short_story' => csvimport_lang('yml_target_short_story'),
+		'full_story' => csvimport_lang('yml_target_full_story'),
+		'alt_name' => csvimport_lang('yml_target_alt_name'),
+		'tags' => csvimport_lang('yml_target_tags'),
+	];
+	$ymlFieldLabels = [];
+	foreach (['name', 'price', 'oldprice', 'vendor', 'model', 'description', 'barcode', 'vendorCode', 'count', 'weight', 'volume', 'typePrefix', 'country_of_origin', 'url', 'currencyId'] as $field) {
+		$key = 'yml_field_' . $field;
+		$ymlFieldLabels[$field] = csvimport_lang($key);
+	}
+	$autoMap = [
+		'name' => 'title',
+		'description' => 'short_story',
+		'vendor' => isset($xfFields['brand']) ? 'xf_brand' : (isset($xfFields['vendor']) ? 'xf_vendor' : 'skip'),
+		'price' => isset($xfFields['price']) ? 'xf_price' : 'skip',
+		'oldprice' => isset($xfFields['oldprice']) ? 'xf_oldprice' : 'skip',
+		'model' => isset($xfFields['model']) ? 'xf_model' : 'skip',
+		'barcode' => isset($xfFields['barcode']) ? 'xf_barcode' : 'skip',
+		'vendorCode' => isset($xfFields['vendorCode']) ? 'xf_vendorCode' : (isset($xfFields['articul']) ? 'xf_articul' : 'skip'),
+		'weight' => isset($xfFields['weight']) ? 'xf_weight' : 'skip',
+		'count' => isset($xfFields['count']) ? 'xf_count' : 'skip',
+	];
+	$exampleOffer = $data['offers'][0] ?? [];
+	$standardFields = [];
+	foreach ($data['fields'] as $field) {
+		$standardFields[] = [
+			'name' => $field,
+			'label' => $ymlFieldLabels[$field] ?? $field,
+			'example' => mb_substr((string)($exampleOffer[$field] ?? ''), 0, 80),
+			'selected' => $autoMap[$field] ?? 'skip',
+		];
+	}
+	$paramRows = [];
+	foreach ($data['params'] as $paramName) {
+		$paramKey = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '_', $paramName));
+		$selected = 'skip';
+		foreach ($xfFields as $field => $label) {
+			if (strtolower($field) === $paramKey) {
+				$selected = 'xf_' . $field;
+				break;
+			}
+		}
+		$paramRows[] = [
+			'name' => $paramName,
+			'example' => mb_substr((string)($exampleOffer['params'][$paramName] ?? ''), 0, 80),
+			'selected' => $selected,
+		];
+	}
+	$hasPictures = false;
+	foreach ($data['offers'] as $offer) {
+		if (!empty($offer['pictures'])) {
+			$hasPictures = true;
+			break;
+		}
+	}
+	$imageXfOptions = csvimport_get_xf_image_fields();
+	$categoryRows = [];
+	foreach ($data['categories'] as $ymlId => $ymlName) {
+		$matched = 0;
+		foreach ($cats as $categoryId => $categoryName) {
+			$cleanName = preg_replace('/\s*\(.*\)$/', '', $categoryName);
+			if (mb_strtolower(trim($ymlName)) === mb_strtolower(trim($cleanName))) {
+				$matched = $categoryId;
+				break;
+			}
+		}
+		$categoryRows[] = [
+			'id' => $ymlId,
+			'name' => $ymlName,
+			'matched' => $matched,
+		];
+	}
+	csvimport_render_page('yml_preview', [
+		'filename' => $filename,
+		'data' => $data,
+		'cats' => $cats,
+		'xfFields' => $xfFields,
+		'newsTargets' => $newsTargets,
+		'standardFields' => $standardFields,
+		'paramRows' => $paramRows,
+		'hasPictures' => $hasPictures,
+		'imageXfOptions' => $imageXfOptions,
+		'categoryRows' => $categoryRows,
+		'settings' => csvimport_get_default_settings(),
+	], 'files');
 }
 
 // ─── Action: YML run import ─────────────────────────────────────────────────
@@ -484,13 +625,13 @@ function csvimport_action_yml_run(string $uploadDir): void
 	$filename = basename($_POST['file'] ?? '');
 	$path     = $uploadDir . $filename;
 	if (!$filename || !file_exists($path)) {
-		msg(['type' => 'error', 'text' => 'Файл не найден']);
+		msg(['type' => 'error', 'text' => csvimport_lang('msg_file_not_found')]);
 		csvimport_page_main($uploadDir);
 		return;
 	}
 	$data = csvimport_parse_yml($path);
 	if ($data === null) {
-		msg(['type' => 'error', 'text' => 'Ошибка разбора YML файла']);
+		msg(['type' => 'error', 'text' => csvimport_lang('msg_yml_parse_error')]);
 		csvimport_page_main($uploadDir);
 		return;
 	}
@@ -586,6 +727,6 @@ function csvimport_action_yml_run(string $uploadDir): void
 			}
 		}
 	}
-	msg(['type' => 'ok', 'text' => "YML импорт завершён. Создано: $created, обновлено: $updated, ошибок: $errors"]);
+	msg(['type' => 'ok', 'text' => sprintf(csvimport_lang('msg_yml_import_summary'), $created, $updated, $errors)]);
 	csvimport_page_main($uploadDir);
 }

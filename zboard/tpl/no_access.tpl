@@ -1,3 +1,3 @@
 <div class="feed-me">
-Р”РѕСЃС‚СѓРї Р·Р°РїСЂРµС‰РµРЅ
+{{ lang['zboard']['ui_no_access'] }}
 </div>

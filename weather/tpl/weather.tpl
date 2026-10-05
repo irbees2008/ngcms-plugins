@@ -1,6 +1,6 @@
 <div class="weather-block">
 	<div class="weather-header">
-		<h3>Погода в
+		<h3>{{ lang.title }}
 			{{ weather.city }}</h3>
 	</div>
 	<div class="weather-content">
@@ -8,11 +8,11 @@
 		<div class="weather-temp">{{ weather.temp }}{{ weather.units }}</div>
 		<div class="weather-desc">{{ weather.description }}</div>
 		<div class="weather-details">
-			<span>Влажность:
+			<span>{{ lang.humidity }}:
 				{{ weather.humidity }}%</span>
-			<span>Ветер:
+			<span>{{ lang.wind }}:
 				{{ weather.wind }}
-				м/с</span>
+				{{ weather.wind_unit }}</span>
 		</div>
 	</div>
 </div>

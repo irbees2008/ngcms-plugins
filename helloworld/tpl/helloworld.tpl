@@ -2,7 +2,7 @@
 	<h1>{{ title }}</h1>
 	<p>{{ body }}</p>
 	<p>
-		<small>Просмотров страницы:
+		<small>{{ hits_label }}
 			{{ hits }}</small>
 	</p>
 </div>

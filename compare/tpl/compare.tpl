@@ -1,18 +1,18 @@
 {% if products|length > 0 %}
 	<div class="compare-page">
-		<h2>Сравнение товаров</h2>
-		<a href="{{ clear_link }}" class="btn btn-sm btn-outline-secondary">Очистить список</a>
+		<h2>{{ lang['title'] }}</h2>
+		<a href="{{ clear_link }}" class="btn btn-sm btn-outline-secondary">{{ lang['clear'] }}</a>
 
 		<div class="table-responsive mt-3">
 			<table class="table table-bordered compare-table">
 				<thead>
 					<tr>
-						<th>Характеристика</th>
+						<th>{{ lang['feature'] }}</th>
 						{% for p in products %}
 							<th>
 								<a href="{{ p.url }}">{{ p.title }}</a>
 								<br>
-								<a href="{{ remove_link }}?id={{ p.id }}" class="btn btn-sm btn-danger mt-1">Удалить</a>
+								<a href="{{ remove_link }}?id={{ p.id }}" class="btn btn-sm btn-danger mt-1">{{ lang['remove'] }}</a>
 							</th>
 						{% endfor %}
 					</tr>
@@ -34,7 +34,7 @@
 	</div>
 {% else %}
 	<div class="compare-empty">
-		<p>Список сравнения пуст. Добавьте товары для сравнения.</p>
-		<a href="/" class="btn btn-primary">На главную</a>
+		<p>{{ lang['empty'] }} {{ lang['empty_hint'] }}</p>
+		<a href="/" class="btn btn-primary">{{ lang['home'] }}</a>
 	</div>
 {% endif %}

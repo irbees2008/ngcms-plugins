@@ -1,6 +1,6 @@
 {# Web Push subscription button template #}
 <div class="webpush-widget" id="webpush-widget">
-	<button type="button" id="webpush-subscribe-btn" class="webpush-btn webpush-btn-subscribe" data-endpoint="{{ endpoint }}" data-subscribe-text="{{ subscribe_text }}" data-unsubscribe-text="{{ unsubscribe_text }}" data-public-key="{{ public_key }}">
+	<button type="button" id="webpush-subscribe-btn" class="webpush-btn webpush-btn-subscribe" data-endpoint="{{ endpoint }}" data-subscribe-text="{{ subscribe_text }}" data-unsubscribe-text="{{ unsubscribe_text }}" data-public-key="{{ public_key }}" data-error-no-support="{{ messages.error_no_support }}" data-error-permission="{{ messages.error_permission }}" data-error-https="{{ messages.error_https }}" data-error-key="{{ messages.error_key }}" data-error-service-worker="{{ messages.error_service_worker }}" data-error-subscribe="{{ messages.error_subscribe }}" data-error-unsubscribe="{{ messages.error_unsubscribe }}" data-error-unknown="{{ messages.error_unknown }}" data-subscribed-message="{{ messages.subscribed_message }}" data-unsubscribed-message="{{ messages.unsubscribed_message }}">
 		<svg class="webpush-icon" width="20" height="20" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 			<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
 			<path d="M13.73 21a2 2 0 0 1-3.46 0"></path>

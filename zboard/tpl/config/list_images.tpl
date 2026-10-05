@@ -4,7 +4,7 @@
 			<img class="card-img-top fix" name="#content-target-{pid}" src='{home}/uploads/zboard/thumb/{filepath}' width='150' height='120' alt="img">
 		</a>
 		<div class="card-body p-2 text-center">
-			<a href="{del}" class="btn btn-sm btn-danger">Удалить</a>
+			<a href="{del}" class="btn btn-sm btn-danger">{l_zboard:admin_delete}</a>
 		</div>
 	</div>
 </td>

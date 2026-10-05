@@ -1,6 +1,7 @@
 <?php
 if (!defined('NGCMS')) die('HAL');
 
+LoadPluginLang('currencies', 'config', '', '', ':');
 pluginsLoadConfig();
 
 // Admin panel for currencies
@@ -18,8 +19,14 @@ switch ($_REQUEST['action'] ?? '') {
         currencies_admin_delete();
         break;
     case 'update_rates':
-        currencies_update_rates_cbr();
-        msg(['type' => 'ok', 'text' => 'Курсы обновлены']);
+        $rateSource = pluginGetVariable('currencies', 'rate_source') ?: 'cbr';
+        if ($rateSource === 'manual') {
+            msg(['type' => 'info', 'text' => $lang['currencies:msg_manual_rates']]);
+        } elseif (currencies_update_rates()) {
+            msg(['type' => 'ok', 'text' => $lang['currencies:msg_rates_updated']]);
+        } else {
+            msg(['type' => 'error', 'text' => $lang['currencies:msg_rates_update_failed']]);
+        }
         currencies_admin_list();
         break;
     default:
@@ -28,28 +35,34 @@ switch ($_REQUEST['action'] ?? '') {
 
 function currencies_admin_list()
 {
-    global $mysql, $twig, $template;
+    global $mysql, $twig, $template, $lang;
     $rows  = $mysql->select("SELECT * FROM " . prefix . "_currencies ORDER BY is_base DESC, code ASC", 1);
+    $rateSource = pluginGetVariable('currencies', 'rate_source') ?: 'cbr';
     $tpath = locatePluginTemplates(['list', 'edit'], 'currencies', 1);
     $xt    = $twig->loadTemplate($tpath['list'] . '/list.tpl');
     $template['vars']['mainblock'] = $xt->render([
         'currencies'   => $rows,
         'update_link'  => '?action=update_rates',
         'add_link'     => '?action=add',
+        'can_update_rates' => $rateSource !== 'manual',
+        'lang'         => $lang,
     ]);
 }
 
 function currencies_admin_add()
 {
-    global $twig, $template;
+    global $twig, $template, $lang;
     $tpath = locatePluginTemplates(['edit'], 'currencies', 1);
     $xt    = $twig->loadTemplate($tpath['edit'] . '/edit.tpl');
-    $template['vars']['mainblock'] = $xt->render(['row' => ['id' => 0, 'code' => '', 'name' => '', 'symbol' => '', 'rate' => '1.000000', 'is_base' => 0]]);
+    $template['vars']['mainblock'] = $xt->render([
+        'row' => ['id' => 0, 'code' => '', 'name' => '', 'symbol' => '', 'rate' => '1.000000', 'is_base' => 0],
+        'lang' => $lang,
+    ]);
 }
 
 function currencies_admin_edit()
 {
-    global $mysql, $twig, $template;
+    global $mysql, $twig, $template, $lang;
     $id  = intval($_REQUEST['id'] ?? 0);
     $row = $mysql->record("SELECT * FROM " . prefix . "_currencies WHERE id=" . db_squote($id) . " LIMIT 1");
     if (!$row) {
@@ -58,7 +71,7 @@ function currencies_admin_edit()
     }
     $tpath = locatePluginTemplates(['edit'], 'currencies', 1);
     $xt    = $twig->loadTemplate($tpath['edit'] . '/edit.tpl');
-    $template['vars']['mainblock'] = $xt->render(['row' => $row]);
+    $template['vars']['mainblock'] = $xt->render(['row' => $row, 'lang' => $lang]);
 }
 
 function currencies_admin_save()

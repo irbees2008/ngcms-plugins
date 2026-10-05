@@ -9,6 +9,24 @@
 
 if (!defined('NGCMS')) die('HAL');
 
+function mailing_lang(string $key, string $fallback = ''): string
+{
+    global $lang;
+    return isset($lang['mailing:' . $key]) ? (string)$lang['mailing:' . $key] : $fallback;
+}
+
+function mailing_lang_vars(): array
+{
+    global $lang;
+    $vars = array();
+    foreach ((array)$lang as $key => $value) {
+        if (strpos($key, 'mailing:') === 0) {
+            $vars[substr($key, 8)] = $value;
+        }
+    }
+    return $vars;
+}
+
 /**
  * Получить инстанс базы данных
  */

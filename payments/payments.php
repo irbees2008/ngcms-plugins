@@ -8,6 +8,35 @@ if (!defined('NGCMS')) die('HAL');
 
 use function Plugins\{logger, sanitize};
 
+LoadPluginLang('payments', 'main', '', '', ':');
+
+function payments_lang_vars(): array
+{
+    global $lang;
+
+    return [
+        'pay_title' => $lang['payments:pay.title'],
+        'pay_amount' => $lang['payments:pay.amount'],
+        'pay_choose_method' => $lang['payments:pay.choose_method'],
+        'success_title' => $lang['payments:success.title'],
+        'success_order_paid' => $lang['payments:success.order_paid'],
+        'fail_title' => $lang['payments:fail.title'],
+        'fail_order_unpaid' => $lang['payments:fail.order_unpaid'],
+        'fail_retry' => $lang['payments:fail.retry'],
+        'home' => $lang['payments:home'],
+        'order_label' => $lang['payments:order.label'],
+        'redirect_title' => $lang['payments:redirect.title'],
+        'redirecting' => $lang['payments:redirecting'],
+    ];
+}
+
+function payments_order_description(int $orderId): string
+{
+    global $lang;
+
+    return sprintf($lang['payments:order.description'], $orderId);
+}
+
 // Register frontend pages
 register_plugin_page('payments', 'pay',     'payments_pay_page');
 register_plugin_page('payments', 'success', 'payments_success_page');
@@ -104,6 +133,7 @@ function payments_pay_page()
         'order'    => $order,
         'items'    => json_decode($order['items_json'], true),
         'adapters' => array_keys($adapters),
+        'lang'     => payments_lang_vars(),
     ]);
 }
 
@@ -115,7 +145,10 @@ function payments_success_page()
     $order   = $orderId ? payments_get_order($orderId) : null;
     $tpath   = locatePluginTemplates(['success'], 'payments', 1);
     $xt      = $twig->loadTemplate($tpath['success'] . '/success.tpl');
-    $template['vars']['mainblock'] = $xt->render(['order' => $order]);
+    $template['vars']['mainblock'] = $xt->render([
+        'order' => $order,
+        'lang' => payments_lang_vars(),
+    ]);
 }
 
 // ─── Page: fail ────────────────────────────────────────────────────────────
@@ -126,7 +159,10 @@ function payments_fail_page()
     $order   = $orderId ? payments_get_order($orderId) : null;
     $tpath   = locatePluginTemplates(['fail'], 'payments', 1);
     $xt      = $twig->loadTemplate($tpath['fail'] . '/fail.tpl');
-    $template['vars']['mainblock'] = $xt->render(['order' => $order]);
+    $template['vars']['mainblock'] = $xt->render([
+        'order' => $order,
+        'lang' => payments_lang_vars(),
+    ]);
 }
 
 // ─── Page: status (AJAX) ───────────────────────────────────────────────────

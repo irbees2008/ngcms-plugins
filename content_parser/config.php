@@ -351,7 +351,7 @@ function automation()
     );
     // Проверяем существование шаблонов
     if (empty($tpath['config/main']) || empty($tpath['config/automation'])) {
-        die('Ошибка: Не найдены необходимые шаблоны.');
+        die($lang['content_parser:error_templates_missing']);
     }
     try {
         // Загружаем основной шаблон
@@ -415,6 +415,21 @@ function automation()
                 ];
             }
         }
+        $contentParserLang = [];
+        $contentParserPrefix = 'content_parser:';
+        foreach ($lang as $key => $value) {
+            if (strpos($key, $contentParserPrefix) === 0) {
+                $contentParserLang[substr($key, strlen($contentParserPrefix))] = $value;
+            }
+        }
+        $parserLangJson = json_encode(
+            $contentParserLang,
+            JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP
+        );
+        if ($parserLangJson === false) {
+            throw new RuntimeException('Unable to encode content_parser language strings: ' . json_last_error_msg());
+        }
+
         // Переменные для шаблона автоматизации
         $tVarsAutomation = [
             'rss_url' => $rssUrl,
@@ -431,6 +446,8 @@ function automation()
             'tg_use_madelineproto' => $tgUseMadelineProto,
             'madelineproto_installed' => $madelineProtoInstalled,
             'categories' => $categories,
+            'lang' => $lang,
+            'parser_lang_json' => $parserLangJson,
         ];
         // Рендерим шаблон автоматизации
         $renderedAutomation = $automationTemplate->render($tVarsAutomation);
@@ -442,13 +459,14 @@ function automation()
             'skins_url' => skins_url,
             'admin_url' => admin_url,
             'home' => home,
-            'current_title' => 'Настройки парсера RSS',
+            'current_title' => $lang['content_parser:title_settings'],
+            'lang' => $lang,
         ];
         // Выводим основной шаблон
         echo $mainTemplate->render($tVarsMain);
     } catch (Exception $e) {
         // Обработка ошибок Twig
-        die('Ошибка шаблонизатора: ' . $e->getMessage());
+        die($lang['content_parser:error_template_render'] . $e->getMessage());
     }
 }
 // Основной обработчик запросов
@@ -494,14 +512,14 @@ switch ($_REQUEST['action'] ?? '') {
         header('Content-Type: application/json');
         try {
             if (!file_exists(__DIR__ . '/telegram_madelineproto.php')) {
-                echo json_encode(['authorized' => false, 'error' => 'Файл telegram_madelineproto.php не найден']);
+                echo json_encode(['authorized' => false, 'error' => $lang['content_parser:error_telegram_handler_missing']]);
                 if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
                 else while (ob_get_level()) @ob_end_flush();
                 exit;
             }
 
             if (!function_exists('checkTelegramAuth')) {
-                echo json_encode(['authorized' => false, 'error' => 'Функция checkTelegramAuth не найдена']);
+                echo json_encode(['authorized' => false, 'error' => $lang['content_parser:error_check_auth_missing']]);
                 if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
                 else while (ob_get_level()) @ob_end_flush();
                 exit;
@@ -520,7 +538,7 @@ switch ($_REQUEST['action'] ?? '') {
         } catch (\Throwable $e) {
             echo json_encode([
                 'authorized' => false,
-                'error' => 'Ошибка: ' . $e->getMessage(),
+                'error' => $lang['content_parser:error_prefix'] . $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
@@ -547,7 +565,7 @@ switch ($_REQUEST['action'] ?? '') {
 
             if (empty($phone)) {
                 file_put_contents($logFile, "3. ОШИБКА: Номер пустой\n", FILE_APPEND);
-                echo json_encode(['success' => false, 'error' => 'Номер телефона не указан']);
+                echo json_encode(['success' => false, 'error' => $lang['content_parser:error_auth_phone_required']]);
                 if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
                 else while (ob_get_level()) @ob_end_flush();
                 exit;
@@ -556,7 +574,7 @@ switch ($_REQUEST['action'] ?? '') {
             file_put_contents($logFile, "4. Проверка функции startTelegramAuth...\n", FILE_APPEND);
             if (!function_exists('startTelegramAuth')) {
                 file_put_contents($logFile, "5. ОШИБКА: Функция не найдена\n", FILE_APPEND);
-                echo json_encode(['success' => false, 'error' => 'Функция startTelegramAuth не найдена']);
+                echo json_encode(['success' => false, 'error' => $lang['content_parser:error_start_auth_missing']]);
                 if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
                 else while (ob_get_level()) @ob_end_flush();
                 exit;
@@ -579,7 +597,7 @@ switch ($_REQUEST['action'] ?? '') {
         } catch (\Throwable $e) {
             $errorInfo = [
                 'success' => false,
-                'error' => 'Ошибка: ' . $e->getMessage(),
+                'error' => $lang['content_parser:error_prefix'] . $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString()
@@ -604,14 +622,14 @@ switch ($_REQUEST['action'] ?? '') {
         try {
             $code = trim($_POST['code'] ?? '');
             if (empty($code)) {
-                echo json_encode(['success' => false, 'error' => 'Код не указан']);
+                echo json_encode(['success' => false, 'error' => $lang['content_parser:error_auth_code_required']]);
                 if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
                 else while (ob_get_level()) @ob_end_flush();
                 exit;
             }
 
             if (!function_exists('completeTelegramAuth')) {
-                echo json_encode(['success' => false, 'error' => 'Функция completeTelegramAuth не найдена']);
+                echo json_encode(['success' => false, 'error' => $lang['content_parser:error_complete_auth_missing']]);
                 if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
                 else while (ob_get_level()) @ob_end_flush();
                 exit;
@@ -630,7 +648,7 @@ switch ($_REQUEST['action'] ?? '') {
         } catch (\Throwable $e) {
             echo json_encode([
                 'success' => false,
-                'error' => 'Ошибка: ' . $e->getMessage(),
+                'error' => $lang['content_parser:error_prefix'] . $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
@@ -650,14 +668,14 @@ switch ($_REQUEST['action'] ?? '') {
         try {
             $password = $_POST['password'] ?? '';
             if (empty($password)) {
-                echo json_encode(['success' => false, 'error' => 'Пароль не указан']);
+                echo json_encode(['success' => false, 'error' => $lang['content_parser:error_auth_password_required']]);
                 if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
                 else while (ob_get_level()) @ob_end_flush();
                 exit;
             }
 
             if (!function_exists('complete2FATelegramAuth')) {
-                echo json_encode(['success' => false, 'error' => 'Функция complete2FATelegramAuth не найдена']);
+                echo json_encode(['success' => false, 'error' => $lang['content_parser:error_complete_2fa_missing']]);
                 if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
                 else while (ob_get_level()) @ob_end_flush();
                 exit;
@@ -676,7 +694,7 @@ switch ($_REQUEST['action'] ?? '') {
         } catch (\Throwable $e) {
             echo json_encode([
                 'success' => false,
-                'error' => 'Ошибка: ' . $e->getMessage(),
+                'error' => $lang['content_parser:error_prefix'] . $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
@@ -698,7 +716,7 @@ switch ($_REQUEST['action'] ?? '') {
             $sessionLockFile = $sessionFile . '.lock';
 
             if (!file_exists($sessionFile)) {
-                echo json_encode(['success' => true, 'message' => 'Файл сессии не найден (уже удален)']);
+                echo json_encode(['success' => true, 'message' => $lang['content_parser:info_auth_session_missing']]);
                 if (function_exists('fastcgi_finish_request')) {
                     fastcgi_finish_request();
                 } else {
@@ -724,13 +742,13 @@ switch ($_REQUEST['action'] ?? '') {
             }
 
             if ($deleted) {
-                echo json_encode(['success' => true, 'message' => 'Сессия успешно удалена']);
+                echo json_encode(['success' => true, 'message' => $lang['content_parser:info_auth_session_deleted']]);
             } else {
                 echo json_encode([
                     'success' => false,
-                    'error' => 'Не удалось удалить сессию автоматически',
+                    'error' => $lang['content_parser:error_auth_session_delete'],
                     'manual_path' => $sessionFile,
-                    'hint' => 'Удалите вручную через проводник Windows или выполните в PowerShell: Remove-Item "' . $sessionFile . '" -Recurse -Force'
+                    'hint' => 'Remove-Item "' . $sessionFile . '" -Recurse -Force'
                 ]);
             }
 

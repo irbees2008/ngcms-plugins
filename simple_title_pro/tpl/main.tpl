@@ -32,12 +32,12 @@
 	<div class="card mb-4">
 		<div class="card-body p-2">
 			<div class="d-flex flex-wrap gap-2">
-				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=simple_title_pro" class="btn btn-outline-primary">Общие</a>
-				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=simple_title_pro&action=list_static" class="btn btn-outline-primary">Список статиков</a>
-				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=simple_title_pro&action=list_cat" class="btn btn-outline-primary">Список категорий</a>
-				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=simple_title_pro&action=list_news" class="btn btn-outline-primary">Список новостей</a>
-				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=simple_title_pro&action=clear_cache" class="btn btn-outline-warning">Очистить кэш</a>
-				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=simple_title_pro&action=about" class="btn btn-outline-info">О плагине</a>
+				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=simple_title_pro" class="btn btn-outline-primary">{{ lang['page.main'] }}</a>
+				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=simple_title_pro&action=list_static" class="btn btn-outline-primary">{{ lang['page.list_static'] }}</a>
+				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=simple_title_pro&action=list_cat" class="btn btn-outline-primary">{{ lang['page.list_cat'] }}</a>
+				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=simple_title_pro&action=list_news" class="btn btn-outline-primary">{{ lang['page.list_news'] }}</a>
+				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=simple_title_pro&action=clear_cache" class="btn btn-outline-warning">{{ lang['btn.clear_cache'] }}</a>
+				<a href="{{ admin_url }}/admin.php?mod=extra-config&plugin=simple_title_pro&action=about" class="btn btn-outline-info">{{ lang['page.about'] }}</a>
 			</div>
 		</div>
 	</div>

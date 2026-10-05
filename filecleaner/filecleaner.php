@@ -498,6 +498,7 @@ function filecleaner_forget_scan_entry(string $relative): void
 
 function filecleaner_delete(string $relative): array
 {
+    global $lang;
     $relative = filecleaner_normalize($relative);
     $root = realpath(filecleaner_root());
     $fullPath = $root === false ? false : realpath($root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative));
@@ -507,33 +508,33 @@ function filecleaner_delete(string $relative): array
         if (filecleaner_normalize((string)($entry['path'] ?? '')) === $relative) $candidate = $entry;
     }
     if (!$root || !filecleaner_is_allowed_relative($relative) || !$candidate || $candidate['status'] !== 'unused' || ($fullPath && strpos($fullPath, $root . DIRECTORY_SEPARATOR) !== 0)) {
-        return [false, 'Файл не прошёл повторную проверку безопасности.'];
+        return [false, $lang['filecleaner:delete_recheck_failed']];
     }
     if (!$fullPath || !is_file($fullPath)) {
         filecleaner_forget_scan_entry($relative);
         filecleaner_log_operation('delete', 'missing', ['path' => $relative]);
-        return [true, 'Файл уже отсутствует: ' . $relative];
+        return [true, sprintf($lang['filecleaner:delete_missing'], $relative)];
     }
     $cfg = filecleaner_config();
     if (filecleaner_is_excluded($relative, $cfg) || filemtime($fullPath) > time() - ($cfg['protect_days'] * 86400)) {
-        return [false, 'Файл защищён настройками или возрастом.'];
+        return [false, $lang['filecleaner:delete_protected']];
     }
     foreach (filecleaner_get_sources() as $source) {
         try {
             foreach ((array)call_user_func($source) as $record) {
                 $sourcePath = is_array($record) ? (string)($record['path'] ?? '') : (string)$record;
-                if (filecleaner_normalize($sourcePath) === $relative) return [false, 'Файл зарегистрирован или используется.'];
+                if (filecleaner_normalize($sourcePath) === $relative) return [false, $lang['filecleaner:delete_in_use']];
             }
         } catch (Throwable $e) {
-            return [false, 'Источник использования недоступен, удаление отменено.'];
+            return [false, $lang['filecleaner:delete_source_unavailable']];
         }
     }
     $size = filesize($fullPath);
-    if (!unlink($fullPath)) return [false, 'Не удалось удалить файл.'];
+    if (!unlink($fullPath)) return [false, $lang['filecleaner:delete_failed']];
     $log = filecleaner_storage('deletions.log');
     file_put_contents($log, date('c') . "\t" . $relative . "\t" . (int)$size . "\n", FILE_APPEND | LOCK_EX);
     filecleaner_log_operation('delete', 'completed', ['path' => $relative, 'size' => (int)$size]);
-    return [true, 'Удалён: ' . $relative];
+    return [true, sprintf($lang['filecleaner:delete_success'], $relative)];
 }
 
 function filecleaner_register_cron(): void

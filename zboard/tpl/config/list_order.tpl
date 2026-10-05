@@ -3,11 +3,11 @@
 		<thead class="thead-light">
 			<tr>
 				<th scope="col">#</th>
-				<th scope="col">Дата</th>
-				<th scope="col">Объявление</th>
-				<th scope="col">Стоимость</th>
-				<th scope="col">Описание</th>
-				<th scope="col">Статус</th>
+				<th scope="col">{l_zboard:admin_date}</th>
+				<th scope="col">{l_zboard:admin_order_announcement}</th>
+				<th scope="col">{l_zboard:admin_price}</th>
+				<th scope="col">{l_zboard:admin_order_description}</th>
+				<th scope="col">{l_zboard:admin_order_status}</th>
 			</tr>
 		</thead>
 		<tbody>

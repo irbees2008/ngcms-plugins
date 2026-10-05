@@ -8,6 +8,8 @@ if (!defined('NGCMS')) die ('HAL');
 //
 
 pluginsLoadConfig();
+LoadPluginLang('zboard', 'config', '', '', ':');
+global $lang;
 
 $db_update = array(
 	array(
@@ -41,5 +43,5 @@ if ($_REQUEST['action'] == 'commit') {
 		plugin_mark_deinstalled($plugin);
 	}
 } else {
-	generate_install_page($plugin, 'Удаление плагина', 'deinstall');
+	generate_install_page($plugin, $lang['zboard:uninstall_title'], 'deinstall');
 }

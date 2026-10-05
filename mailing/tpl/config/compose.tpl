@@ -1,35 +1,35 @@
 <form method="post" action="" enctype="multipart/form-data">
 	<fieldset class="admGroup">
-		<legend class="title">Основная информация</legend>
+		<legend class="title">{{ lang.main_information }}</legend>
 		<div class="table-responsive">
 			<table class="table table-bordered">
 				<tbody>
 					<tr>
-						<th scope="row" class="align-middle">Название кампании</th>
-						<td><input name="title" type="text" class="form-control" placeholder="Необязательно"/></td>
+						<th scope="row" class="align-middle">{{ lang.campaign_title }}</th>
+						<td><input name="title" type="text" class="form-control" placeholder="{{ lang.optional }}"/></td>
 					</tr>
 					<tr>
-						<th scope="row" class="align-middle">Тема письма
+						<th scope="row" class="align-middle">{{ lang.subject }}
 							<span class="text-danger">*</span>
 						</th>
 						<td><input name="subject" type="text" class="form-control" required/></td>
 					</tr>
 					<tr>
 						<th scope="row" class="align-middle">
-							HTML контент
-							<br><small>Можно использовать {UNSUB_URL} для отписки</small>
+							{{ lang.html_content }}
+							<br><small>{{ lang.unsubscribe_placeholder }}</small>
 						</th>
 						<td>
-							<textarea name="body_html" class="form-control" rows="12" placeholder="HTML письма"></textarea>
+							<textarea name="body_html" class="form-control" rows="12" placeholder="{{ lang.html_email_placeholder }}"></textarea>
 						</td>
 					</tr>
 					<tr>
 						<th scope="row" class="align-middle">
-							Text версия
-							<br><small>Опционально, для почтовых клиентов без HTML</small>
+							{{ lang.text_version }}
+							<br><small>{{ lang.text_version_help }}</small>
 						</th>
 						<td>
-							<textarea name="body_text" class="form-control" rows="6" placeholder="Текстовая версия"></textarea>
+							<textarea name="body_text" class="form-control" rows="6" placeholder="{{ lang.text_email_placeholder }}"></textarea>
 						</td>
 					</tr>
 				</tbody>
@@ -38,28 +38,28 @@
 	</fieldset>
 
 	<fieldset class="admGroup">
-		<legend class="title">Получатели (сегмент)</legend>
+		<legend class="title">{{ lang.recipients_segment }}</legend>
 		<div class="table-responsive">
 			<table class="table table-bordered">
 				<tbody>
 					<tr>
 						<th scope="row" class="align-middle">
-							ID групп пользователей
-							<br><small>Через запятую, например: 1,2,5</small>
+							{{ lang.user_group_ids }}
+							<br><small>{{ lang.user_group_ids_help }}</small>
 						</th>
 						<td><input name="groups_csv" type="text" class="form-control" placeholder="1,2"/></td>
 					</tr>
 					<tr>
-						<th scope="row" class="align-middle">Только активные пользователи</th>
+						<th scope="row" class="align-middle">{{ lang.only_active_users }}</th>
 						<td>
 							<label><input type="checkbox" name="only_active" checked>
-								Да</label>
+								{{ lang.yes_option }}</label>
 						</td>
 					</tr>
 					<tr>
 						<th scope="row" class="align-middle">
-							Лимит получателей
-							<br><small>0 = без лимита</small>
+							{{ lang.recipient_limit }}
+							<br><small>{{ lang.zero_unlimited }}</small>
 						</th>
 						<td><input name="limit" type="text" class="form-control" value="0"/></td>
 					</tr>
@@ -69,19 +69,19 @@
 	</fieldset>
 
 	<fieldset class="admGroup">
-		<legend class="title">Параметры отправки</legend>
+		<legend class="title">{{ lang.send_parameters }}</legend>
 		<div class="table-responsive">
 			<table class="table table-bordered">
 				<tbody>
 					<tr>
 						<th scope="row" class="align-middle">
-							Отложенная отправка
-							<br><small>UNIX timestamp, 0 = отправить сейчас</small>
+							{{ lang.scheduled_send }}
+							<br><small>{{ lang.unix_timestamp_help }}</small>
 						</th>
 						<td><input name="send_at_ts" type="text" class="form-control" value="0"/></td>
 					</tr>
 					<tr>
-						<th scope="row" class="align-middle">Вложения</th>
+						<th scope="row" class="align-middle">{{ lang.attachments }}</th>
 						<td><input name="attachments[]" type="file" class="form-control" multiple/></td>
 					</tr>
 				</tbody>
@@ -92,7 +92,7 @@
 	<input type="hidden" name="created_by" value="0">
 
 	<div class="card-footer text-center">
-		<button class="btn btn-success" type="submit" name="create_campaign" value="1">Создать и поставить в очередь</button>
+		<button class="btn btn-success" type="submit" name="create_campaign" value="1">{{ lang.create_and_queue }}</button>
 	</div>
 </form>
 

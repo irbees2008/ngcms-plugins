@@ -1,151 +1,236 @@
-<form action="" method="post">
-	<?php
-	global $mysql, $config, $parse, $lang;
-	# Open the File.
-	if (($handle = fopen("/home/s/stdex/air.tw1.ru/public_html/professionals/engine/plugins/csv_reimport/stdex_tez.csv", "r")) !== FALSE) {
-		# Set the parent multidimensional array key to 0.
-		$nn = 0;
-		while (($data = fgetcsv($handle, 1000, ";")) !== FALSE) {
-			# Count the total keys in the row.
-
-			$c = count($data);
-			# Populate the multidimensional array.
-			for ($x = 0; $x < $c; $x++) {
-				$csvarray[$nn][$x] = $data[$x];
-			}
-			$nn++;
-		}
-		# Close the File.
-		fclose($handle);
-	} else {
-		print_r("nt_file");
-	}
-
-	//var_dump($csvarray);
-
-
-
-	echo "<input type='submit' name='sented' class='button' />" . "<br/>" . "<br/>";
-	/**/ //var_dump($csvarray);
-	if ($_POST['sented']) {
-
-		foreach ($csvarray as $key => $value) {
-
-			//			$mainpage = 1;
-			//			$approve = 1;
-			//			$flags = 2;
-
-			$titleF = $value[1];
-			var_dump($titleF);
-			$nrow = $mysql->record("select * from " . prefix . "_news where title=" . db_squote($titleF));
-			if (!($nrow)) continue;
-
-
-			// Decode previusly stored data
-			$oldFields = xf_decode($nrow['xfields']);
-
-			$out_arr['gosreg'] = $value[2];
-			$out_arr['refusalfire'] = $value[3];
-			$out_arr['refusal'] = $value[4];
-			$out_arr['conformity'] = $value[5];
-			$out_arr['voluntaryfire'] = $value[6];
-			$out_arr['roomab'] = $value[7];
-
-			$xf = xf_configLoad();
-			if (!is_array($xf))
-				return 1;
-			$rcall = $out_arr;
-			if (!is_array($rcall)) $rcall = array();
-
-			$xdata = array();
-			foreach ($xf['news'] as $id => $data) {
-				// Skip disabled fields
-				if ($oldFields[$id]) {
-					$xdata[$id] = $oldFields[$id];
-					continue;
-				}
-				if ($data['type'] == 'images') {
-					continue;
-				}
-				// Fill xfields. Check that all required fields are filled
-				if ($rcall[$id] != '') {
-					$xdata[$id] = $rcall[$id];
-				} else if ($data['required']) {
-					msg(array("type" => "error", "text" => str_replace('{field}', $id, $lang['xfields_msge_emptyrequired'])));
-					return 0;
-				}
-				// Check if we should save data into separate SQL field
-				if ($data['storage'] && ($rcall[$id] != '')) {
-					$SQL['xfields_' . $id] = $rcall[$id];
-					$xdata[$id] = $rcall[$id];
-				}
-			}
-
-			//var_dump($xdata);
-
-			$SQL['xfields']   = xf_encode($xdata);
-
-			//$SQL['content'] = str_replace("\r\n", "\n", $content);
-			//$SQL['title'] = $title;
-
-			/*
-		$alt_name = strtolower($parse->translit(trim($title), 1));
-
-		$alt_name = preg_replace(array('/\./', '/(_{2,20})/', '/^(_+)/', '/(_+)$/'), array('_', '_'), $alt_name);
-
-		if ($alt_name == '') $alt_name = '_';
-
-				$i = '';
-				while ( is_array($mysql->record("select id from ".prefix."_news where alt_name = ".db_squote($alt_name.$i)." limit 1")) ) {
-					$i++;
-				}
-			$alt_name = $alt_name.$i;
-
-			$SQL['alt_name'] = $alt_name;
-			$SQL['postdate'] = time() + ($config['date_adjust'] * 60);
-
-			$SQL['author']		= !empty($userROW['name'])?$userROW['name']:'Гость';
-			$SQL['author_id']	= !empty($userROW['id'])?intval($userROW['id']):0;
-
-			$SQL['mainpage'] = $mainpage;
-			$SQL['approve'] = $approve;
-			$SQL['flags'] = $flags;
-
-		*/
-			if (empty($error_text)) {
-				//$vnames = array(); $vparams = array();
-				//foreach ($SQL as $k => $v) { $vnames[]  = $k; $vparams[] = db_squote($v); }
-				foreach ($SQL as $k => $v) {
-
-					$mysql->query("UPDATE " . prefix . "_news SET " . $k . " = " . db_squote($v) . " WHERE title = " . db_squote($titleF));
-					//$vnames[]  = $k;
-					//$vparams[] = db_squote($v);
-				}
-			}
-
-			unset($SQL);
-			unset($out_arr);
-		}
-
-
-
-		echo "<META HTTP-EQUIV='Refresh' Content='0'>";
-	}
-	/**/
-
-	?>
-</form>
-
 <?php
+if (!defined('NGCMS')) {
+	exit('HAL');
+}
+
+LoadPluginLang('csv_reimport', 'config', '', '', ':');
 pluginsLoadConfig();
-$cfg = array();
-array_push($cfg, array('descr' => 'Плагин позволяет добавлять контент из csv'));
 
+function csvreimport_lang(string $key): string
+{
+	global $lang;
+	$fullKey = 'csv_reimport:' . $key;
+	if (!isset($lang[$fullKey])) {
+		throw new RuntimeException('Missing csv_reimport language key: ' . $key);
+	}
 
-if ($_REQUEST['action'] == 'commit') {
+	return $lang[$fullKey];
+}
 
+function csvreimport_render_page(array $variables): void
+{
+	global $twig, $lang, $PHP_SELF;
+	$mainKey = 'config/main';
+	$viewKey = 'config/import';
+	$paths = locatePluginTemplates([$mainKey, $viewKey], 'csv_reimport', 1);
+	if (empty($paths[$mainKey]) || empty($paths[$viewKey])) {
+		throw new RuntimeException(csvreimport_lang('error_templates_missing'));
+	}
+
+	$variables['lang'] = $lang;
+	$view = $twig->loadTemplate($paths[$viewKey] . $viewKey . '.tpl');
+	$entries = $view->render($variables);
+	$layout = $twig->loadTemplate($paths[$mainKey] . $mainKey . '.tpl');
+	echo $layout->render([
+		'current_title' => csvreimport_lang('title'),
+		'entries' => $entries,
+		'lang' => $lang,
+		'php_self' => $PHP_SELF,
+	]);
+}
+
+function csvreimport_list_files(string $uploadDir): array
+{
+	$files = [];
+	foreach (glob($uploadDir . 'csv_reimport_*.csv') ?: [] as $path) {
+		if (!preg_match('/^csv_reimport_[a-f0-9]{16}\.csv$/', basename($path))) {
+			continue;
+		}
+		$files[] = [
+			'name' => basename($path),
+			'size' => round(filesize($path) / 1024, 1),
+			'modified' => date('Y-m-d H:i', filemtime($path)),
+		];
+	}
+	usort($files, static function ($left, $right) {
+		return strcmp($right['name'], $left['name']);
+	});
+
+	return $files;
+}
+
+function csvreimport_upload(string $uploadDir): array
+{
+	if (!isset($_FILES['csvfile']) || $_FILES['csvfile']['error'] === UPLOAD_ERR_NO_FILE) {
+		return ['type' => 'error', 'text' => csvreimport_lang('msg_file_not_selected')];
+	}
+	if ($_FILES['csvfile']['error'] !== UPLOAD_ERR_OK) {
+		return ['type' => 'error', 'text' => csvreimport_lang('msg_upload_failed')];
+	}
+	$originalName = (string)($_FILES['csvfile']['name'] ?? '');
+	if (strtolower(pathinfo($originalName, PATHINFO_EXTENSION)) !== 'csv') {
+		return ['type' => 'error', 'text' => csvreimport_lang('msg_file_type_invalid')];
+	}
+	if (!is_writable($uploadDir)) {
+		return ['type' => 'error', 'text' => csvreimport_lang('msg_upload_directory_unwritable')];
+	}
+
+	$fileName = 'csv_reimport_' . bin2hex(random_bytes(8)) . '.csv';
+	if (!move_uploaded_file($_FILES['csvfile']['tmp_name'], $uploadDir . $fileName)) {
+		return ['type' => 'error', 'text' => csvreimport_lang('msg_upload_failed')];
+	}
+
+	return ['type' => 'success', 'text' => sprintf(csvreimport_lang('msg_file_uploaded'), $fileName)];
+}
+
+function csvreimport_process_file(string $path): array
+{
+	global $mysql;
+	if (filesize($path) === 0) {
+		return ['error' => csvreimport_lang('msg_file_empty')];
+	}
+	if (!function_exists('xf_configLoad') || !function_exists('xf_decode') || !function_exists('xf_encode')) {
+		return ['error' => csvreimport_lang('msg_xfields_unavailable')];
+	}
+	$xfConfig = xf_configLoad();
+	if (!is_array($xfConfig) || !isset($xfConfig['news']) || !is_array($xfConfig['news'])) {
+		return ['error' => csvreimport_lang('msg_xfields_unavailable')];
+	}
+
+	$handle = fopen($path, 'r');
+	if ($handle === false) {
+		return ['error' => csvreimport_lang('msg_file_read_failed')];
+	}
+
+	$stats = ['updated' => 0, 'not_found' => 0, 'invalid' => 0, 'skipped' => 0];
+	$line = 0;
+	while (($row = fgetcsv($handle, 0, ';')) !== false) {
+		$line++;
+		$row = array_map(static function ($value) {
+			return mb_convert_encoding((string)$value, 'UTF-8', 'UTF-8,CP1251,Windows-1251');
+		}, $row);
+		if ($line === 1 && isset($row[0])) {
+			$row[0] = preg_replace('/^\xEF\xBB\xBF/', '', $row[0]);
+		}
+
+		$title = trim((string)($row[1] ?? ''));
+		if ($line === 1 && in_array(mb_strtolower($title, 'UTF-8'), ['title', 'название', 'заголовок'], true)) {
+			continue;
+		}
+		if ($title === '') {
+			$stats['skipped']++;
+			continue;
+		}
+		if (count($row) < 8) {
+			$stats['invalid']++;
+			continue;
+		}
+
+		$news = $mysql->record(
+			'SELECT id, xfields FROM ' . prefix . '_news WHERE title = ' . db_squote($title) . ' ORDER BY id LIMIT 1'
+		);
+		if (!$news) {
+			$stats['not_found']++;
+			continue;
+		}
+
+		$incoming = [
+			'gosreg' => $row[2],
+			'refusalfire' => $row[3],
+			'refusal' => $row[4],
+			'conformity' => $row[5],
+			'voluntaryfire' => $row[6],
+			'roomab' => $row[7],
+		];
+		$oldFields = xf_decode((string)($news['xfields'] ?? ''));
+		$xfields = [];
+		$storageUpdates = [];
+		$hasRequiredValue = true;
+
+		foreach ($xfConfig['news'] as $id => $field) {
+			if (!preg_match('/^[A-Za-z0-9_]+$/', (string)$id)) {
+				$stats['invalid']++;
+				$hasRequiredValue = false;
+				break;
+			}
+			if (array_key_exists($id, $oldFields) && $oldFields[$id] !== '') {
+				$xfields[$id] = $oldFields[$id];
+				continue;
+			}
+			if (($field['type'] ?? '') === 'images') {
+				continue;
+			}
+
+			$value = (string)($incoming[$id] ?? '');
+			if ($value !== '') {
+				$xfields[$id] = $value;
+				if (!empty($field['storage'])) {
+					$storageUpdates['xfields_' . $id] = $value;
+				}
+			} elseif (!empty($field['required'])) {
+				$hasRequiredValue = false;
+				break;
+			}
+		}
+		if (!$hasRequiredValue) {
+			continue;
+		}
+
+		$updates = ['xfields = ' . db_squote(xf_encode($xfields))];
+		foreach ($storageUpdates as $column => $value) {
+			$updates[] = '`' . $column . '` = ' . db_squote($value);
+		}
+		$result = $mysql->query(
+			'UPDATE ' . prefix . '_news SET ' . implode(', ', $updates) . ' WHERE id = ' . (int)$news['id']
+		);
+		if ($result === false) {
+			$stats['invalid']++;
+			continue;
+		}
+		$stats['updated']++;
+	}
+	fclose($handle);
+
+	if ($line === 0) {
+		return ['error' => csvreimport_lang('msg_file_empty')];
+	}
+
+	return ['stats' => $stats];
+}
+
+$uploadDir = __DIR__ . '/upload/';
+if (!is_dir($uploadDir)) {
+	@mkdir($uploadDir, 0755, true);
+}
+$notice = null;
+$action = (string)($_REQUEST['action'] ?? '');
+if ($action === 'upload') {
+	$notice = csvreimport_upload($uploadDir);
+} elseif ($action === 'run') {
+	$fileName = (string)($_POST['file'] ?? '');
+	if (!preg_match('/^csv_reimport_[a-f0-9]{16}\.csv$/', $fileName) || !is_file($uploadDir . $fileName)) {
+		$notice = ['type' => 'error', 'text' => csvreimport_lang('msg_file_not_found')];
+	} else {
+		$result = csvreimport_process_file($uploadDir . $fileName);
+		$notice = isset($result['error'])
+			? ['type' => 'error', 'text' => $result['error']]
+			: ['type' => 'success', 'text' => sprintf(
+				csvreimport_lang('msg_import_summary'),
+				$result['stats']['updated'],
+				$result['stats']['not_found'],
+				$result['stats']['invalid'],
+				$result['stats']['skipped']
+			)];
+	}
+}
+
+$cfg = [['descr' => csvreimport_lang('plugin_description')]];
+if (($_REQUEST['action'] ?? '') === 'commit') {
 	commit_plugin_config_changes($plugin, $cfg);
 	print_commit_complete('csv_reimport');
 } else {
-	generate_config_page('csv_reimport', $cfg);
+	csvreimport_render_page([
+		'files' => csvreimport_list_files($uploadDir),
+		'notice' => $notice,
+	]);
 }

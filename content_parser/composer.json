@@ -1,0 +1,20 @@
+{
+  "name": "ngcms/content-parser",
+  "description": "Content Parser plugin with MadelineProto support",
+  "type": "library",
+  "require": {
+    "php": ">=8.2",
+    "danog/madelineproto": "^8.0"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "./lib/MadelineProto-8"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "ContentParser\\": "src/"
+    }
+  }
+}

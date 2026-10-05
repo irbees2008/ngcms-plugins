@@ -1,59 +1,59 @@
-<h4>CRON / Ручной запуск</h4>
+<h4>{{ lang.cron_heading }}</h4>
 
 <fieldset class="admGroup">
-	<legend class="title">Системный CRON (рекомендуется)</legend>
+	<legend class="title">{{ lang.system_cron_recommended }}</legend>
 	<div class="alert alert-info">
 		<p>
-			<strong>Текущий период:</strong>
+			<strong>{{ lang.current_period }}:</strong>
 			{{ period_label }}</p>
-		<p>Плагин автоматически вызывается через
+		<p>{{ lang.cron_auto_explanation }}
 			<code>syscron.php</code>
-			согласно настроенному периоду.</p>
-		<p>Измените период в разделе "Настройки" → "Системный CRON"</p>
+			{{ lang.cron_auto_explanation_suffix }}</p>
+		<p>{{ lang.cron_period_instructions }}</p>
 	</div>
 </fieldset>
 
 <fieldset class="admGroup">
-	<legend class="title">Ручной запуск через URL</legend>
+	<legend class="title">{{ lang.manual_url_title }}</legend>
 
 	{% if cron_secret %}
 		<div class="alert alert-success">
 			<p>
-				<strong>URL для ручного запуска:</strong>
+				<strong>{{ lang.manual_url_label }}</strong>
 			</p>
 			<pre>{{ cron_url }}</pre>
 
 			<p class="mt-3">
-				<strong>Пример добавления в crontab:</strong>
+				<strong>{{ lang.crontab_example }}</strong>
 			</p>
 			<pre>*/5 * * * * curl -s {{ cron_url }} >/dev/null 2>&1</pre>
 
 			<p class="mt-3">
-				<strong>Или через wget:</strong>
+				<strong>{{ lang.wget_example }}</strong>
 			</p>
 			<pre>*/5 * * * * wget -q -O - {{ cron_url }} >/dev/null 2>&1</pre>
 		</div>
 	{% else %}
 		<div class="alert alert-danger">
 			<p>
-				<strong>Секрет не задан!</strong>
+				<strong>{{ lang.secret_not_set }}</strong>
 			</p>
-			<p>Задайте секретный ключ в разделе "Настройки" → "Авто-обработка" → "Секрет для cron URL"</p>
-			<p>Без секрета URL для ручного запуска будет недоступен.</p>
+			<p>{{ lang.set_secret_instruction }}</p>
+			<p>{{ lang.secret_required }}</p>
 		</div>
 	{% endif %}
 </fieldset>
 
 <fieldset class="admGroup">
-	<legend class="title">Обработка по посещениям сайта</legend>
+	<legend class="title">{{ lang.visitor_processing }}</legend>
 	<div class="alert alert-warning">
 		<p>
-			<strong>Статус:</strong>
-			{% if enable_tick == '1' %}✅ Включено{% else %}❌ Отключено
+			<strong>{{ lang.status }}:</strong>
+			{% if enable_tick == '1' %}✅ {{ lang.enabled }}{% else %}❌ {{ lang.disabled }}
 			{% endif %}
 		</p>
-		<p>Очередь обрабатывается автоматически при заходах посетителей на сайт с вероятностью
+		<p>{{ lang.queue_visit_probability }}
 			{{ tick_chance }}%</p>
-		<p>Измените настройки в разделе "Настройки" → "Авто-обработка"</p>
+		<p>{{ lang.visitor_settings_instruction }}</p>
 	</div>
 </fieldset>

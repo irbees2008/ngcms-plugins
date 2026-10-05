@@ -3,18 +3,18 @@
   Использование в шаблоне: {{ callPlugin("mailing.stats") }}
 #}
 <div class="mailing-stats">
-	<h3>Статистика рассылок</h3>
+	<h3>{{ lang.stats_title }}</h3>
 	<div class="stats-grid">
 		<div class="stat-item">
-			<span class="stat-label">Всего кампаний:</span>
+			<span class="stat-label">{{ lang.total_campaigns }}:</span>
 			<span class="stat-value">{{ total_campaigns }}</span>
 		</div>
 		<div class="stat-item">
-			<span class="stat-label">Отправлено писем:</span>
+			<span class="stat-label">{{ lang.sent_emails }}:</span>
 			<span class="stat-value">{{ total_sent }}</span>
 		</div>
 		<div class="stat-item">
-			<span class="stat-label">В очереди:</span>
+			<span class="stat-label">{{ lang.in_queue }}:</span>
 			<span class="stat-value">{{ total_pending }}</span>
 		</div>
 	</div>

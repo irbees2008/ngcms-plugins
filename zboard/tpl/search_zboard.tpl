@@ -1,44 +1,44 @@
 {% if (submit) %}
 	<div class="t-side">
-		<div class="hd">Поиск</div>
+		<div class="hd">{{ lang['zboard']['ui_search'] }}</div>
 		<div class="bd">
 			<form id="search" method="post" action="">
-				<label class="conl">Ключевые слова<br/>
+				<label class="conl">{{ lang['zboard']['ui_keywords'] }}<br/>
 					<input type="text" class="form-control" name="keywords" size="40" maxlength="100"/>
 					<br/>
 				</label>
-				<label class="conl">Категории<br/>
+				<label class="conl">{{ lang['zboard']['ui_category'] }}<br/>
 					<select id="cat" name="cat_id">
-						<option value='0'>Все категории</option>
+						<option value='0'>{{ lang['zboard']['ui_all_categories'] }}</option>
 						{{ options }}
 					</select>
 					<br/>
 				</label>
-				<label class="conl">Поиск в<br/>
+				<label class="conl">{{ lang['zboard']['ui_search_in'] }}<br/>
 					<select name="search_in">
-						<option value='all' selected>В тексте объявления и заголовке</option>
-						<option value='text'>Только в тексте объявления</option>
-						<option value='title'>Только в заголовке</option>
+						<option value='all' selected>{{ lang['zboard']['ui_search_all'] }}</option>
+						<option value='text'>{{ lang['zboard']['ui_search_text'] }}</option>
+						<option value='title'>{{ lang['zboard']['ui_search_title'] }}</option>
 					</select>
 					<br/>
 				</label>
 				<br/><br/><br/>
-				<input type="submit" name="submit" value="Отправить" accesskey="s"/>
+				<input type="submit" name="submit" value="{{ lang['zboard']['ui_submit'] }}" accesskey="s"/>
 			</form>
 		</div>
 	</div>
 {% else %}
 	<div class="t-side">
-		<div class="hd">Результаты поиска</div>
+		<div class="hd">{{ lang['zboard']['ui_search_results'] }}</div>
 		<div class="bd">
 			<table class="hosting">
 				<tr>
-					<th>Дата</th>
-					<th>Категория</th>
-					<th>Изображение</th>
-					<th>Заголовок</th>
-					<th>Объявление</th>
-					<th>Автор</th>
+					<th>{{ lang['zboard']['ui_date'] }}</th>
+					<th>{{ lang['zboard']['ui_category'] }}</th>
+					<th>{{ lang['zboard']['ui_image'] }}</th>
+					<th>{{ lang['zboard']['ui_title'] }}</th>
+					<th>{{ lang['zboard']['ui_announcement'] }}</th>
+					<th>{{ lang['zboard']['ui_author'] }}</th>
 				</tr>
 				{% for entry in entries %}
 					<tr>
@@ -71,15 +71,15 @@
 				{% else %}
 					<tr>
 						<td colspan="6" class="website">
-							По вашему запросу
+							{{ lang['zboard']['ui_no_results_before'] }}
 							<b>{{get_url}}</b>
-							ничего не найдено
+							{{ lang['zboard']['ui_no_results_after'] }}
 						</td>
 					</tr>
 				{% endfor %}
 				<tr>
 					<td colspan="6" class="website">
-						<a href='{{home}}/plugin/zboard/search/'>Вернуться назад</a>
+						<a href='{{home}}/plugin/zboard/search/'>{{ lang['zboard']['ui_back_search'] }}</a>
 					</td>
 				</tr>
 				{% if (pages.true) %}

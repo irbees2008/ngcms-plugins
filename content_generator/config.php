@@ -15,10 +15,14 @@ if (!function_exists('Plugins\\logger')) {
 use function Plugins\{array_get, logger, get_ip};
 // Подключаем конфигурацию плагина
 pluginsLoadConfig();
+global $lang;
+$plugin = 'content_generator';
+LoadPluginLang($plugin, 'config', '', 'content_generator.', '');
+LoadPluginLang($plugin, 'main', '', '', '#');
 // Основная функция для отображения интерфейса автоматизации
 function automation()
 {
-    global $twig, $PHP_SELF;
+    global $twig, $PHP_SELF, $lang;
     // Обработка сохранения настроек
     if (array_get($_POST, 'save', '') == '1') {
         // Значения из формы БЕЗ дефолтов
@@ -51,7 +55,7 @@ function automation()
     );
     // Проверяем существование шаблонов
     if (empty($tpath['config/main']) || empty($tpath['config/automation'])) {
-        die('Ошибка: Не найдены необходимые шаблоны.');
+        die($lang['content_generator.error_missing_templates']);
     }
     try {
         // Загружаем основной шаблон
@@ -64,6 +68,7 @@ function automation()
             'static_count' => $staticCount,
             'max_allowed'  => $maxAllowed,
             'plugin_url'   => admin_url . '/admin.php?mod=extra-config&plugin=content_generator',
+            'lang'         => $lang['content_generator'],
         ];
         // Рендерим шаблон автоматизации
         $renderedAutomation = $automationTemplate->render($tVarsAutomation);
@@ -75,13 +80,14 @@ function automation()
             'skins_url'     => skins_url,
             'admin_url'     => admin_url,
             'home'          => home,
-            'current_title' => 'Automation',
+            'current_title' => $lang['content_generator']['title'],
+            'lang'          => $lang['content_generator'],
         ];
         // Выводим основной шаблон
         echo $mainTemplate->render($tVarsMain);
     } catch (Exception $e) {
         // Обработка ошибок Twig
-        die('Ошибка шаблонизатора: ' . $e->getMessage());
+        die(sprintf($lang['content_generator.error_template'], $e->getMessage()));
     }
 }
 // Основной обработчик запросов

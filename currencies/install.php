@@ -1,6 +1,7 @@
 <?php
 if (!defined('NGCMS')) die('HAL');
 
+LoadPluginLang('currencies', 'config', '', '', ':');
 pluginsLoadConfig();
 
 $db_update = [
@@ -33,6 +34,5 @@ if ($_REQUEST['action'] === 'commit') {
         plugin_mark_installed('currencies');
     }
 } else {
-    generate_install_page('currencies', 'Плагин мультивалютности. Создаётся таблица <b>currencies</b>. '
-        . 'Поддерживает автообновление курсов с ЦБ РФ. Интегрируется с plugins basket и payments.');
+    generate_install_page('currencies', $lang['currencies:install_description']);
 }

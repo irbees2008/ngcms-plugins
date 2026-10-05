@@ -3,6 +3,7 @@ if (!defined('NGCMS')) die('HAL');
 
 pluginsLoadConfig();
 loadPluginLang('payments', 'config', '', '', ':');
+global $lang;
 
 $db_update = [
     [
@@ -26,7 +27,5 @@ if ($_REQUEST['action'] === 'commit') {
         plugin_mark_installed('payments');
     }
 } else {
-    generate_install_page('payments', 'Плагин добавляет поддержку платёжных шлюзов к корзине (basket). '
-        . 'Создаётся таблица <b>payments_transactions</b>. '
-        . 'Требует: basket, feedback, xfields.');
+    generate_install_page('payments', $lang['payments:config.install_description']);
 }

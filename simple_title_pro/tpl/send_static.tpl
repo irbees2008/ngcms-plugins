@@ -9,15 +9,15 @@
 			<div class="card-body">
 				<div class="row align-items-center mb-3">
 					<div class="col-md-6">
-						<label class="form-label fw-bold">Заголовок статической страницы</label>
+						<label class="form-label fw-bold">{{ lang['form.static_title'] }}</label>
 						<div class="form-text text-muted">
-							Текст поля &lt;title&gt;&lt;/title&gt; (разрешено %home% и %static%)
+							{{ lang['help.static_title'] }}
 						</div>
 					</div>
 					<div class="col-md-6">
 						<div class="input-group has-validation">
-							<input type="text" class="form-control rounded-end-0" name="title" value="{{ title }}" placeholder="Введите заголовок" aria-label="Заголовок статической страницы">
-							<select class="form-select rounded-start-0" name="id" aria-label="Выберите страницу">
+							<input type="text" class="form-control rounded-end-0" name="title" value="{{ title }}" placeholder="{{ lang['input.title_placeholder'] }}" aria-label="{{ lang['form.static_title'] }}">
+							<select class="form-select rounded-start-0" name="id" aria-label="{{ lang['input.select_static'] }}">
 								{{ options }}
 							</select>
 						</div>
@@ -27,7 +27,7 @@
 		</div>
 		<div class="d-grid gap-2 col-md-4 mx-auto">
 			<button type="submit" name="submit" class="btn btn-primary btn-lg">
-				Сохранить
+				{{ lang['btn.save'] }}
 			</button>
 		</div>
 	</form>

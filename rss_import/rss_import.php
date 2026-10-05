@@ -19,11 +19,13 @@ if (!function_exists('Plugins\\logger')) {
 
 use function Plugins\{cache_get, cache_put, logger};
 
+LoadPluginLang('rss_import', 'main', '', '', ':');
+
 add_act('index', 'rss_import_block');
 // Рендер одного блока RSS (rss1, rss2, ... ) через Twig
 function rss_import_render_block($index)
 {
-    global $config, $template, $parse, $twig;
+    global $config, $template, $parse, $twig, $lang;
     $vv = 'rss' . intval($index);
     $number     = intval(extra_get_param('rss_import', $vv . '_number'));
     $maxlength  = intval(extra_get_param('rss_import', $vv . '_maxlength'));
@@ -53,7 +55,7 @@ function rss_import_render_block($index)
     $url = extra_get_param('rss_import', $vv . '_url');
     // Проверка наличия URL
     if (empty($url)) {
-        return 'RSS не доступен: URL не настроен в админке';
+        return $lang['rss_import:error.no_url'];
     }
     // Загружаем содержимое с таймаутом
     $context = stream_context_create([
@@ -65,20 +67,20 @@ function rss_import_render_block($index)
     ]);
     $xmlContent = @file_get_contents($url, false, $context);
     if ($xmlContent === false) {
-        return 'RSS не доступен: не удается загрузить ' . htmlspecialchars($url);
+        return $lang['rss_import:error.load_failed'] . htmlspecialchars($url);
     }
     // Проверяем на PHP ошибки в начале
     $xmlContent = trim($xmlContent);
     if (preg_match('/^(Notice|Warning|Fatal|Error|Parse error|Deprecated|Strict Standards):/i', $xmlContent)) {
         // Извлекаем первую строку ошибки
         $firstLine = explode("\n", $xmlContent)[0];
-        return 'RSS не доступен: сервер возвращает PHP ошибки: ' . htmlspecialchars(mb_substr($firstLine, 0, 200));
+        return $lang['rss_import:error.php_errors'] . htmlspecialchars(mb_substr($firstLine, 0, 200));
     }
     // Проверяем, что это XML, а не HTML
     if (stripos($xmlContent, '<?xml') !== 0 && stripos($xmlContent, '<rss') !== 0) {
         // Показываем первые 500 символов для диагностики
         $preview = mb_substr($xmlContent, 0, 500);
-        return 'RSS не доступен: URL возвращает не RSS. Начало ответа: ' . htmlspecialchars($preview);
+        return $lang['rss_import:error.not_rss'] . htmlspecialchars($preview);
     }
     // Включаем отображение ошибок для диагностики
     libxml_use_internal_errors(true);
@@ -87,7 +89,7 @@ function rss_import_render_block($index)
         $errors = libxml_get_errors();
         libxml_clear_errors();
         // Формируем сообщение об ошибке
-        $errorMsg = 'RSS не доступен';
+        $errorMsg = $lang['rss_import:error.parse_failed'];
         if (!empty($errors)) {
             $errorMsg .= ': ' . trim($errors[0]->message);
             // Показываем проблемную строку
@@ -95,7 +97,7 @@ function rss_import_render_block($index)
                 $lines = explode("\n", $xmlContent);
                 $lineNum = $errors[0]->line - 1;
                 if (isset($lines[$lineNum])) {
-                    $errorMsg .= '. Строка ' . $errors[0]->line . ': ' . htmlspecialchars(mb_substr($lines[$lineNum], 0, 100));
+                    $errorMsg .= '. ' . sprintf($lang['rss_import:error.line'], $errors[0]->line) . ': ' . htmlspecialchars(mb_substr($lines[$lineNum], 0, 100));
                 }
             }
         }

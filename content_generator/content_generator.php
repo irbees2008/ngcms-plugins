@@ -4,6 +4,9 @@ if (!defined('NGCMS')) die('HAL');
 
 use function Plugins\{array_get, logger};
 
+global $lang;
+LoadPluginLang('content_generator', 'main', '', '', '#');
+
 register_plugin_page('content_generator', '', 'plugin_content_generator', 0);
 /**
  * Создание alt_name из заголовка (транслитерация)
@@ -104,7 +107,7 @@ function generateContent($type, $count)
 }
 function plugin_content_generator()
 {
-	global $SUPRESS_TEMPLATE_SHOW, $SYSTEM_FLAGS;
+	global $SUPRESS_TEMPLATE_SHOW, $SYSTEM_FLAGS, $lang;
 	// Всегда блокируем вывод шаблона для этого плагина
 	$SUPRESS_TEMPLATE_SHOW = 1;
 	$SUPRESS_MAINBLOCK_SHOW = 1;
@@ -117,7 +120,7 @@ function plugin_content_generator()
 	if (empty($action)) {
 		// Возвращаем пустой JSON для пустых запросов
 		@header('Content-type: application/json; charset=utf-8');
-		echo json_encode(['error' => 'No action specified']);
+		echo json_encode(['error' => $lang['content_generator']['no_action']]);
 		return;
 	}
 	@header('Content-type: application/json; charset=utf-8');
@@ -150,7 +153,7 @@ function plugin_content_generator()
 	if ($count < 1) {
 		logger('Error: Invalid count - action=' . $action . ', count=' . $count . ', ip=' . get_ip(), 'error', 'content_generator.log');
 		echo json_encode([
-			'error' => 'Invalid count (config value)',
+			'error' => $lang['content_generator']['invalid_count'],
 			'debug' => [
 				'action' => $action,
 				'count' => $count,
@@ -174,7 +177,7 @@ function plugin_content_generator()
 				$result = generateContent('static', $count);
 				break;
 			default:
-				echo json_encode(['error' => 'Invalid action']);
+				echo json_encode(['error' => $lang['content_generator']['invalid_action']]);
 				exit();
 		}
 		ob_end_clean();

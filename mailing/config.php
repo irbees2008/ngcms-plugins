@@ -10,6 +10,7 @@ if (!defined('NGCMS')) die('HAL');
 pluginsLoadConfig();
 require_once __DIR__ . '/lib/common.php';
 require_once __DIR__ . '/lib/queue.php';
+LoadPluginLang('mailing', 'main', '', '', ':');
 // Роутер действий
 switch ($_REQUEST['action'] ?? 'settings') {
     case 'compose':
@@ -60,7 +61,7 @@ function show_settings()
         pluginSetVariable('mailing', 'auto_news_groups', secure_html($_REQUEST['auto_news_groups'] ?? '[]'));
         pluginSetVariable('mailing', 'auto_news_scan_limit', intval($_REQUEST['auto_news_scan_limit'] ?? 5));
         pluginsSaveConfig();
-        msg(array("text" => "Настройки успешно сохранены"));
+        msg(array("text" => mailing_lang('settings_saved')));
     }
     // Получаем текущие значения
     $from_email = pluginGetVariable('mailing', 'from_email');
@@ -87,6 +88,7 @@ function show_settings()
     // Рендерим шаблон настроек
     $xt = $twig->loadTemplate($tpath['config/settings'] . 'config/settings.tpl');
     $tVars = array(
+        'lang' => mailing_lang_vars(),
         'from_email' => $from_email,
         'from_name' => $from_name,
         'reply_to' => $reply_to,
@@ -111,7 +113,7 @@ function show_settings()
     );
     // Рендерим главный шаблон
     $xg = $twig->loadTemplate($tpath['config/main'] . 'config/main.tpl');
-    print $xg->render(array('entries' => $xt->render($tVars)));
+    print $xg->render(array('entries' => $xt->render($tVars), 'lang' => mailing_lang_vars()));
 }
 /**
  * Страница создания рассылки
@@ -162,15 +164,15 @@ function show_compose()
                 }
             }
         }
-        msg(array("text" => "Кампания создана, письма поставлены в очередь"));
+        msg(array("text" => mailing_lang('campaign_created')));
         show_campaigns();
         return;
     }
     // Рендерим форму создания
     $xt = $twig->loadTemplate($tpath['config/compose'] . 'config/compose.tpl');
-    $tVars = array();
+    $tVars = array('lang' => mailing_lang_vars());
     $xg = $twig->loadTemplate($tpath['config/main'] . 'config/main.tpl');
-    print $xg->render(array('entries' => $xt->render($tVars)));
+    print $xg->render(array('entries' => $xt->render($tVars), 'lang' => mailing_lang_vars()));
 }
 /**
  * Страница списка кампаний
@@ -186,15 +188,25 @@ function show_campaigns()
     $tblCamp = mailing_tbl('mailing_campaigns');
     $rows = $db->select("SELECT * FROM " . $tblCamp . " ORDER BY id DESC LIMIT 50");
     $entries = array();
+    $statusLabels = array(
+        'scheduled' => 'status_scheduled',
+        'pending' => 'status_pending',
+        'sending' => 'status_sending',
+        'sent' => 'status_sent',
+        'failed' => 'status_failed',
+        'fail' => 'status_failed',
+        'cancelled' => 'status_cancelled',
+    );
     if ($rows) {
         foreach ($rows as $r) {
             $cid = intval($r['id']);
             $q = $db->record("SELECT COUNT(*) as c, SUM(status='sent') as s, SUM(status='fail') as f FROM " . mailing_tbl('mailing_queue') . " WHERE campaign_id=" . $cid);
             $sendAt = intval($r['send_at']);
+            $status = (string)$r['status'];
             $entries[] = array(
                 'id' => $cid,
                 'subject' => $r['subject'],
-                'status' => $r['status'],
+                'status' => isset($statusLabels[$status]) ? mailing_lang($statusLabels[$status], $status) : $status,
                 'send_at_formatted' => $sendAt ? date('Y-m-d H:i', $sendAt) : '',
                 'queue_total' => intval($q['c']),
                 'queue_sent' => intval($q['s']),
@@ -211,9 +223,10 @@ function show_campaigns()
     $tVars = array(
         'entries' => $entries,
         'hasStats' => $hasStats,
+        'lang' => mailing_lang_vars(),
     );
     $xg = $twig->loadTemplate($tpath['config/main'] . 'config/main.tpl');
-    print $xg->render(array('entries' => $xt->render($tVars)));
+    print $xg->render(array('entries' => $xt->render($tVars), 'lang' => mailing_lang_vars()));
 }
 /**
  * Страница CRON информации
@@ -227,20 +240,21 @@ function show_cron()
     $enable_tick = pluginGetVariable('mailing', 'enable_tick');
     $tick_chance = pluginGetVariable('mailing', 'tick_chance');
     $periods = [
-        '0' => 'Отключено',
-        '5m' => '5 минут',
-        '10m' => '10 минут',
-        '15m' => '15 минут',
-        '1h' => '1 час',
-        '2h' => '2 часа',
-        '3h' => '3 часа',
-        '4h' => '4 часа',
-        '6h' => '6 часов',
-        '8h' => '8 часов',
-        '12h' => '12 часов',
-        '1d' => '1 день'
+        '0' => mailing_lang('period_disabled'),
+        '5m' => mailing_lang('period_5m'),
+        '10m' => mailing_lang('period_10m'),
+        '15m' => mailing_lang('period_15m'),
+        '30m' => mailing_lang('period_30m'),
+        '1h' => mailing_lang('period_1h'),
+        '2h' => mailing_lang('period_2h'),
+        '3h' => mailing_lang('period_3h'),
+        '4h' => mailing_lang('period_4h'),
+        '6h' => mailing_lang('period_6h'),
+        '8h' => mailing_lang('period_8h'),
+        '12h' => mailing_lang('period_12h'),
+        '1d' => mailing_lang('period_1d')
     ];
-    $period_label = $periods[$period] ?? 'Не настроен';
+    $period_label = $periods[$period] ?? mailing_lang('period_not_configured');
     $cron_url = mailing_base_url() . '/?mailing_cron=1&secret=' . $cron_secret;
     // Рендерим информацию о CRON
     $xt = $twig->loadTemplate($tpath['config/cron'] . 'config/cron.tpl');
@@ -251,9 +265,10 @@ function show_cron()
         'cron_url' => $cron_url,
         'enable_tick' => $enable_tick,
         'tick_chance' => $tick_chance,
+        'lang' => mailing_lang_vars(),
     );
     $xg = $twig->loadTemplate($tpath['config/main'] . 'config/main.tpl');
-    print $xg->render(array('entries' => $xt->render($tVars)));
+    print $xg->render(array('entries' => $xt->render($tVars), 'lang' => mailing_lang_vars()));
 }
 /**
  * Страница обновления схемы БД (мягкая миграция)
@@ -264,9 +279,9 @@ function show_upgrade()
     $tpath = locatePluginTemplates(array('config/main'), 'mailing', 1);
     $ok = mailing_ensure_campaign_stats_columns();
     $msg = $ok
-        ? '<div class="alert alert-success">Колонки статистики кампаний проверены/добавлены. Статистика будет обновляться при отправке.</div>'
-        : '<div class="alert alert-warning">Не удалось добавить колонки статистики (возможно, недостаточно прав). Плагин продолжит работать с расчётом по очереди.</div>';
-    $links = '<p><a class="btn btn-sm btn-outline-success" href="admin.php?mod=extra-config&plugin=mailing&action=campaigns">Перейти к кампаниям</a></p>';
+        ? '<div class="alert alert-success">' . mailing_h(mailing_lang('upgrade_success')) . '</div>'
+        : '<div class="alert alert-warning">' . mailing_h(mailing_lang('upgrade_warning')) . '</div>';
+    $links = '<p><a class="btn btn-sm btn-outline-success" href="admin.php?mod=extra-config&plugin=mailing&action=campaigns">' . mailing_h(mailing_lang('go_to_campaigns')) . '</a></p>';
     $xg = $twig->loadTemplate($tpath['config/main'] . 'config/main.tpl');
-    print $xg->render(array('entries' => $msg . $links));
+    print $xg->render(array('entries' => $msg . $links, 'lang' => mailing_lang_vars()));
 }

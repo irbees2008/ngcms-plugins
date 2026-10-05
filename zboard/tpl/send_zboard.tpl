@@ -13,27 +13,27 @@
 </script>
 <div class="comment">
 	<h3>
-		<span>Добавить объявление</span>
+		<span>{{ lang['zboard']['ui_add_title'] }}</span>
 	</h3>
 	<form method="post" action="" class="comment-form" name="form" enctype="multipart/form-data">
 		<input type="hidden" name="submit" value="1"/>
 		<ul class="comment-author">
 			<li class="item clearfix">
 				<input type="text" class="form-control" name="announce_name" value="{{announce_name}}" tabindex="1">
-				<label>Заголовок объявления
+				<label>{{ lang['zboard']['ui_announcement_title'] }}
 					<i>(*)</i>
 				</label>
 			</li>
 			<li class="item clearfix">
 				<input type="text" class="form-control" name="author" value="{{author}}" tabindex="1">
-				<label>Автор
+				<label>{{ lang['zboard']['ui_author'] }}
 					<i>(*)</i>
 				</label>
 			</li>
 			{% if not(global.flags.isLogged) %}
 				<li class="item clearfix">
 					<input type="text" class="form-control" name="author_email" value="{{author_email}}" tabindex="1">
-					<label>Email
+					<label>{{ lang['zboard']['ui_email'] }}
 						<i>(*)</i>
 					</label>
 				</li>
@@ -42,7 +42,7 @@
 				<select name="announce_period">
 					{{list_period}}
 				</select>
-				<label>Период объявления
+				<label>{{ lang['zboard']['ui_period'] }}
 					<i>(*)</i>
 				</label>
 			</li>
@@ -50,20 +50,20 @@
 				<select name="cat_id">
 					{{options}}
 				</select>
-				<label>Категория
+				<label>{{ lang['zboard']['ui_category'] }}
 					<i>(*)</i>
 				</label>
 			</li>
 		</ul>
 		<span class="textarea">
-			<label>Описание объявления
+			<label>{{ lang['zboard']['ui_description'] }}
 				<i>(*)</i>
 			</label><br/><br/>
 			<textarea type="text" id="content_description" name="announce_description" tabindex="4">{{announce_description}}</textarea>
 		</span>
 		<span class="textarea">
-			<label>Контакты
-				<i>(телефон)</i>
+			<label>{{ lang['zboard']['ui_contacts'] }}
+				<i>({{ lang['zboard']['ui_phone'] }})</i>
 			</label>
 			<input type="tel" class="form-control" id="announce_contacts" name="announce_contacts" value="{{announce_contacts}}" placeholder="+7 (___) ___-__-__"/>
 		</span><br/><br/>
@@ -99,7 +99,7 @@ var li = document.createElement('li');
 li.setAttribute('data-pid', json.pid || '');
 li.setAttribute('data-filepath', json.filepath);
 li.style.position = 'relative';
-li.innerHTML = '<img src="/uploads/zboard/thumb/' + json.filepath.replace(/"/g, '') + '" alt="" />' + '<button type="button" class="zb-del" title="Удалить">×</button>';
+li.innerHTML = '<img src="/uploads/zboard/thumb/' + json.filepath.replace(/"/g, '') + '" alt="" />' + '<button type="button" class="zb-del" title="{{ lang['zboard']['ui_delete'] }}">×</button>';
 ul.appendChild(li);
 }
 }
@@ -166,7 +166,7 @@ ac.value = res;
 }
 });
 				</script>
-				<label>Прикрепить изображения</label><br/><br/>
+				<label>{{ lang['zboard']['ui_attach_images'] }}</label><br/><br/>
 				<input type="hidden" id="txtdes" name="txtdes" value="{{id}}"/>
 				<div id="queue"></div>
 				<input id="file_upload" name="file_upload" type="file" multiple="true">
@@ -176,7 +176,7 @@ ac.value = res;
 							{% for entry in entriesImg %}
 								<li data-pid="{{entry.pid}}" data-filepath="{{entry.filepath}}" style="position:relative;">
 									<img src="{{entry.home}}/uploads/zboard/thumb/{{entry.filepath}}" alt=""/>
-									<button type="button" class="zb-del" title="Удалить">×</button>
+									<button type="button" class="zb-del" title="{{ lang['zboard']['ui_delete'] }}">×</button>
 								</li>
 							{% endfor %}
 						{% endif %}
@@ -200,10 +200,10 @@ return r.text();
 if (txt.indexOf('OK') === 0) {
 li.remove();
 } else {
-alert('Не удалось удалить: ' + txt);
+alert('{{ lang['zboard']['ui_upload_delete_error'] }}' + txt);
 }
 }).catch(function (err) {
-alert('Ошибка запроса: ' + err);
+alert('{{ lang['zboard']['ui_request_error'] }}' + err);
 });
 });
 })();
@@ -211,7 +211,7 @@ alert('Ошибка запроса: ' + err);
 			</li>
 			{% if (use_recaptcha) %}
 				<li class="item clearfix">
-					<label>Капча
+					<label>{{ lang['zboard']['ui_captcha'] }}
 						<i>(*)</i>
 					</label><br/><br/>
 					{{captcha}}
@@ -219,11 +219,11 @@ alert('Ошибка запроса: ' + err);
 			{% endif %}
 		</ul>
 		<div class="submit" style="display:flex; gap:10px;">
-			<button id="zboard-upload-btn" type="button" tabindex="5">Загрузить изображения</button>
-			<button id="zboard-submit-btn" name="submit" type="button" tabindex="5">Сохранить объявление</button>
+			<button id="zboard-upload-btn" type="button" tabindex="5">{{ lang['zboard']['ui_upload_images'] }}</button>
+			<button id="zboard-submit-btn" name="submit" type="button" tabindex="5">{{ lang['zboard']['ui_save_announcement'] }}</button>
 		</div>
 		<span class="submit">
-			<button tabindex="5" type="reset">Сброс</button>
+			<button tabindex="5" type="reset">{{ lang['zboard']['ui_reset'] }}</button>
 		</span>
 	</form>
 </div>

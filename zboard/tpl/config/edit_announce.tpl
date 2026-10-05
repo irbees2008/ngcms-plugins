@@ -8,37 +8,37 @@
 	<div class="container-fluid">
 		<div class="row">
 			<div class="col-md-6 mb-3">
-				<label for="announce_name">Заголовок объявления</label>
+				<label for="announce_name">{l_zboard:ui_announcement_title}</label>
 				<input type="text" class="form-control" id="announce_name" name="announce_name" value="{announce_name}"/>
 			</div>
 			<div class="col-md-6 mb-3">
-				<label for="author">Автор</label>
+				<label for="author">{l_zboard:ui_author}</label>
 				<input type="text" class="form-control" id="author" name="author" value="{author}"/>
 			</div>
 		</div>
 		<div class="row">
 			<div class="col-md-6 mb-3">
-				<label for="announce_period">Период объявления</label>
+				<label for="announce_period">{l_zboard:ui_period}</label>
 				<select class="form-control" id="announce_period" name="announce_period">{list_period}</select>
 			</div>
 			<div class="col-md-6 mb-3">
-				<label for="cat_id">Категория</label>
+				<label for="cat_id">{l_zboard:ui_category}</label>
 				<select class="form-control" id="cat_id" name="cat_id">{options}</select>
 			</div>
 		</div>
 		<div class="row">
 			<div class="col-md-6 mb-3">
-				<label for="announce_description">Текст объявления</label>
+				<label for="announce_description">{l_zboard:ui_description}</label>
 				<textarea class="form-control" id="announce_description" name="announce_description" rows="6">{announce_description}</textarea>
 			</div>
 			<div class="col-md-6 mb-3">
-				<label for="announce_contacts">Контакты  (телефон)</label>
+				<label for="announce_contacts">{l_zboard:ui_contacts} ({l_zboard:ui_phone})</label>
 				<input type="tel" class="form-control" id="announce_contacts" name="announce_contacts" value="{announce_contacts}" placeholder="+7 (___) ___-__-__"/>
 			</div>
 		</div>
 		<div class="row">
 			<div class="col-md-6 mb-3">
-				<label>Прикрепить изображения</label>
+				<label>{l_zboard:ui_attach_images}</label>
 				<div class="mb-2">
 					<input type="hidden" id="txtdes" name="txtdes" value="{id}"/>
 					<div id="queue"></div>
@@ -105,7 +105,7 @@ ac.value = res;
 				</script>
 			</div>
 			<div class="col-md-6 mb-3">
-				<label>Прикрепленные изображения</label>
+				<label>{l_zboard:ui_attached_images}</label>
 				<div class="table-responsive">
 					<table class="table table-bordered table-sm">
 						<tbody>
@@ -119,12 +119,12 @@ ac.value = res;
 			<div class="col-md-6 mb-3">
 				<div class="form-check">
 					<input class="form-check-input" type="checkbox" id="announce_activeme" name="announce_activeme" {announce_activeme} value="1">
-					<label class="form-check-label" for="announce_activeme">Активировать объявление?</label>
+					<label class="form-check-label" for="announce_activeme">{l_zboard:admin_activate_announcement}</label>
 				</div>
 			</div>
 			<div class="col-md-6 mb-3 text-right">
-				<button type="submit" name="submit" onclick="javascript:$('#file_upload').uploadifive('upload')" class="btn btn-primary mr-2">Отредактировать</button>
-				<button type="submit" name="delme" class="btn btn-danger">Удалить</button>
+				<button type="submit" name="submit" onclick="javascript:$('#file_upload').uploadifive('upload')" class="btn btn-primary mr-2">{l_zboard:admin_edit}</button>
+				<button type="submit" name="delme" class="btn btn-danger">{l_zboard:admin_delete}</button>
 			</div>
 		</div>
 	</div>

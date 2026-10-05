@@ -8,10 +8,15 @@ use function Plugins\{notify, logger};
 
 function plugin_zboard_install($action)
 {
-    global $lang, $mysql;
+    global $lang, $mysql, $config;
+    LoadPluginLang('zboard', 'config', '', '', ':');
     if (!file_exists(dirname(dirname(dirname(dirname(__FILE__)))) . '/uploads/zboard')) {
         if (!@mkdir(dirname(dirname(dirname(dirname(__FILE__)))) . '/uploads/zboard/', 0777)) {
-            $error = 'Критическая ошибка <br /> не удалось создать папку ' . dirname(dirname(dirname(dirname(__FILE__)))) . '/uploads/images/zboard';
+            $error = str_replace(
+                '{path}',
+                dirname(dirname(dirname(dirname(__FILE__)))) . '/uploads/images/zboard',
+                $lang['zboard:install_failed_directory']
+            );
             notify('error', $error);
             logger('zboard install failed: ' . $error, 'error');
             die($error);
@@ -19,14 +24,16 @@ function plugin_zboard_install($action)
     }
     if (!file_exists(dirname(dirname(dirname(dirname(__FILE__)))) . '/uploads/zboard/thumb')) {
         if (!@mkdir(dirname(dirname(dirname(dirname(__FILE__)))) . '/uploads/zboard/thumb', 0777)) {
-            $error = 'Критическая ошибка <br /> не удалось создать папку ' . dirname(dirname(dirname(dirname(__FILE__)))) . '/uploads/images/zboard/thumb';
+            $error = str_replace(
+                '{path}',
+                dirname(dirname(dirname(dirname(__FILE__)))) . '/uploads/images/zboard/thumb',
+                $lang['zboard:install_failed_directory']
+            );
             notify('error', $error);
             logger('zboard install failed: ' . $error, 'error');
             die($error);
         }
     }
-    if ($action != 'autoapply')
-        loadPluginLang('zboard', 'config', '', '', ':');
     $db_update = array(
         array(
             'table'        => 'zboard',
@@ -122,8 +129,12 @@ function plugin_zboard_install($action)
     );
     switch ($action) {
         case 'confirm':
-            $pluginDocumentation = (string) file_get_contents(__DIR__ . '/plugin.md');
-            $pluginDocumentation = preg_replace('/\A---\s*\r?\n.*?\r?\n---(?:\r?\n|\z)/s', '', $pluginDocumentation);
+            if (isset($config['default_lang']) && strtolower($config['default_lang']) == 'english') {
+                $pluginDocumentation = $lang['zboard:install_description'];
+            } else {
+                $pluginDocumentation = (string) file_get_contents(__DIR__ . '/plugin.md');
+                $pluginDocumentation = preg_replace('/\A---\s*\r?\n.*?\r?\n---(?:\r?\n|\z)/s', '', $pluginDocumentation);
+            }
             generate_install_page('zboard', $pluginDocumentation);
             break;
         case 'autoapply':
@@ -143,11 +154,11 @@ function plugin_zboard_install($action)
                 'width' => '2000',
                 'height' => '2000',
                 'width_thumb' => '350',
-                'description' => 'Описание',
-                'keywords' => 'Ключевые, слова,',
+                'description' => $lang['zboard:install_default_description'],
+                'keywords' => $lang['zboard:install_default_keywords'],
                 'list_period' => '1|2|3|4',
-                'info_send' => '<div class="msgo">Спасибо, <strong>%user%</strong>! Вы добавили новое объявление.<br /><strong>Объявление будет доступно после проверки.</strong></div>',
-                'info_edit' => '<div class="msgo">Спасибо, <strong>%user%</strong>! Вы отредактировали объявление.<br /><strong>Объявление будет доступно после проверки.</strong></div>',
+                'info_send' => $lang['zboard:install_default_info_send'],
+                'info_edit' => $lang['zboard:install_default_info_edit'],
                 'template_mail' => '%announce_name% - %author% - %announce_description% - %announce_period% - %announce_contacts% - %date%',
                 'ext_image' => '*.jpg;*.jpeg;*.gif;*.png',
                 'admin_count' => '10',

@@ -27,10 +27,13 @@ if (!function_exists('Plugins\\logger')) {
 
 use function Plugins\{logger, sanitize, get_ip, benchmark, str_limit, truncate_html, is_post};
 
+LoadPluginLang('show_comments', 'config', '', '', ':');
+LoadPluginLang('show_comments', 'main', '', '', ':');
+
 function show_comments()
 {
 
-	global $mysql, $config, $parse;
+	global $mysql, $config, $parse, $lang;
 
 	$startTime = benchmark();
 
@@ -77,12 +80,12 @@ function show_comments()
 	echo '<form action="" method="post" name="select_comments"><div id=ttr>';
 	echo '<table><tbody>';
 	echo '<tr>';
-	echo '<th>Дата</th>';
-	echo '<th>Комментарий</th>';
-	echo '<th>Новость</th>';
-	echo '<th style="width:14%;">Автор</th>';
-	echo '<th style="width:13%;">IP</th>';
-	echo '<th><input type="checkbox" name="master_box" title="Выбрать все" onclick="javascript:check_uncheck_all(select_comments)" ></th>';
+	echo '<th>' . $lang['show_comments:tbl.date'] . '</th>';
+	echo '<th>' . $lang['show_comments:tbl.comment'] . '</th>';
+	echo '<th>' . $lang['show_comments:tbl.news'] . '</th>';
+	echo '<th style="width:14%;">' . $lang['show_comments:tbl.author'] . '</th>';
+	echo '<th style="width:13%;">' . $lang['show_comments:tbl.ip'] . '</th>';
+	echo '<th><input type="checkbox" name="master_box" title="' . $lang['show_comments:tbl.check_all'] . '" onclick="javascript:check_uncheck_all(select_comments)" ></th>';
 	echo '</tr>';
 	foreach ($result as $prd) {
 		// Parse comments
@@ -203,20 +206,20 @@ function show_comments()
 		// echo $startpage.$page2left.$page1left.'<strong>'.$page.'</strong>'.$page1right.$page2right.$endpage;
 		echo '</div>';
 	}
-	echo '<table><tr><td>' . $startpage . $page2left . $page1left . '<strong>' . $page . '</strong>' . $page1right . $page2right . $endpage . '&nbsp;&nbsp;&nbsp;&nbsp;</td><td style="align:right"><input class="button" type="submit" value="Удалить"></td></tr></table></form>';
+	echo '<table><tr><td>' . $startpage . $page2left . $page1left . '<strong>' . $page . '</strong>' . $page1right . $page2right . $endpage . '&nbsp;&nbsp;&nbsp;&nbsp;</td><td style="align:right"><input class="button" type="submit" value="' . $lang['show_comments:tbl.delete'] . '"></td></tr></table></form>';
 }
 
 if (!getPluginStatusInstalled('comments')) {
-	echo 'Плагин comments не установлен!';
+	echo $lang['show_comments:err.no_comments_plugin'];
 
 	return false;
 }
 pluginsLoadConfig();
 $cfg = array();
-array_push($cfg, array('descr' => 'Плагин выводит список всех комментариев на сайте.'));
-array_push($cfg, array('name' => 'perpage', 'title' => 'Кол-во комментариев для отображения на одной странице', 'type' => 'input', 'value' => extra_get_param($plugin, 'perpage')));
-array_push($cfg, array('name' => 'comm_length', 'title' => 'Усечение длины комментария', 'descr' => 'Кол-во символов из комментария для отображения<br/>Значение по умолчанию: <b>50</b>', 'type' => 'input', 'html_flags' => 'size=5', 'value' => extra_get_param($plugin, 'comm_length')));
-array_push($cfg, array('name' => 'order', 'title' => 'Упорядочить по:', 'descr' => 'Выберите порядок отображения комментариев.', 'type' => 'select', 'values' => array('asc' => 'Возрастанию', 'desc' => 'Убыванию'), 'value' => extra_get_param($plugin, 'order')));
+array_push($cfg, array('descr' => $lang['show_comments:description']));
+array_push($cfg, array('name' => 'perpage', 'title' => $lang['show_comments:perpage.title'], 'type' => 'input', 'value' => extra_get_param($plugin, 'perpage')));
+array_push($cfg, array('name' => 'comm_length', 'title' => $lang['show_comments:comm_length.title'], 'descr' => $lang['show_comments:comm_length.descr'], 'type' => 'input', 'html_flags' => 'size=5', 'value' => extra_get_param($plugin, 'comm_length')));
+array_push($cfg, array('name' => 'order', 'title' => $lang['show_comments:order.title'], 'descr' => $lang['show_comments:order.descr'], 'type' => 'select', 'values' => array('asc' => $lang['show_comments:order.opt.asc'], 'desc' => $lang['show_comments:order.opt.desc']), 'value' => extra_get_param($plugin, 'order')));
 if ($_REQUEST['action'] == 'commit') {
 	commit_plugin_config_changes($plugin, $cfg);
 	print_commit_complete('show_comments');

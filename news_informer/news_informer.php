@@ -1,5 +1,6 @@
 <?php
 if (!defined('NGCMS')) die('HAL');
+LoadPluginLang('news_informer', 'main', '', '', ':');
 // Регистрация TWIG-функции
 twigRegisterFunction('news_informer', 'show', 'plugin_news_informer_showTwig');
 // Автоматический вывод (если не используется TWIG режим)
@@ -10,17 +11,17 @@ if (!pluginGetVariable('news_informer', 'mode')) {
 register_plugin_page('news_informer', 'embed', 'plugin_news_informer_embed', 0);
 function plugin_news_informer_embed()
 {
-    global $config;
+    global $config, $lang;
     // Определяем режим вывода
     $mode = $_REQUEST['mode'] ?? 'js';
     if ($mode == 'html') {
         // Режим iframe
         header('Content-Type: text/html; charset=utf-8');
         echo '<!DOCTYPE html>
-        <html>
+        <html lang="' . htmlspecialchars($lang['news_informer:html_lang'], ENT_QUOTES, 'UTF-8') . '">
         <head>
             <meta charset="UTF-8">
-            <title>Новости с сайта ' . $config['home'] . '</title>
+            <title>' . htmlspecialchars($lang['news_informer:news_from_site'] . ' ' . $config['home'], ENT_QUOTES, 'UTF-8') . '</title>
             <base target="_blank">
             <style>body {margin:0; padding:0;}</style>
         </head>
@@ -49,7 +50,7 @@ function plugin_news_informer()
 }
 function plugin_news_informer_showTwig($params)
 {
-    global $mysql, $config, $twig, $twigLoader, $catz, $catmap;
+    global $mysql, $config, $twig, $twigLoader, $catz, $catmap, $lang;
     // Получаем настройки
     $count = isset($params['count']) ? intval($params['count']) : pluginGetVariable('news_informer', 'count');
     $cacheExpire = isset($params['cacheExpire']) ? intval($params['cacheExpire']) : pluginGetVariable('news_informer', 'cacheExpire');
@@ -104,7 +105,11 @@ function plugin_news_informer_showTwig($params)
     $tVars = array(
         'entries' => $news,
         'tpl_url' => tpl_url,
-        'home' => home
+        'home' => home,
+        'lang' => array(
+            'last_news' => $lang['news_informer:last_news'],
+            'all_news' => $lang['news_informer:all_news'],
+        ),
     );
     // Загружаем и рендерим шаблон
     $xt = $twig->loadTemplate($tpath[$templateName] . $templateName . '.tpl');
@@ -126,12 +131,13 @@ function plugin_news_informer_ajax_show()
 }
 function plugin_news_informer_ajax_frame()
 {
+    global $lang;
     header('Content-Type: text/html; charset=utf-8');
     echo '<!DOCTYPE html>
-    <html>
+    <html lang="' . htmlspecialchars($lang['news_informer:html_lang'], ENT_QUOTES, 'UTF-8') . '">
     <head>
         <meta charset="UTF-8">
-        <title>Новости с сайта ' . home . '</title>
+        <title>' . htmlspecialchars($lang['news_informer:news_from_site'] . ' ' . home, ENT_QUOTES, 'UTF-8') . '</title>
         <base target="_blank">
     </head>
     <body style="margin:0; padding:0;">

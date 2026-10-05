@@ -14,7 +14,7 @@ use function Plugins\{logger, get_ip, is_mobile};
  */
 function webpush_inject_code(): void
 {
-    global $template, $twig;
+    global $template, $twig, $lang;
 
     // Проверяем, включен ли плагин
     $enabled = pluginGetVariable('webpush', 'enabled');
@@ -33,7 +33,7 @@ function webpush_inject_code(): void
     }
 
     // Загружаем локализацию
-    LoadPluginLang('webpush', 'site', '', '', ':');
+    LoadPluginLang('webpush', 'site', '', 'webpush', ':');
 
     // Находим шаблон
     $tpath = locatePluginTemplates(['webpush'], 'webpush', pluginGetVariable('webpush', 'localsource'));
@@ -47,8 +47,20 @@ function webpush_inject_code(): void
     // Подготавливаем переменные для шаблона
     $tvars = [
         'endpoint' => home . '/engine/plugins/webpush/endpoint.php',
-        'subscribe_text' => pluginGetVariable('webpush', 'subscribe_text') ?: 'Включить уведомления',
-        'unsubscribe_text' => $GLOBALS['lang']['webpush:unsubscribe_text'] ?? 'Отключить уведомления',
+        'subscribe_text' => pluginGetVariable('webpush', 'subscribe_text') ?: $lang['webpush:subscribe_text'],
+        'unsubscribe_text' => $lang['webpush:unsubscribe_text'],
+        'messages' => [
+            'error_no_support' => $lang['webpush:error_no_support'],
+            'error_permission' => $lang['webpush:error_permission'],
+            'error_https' => $lang['webpush:error_https'],
+            'error_key' => $lang['webpush:error_key'],
+            'error_service_worker' => $lang['webpush:error_service_worker'],
+            'error_subscribe' => $lang['webpush:error_subscribe'],
+            'error_unsubscribe' => $lang['webpush:error_unsubscribe'],
+            'error_unknown' => $lang['webpush:error_unknown'],
+            'subscribed_message' => $lang['webpush:subscribed_message'],
+            'unsubscribed_message' => $lang['webpush:unsubscribed_message'],
+        ],
         'js_path' => home . '/engine/plugins/webpush/js/webpush.js',
         'public_key' => pluginGetVariable('webpush', 'vapid_public'),
     ];

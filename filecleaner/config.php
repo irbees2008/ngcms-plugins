@@ -1,12 +1,12 @@
 <?php
 if (!defined('NGCMS')) die('HAL');
+LoadPluginLang('filecleaner', 'config', '', '', ':');
 if (!getPluginStatusActive('filecleaner')) {
-    msg(['type' => 'error', 'text' => 'Плагин отключен.']);
+    msg(['type' => 'error', 'text' => $lang['filecleaner:plugin_disabled']]);
     return;
 }
 
 pluginsLoadConfig();
-LoadPluginLang('filecleaner', 'config', '', '', ':');
 require_once __DIR__ . '/filecleaner.php';
 
 function filecleaner_h(string $value): string
@@ -141,6 +141,7 @@ function filecleaner_clear_operations_log(): void
 
 function filecleaner_operations_log(): array
 {
+    global $lang;
     $file = filecleaner_storage('operations.log');
     if (!is_file($file)) return [];
     $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
@@ -153,10 +154,12 @@ function filecleaner_operations_log(): array
         $timestamp = strtotime((string)($entry['date'] ?? ''));
         if ($timestamp === false || $timestamp < $cutoff) continue;
         $keptLines[] = $line;
+        $action = (string)($entry['action'] ?? '');
+        $status = (string)($entry['status'] ?? '');
         $entries[] = [
             'date' => date('d.m.Y H:i:s', $timestamp),
-            'action' => (string)($entry['action'] ?? ''),
-            'status' => (string)($entry['status'] ?? ''),
+            'action' => $lang['filecleaner:operation_action_' . $action] ?? $action,
+            'status' => $lang['filecleaner:operation_status_' . $status] ?? $status,
             'details' => json_encode($entry['details'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         ];
     }

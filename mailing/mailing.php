@@ -28,6 +28,7 @@ use function Plugins\{validate_email, array_pluck, benchmark, logger};
 require_once __DIR__ . '/lib/common.php';
 require_once __DIR__ . '/lib/mailer.php';
 require_once __DIR__ . '/lib/queue.php';
+LoadPluginLang('mailing', 'main', '', '', ':');
 
 // Регистрация актов (хуков)
 add_act('core', 'mailing_tick');           // фоновая обработка при посещениях
@@ -196,6 +197,7 @@ function mailing_twig_stats(array $params = []): string
     );
 
     $tvars = [
+        'lang' => mailing_lang_vars(),
         'total_campaigns' => (int)($stats['total_campaigns'] ?? 0),
         'total_sent' => (int)($stats['total_sent'] ?? 0),
         'total_pending' => (int)($stats['total_pending'] ?? 0),
@@ -226,6 +228,7 @@ function mailing_twig_subscription_form(array $params = []): string
     }
 
     $tvars = [
+        'lang' => mailing_lang_vars(),
         'is_logged' => is_array($userROW),
         'is_subscribed' => $isSubscribed,
         'action_url' => '/?mailing_subscribe=1',

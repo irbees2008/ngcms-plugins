@@ -9,25 +9,27 @@ if (!defined('NGCMS')) die ('HAL');
 
 // Preload config file
 pluginsLoadConfig();
+loadPluginLang('qrcode', 'config', '', '', ':');
+global $lang, $plugin;
 	
 // Fill configuration parameters
 $cfg = array();
-array_push($cfg, array('descr' => 'Данный плагин генерирует QRcode'));
+array_push($cfg, array('descr' => $lang['qrcode:config.description']));
 
 $cfgX = array();     
-    array_push($cfgX, array('name' => 'chs', 'title' => 'Размеры в пикселях', 'type' => 'input', 'value' => intval(pluginGetVariable($plugin,'chs'))?pluginGetVariable($plugin,'chs'):'150'));
-	array_push($cfgX, array('name' => 'chld', 'title' => 'Уровень коррекции ошибок<br /><small><b>L</b> - Allows recovery of up to 7% data loss (<b>по умолчанию</b>)<br /><b>M</b> - Allows recovery of up to 15% data loss<br /><b>Q</b> - Allows recovery of up to 25% data loss<br /><b>H</b> - Allows recovery of up to 30% data loss</small>', 'type' => 'select', 'values' => array ( 'L' => 'L', 'M' => 'M', 'Q' => 'Q', 'H' => 'H'), 'value' => pluginGetVariable($plugin,'chld')));
-    array_push($cfgX, array('name' => 'margin', 'title' => 'Отступ', 'type' => 'input', 'value' => intval(pluginGetVariable($plugin,'margin'))?pluginGetVariable($plugin,'margin'):'4'));	
-   	array_push($cfgX, array('name' => 'upload', 'title' => 'Загружать QRcode на сайт', 'type' => 'checkbox', 'value' => pluginGetVariable($plugin,'upload')));	
-array_push($cfg,  array('mode' => 'group', 'title' => '<b>Основные настройки</b>', 'entries' => $cfgX));
+array_push($cfgX, array('name' => 'chs', 'title' => $lang['qrcode:config.size'], 'type' => 'input', 'value' => intval(pluginGetVariable($plugin,'chs'))?pluginGetVariable($plugin,'chs'):'150'));
+array_push($cfgX, array('name' => 'chld', 'title' => $lang['qrcode:config.error_correction'], 'descr' => $lang['qrcode:config.error_correction_help'], 'type' => 'select', 'values' => array ( 'L' => 'L', 'M' => 'M', 'Q' => 'Q', 'H' => 'H'), 'value' => pluginGetVariable($plugin,'chld')));
+array_push($cfgX, array('name' => 'margin', 'title' => $lang['qrcode:config.margin'], 'type' => 'input', 'value' => intval(pluginGetVariable($plugin,'margin'))?pluginGetVariable($plugin,'margin'):'4'));	
+array_push($cfgX, array('name' => 'upload', 'title' => $lang['qrcode:config.upload'], 'type' => 'checkbox', 'value' => pluginGetVariable($plugin,'upload')));	
+array_push($cfg,  array('mode' => 'group', 'title' => '<b>' . $lang['qrcode:config.group_main'] . '</b>', 'entries' => $cfgX));
 
 $cfgX = array();
-	array_push($cfgX, array('name' => 'localsource', 'title' => 'Выберите каталог из которого плагин будет брать шаблоны для отображения<br /><small><b>Шаблон сайта</b> - плагин будет пытаться взять шаблоны из общего шаблона сайта; в случае недоступности - шаблоны будут взяты из собственного каталога плагина<br /><b>Плагин</b> - шаблоны будут браться из собственного каталога плагина</small>', 'type' => 'select', 'values' => array ( '0' => 'Шаблон сайта', '1' => 'Плагин'), 'value' => intval(pluginGetVariable($plugin,'localsource'))));
-array_push($cfg,  array('mode' => 'group', 'title' => '<b>Настройки отображения</b>', 'entries' => $cfgX));
+array_push($cfgX, array('name' => 'localsource', 'title' => $lang['qrcode:config.template_source'], 'descr' => $lang['qrcode:config.template_source_help'], 'type' => 'select', 'values' => array ( '0' => $lang['qrcode:config.template_source_site'], '1' => $lang['qrcode:config.template_source_plugin']), 'value' => intval(pluginGetVariable($plugin,'localsource'))));
+array_push($cfg,  array('mode' => 'group', 'title' => '<b>' . $lang['qrcode:config.group_display'] . '</b>', 'entries' => $cfgX));
 
 $cfgX = array();
-	array_push($cfgX, array('name' => 'clear_qrcode', 'title' => 'Удалить неиспользуемые кэш и QRcode', 'type' => 'select', 'value' => 0, 'values' => array ( 0 => $lang['noa'], 1 => $lang['yesa']), 'nosave' => 1));
-array_push($cfg,  array('mode' => 'group', 'title' => '<b>Очистка системы</b>', 'entries' => $cfgX));
+array_push($cfgX, array('name' => 'clear_qrcode', 'title' => $lang['qrcode:config.cleanup'], 'type' => 'select', 'value' => 0, 'values' => array ( 0 => $lang['noa'], 1 => $lang['yesa']), 'nosave' => 1));
+array_push($cfg,  array('mode' => 'group', 'title' => '<b>' . $lang['qrcode:config.group_cleanup'] . '</b>', 'entries' => $cfgX));
 
 // RUN 
 if ($_REQUEST['action'] == 'commit') {
@@ -61,6 +63,6 @@ function clear_qrcode() {
 			}
 		}
 	}
-	msg(array('type' => 'info', 'info' => 'Неиспользуемые QRcode удалены'));
-	msg(array('type' => 'info', 'info' => 'Кэш очищен'));
+	msg(array('type' => 'info', 'info' => $lang['qrcode:config.cleanup_images_removed']));
+	msg(array('type' => 'info', 'info' => $lang['qrcode:config.cleanup_cache_cleared']));
 }

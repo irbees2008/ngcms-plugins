@@ -7,26 +7,26 @@
 		{% if is_subscribed %}
 			<div class="subscription-status subscribed">
 				<i class="fa fa-check-circle"></i>
-				<p>Вы подписаны на email-рассылку</p>
+				<p>{{ lang.subscribed_message }}</p>
 				<form method="post" action="{{ action_url }}">
 					<input type="hidden" name="action" value="unsubscribe">
-					<button type="submit" class="btn btn-secondary">Отписаться</button>
+					<button type="submit" class="btn btn-secondary">{{ lang.unsubscribe }}</button>
 				</form>
 			</div>
 		{% else %}
 			<div class="subscription-status unsubscribed">
 				<i class="fa fa-envelope-o"></i>
-				<p>Вы отписаны от email-рассылки</p>
+				<p>{{ lang.unsubscribed_message }}</p>
 				<form method="post" action="{{ action_url }}">
 					<input type="hidden" name="action" value="subscribe">
-					<button type="submit" class="btn btn-primary">Подписаться</button>
+					<button type="submit" class="btn btn-primary">{{ lang.subscribe }}</button>
 				</form>
 			</div>
 		{% endif %}
 	{% else %}
 		<div class="subscription-status guest">
 			<i class="fa fa-info-circle"></i>
-			<p>Войдите на сайт, чтобы управлять подпиской на рассылку</p>
+			<p>{{ lang.login_to_manage_subscription }}</p>
 		</div>
 	{% endif %}
 </div>

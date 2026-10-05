@@ -101,7 +101,7 @@ function compare_clear()
 // ─── Comparison list page ──────────────────────────────────────────────────
 function compare_list_page()
 {
-    global $template, $twig, $mysql;
+    global $template, $twig, $mysql, $lang;
 
     $ids = compare_get_ids();
 
@@ -146,6 +146,7 @@ function compare_list_page()
         'clear_link' => generatePluginLink('compare', 'clear'),
         'add_link'   => generatePluginLink('compare', 'add'),
         'remove_link' => generatePluginLink('compare', 'remove'),
+        'lang' => $lang['compare'],
     ]);
 }
 
