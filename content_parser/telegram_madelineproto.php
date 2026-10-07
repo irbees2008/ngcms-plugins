@@ -139,7 +139,7 @@ function checkTelegramAuth()
  * @param string $phone Номер телефона
  * @return array Результат
  */
-function startTelegramAuth($phone)
+function startTelegramAuth($phone, $isRetry = false)
 {
     $logFile = __DIR__ . '/telegram_auth_debug.log';
     file_put_contents($logFile, "  [startTelegramAuth] Начало функции\n", FILE_APPEND);
@@ -187,6 +187,11 @@ function startTelegramAuth($phone)
 
         file_put_contents($logFile, "  [startTelegramAuth] Создание API объекта...\n", FILE_APPEND);
 
+        $serClass = 'danog\\MadelineProto\\Settings\\Serialization';
+        file_put_contents($logFile, "  [startTelegramAuth] Serialization class_exists=" . (class_exists($serClass) ? 'yes' : 'NO')
+            . ', igbinary=' . (extension_loaded('igbinary') ? phpversion('igbinary') : 'no')
+            . ', PHP=' . PHP_VERSION . ', file_exists=' . (file_exists(__DIR__ . '/lib/MadelineProto-8/src/Settings/Serialization.php') ? 'yes' : 'NO') . "\n", FILE_APPEND);
+
         ob_start();
         $API = new \danog\MadelineProto\API($sessionFile, $settings);
 
@@ -232,8 +237,44 @@ function startTelegramAuth($phone)
         file_put_contents($logFile, "  [startTelegramAuth] EXCEPTION: " . $e->getMessage() . "\n", FILE_APPEND);
         file_put_contents($logFile, "  [startTelegramAuth] File: " . $e->getFile() . ":" . $e->getLine() . "\n", FILE_APPEND);
         ob_end_clean();
+
+        // Сессия создана в другом окружении (другой igbinary/PHP) и не читается - удаляем и пробуем заново
+        if (!$isRetry && isTelegramSessionUnreadable($e->getMessage()) && file_exists($sessionFile)) {
+            file_put_contents($logFile, "  [startTelegramAuth] Сессия нечитаема, удаляем и повторяем\n", FILE_APPEND);
+            removeTelegramSessionPath($sessionFile);
+            return startTelegramAuth($phone, true);
+        }
+
         return ['success' => false, 'error' => $e->getMessage()];
     }
+}
+
+/**
+ * Ошибка десериализации файла сессии (igbinary/unserialize)
+ */
+function isTelegramSessionUnreadable($message)
+{
+    return stripos($message, 'igbinary') !== false
+        || stripos($message, 'unserialize') !== false;
+}
+
+/**
+ * Удаление файла или директории сессии MadelineProto вместе с lock-файлом
+ */
+function removeTelegramSessionPath($path)
+{
+    @unlink($path . '.lock');
+    if (is_dir($path)) {
+        $it = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($it as $f) {
+            $f->isDir() ? @rmdir($f->getPathname()) : @unlink($f->getPathname());
+        }
+        return @rmdir($path);
+    }
+    return @unlink($path);
 }
 
 /**
@@ -543,12 +584,7 @@ function parseTelegramChannelWithAuth($channelName, $count)
                 $localImage = extractImageFromTelegramMedia($API, $msg['media']);
             }
 
-            // Формируем контент
-            $body = '';
-            if (!empty($localImage)) {
-                $body .= '[img]' . $localImage . '[/img]' . "\n\n";
-            }
-            $body .= $text;
+            $body = $text;
 
             // Дата публикации
             $postDate = $msg['date'] ?? time();
