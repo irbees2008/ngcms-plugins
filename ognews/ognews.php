@@ -51,8 +51,44 @@ class OGNEWSNewsFilter extends NewsFilter
             return ['width' => $width, 'height' => $height];
         };
 
+        $getAbsoluteImageUrl = function ($imagePath) use ($config) {
+            $imagePath = trim((string)$imagePath);
+            if (preg_match('~^https?://~i', $imagePath)) {
+                return $imagePath;
+            }
+
+            $homeUrl = (string)($config['home_url'] ?? '');
+            $base = parse_url($homeUrl);
+            if (empty($base['host'])) {
+                $base = parse_url((string)($config['images_url'] ?? ''));
+            }
+
+            $scheme = $base['scheme'] ?? '';
+            if (!$scheme) {
+                $scheme = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off') ? 'https' : 'http';
+            }
+            if (strpos($imagePath, '//') === 0) {
+                return $scheme . ':' . $imagePath;
+            }
+
+            $host = $base['host'] ?? '';
+            $port = isset($base['port']) ? ':' . $base['port'] : '';
+            if (!$host) {
+                $requestHost = (string)($_SERVER['HTTP_HOST'] ?? '');
+                if (preg_match('/^[A-Za-z0-9.-]+(?::[0-9]{1,5})?$/D', $requestHost)) {
+                    $host = $requestHost;
+                }
+            }
+            if (!$host) {
+                return $imagePath;
+            }
+
+            $origin = $scheme . '://' . $host . $port;
+            return $origin . '/' . ltrim($imagePath, '/');
+        };
+
         // Функция для создания реального OG-изображения 1200×630
-        $createOGImage = function ($imagePath) use ($config) {
+        $createOGImage = function ($imagePath) use ($config, $getAbsoluteImageUrl) {
             $targetWidth = 1200;
             $targetHeight = 630;
 
@@ -71,11 +107,26 @@ class OGNEWSNewsFilter extends NewsFilter
                 // Для внешних URL - скачиваем временно или используем оригинал
                 return ['url' => $imagePath, 'width' => $targetWidth, 'height' => $targetHeight];
             } else {
-                $sourcePath = rtrim($_SERVER['DOCUMENT_ROOT'], '/') . $imagePath;
+                $imageUrlPath = parse_url($imagePath, PHP_URL_PATH);
+                $imageUrlPath = is_string($imageUrlPath) ? $imageUrlPath : $imagePath;
+                $localCandidates = [
+                    rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') . DIRECTORY_SEPARATOR . ltrim($imageUrlPath, '/\\'),
+                ];
+                foreach (['images_dir', 'attach_dir'] as $directoryKey) {
+                    if (!empty($config[$directoryKey])) {
+                        $localCandidates[] = rtrim($config[$directoryKey], '/\\') . DIRECTORY_SEPARATOR . ltrim($imageUrlPath, '/\\');
+                    }
+                }
+                foreach ($localCandidates as $candidate) {
+                    if (is_file($candidate)) {
+                        $sourcePath = $candidate;
+                        break;
+                    }
+                }
             }
 
             if (!file_exists($sourcePath)) {
-                return ['url' => $imagePath, 'width' => $targetWidth, 'height' => $targetHeight];
+                return ['url' => $getAbsoluteImageUrl($imagePath), 'width' => $targetWidth, 'height' => $targetHeight];
             }
 
             // Генерируем имя для OG-версии
@@ -92,19 +143,19 @@ class OGNEWSNewsFilter extends NewsFilter
             // Получаем размеры и тип исходного изображения
             $imageInfo = @getimagesize($sourcePath);
             if (!$imageInfo) {
-                return ['url' => $imagePath, 'width' => $targetWidth, 'height' => $targetHeight];
+                return ['url' => $getAbsoluteImageUrl($imagePath), 'width' => $targetWidth, 'height' => $targetHeight];
             }
 
             list($srcWidth, $srcHeight, $srcType) = $imageInfo;
 
             // Если изображение уже нужного размера - используем оригинал
             if ($srcWidth == $targetWidth && $srcHeight == $targetHeight) {
-                return ['url' => $imagePath, 'width' => $targetWidth, 'height' => $targetHeight];
+                return ['url' => $getAbsoluteImageUrl($imagePath), 'width' => $targetWidth, 'height' => $targetHeight];
             }
 
             // Проверяем наличие GD
             if (!function_exists('imagecreatefromjpeg')) {
-                return ['url' => $imagePath, 'width' => $targetWidth, 'height' => $targetHeight];
+                return ['url' => $getAbsoluteImageUrl($imagePath), 'width' => $targetWidth, 'height' => $targetHeight];
             }
 
             // Создаем исходное изображение
@@ -127,7 +178,7 @@ class OGNEWSNewsFilter extends NewsFilter
             }
 
             if (!$srcImage) {
-                return ['url' => $imagePath, 'width' => $targetWidth, 'height' => $targetHeight];
+                return ['url' => $getAbsoluteImageUrl($imagePath), 'width' => $targetWidth, 'height' => $targetHeight];
             }
 
             // Вычисляем размеры с сохранением пропорций (crop to fit)
@@ -201,7 +252,7 @@ class OGNEWSNewsFilter extends NewsFilter
                 return ['url' => $ogFileUrl, 'width' => $targetWidth, 'height' => $targetHeight];
             }
 
-            return ['url' => $imagePath, 'width' => $targetWidth, 'height' => $targetHeight];
+            return ['url' => $getAbsoluteImageUrl($imagePath), 'width' => $targetWidth, 'height' => $targetHeight];
         };
         if (($CurrentHandler['handlerName'] == 'news') || ($CurrentHandler['handlerName'] == 'print')) {
             if (isset($mode['style']) && $mode['style'] == 'full') {
