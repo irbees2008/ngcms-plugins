@@ -14,7 +14,6 @@ title: "Audio Player"
 information: "HTML5 player with playlist from uploads folder"
 preinstall: "no"
 ---
-
 # README для плагина "Audio Player" для NGCMS
 
 ## Описание

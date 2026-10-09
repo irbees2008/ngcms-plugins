@@ -16,5 +16,4 @@ title: "HelloWorld"
 information: "Показывает базовые приёмы создания плагинов."
 preinstall: "no"
 ---
-
 # Пример HelloWorld

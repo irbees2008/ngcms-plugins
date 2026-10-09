@@ -16,7 +16,6 @@ title: "jChat → Telegram"
 information: "Интеграция jChat с Telegram Bot API для мгновенных уведомлений"
 preinstall: "no"
 ---
-
 # ✅ jChat + Telegram - ГОТОВО К РАБОТЕ!
 ## 🎉 Плагин успешно установлен и работает!
 Теперь вы получаете уведомления в Telegram о новых сообщениях в чате.

@@ -12,5 +12,4 @@ author: "Rostunov S U"
 author_uri: "http://rostunov.com"
 minenginebuild: "3740369"
 ---
-
 # Создание тестовых данных

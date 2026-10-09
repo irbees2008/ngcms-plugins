@@ -15,7 +15,6 @@ title: "Antispam"
 information: "Фильтрует спам в комментариях"
 preinstall: "no"
 ---
-
 ####################
 # Akismet Antispam #
 ####################

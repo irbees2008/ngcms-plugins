@@ -15,7 +15,6 @@ information: "Импорт новостей через RSS"
 preinstall: "no"
 preinstall_vars: "cache=\"1\"; cacheExpire=\"3600\";"
 ---
-
 # RSS Import Plugin
 
 Импорт внешних RSS-лент.

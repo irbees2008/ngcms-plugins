@@ -16,85 +16,86 @@ minenginebuild: "23b3116"
 information: "Аутентификация через ВК, Google, Yandex, Facebook и т.д."
 preinstall: "no"
 ---
+# Авторизация через социальные сети
 
-# =========================================================================== #
-# NG CMS // Плагины // auth_social - авторизация через соцсети                #
-# =========================================================================== #
-Плагин не является самостоятельным модулем авторизации, а работает лишь как
-дополнение к одному из уже работающих плагинов, например auth_basic.
-В данный момент поддерживается авторизация через: VK ID, Yandex, Google, Facebook, GitHub.
-#=====================================#
-Установка
-#=====================================#
-1. Зарегистрировать приложения в соцсетях (см. также https://github.com/stanislas-prime/SocialAuther).
-В параметре redirect_uri укажите соответствующие URL:
-**VK ID** (новый VK ID SDK с PKCE):
-https://sitename.ru/plugin/auth_social/vkid/
-Настройки приложения VK ID:
-- Получите Client ID и Client Secret на https://id.vk.com/about/business/go/docs/ru/vkid/latest/vk-id/connection/create-app
-- Scope: email (примечание: VK может не возвращать email даже при запросе)
-**Yandex**:
-https://sitename.ru/plugin/auth_social/yandex/
-**Google**:
-https://sitename.ru/plugin/auth_social/google/
-**Facebook**:
-https://sitename.ru/plugin/auth_social/facebook/
-**GitHub**:
-https://sitename.ru/plugin/auth_social/github/
-Рекомендуется scope: read:user, user:email (для получения e‑mail).
-2. Включить плагин. В настройках плагина внести данные о приложениях в соц.сетях:
-   - VK ID: vkid_client_id, vkid_client_secret, vkid_scope
-   - Остальные: client_id, client_secret, public_key (где требуется)
-3. В шаблоне usermenu.tpl прописать ссылки для авторизации:
-**Для VK ID (новый SDK):**
-<a href="{{p.auth_social.vkid.authUrl}}" title="VK ID"><img src="/engine/plugins/auth_social/social/VK.png" alt="VK ID"/></a>
-**Для остальных провайдеров:**
-<a href="{{p.auth_social.yandex.authUrl}}" title="{{p.auth_social.yandex.title}}"><img src="/engine/plugins/auth_social/social/ya.png" alt="{{p.auth_social.yandex.title}}"/></a>
-<a href="{{p.auth_social.google.authUrl}}" title="{{p.auth_social.google.title}}"><img src="/engine/plugins/auth_social/social/G.png" alt="{{p.auth_social.google.title}}"/></a>
-<a href="{{p.auth_social.facebook.authUrl}}" title="{{p.auth_social.facebook.title}}"><img src="/engine/plugins/auth_social/social/FB.png" alt="{{p.auth_social.facebook.title}}"/></a>
-<a href="{{p.auth_social.github.authUrl}}" title="{{p.auth_social.github.title}}"><img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="{{p.auth_social.github.title}}" style="width:32px;height:32px"/></a>
-#=====================================#
-Интеграция с ng-helpers v0.2.2
-#=====================================#
-Плагин использует функции из библиотеки ng-helpers для улучшения безопасности и логирования:
-**validate_email()** - валидация email адресов от OAuth провайдеров
-- Защита от некорректных email
-- Предотвращение регистрации с невалидными адресами
-**random_string()** - генерация безопасных случайных строк
-- Используется для PKCE токенов (state, code_verifier)
-- Криптографически стойкая генерация
-**logger()** - расширенное логирование
-- Логи OAuth операций: редиректы, аутентификации, регистрации
-- Отслеживание IP-адресов для безопасности
-- Файл логов: engine/cache/logs/auth_social.log
-**get_ip()** - получение IP-адреса пользователя
-- Используется в логах для аудита
-- Поддержка прокси и CDN
-Примеры логов:
+Плагин не является самостоятельным модулем авторизации: он дополняет уже
+работающий плагин авторизации, например `auth_basic`.
+
+Поддерживаются VK ID, Yandex, Google, Facebook и GitHub.
+
+## Установка и настройка
+
+1. Зарегистрируйте приложения у нужных провайдеров. В качестве `redirect_uri`
+   укажите соответствующие адреса:
+
+   | Провайдер | Адрес обратного вызова |
+   | --- | --- |
+   | VK ID | `https://sitename.ru/plugin/auth_social/vkid/` |
+   | Yandex | `https://sitename.ru/plugin/auth_social/yandex/` |
+   | Google | `https://sitename.ru/plugin/auth_social/google/` |
+   | Facebook | `https://sitename.ru/plugin/auth_social/facebook/` |
+   | GitHub | `https://sitename.ru/plugin/auth_social/github/` |
+
+   Дополнительные сведения о регистрации приложений: [SocialAuther](https://github.com/stanislas-prime/SocialAuther).
+   Для VK ID получите Client ID и Client Secret в [документации VK ID](https://id.vk.com/about/business/go/docs/ru/vkid/latest/vk-id/connection/create-app).
+   Запрашиваемый scope для VK ID — `email`, но VK может не вернуть адрес даже при его запросе.
+   Для GitHub рекомендуется scope `read:user, user:email`.
+2. Включите плагин и внесите в его настройки данные приложений:
+   - VK ID: `vkid_client_id`, `vkid_client_secret`, `vkid_scope`;
+   - другие провайдеры: `client_id`, `client_secret`, `public_key` (если требуется).
+3. Добавьте ссылки авторизации в `usermenu.tpl`. Примеры:
+
+   ```html
+   <!-- VK ID -->
+   <a href="{{p.auth_social.vkid.authUrl}}" title="VK ID"><img src="/engine/plugins/auth_social/social/VK.png" alt="VK ID"/></a>
+
+   <!-- Остальные провайдеры -->
+   <a href="{{p.auth_social.yandex.authUrl}}" title="{{p.auth_social.yandex.title}}"><img src="/engine/plugins/auth_social/social/ya.png" alt="{{p.auth_social.yandex.title}}"/></a>
+   <a href="{{p.auth_social.google.authUrl}}" title="{{p.auth_social.google.title}}"><img src="/engine/plugins/auth_social/social/G.png" alt="{{p.auth_social.google.title}}"/></a>
+   <a href="{{p.auth_social.facebook.authUrl}}" title="{{p.auth_social.facebook.title}}"><img src="/engine/plugins/auth_social/social/FB.png" alt="{{p.auth_social.facebook.title}}"/></a>
+   <a href="{{p.auth_social.github.authUrl}}" title="{{p.auth_social.github.title}}"><img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="{{p.auth_social.github.title}}" style="width:32px;height:32px"/></a>
+   ```
+
+## Интеграция с ng-helpers
+
+Плагин использует функции ng-helpers для валидации и логирования:
+
+- `validate_email()` проверяет адреса электронной почты, полученные от OAuth-провайдеров, и помогает не допустить регистрацию с некорректным адресом.
+- `random_string()` генерирует криптографически стойкие строки для PKCE-параметров `state` и `code_verifier`.
+- `logger()` записывает операции OAuth, регистрации и IP-адреса в `engine/cache/logs/auth_social.log`.
+- `get_ip()` получает IP-адрес посетителя, в том числе при работе через прокси и CDN.
+
+Примеры записей журнала:
+
+```text
 [2026-01-29 14:30:45] [INFO] VK ID OAuth redirect initiated, IP: 192.168.1.100
 [2026-01-29 14:30:46] [INFO] Successful OAuth authentication: vkid user Иван (ivan@example.com), IP: 192.168.1.100
 [2026-01-29 14:31:20] [WARNING] Invalid email from google: invalid-email, IP: 192.168.1.100
-#=====================================#
-Технические особенности VK ID
-#=====================================#
-- Используется OAuth 2.0 с PKCE (Proof Key for Code Exchange)
-- Реализован через отдельный адаптер Adapter\Vkid
-- Поддержка code_verifier и code_challenge для безопасного обмена токенами
-- Автоматическое управление session state для защиты от CSRF
-- Аватары загружаются автоматически при первой регистрации
-- Email может быть недоступен даже при запросе scope=email
-#=====================================#
-Интеграция с профилем (плагин uprofile)
-#=====================================#
-При установке плагина в таблице users создаются новые поля: provider, social_id, social_page, sex, birthday
-Данные в этих полях слабоструктурированы и могут либо вообще отсутствовать, либо их вид может различаться в зависимости от соц. сети.
-1. \templates\ваш_шаблон\plugins\uprofile\users.tpl
-{{ userRec.provider }} - тип соц. сети (vkid, yandex, google, facebook, github).
-{{ userRec.social_id }} - уникальный ID пользователя в социальной сети.
-{{ userRec.social_page }} - ссылка на профиль в социальной сети.
-{{ userRec.sex }} - пол пользователя (male/female или пусто).
-{{ userRec.birthday }} - дата рождения пользователя в формате YYYY-MM-DD.
-Пример вывода:
+```
+
+## Особенности VK ID
+
+- Используется OAuth 2.0 с PKCE (Proof Key for Code Exchange).
+- Реализован отдельный адаптер `Adapter\Vkid`.
+- Поддерживаются `code_verifier` и `code_challenge` для обмена токенами.
+- Состояние сессии управляется автоматически для защиты от CSRF.
+- Аватары загружаются при первой регистрации.
+- Email может быть недоступен даже при запросе `scope=email`.
+
+## Интеграция с профилем uprofile
+
+При установке плагин добавляет в таблицу `users` поля `provider`, `social_id`,
+`social_page`, `sex` и `birthday`. Данные могут отсутствовать, а их формат может
+зависеть от социальной сети.
+
+### Шаблон `templates/ваш_шаблон/plugins/uprofile/users.tpl`
+
+Доступны переменные `userRec.provider` (код провайдера: `vkid`, `yandex`, `google`,
+`facebook` или `github`), `userRec.social_id` (ID пользователя), `userRec.social_page`
+(ссылка на профиль), `userRec.sex` (пол, `male`, `female` или пустое значение) и
+`userRec.birthday` (дата в формате `YYYY-MM-DD`).
+
+```twig
 {% if (userRec.provider) and (userRec.social_page) %}
     <tr>
         <td>Профиль соцсети:</td>
@@ -113,10 +114,14 @@ https://sitename.ru/plugin/auth_social/github/
         <td class="second">{{ userRec.birthday }}</td>
     </tr>
 {% endif %}
-2. \templates\ваш_шаблон\plugins\uprofile\profile.tpl
-{{ userRec.sex }} - пол пользователя.
-{{ userRec.birthday }} - дата рождения пользователя.
-Пример вывода:
+```
+
+### Шаблон `templates/ваш_шаблон/plugins/uprofile/profile.tpl`
+
+В форме редактирования профиля можно использовать `userRec.sex` и
+`userRec.birthday`:
+
+```html
 <div class="label label-table">
     <label>Пол:</label>
     <select name="editsex" class="input">
@@ -129,26 +134,24 @@ https://sitename.ru/plugin/auth_social/github/
     <label>Дата рождения (YYYY-MM-DD):</label>
     <input type="date" name="editbirthday" value="{{ userRec.birthday }}" class="input" />
 </div>
-#=====================================#
-Отладка и логирование
-#=====================================#
-**Основные логи (ng-helpers):**
-Файл: engine/cache/logs/auth_social.log
-Содержит:
-- Инициации OAuth редиректов
-- Успешные аутентификации с данными пользователя
-- Создание новых пользователей через соцсети
-- Предупреждения о невалидных email (WARNING)
-- IP-адреса для отслеживания
-**Детальная отладка (опционально):**
-Для включения отладочного режима раскомментируйте строки с // DEBUG: в файлах:
-- engine/plugins/auth_social/social.php
-- engine/plugins/auth_social/lib/SocialAuther/Adapter/Vkid.php
-Детальные отладочные логи: engine/plugins/auth_social/log.txt
-#=====================================#
-Известные проблемы
-#=====================================#
-1. VK ID может не возвращать email пользователя даже при scope=email
-2. Длинные URL аватаров не сохраняются в поле avatar - вместо этого аватары загружаются и сохраняются локально
-3. При первой регистрации через соцсеть пользователь получает случайный пароль
-4. HTTPS обязателен для корректной работы OAuth провайдеров
+```
+
+## Отладка и логирование
+
+Основной журнал ng-helpers находится в `engine/cache/logs/auth_social.log`. Он
+содержит сведения о перенаправлениях OAuth, успешных аутентификациях и создании
+пользователей, предупреждения о некорректном email и IP-адреса.
+
+Для включения дополнительной отладки раскомментируйте строки `// DEBUG:` в файлах:
+
+- `engine/plugins/auth_social/social.php`;
+- `engine/plugins/auth_social/lib/SocialAuther/Adapter/Vkid.php`.
+
+Детальные отладочные записи сохраняются в `engine/plugins/auth_social/log.txt`.
+
+## Известные ограничения
+
+1. VK ID может не возвращать email даже при scope `email`.
+2. Длинные URL аватаров не сохраняются в поле `avatar`; аватары загружаются локально.
+3. При первой регистрации через социальную сеть пользователь получает случайный пароль.
+4. Для корректной работы OAuth-провайдеров требуется HTTPS.

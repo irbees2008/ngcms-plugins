@@ -16,7 +16,6 @@ information: "Генерирует специальный RSS поток для 
 preinstall: "no"
 preinstall_vars: "feed_title_format=\"site_title\"; news_title=\"1\"; news_count=\"30\"; use_hide=\"1\""
 ---
-
 # RSS Yandex Plugin
 
 RSS-лента для Яндекс.Новостей.

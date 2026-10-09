@@ -11,12 +11,8 @@ author: "Dzmitry Khadorkin (KhadeR) / Updated for Twig by AI Assistant"
 author_uri: "http://khadersg.com/me/"
 preinstall: "no"
 ---
+# Социальные закладки | Social Bookmarks
 
-# ===========================================================================
-
-# NG CMS // Плагины // Социальные закладки | Social Bookmarks
-
-# ===========================================================================
 
 ## Описание плагина
 

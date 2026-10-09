@@ -13,24 +13,28 @@ author_uri: "http://digitalplace.ru/"
 minenginebuild: "23b3116"
 preinstall: "no"
 ---
+# Карта сайта
 
-Карта сайта
+Плагин формирует карту сайта из категорий, новостей и статических страниц.
 
-Требования:
+## Требования
+
 - PHP 8.0+
 - ng-helpers v0.2.2+
 
-Модернизация (2026):
+## Изменения 2026 года
+
 - Обновлено до ng-helpers v0.2.2
 - Заменено кеширование: cacheRetrieveFile/cache_put → cache()
 - Добавлено логирование: engine/data/logs/sitemap.log
-- Требуется PHP 8.0+
 
-Шаблоны:
-===sitemap.tpl===
-{{ entries }}       - массив объектов - категрии, новости, статика (структуру подробнее смотреть через {{ debugValue(entries) }} )
-{{ pagination }}    - постраничная навигация
-{{ counts }}        - массив с общим количеством объектов ({{ counts.countCatz }}, {{ counts.countNews }}, {{ counts.countStatic }})
-{{ news_per_page }} - количество новостей на странице
-{{ pages_count }}   - количество страниц
-{{ page }}          - номер текущей страницы
+## Шаблон `sitemap.tpl`
+
+| Переменная | Описание |
+| --- | --- |
+| `entries` | Объекты категорий, новостей и статических страниц. Структуру можно посмотреть через `debugValue(entries)`. |
+| `pagination` | Постраничная навигация. |
+| `counts` | Количество объектов: `counts.countCatz`, `counts.countNews`, `counts.countStatic`. |
+| `news_per_page` | Количество новостей на странице. |
+| `pages_count` | Общее количество страниц. |
+| `page` | Номер текущей страницы. |

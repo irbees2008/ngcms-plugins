@@ -9,7 +9,6 @@ description: "Обновление дополнительных полей су�
 author: "Rostunov Sergey"
 author_uri: "http://rostunov.com/"
 ---
-
 # CSV News Re-import
 
 Плагин обновляет дополнительные поля уже существующих новостей по данным CSV.

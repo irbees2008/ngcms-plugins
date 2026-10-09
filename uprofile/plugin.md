@@ -17,111 +17,129 @@ title: "Профиль пользователя"
 information: "Позволяет пользователя просматривать чужие профили и редактировать свой."
 preinstall: "yes"
 ---
+# Просмотр и редактирование профиля пользователя
 
-# =========================================================================== #
-# NG CMS // Плагины // Просмотр/редактирование профиля пользователя           #
-# =========================================================================== #
-Плагин обеспечивает функционал просмотра и редактирования профиля пользователей.
-За данные функции отвечают следующие шаблоны:
-users.tpl	- просмотр профиля пользователя (как чужого так и своего)
-profile.tpl	- страница редактирования собственного профиля
- users.tpl
-------------------------------------------------
-Шаблон используется для просмотра профиля любого пользователя (а также своего в
-режиме "как меня видят другие")
-Некоторые переменные оставлены в шаблоне в целях совместимости с предыдущими версиями.
-Список переменных:
-* user		- массив с данными пользователя, взятыми из таблицы БД users
-  * id		- ID пользователя
-  * name	- логин пользователя
-  * news        - кол-во новостей пользователя
-  * com		- кол-во комментариев пользователя
-  * status	- наименование группы пользователя
-  * last	- дата/время последнего посещения
-  * reg		- дата/время регистрации
-  * from	- Поле "откуда"
-  * info	- Поле "информация обо мне"
-  * flags	- Массив с признаками/флагами
-    * hasAvatar		- Флаг: у пользователя есть аватарка
-    * isOwnProfile	- Флаг: пользователь просматривает _собственный_ профиль
-* token	- Токен безопасности для передачи в RPC функцию plugin.uprofile.editForm
-HINT: Переменные из плагина xfields (доп. поля) доступны в ветке p.xfields.
-Интересующиеся могут выполнить {{ debugValue(p.xfields) }} и посмотреть какую именно информацию
-предоставляет xfields в данный шаблон.
-Для "перехода" из режима "просмотра собственного профиля" в его редактирование можно использовать
-следующую конструкцию.
-Необходимые предыдущие шаги:
-* в шаблоне создана ссылка с текстом "редактировать профиль" и событием onclick = "ng_uprofile_editCall(); return false"
-* всё содержимое шаблона users.tpl помещено в div с ID "uprofileReplaceForm"
-{% if (user.flags.isOwnProfile) %}
-<script type="text/javascript" language="javascript">
+Плагин предоставляет просмотр профилей пользователей и редактирование собственного профиля.
+
+Используются шаблоны:
+
+- `users.tpl` — просмотр своего или чужого профиля.
+- `profile.tpl` — редактирование собственного профиля.
+
+## Шаблон `users.tpl`
+
+Шаблон отображает профиль любого пользователя, в том числе собственный в режиме «как меня видят другие». Некоторые переменные сохранены для совместимости с предыдущими версиями.
+
+Доступные переменные:
+
+- `user` — данные пользователя из таблицы `users`:
+  - `id` — ID пользователя.
+  - `name` — логин.
+  - `news` — количество новостей.
+  - `com` — количество комментариев.
+  - `status` — название группы пользователя.
+  - `last` — дата и время последнего посещения.
+  - `reg` — дата и время регистрации.
+  - `from` — поле «Откуда».
+  - `info` — поле «Информация обо мне».
+  - `flags.hasAvatar` — признак наличия аватара.
+  - `flags.isOwnProfile` — признак просмотра собственного профиля.
+- `token` — токен безопасности для RPC-функции `plugin.uprofile.editForm`.
+
+Дополнительные поля плагина `xfields` доступны в ветке `p.xfields`. Для просмотра структуры можно использовать:
+
+```twig
+{{ debugValue(p.xfields) }}
+```
+
+### Переключение собственного профиля в режим редактирования
+
+Чтобы заменить содержимое профиля формой редактирования:
+
+1. Добавьте ссылку с обработчиком `onclick="ng_uprofile_editCall(); return false"`.
+2. Поместите содержимое `users.tpl` в элемент с ID `uprofileReplaceForm`.
+
+```twig
+{% if user.flags.isOwnProfile %}
+<script>
 function ng_uprofile_editCall() {
-	$.post('/engine/rpc.php', { json : 1, methodName : 'plugin.uprofile.editForm', rndval: new Date().getTime(), params : json_encode({ 'token' : '{{ token }}' }) }, function(data) {
-		// Try to decode incoming data
-		try {
-			resTX = eval('('+data+')');
-		} catch (err) { alert('Error parsing JSON output. Result: '+linkTX.response); }
-		if (!resTX['status']) {
-			ngNotifyWindow('Error ['+resTX['errorCode']+']: '+resTX['errorText'], 'ERROR');
-		} else {
-			$('#uprofileReplaceForm').html(resTX['data']);
-		}
-	}).error(function() { ngNotifyWindow('HTTP error during request', 'ERROR'); });
+    $.post('/engine/rpc.php', {
+        json: 1,
+        methodName: 'plugin.uprofile.editForm',
+        rndval: new Date().getTime(),
+        params: json_encode({ token: '{{ token }}' })
+    }, function (data) {
+        try {
+            resTX = eval('(' + data + ')');
+        } catch (err) {
+            alert('Error parsing JSON output. Result: ' + linkTX.response);
+        }
+        if (!resTX.status) {
+            ngNotifyWindow('Error [' + resTX.errorCode + ']: ' + resTX.errorText, 'ERROR');
+        } else {
+            $('#uprofileReplaceForm').html(resTX.data);
+        }
+    }).error(function () {
+        ngNotifyWindow('HTTP error during request', 'ERROR');
+    });
 }
 </script>
 {% endif %}
- profile.tpl
-------------------------------------------------
-Шаблон для редактирования собственного профиля
-Шаблон используется для просмотра профиля любого пользователя (а также своего в
-режиме "как меня видят другие")
-* user		- массив с данными пользователя, взятыми из таблицы БД users
-  * id		- ID пользователя
-  * name	- логин пользователя
-  * news        - кол-во новостей пользователя
-  * com		- кол-во комментариев пользователя
-  * status	- наименование группы пользователя
-  * last	- дата/время последнего посещения
-  * reg		- дата/время регистрации
-  * email	- email пользователя
-  * from	- Поле "откуда"
-  * info	- Поле "информация обо мне"
-  * flags	- Массив с признаками/флагами
-    * hasAvatar		- Флаг: у пользователя есть аватарка
-* flags		- Набор глобальных флагов
-  * avatarAllowed	- Флаг: пользователям разрешено иметь аватары
-* info_sizelimit_text	- текстовое сообщение для выдачи пользователю при превышении размера поля "обо мне" (info)
-* info_sizelimit	- ограничение (в символах) на максимальный размер поля "обо мне" (info)
-* form_action		- URL формы, на который необходимо отправлять пользователя для сохранения профиля
-* token	- Токен безопасности для изменения профиля пользователя
-Для сохранения настроек профиля необходимо создать форму, отправляющую POST запрос на URL {{ form_action }}.
-При этом необходимо добавить следующие невидимые (hidden) поля:
-* token со значением {{ token }}
-Информация передаётся в следующих полях:
-* editemail	- для {{ user.email }}
-* editfrom	- для {{ user.from }}
-* editabout	- для {{ user.about }}
-* editpassword	- для задания нового пароля
-* oldpass	- для указания старого пароля (требуется только при попытке смены пароля)
-* newavatar	- тип "file", для заливки новой аватарки
-* delavatar	- тип "checkbox", для отметки "удалить аватарку"
-Для вывода аватара можно использовать конструкцию:
-{% if (flags.avatarAllowed) %}
- <input type="file" name="newavatar" size="40" /><br />
- {% if (user.flags.hasAvatar) %}
-  <img src="{{ user.avatar }}" style="margin: 5px; border: 0px; alt=""/><br/>
-  <input type="checkbox" name="delavatar" id="delavatar" class="check" />&nbsp;
-  <label for="delavatar">{{ lang.uprofile['delete'] }}</label>
- {% endif %}
+```
+
+## Шаблон `profile.tpl`
+
+Шаблон используется для редактирования собственного профиля. Доступны переменные:
+
+- `user` — данные пользователя:
+  - `id`, `name`, `news`, `com`, `status`, `last`, `reg`, `email`, `from`, `info`;
+  - `flags.hasAvatar` — признак наличия аватара.
+- `flags.avatarAllowed` — разрешены ли пользователям аватары.
+- `info_sizelimit_text` — сообщение о превышении ограничения поля «Информация обо мне».
+- `info_sizelimit` — максимальный размер поля `info` в символах.
+- `form_action` — URL для отправки формы сохранения профиля.
+- `token` — токен безопасности для изменения профиля.
+
+Форма должна отправлять POST-запрос на `{{ form_action }}` и содержать скрытое поле `token` со значением `{{ token }}`.
+
+Поля формы:
+
+| Имя поля | Назначение |
+|---|---|
+| `editemail` | Значение `{{ user.email }}` |
+| `editfrom` | Значение `{{ user.from }}` |
+| `editabout` | Значение `{{ user.about }}` |
+| `editpassword` | Новый пароль |
+| `oldpass` | Старый пароль; требуется только при смене пароля |
+| `newavatar` | Поле типа `file` для загрузки аватара |
+| `delavatar` | Поле типа `checkbox` для удаления аватара |
+
+Пример формы управления аватаром:
+
+```twig
+{% if flags.avatarAllowed %}
+    <input type="file" name="newavatar" size="40" />
+    {% if user.flags.hasAvatar %}
+        <img src="{{ user.avatar }}" style="margin: 5px; border: 0" alt="" />
+        <input type="checkbox" name="delavatar" id="delavatar" class="check" />
+        <label for="delavatar">{{ lang.uprofile['delete'] }}</label>
+    {% endif %}
 {% else %}
- {{ lang.uprofile['avatars_denied'] }}
+    {{ lang.uprofile['avatars_denied'] }}
 {% endif %}
-добавленна ссылка и количество закладок пользователя в профиле
-Для вывода количества закладок пользователя можно использовать конструкцию:
-{% if (user.bookmarks_count) %}
-		{{ lang.uprofile['bookmarks'] }}:
-		<a href="{{ user.bookmarks_link }}">{{ user.bookmarks_count }}</a>
-	{% else %}
-		{{ lang.uprofile['bookmarks'] }}: 0
-	{% endif %}
-добавленна поддержка закладок в users.tpl {plugin_bookmarks}
+```
+
+### Интеграция с закладками
+
+Для вывода количества закладок и ссылки на них используйте:
+
+```twig
+{% if user.bookmarks_count %}
+    {{ lang.uprofile['bookmarks'] }}:
+    <a href="{{ user.bookmarks_link }}">{{ user.bookmarks_count }}</a>
+{% else %}
+    {{ lang.uprofile['bookmarks'] }}: 0
+{% endif %}
+```
+
+В `users.tpl` также поддерживается переменная `{plugin_bookmarks}`.

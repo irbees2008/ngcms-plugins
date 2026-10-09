@@ -17,5 +17,4 @@ minenginebuild: "23b3116"
 information: "Позволяет гибко управлять заголовками страниц сайта, включая поддержку Open Graph и Twitter Cards."
 preinstall: "no"
 ---
-
 # Simple Title

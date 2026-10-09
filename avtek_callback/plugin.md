@@ -16,7 +16,6 @@ title: "AVTEK Callback"
 information: "Создание форм, модалка/встройка, заявки, экспорт XLS"
 preinstall: "no"
 ---
-
 # AVTEK Callback (avtek_callback) — документация (актуальная версия: embed-only)
 
 ## Что делает плагин
