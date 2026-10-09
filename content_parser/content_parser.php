@@ -2,8 +2,6 @@
 // Защита от прямого доступа
 if (!defined('NGCMS')) die('HAL');
 
-LoadPluginLang('content_parser', 'config', '', '', ':');
-
 use function Plugins\logger;
 use function Plugins\benchmark;
 use function Plugins\sanitize;
@@ -17,18 +15,6 @@ if (file_exists($madelineProtoFile)) {
 }
 
 register_plugin_page('content_parser', '', 'plugin_content_parse', 0);
-
-function contentParserLang($key)
-{
-    global $lang;
-    $index = 'content_parser:' . $key;
-    if (!isset($lang[$index])) {
-        throw new RuntimeException('Missing content_parser language key: ' . $key);
-    }
-
-    return $lang[$index];
-}
-
 /**
  * Загрузка медиафайла на сервер через NGCMS upload system
  * @param string $url URL изображения или видео
@@ -112,13 +98,13 @@ function parseRssFeed($rssUrl, $count)
         $rss = loadRssFeed($rssUrl);
     } catch (Exception $e) {
         logger('RSS load failed: url=' . sanitize($rssUrl, 'info', 'content_parser.log') . ', error=' . $e->getMessage());
-        throw new Exception(contentParserLang('parse_rss_load_error') . $e->getMessage());
+        throw new Exception("Ошибка загрузки RSS: " . $e->getMessage());
     }
     $items = [];
     $parsedCount = 0;
     // Проверяем наличие тегов <item>
     if (!isset($rss->channel->item)) {
-        throw new Exception(contentParserLang('parse_rss_structure_error'));
+        throw new Exception('Некорректная структура RSS-канала: отсутствуют теги <item>');
     }
     foreach ($rss->channel->item as $item) {
         if ($parsedCount >= $count) {
@@ -163,21 +149,21 @@ function loadRssFeed($rssUrl)
     if (curl_errno($ch)) {
         $error = curl_error($ch);
         curl_close($ch);
-        throw new Exception(contentParserLang('parse_rss_curl_error') . $error);
+        throw new Exception("Ошибка cURL при загрузке RSS: $error");
     }
     curl_close($ch);
     if ($httpCode >= 400) {
-        throw new Exception(contentParserLang('parse_rss_http_error_prefix') . $httpCode . contentParserLang('parse_rss_http_error_suffix'));
+        throw new Exception("HTTP ошибка $httpCode при загрузке RSS канала");
     }
     if (empty($response)) {
-        throw new Exception(contentParserLang('parse_rss_empty_response'));
+        throw new Exception("Пустой ответ от RSS канала");
     }
     // Преобразуем ответ в SimpleXML
     libxml_use_internal_errors(true);
     $rss = simplexml_load_string($response);
     if ($rss === false) {
         $errors = libxml_get_errors();
-        $errorMsg = contentParserLang('parse_rss_xml_error');
+        $errorMsg = "Ошибка разбора XML RSS";
         if (!empty($errors)) {
             $errorMsg .= ": " . $errors[0]->message;
         }
@@ -254,7 +240,7 @@ function parseVkPosts($groupId, $count)
     if (!empty($posts)) {
         return $posts;
     }
-    throw new Exception(contentParserLang('parse_vk_rss_unavailable'));
+    throw new Exception('VK RSS недоступен. Для парсинга VK необходимо настроить VK API токен в настройках плагина. Убедитесь, что токен сохранен через форму "Настройка VK API".');
 }
 function parseVkViaAPI($groupId, $count, $token)
 {
@@ -269,7 +255,7 @@ function parseVkViaAPI($groupId, $count, $token)
         // Screen name - нужно разрешить через resolveScreenName
         $ownerId = resolveVkScreenName($groupId, $token);
         if (!$ownerId) {
-            throw new Exception(contentParserLang('parse_vk_screen_name_error') . $groupId);
+            throw new Exception('Не удалось определить ID группы VK по screen_name: ' . $groupId);
         }
     }
     // Вызываем wall.get API
@@ -292,23 +278,23 @@ function parseVkViaAPI($groupId, $count, $token)
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     if ($httpCode !== 200 || !$response) {
-        throw new Exception(contentParserLang('parse_vk_http_error') . $httpCode . ')');
+        throw new Exception('Ошибка обращения к VK API (HTTP ' . $httpCode . ')');
     }
     $data = json_decode($response, true);
     if (isset($data['error'])) {
         $errorMsg = $data['error']['error_msg'] ?? 'Unknown error';
         $errorCode = $data['error']['error_code'] ?? 'N/A';
         if ($errorCode == 27) {
-            throw new Exception(contentParserLang('parse_vk_community_token_error'));
+            throw new Exception('VK API ошибка (27): токен сообщества не может читать стену (wall.get). Нужен пользовательский токен с правом "wall" — см. подсказку под полем токена на вкладке VK.');
         }
-        throw new Exception(contentParserLang('parse_vk_api_error') . $errorCode . contentParserLang('parse_vk_api_error_suffix') . $errorMsg);
+        throw new Exception("VK API ошибка ($errorCode): $errorMsg");
     }
     if (!isset($data['response']['items'])) {
-        throw new Exception(contentParserLang('parse_vk_items_missing'));
+        throw new Exception('Некорректный ответ VK API - отсутствует поле items');
     }
     $postsCount = count($data['response']['items']);
     if ($postsCount === 0) {
-        throw new Exception(contentParserLang('parse_vk_zero_posts'));
+        throw new Exception('VK API вернул 0 постов. Возможно, группа пустая или закрыта, либо у токена недостаточно прав (требуются права: wall, groups)');
     }
     $items = [];
     foreach ($data['response']['items'] as $post) {
@@ -393,7 +379,7 @@ function parseVkFromHtml($groupId, $count)
         if (preg_match('#"owner_id":(-?\d+)#', $html, $m)) {
             $ownerId = $m[1];
         } else {
-            throw new Exception(contentParserLang('parse_vk_id_not_found'));
+            throw new Exception('Не удалось определить ID группы VK. Попробуйте указать числовой ID вместо screen_name (например, club123456)');
         }
     }
     // Формируем URL для VK widget (публичный JSON endpoint)
@@ -419,7 +405,7 @@ function parseVkFromHtml($groupId, $count)
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     if ($httpCode !== 200 || !$response) {
-        throw new Exception(contentParserLang('parse_vk_unavailable'));
+        throw new Exception('VK недоступен или группа закрыта. Для закрытых групп требуется VK API токен.');
     }
     $items = [];
     // VK возвращает HTML в response, парсим его
@@ -438,7 +424,7 @@ function parseVkFromHtml($groupId, $count)
         }
     }
     if (empty($items)) {
-        throw new Exception(contentParserLang('parse_vk_no_posts'));
+        throw new Exception('Не удалось получить посты VK. Возможно, группа закрыта или требуется настройка VK API с токеном доступа.');
     }
     return $items;
 }
@@ -480,7 +466,7 @@ function parseTelegramChannel($channelName, $count)
 {
     $channelName = normalizeTelegramChannel($channelName);
     if ($channelName === '') {
-        throw new Exception(contentParserLang('parse_tg_channel_invalid'));
+        throw new Exception('Некорректное имя канала Telegram');
     }
 
     // Проверяем настройки плагина: использовать ли MadelineProto
@@ -556,21 +542,21 @@ function parseTelegramChannelViaWeb($channelName, $count)
         } elseif ($curlErrno === 28) {
             $hint = ' Превышен таймаут — соединение блокируется.';
         }
-        throw new Exception(contentParserLang('parse_tg_curl_error') . $curlErrno . ' — ' . $curlError . '.' . $hint);
+        throw new Exception('Telegram недоступен: curl #' . $curlErrno . ' — ' . $curlError . '.' . $hint);
     }
 
     logger('Telegram HTTP response: code=' . $httpCode . ', size=' . strlen($html), 'debug', 'content_parser.log');
 
     if ($httpCode === 404) {
-        throw new Exception(contentParserLang('parse_tg_not_found_prefix') . $channelName . contentParserLang('parse_tg_not_found_suffix'));
+        throw new Exception('Канал @' . $channelName . ' не найден. Проверьте правильность имени канала.');
     }
 
     if ($httpCode >= 400) {
-        throw new Exception(contentParserLang('parse_tg_http_error') . $httpCode);
+        throw new Exception('Ошибка доступа к Telegram: HTTP ' . $httpCode);
     }
 
     if (empty($html)) {
-        throw new Exception(contentParserLang('parse_tg_empty_response'));
+        throw new Exception('Пустой ответ от Telegram');
     }
 
     // Проверяем, что канал существует (проверяем несколько маркеров)
@@ -625,7 +611,7 @@ function parseTelegramChannelViaWeb($channelName, $count)
     $postNodes = $xpath->query('//div[contains(@class, "tgme_widget_message")]');
 
     if ($postNodes->length === 0) {
-        throw new Exception(contentParserLang('parse_tg_no_posts'));
+        throw new Exception('Не удалось найти посты в канале. Возможно, канал пустой.');
     }
 
     $parsed = 0;
@@ -721,7 +707,7 @@ function parseTelegramChannelViaWeb($channelName, $count)
     }
 
     if (empty($items)) {
-        throw new Exception(contentParserLang('parse_tg_extract_error'));
+        throw new Exception('Не удалось извлечь посты из канала');
     }
 
     $elapsed = (microtime(true) - $startTime) * 1000;
@@ -770,7 +756,7 @@ function parseSiteNews($url, $selector, $count)
     $startTime = microtime(true);
     $html = loadHtml($url);
     if ($html === false || empty($html)) {
-        throw new Exception(contentParserLang('parse_site_fetch_error') . sanitize($url, 'info', 'content_parser.log'));
+        throw new Exception('Не удалось загрузить страницу сайта: ' . sanitize($url, 'info', 'content_parser.log'));
     }
 
     $selector = trim($selector);
@@ -782,7 +768,7 @@ function parseSiteNews($url, $selector, $count)
         $selector = substr($selector, 1);
     }
     if ($selector === '') {
-        throw new Exception(contentParserLang('parse_site_selector_required'));
+        throw new Exception('Не указан id или class блока новости');
     }
 
     libxml_use_internal_errors(true);
@@ -798,7 +784,7 @@ function parseSiteNews($url, $selector, $count)
     }
 
     if ($nodes === false || $nodes->length === 0) {
-        throw new Exception(contentParserLang('parse_site_blocks_missing'));
+        throw new Exception('Блоки новостей по указанному id/class не найдены на странице');
     }
 
     $items = [];
@@ -862,7 +848,7 @@ function parseSiteNews($url, $selector, $count)
     }
 
     if (empty($items)) {
-        throw new Exception(contentParserLang('parse_site_no_news'));
+        throw new Exception('Не удалось извлечь ни одной новости из найденных блоков');
     }
 
     $elapsed = (microtime(true) - $startTime) * 1000;
@@ -1121,7 +1107,7 @@ function createContentFromRss($type, $items)
                 logger('addNewsDirect returned: ' . ($addedDirect ? 'true (ID=' . $addedDirect . ')' : 'false'), 'info', 'content_parser.log');
 
                 if (!$addedDirect) {
-                    $stats['errors'][] = contentParserLang('parse_news_create_error') . $item['title'];
+                    $stats['errors'][] = 'Не удалось добавить: ' . $item['title'];
                     logger('Failed to add item: ' . $item['title'], 'error', 'content_parser.log');
                     continue; // Пропускаем и идём к следующей
                 }
@@ -1138,7 +1124,7 @@ function createContentFromRss($type, $items)
 }
 function plugin_content_parse()
 {
-    global $SUPRESS_TEMPLATE_SHOW, $SYSTEM_FLAGS, $catmap, $userROW, $lang;
+    global $SUPRESS_TEMPLATE_SHOW, $SYSTEM_FLAGS, $catmap, $userROW;
     // Очищаем все буферы вывода
     while (ob_get_level() > 0) {
         ob_end_clean();
@@ -1157,22 +1143,22 @@ function plugin_content_parse()
         $rssUrl = $_REQUEST['rss_url'] ?? '';
         $category = intval($_REQUEST['category'] ?? 0);
         if ($count < 1) {
-            echo json_encode(['error' => $lang['content_parser:parse_invalid_count']]);
+            echo json_encode(['error' => 'Invalid count']);
             exit();
         }
         if ($category <= 0) {
-            echo json_encode(['error' => $lang['content_parser:parse_category_required']]);
+            echo json_encode(['error' => 'Не выбрана категория размещения']);
             exit();
         }
         // Проверка авторизации и прав до вызова addNews
         if (!is_array($userROW) || empty($userROW['id'])) {
-            echo json_encode(['error' => $lang['content_parser:parse_auth_required']]);
+            echo json_encode(['error' => 'Требуется авторизация администратора']);
             exit();
         }
         if (function_exists('checkPermission')) {
             $perm = checkPermission(['plugin' => '#admin', 'item' => 'news'], null, ['add']);
             if (!$perm['add']) {
-                echo json_encode(['error' => $lang['content_parser:parse_permission_denied']]);
+                echo json_encode(['error' => 'Недостаточно прав для добавления новостей']);
                 exit();
             }
         }
@@ -1183,48 +1169,48 @@ function plugin_content_parse()
             }
         }
         if (!isset($catmap[$category])) {
-            echo json_encode(['error' => $lang['content_parser:parse_category_not_found']]);
+            echo json_encode(['error' => 'Выбранная категория не найдена']);
             exit();
         }
         try {
             if ($source === 'vk') {
                 $vkGroup = $_REQUEST['vk_group'] ?? '';
                 if (!$vkGroup) {
-                    throw new Exception($lang['content_parser:parse_vk_group_required']);
+                    throw new Exception('Не указана группа VK');
                 }
                 $vkId = normalizeVkGroup($vkGroup);
                 if (!$vkId) {
-                    throw new Exception($lang['content_parser:parse_vk_group_invalid']);
+                    throw new Exception('Некорректный идентификатор группы VK');
                 }
                 $items = parseVkPosts($vkId, $count);
             } elseif ($source === 'telegram') {
                 $tgChannel = $_REQUEST['tg_channel'] ?? '';
                 if (!$tgChannel) {
-                    throw new Exception($lang['content_parser:parse_tg_channel_required']);
+                    throw new Exception('Не указан канал Telegram');
                 }
                 $tgChannel = normalizeTelegramChannel($tgChannel);
                 if (!$tgChannel) {
-                    throw new Exception($lang['content_parser:parse_tg_channel_invalid']);
+                    throw new Exception('Некорректное имя канала Telegram');
                 }
                 $items = parseTelegramChannel($tgChannel, $count);
             } elseif ($source === 'site') {
                 $siteUrl = trim($_REQUEST['site_url'] ?? '');
                 $siteSelector = trim($_REQUEST['site_selector'] ?? '');
                 if (!$siteUrl || !validate_url($siteUrl)) {
-                    throw new Exception($lang['content_parser:parse_site_url_invalid']);
+                    throw new Exception('Некорректный URL сайта');
                 }
                 if (!$siteSelector) {
-                    throw new Exception($lang['content_parser:parse_site_selector_required']);
+                    throw new Exception('Не указан id или class блока новости');
                 }
                 $items = parseSiteNews($siteUrl, $siteSelector, $count);
             } else {
                 if (empty($rssUrl)) {
-                    throw new Exception($lang['content_parser:parse_rss_url_invalid']);
+                    throw new Exception('Invalid RSS URL');
                 }
                 try {
                     $items = parseRssFeed($rssUrl, $count);
                 } catch (Exception $e) {
-                    throw new Exception($lang['content_parser:parse_rss_prefix'] . $e->getMessage());
+                    throw new Exception('RSS парсинг: ' . $e->getMessage());
                 }
             }
             // Прокидываем категорию
@@ -1233,7 +1219,10 @@ function plugin_content_parse()
             $itemsCount = is_array($items) ? count($items) : 0;
             if ($itemsCount === 0) {
                 // ОТЛАДКА: Добавляем информацию о том, что вернула функция
-                throw new Exception($lang['content_parser:parse_source_empty']);
+                $debugMsg = 'Не удалось получить посты из источника. ';
+                $debugMsg .= 'Проверьте правильность указанных данных (URL канала, имя пользователя, токен VK API). ';
+
+                throw new Exception($debugMsg);
             }
             // Создаем новости
             $stats = createContentFromRss('news', $items);
@@ -1243,12 +1232,12 @@ function plugin_content_parse()
 
             // Формируем HTML для уведомлений в стиле NGCMS msg()
             $successMsg = '<div class="ok" style="margin: 15px 0; padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">';
-            $successMsg .= '✅ <strong>' . $lang['content_parser:parse_success_title'] . '</strong><br>';
-            $successMsg .= $lang['content_parser:parse_added_label'] . '<strong>' . $stats['added'] . '</strong>';
-            $successMsg .= $lang['content_parser:parse_skipped_label'] . '<strong>' . $stats['skipped'] . '</strong>';
+            $successMsg .= '✅ <strong>Парсинг завершен!</strong><br>';
+            $successMsg .= 'Добавлено: <strong>' . $stats['added'] . '</strong>, ';
+            $successMsg .= 'Пропущено: <strong>' . $stats['skipped'] . '</strong>';
 
             if (!empty($stats['errors'])) {
-                $successMsg .= $lang['content_parser:parse_errors_label'] . '<strong>' . count($stats['errors']) . '</strong>';
+                $successMsg .= ', Ошибок: <strong>' . count($stats['errors']) . '</strong>';
             }
             $successMsg .= '</div>';
 
@@ -1256,10 +1245,10 @@ function plugin_content_parse()
             if (!empty($stats['errors'])) {
                 $errorList = array_slice($stats['errors'], 0, 5); // Показываем первые 5 ошибок
                 $successMsg .= '<div class="warning" style="margin: 15px 0; padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px; color: #856404;">';
-                $successMsg .= '<strong>' . $lang['content_parser:parse_error_title'] . '</strong><br>';
+                $successMsg .= '⚠️ <strong>Ошибки парсинга:</strong><br>';
                 $successMsg .= implode('<br>', array_map('htmlspecialchars', $errorList));
                 if (count($stats['errors']) > 5) {
-                    $successMsg .= '<br>' . $lang['content_parser:parse_more_errors'] . (count($stats['errors']) - 5) . $lang['content_parser:parse_more_errors_suffix'];
+                    $successMsg .= '<br>... и еще ' . (count($stats['errors']) - 5) . ' ошибок';
                 }
                 $successMsg .= '</div>';
             }
@@ -1278,10 +1267,10 @@ function plugin_content_parse()
         }
     } catch (Exception $globalError) {
         error_log("Критическая ошибка в plugin_content_parse: " . $globalError->getMessage());
-        echo json_encode(['error' => $lang['content_parser:parse_critical_error'] . $globalError->getMessage()]);
+        echo json_encode(['error' => 'Критическая ошибка: ' . $globalError->getMessage()]);
     } catch (Error $fatalError) {
         error_log("Фатальная ошибка в plugin_content_parse: " . $fatalError->getMessage());
-        echo json_encode(['error' => $lang['content_parser:parse_fatal_error'] . $fatalError->getMessage()]);
+        echo json_encode(['error' => 'Фатальная ошибка: ' . $fatalError->getMessage()]);
     }
     exit();
 }

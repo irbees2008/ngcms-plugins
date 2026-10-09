@@ -189,10 +189,10 @@
 		<i class="fa fa-vk"></i> VK
 	</button>
 	<button class="parser-tab" data-tab="site">
-		<i class="fa fa-globe"></i> {{ lang['content_parser:ui_tab_sites'] }}
+		<i class="fa fa-globe"></i> Сайты
 	</button>
 	<button class="parser-tab" data-tab="settings">
-		<i class="fa fa-cog"></i> {{ lang['content_parser:ui_tab_settings'] }}
+		<i class="fa fa-cog"></i> Настройки
 	</button>
 </div>
 
@@ -204,32 +204,32 @@
 			<input type="hidden" name="source" value="rss">
 			<input type="hidden" name="actionName" value="generate_news">
 			<div class="card">
-				<div class="card-header">{{ lang['content_parser:ui_rss_news'] }}</div>
+				<div class="card-header">Новости из RSS</div>
 				<div class="card-body">
 					<div class="list">
-						{{ lang['content_parser:label_rss_url'] }}:
+						URL RSS-канала:
 						<input type="text" class="form-control" name="rss_url" value="{{ rss_url }}" required>
 					</div>
 					<div class="list">
-						{{ lang['content_parser:ui_saved_channels'] }}:
+						Сохранённые каналы:
 						<div class="input-group">
 							<select class="form-control" name="rss_channel_select">
-								<option value="" selected>{{ lang['content_parser:ui_select_channel'] }}</option>
+								<option value="" selected>— выберите канал —</option>
 								{% for url in rss_channels %}
 									<option value="{{ url }}">{{ url }}</option>
 								{% endfor %}
 							</select>
-							<button type="button" class="btn btn-outline-secondary" id="useSelected">{{ lang['content_parser:ui_insert'] }}</button>
+							<button type="button" class="btn btn-outline-secondary" id="useSelected">Вставить</button>
 						</div>
 					</div>
 					<div class="list">
-						{{ lang['content_parser:label_count'] }}:
+						Количество новостей:
 						<input type="number" class="form-control" name="count" value="{{ rss_limit }}" min="1" max="1000">
 					</div>
 					<div class="list">
-						{{ lang['content_parser:label_category'] }}:
+						Категория для публикации:
 						<select class="form-control" name="category">
-							<option value="0">{{ lang['content_parser:ui_no_category'] }}</option>
+							<option value="0">— Без категории —</option>
 							{% for c in categories %}
 								<option value="{{ c.id }}">{{ c.name }}</option>
 							{% endfor %}
@@ -244,7 +244,7 @@
 					<div class="message"></div>
 				</div>
 				<div class="card-footer">
-					<input type="submit" name="submit" value="{{ lang['content_parser:ui_parse_rss'] }}" class="btn btn-outline-primary">
+					<input type="submit" name="submit" value="Парсить RSS!" class="btn btn-outline-primary">
 				</div>
 			</div>
 		</form>
@@ -254,15 +254,15 @@
 	<div class="col-sm">
 		<form action="" method="post" name="manage_rss_channels_add">
 			<div class="card">
-				<div class="card-header">{{ lang['content_parser:ui_save_rss_channel'] }}</div>
+				<div class="card-header">Сохранение RSS-канала</div>
 				<div class="card-body">
 					<div class="list">
-						{{ lang['content_parser:ui_new_rss_channel'] }}
+						Новый RSS-канал:
 						<input type="text" class="form-control" name="new_rss_url" placeholder="https://example.com/feed" value="">
 					</div>
 				</div>
 				<div class="card-footer">
-					<input type="submit" name="submit" value="{{ lang['content_parser:ui_add_to_list'] }}" class="btn btn-outline-secondary">
+					<input type="submit" name="submit" value="Добавить в список" class="btn btn-outline-secondary">
 				</div>
 			</div>
 		</form>
@@ -271,10 +271,10 @@
 <div class="row mt-2">
 	<div class="col-sm">
 		<div class="card">
-			<div class="card-header">{{ lang['content_parser:ui_saved_rss_channels'] }}</div>
+			<div class="card-header">Сохранённые RSS-каналы</div>
 			<div class="card-body">
 				{% if rss_channels|length == 0 %}
-					<p>{{ lang['content_parser:ui_empty_list'] }}</p>
+					<p>Список пуст.</p>
 				{% else %}
 					<ul class="list-group">
 						{% for url in rss_channels %}
@@ -282,7 +282,7 @@
 								<span>{{ url }}</span>
 								<form action="" method="post" name="manage_rss_channels_delete_{{ loop.index }}">
 									<input type="hidden" name="delete_rss_url" value="{{ url }}">
-									<button type="submit" class="btn btn-sm btn-outline-danger">{{ lang['content_parser:ui_delete'] }}</button>
+									<button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
 								</form>
 							</li>
 						{% endfor %}
@@ -303,39 +303,39 @@
 			<input type="hidden" name="source" value="site">
 			<input type="hidden" name="actionName" value="generate_news">
 			<div class="card">
-				<div class="card-header">{{ lang['content_parser:ui_site_news'] }}</div>
+				<div class="card-header">Новости с сайта</div>
 				<div class="card-body">
 					<div class="list">
-						{{ lang['content_parser:ui_site_news_list_url'] }}
+						Адрес страницы со списком новостей:
 						<input type="text" class="form-control" name="site_url" placeholder="https://example.com/news" required>
 					</div>
 					<div class="list">
-						{{ lang['content_parser:ui_news_block_selector'] }}
-						<input type="text" class="form-control" name="site_selector" placeholder="{{ lang['content_parser:ui_selector_placeholder'] }}" required>
+						id или class блока новости:
+						<input type="text" class="form-control" name="site_selector" placeholder="#news-item или .news-card" required>
 						<small class="form-text text-muted">
-							{{ lang['content_parser:ui_site_selector_hint'] }}
+							Укажите <code>#id</code>, если у каждого блока новости свой id, или <code>.class</code>, если блоки повторяются с одинаковым классом (например, карточки новостей в ленте). Префикс можно не указывать — тогда поиск идёт по class.
 						</small>
 					</div>
 					<div class="list">
-						{{ lang['content_parser:ui_saved_sources'] }}
+						Сохранённые источники:
 						<div class="input-group">
 							<select class="form-control" name="site_source_select">
-								<option value="" selected>{{ lang['content_parser:ui_select_source'] }}</option>
+								<option value="" selected>— выберите источник —</option>
 								{% for s in site_sources %}
 									<option value="{{ s.url }}" data-selector="{{ s.selector }}">{{ s.url }} ({{ s.selector }})</option>
 								{% endfor %}
 							</select>
-							<button type="button" class="btn btn-outline-secondary" id="useSelectedSite">{{ lang['content_parser:ui_insert'] }}</button>
+							<button type="button" class="btn btn-outline-secondary" id="useSelectedSite">Вставить</button>
 						</div>
 					</div>
 					<div class="list">
-						{{ lang['content_parser:label_count'] }}:
+						Количество новостей:
 						<input type="number" class="form-control" name="count" value="{{ rss_limit }}" min="1" max="200">
 					</div>
 					<div class="list">
-						{{ lang['content_parser:label_category'] }}:
+						Категория для публикации:
 						<select class="form-control" name="category">
-							<option value="0">{{ lang['content_parser:ui_no_category'] }}</option>
+							<option value="0">— Без категории —</option>
 							{% for c in categories %}
 								<option value="{{ c.id }}">{{ c.name }}</option>
 							{% endfor %}
@@ -349,7 +349,7 @@
 					<div class="message"></div>
 				</div>
 				<div class="card-footer">
-					<input type="submit" name="submit" value="{{ lang['content_parser:ui_parse_site'] }}" class="btn btn-outline-primary">
+					<input type="submit" name="submit" value="Парсить сайт!" class="btn btn-outline-primary">
 				</div>
 			</div>
 		</form>
@@ -359,19 +359,19 @@
 	<div class="col-sm">
 		<form action="" method="post" name="manage_site_sources_add">
 			<div class="card">
-				<div class="card-header">{{ lang['content_parser:ui_save_site_source'] }}</div>
+				<div class="card-header">Сохранение источника сайта</div>
 				<div class="card-body">
 					<div class="list">
-						{{ lang['content_parser:ui_page_address'] }}
+						Адрес страницы:
 						<input type="text" class="form-control" name="new_site_url" placeholder="https://example.com/news" value="">
 					</div>
 					<div class="list">
-						{{ lang['content_parser:ui_block_id_class'] }}
-						<input type="text" class="form-control" name="new_site_selector" placeholder="{{ lang['content_parser:ui_selector_placeholder'] }}" value="">
+						id или class блока:
+						<input type="text" class="form-control" name="new_site_selector" placeholder="#news-item или .news-card" value="">
 					</div>
 				</div>
 				<div class="card-footer">
-					<input type="submit" name="submit" value="{{ lang['content_parser:ui_add_to_list'] }}" class="btn btn-outline-secondary">
+					<input type="submit" name="submit" value="Добавить в список" class="btn btn-outline-secondary">
 				</div>
 			</div>
 		</form>
@@ -380,10 +380,10 @@
 <div class="row mt-2">
 	<div class="col-sm">
 		<div class="card">
-			<div class="card-header">{{ lang['content_parser:ui_saved_site_sources'] }}</div>
+			<div class="card-header">Сохранённые источники сайтов</div>
 			<div class="card-body">
 				{% if site_sources|length == 0 %}
-					<p>{{ lang['content_parser:ui_empty_list'] }}</p>
+					<p>Список пуст.</p>
 				{% else %}
 					<ul class="list-group">
 						{% for s in site_sources %}
@@ -391,7 +391,7 @@
 								<span>{{ s.url }} <code>{{ s.selector }}</code></span>
 								<form action="" method="post" name="manage_site_sources_delete_{{ loop.index }}">
 									<input type="hidden" name="delete_site_index" value="{{ loop.index0 }}">
-									<button type="submit" class="btn btn-sm btn-outline-danger">{{ lang['content_parser:ui_delete'] }}</button>
+									<button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
 								</form>
 							</li>
 						{% endfor %}
@@ -412,32 +412,32 @@
 			<input type="hidden" name="source" value="vk">
 			<input type="hidden" name="actionName" value="generate_news">
 			<div class="card">
-				<div class="card-header">{{ lang['content_parser:ui_vk_posts'] }}</div>
+				<div class="card-header">Посты из VK</div>
 				<div class="card-body">
 					<div class="list">
-						{{ lang['content_parser:ui_vk_group_label'] }}
-						<input type="text" class="form-control" name="vk_group" placeholder="{{ lang['content_parser:ui_vk_group_placeholder'] }}" required>
+						Группа VK (имя или URL):
+						<input type="text" class="form-control" name="vk_group" placeholder="club123456 или https://vk.com/public123" required>
 					</div>
 					<div class="list">
-						{{ lang['content_parser:ui_saved_groups'] }}
+						Сохранённые группы:
 						<div class="input-group">
 							<select class="form-control" name="vk_group_select">
-								<option value="" selected>{{ lang['content_parser:ui_select_group'] }}</option>
+								<option value="" selected>— выберите группу —</option>
 								{% for g in vk_groups %}
 									<option value="{{ g }}">{{ g }}</option>
 								{% endfor %}
 							</select>
-							<button type="button" class="btn btn-outline-secondary" id="useSelectedVk">{{ lang['content_parser:ui_insert'] }}</button>
+							<button type="button" class="btn btn-outline-secondary" id="useSelectedVk">Вставить</button>
 						</div>
 					</div>
 					<div class="list">
-						{{ lang['content_parser:label_count'] }}:
+						Количество постов:
 						<input type="number" class="form-control" name="count" value="{{ rss_limit }}" min="1" max="50">
 					</div>
 					<div class="list">
-						{{ lang['content_parser:label_category'] }}:
+						Категория для публикации:
 						<select class="form-control" name="category">
-							<option value="0">{{ lang['content_parser:ui_no_category'] }}</option>
+							<option value="0">— Без категории —</option>
 							{% for c in categories %}
 								<option value="{{ c.id }}">{{ c.name }}</option>
 							{% endfor %}
@@ -451,7 +451,7 @@
 					<div class="message"></div>
 				</div>
 				<div class="card-footer">
-					<input type="submit" name="submit" value="{{ lang['content_parser:ui_parse_vk'] }}" class="btn btn-outline-primary">
+					<input type="submit" name="submit" value="Парсить VK!" class="btn btn-outline-primary">
 				</div>
 			</div>
 		</form>
@@ -462,25 +462,25 @@
 	<div class="col-sm">
 		<form action="" method="post" name="vk_token_form">
 			<div class="card">
-				<div class="card-header">{{ lang['content_parser:ui_vk_api_settings'] }}</div>
+				<div class="card-header">Настройка VK API</div>
 				<div class="card-body">
 					<div class="list">
 						<label>VK API Access Token:</label>
-						<input type="text" class="form-control" name="vk_token" value="{{ vk_token }}" placeholder="{{ lang['content_parser:ui_vk_token_placeholder'] }}">
+						<input type="text" class="form-control" name="vk_token" value="{{ vk_token }}" placeholder="Вставьте пользовательский access_token">
 						<small class="form-text text-muted">
-							<strong>⚠️ {{ lang['content_parser:ui_vk_token_warning'] }}</strong>
-							<br><br><strong>{{ lang['content_parser:ui_vk_token_howto'] }}</strong>
-							<br>{{ lang['content_parser:ui_vk_token_step1'] }} <a href="https://vk.com/apps?act=manage" target="_blank">vk.com/apps?act=manage</a> {{ lang['content_parser:ui_vk_token_step1_suffix'] }}
-							<br>{{ lang['content_parser:ui_vk_token_step2'] }}
+							<strong>⚠️ Токен сообщества не подходит</strong> — он не умеет читать стену (ошибка "Group authorization failed"). Нужен <b>пользовательский токен</b> с правом <code>wall</code>.
+							<br><br><strong>Как получить пользовательский токен:</strong>
+							<br>1. Создайте standalone-приложение: <a href="https://vk.com/apps?act=manage" target="_blank">vk.com/apps?act=manage</a> → "Создать приложение" → тип <b>Standalone-приложение</b>. Скопируйте <b>ID приложения</b>.
+							<br>2. Вставьте в браузере ссылку (замените <code>APP_ID</code> на ID вашего приложения):
 							<br><code style="word-break:break-all;">https://oauth.vk.com/authorize?client_id=APP_ID&display=page&scope=wall,photos,groups,offline&response_type=token&v=5.199</code>
-							<br>{{ lang['content_parser:ui_vk_token_step3'] }} <code>https://oauth.vk.com/blank.html#access_token=ACCESS_TOKEN&expires_in=0&user_id=...</code>
-							<br>{{ lang['content_parser:ui_vk_token_step4'] }}
-							<br><br><a href="{{ lang['content_parser:ui_vk_guide_url'] }}" target="_blank">{{ lang['content_parser:ui_vk_official_guide'] }}</a>
+							<br>3. Разрешите доступ приложению. Браузер перейдёт на пустую страницу с адресом вида <code>https://oauth.vk.com/blank.html#access_token=ВАШ_ТОКЕН&expires_in=0&user_id=...</code>
+							<br>4. Скопируйте значение <code>access_token</code> из адресной строки (до символа <code>&</code>) и вставьте в поле выше.
+							<br><br><a href="https://dev.vk.com/ru/api/access-token/getting-started" target="_blank">Официальная инструкция VK</a>
 						</small>
 					</div>
 				</div>
 				<div class="card-footer">
-					<input type="submit" name="save_vk_token" value="{{ lang['content_parser:ui_save_token'] }}" class="btn btn-outline-success">
+					<input type="submit" name="save_vk_token" value="Сохранить токен" class="btn btn-outline-success">
 				</div>
 			</div>
 		</form>
@@ -491,15 +491,15 @@
 	<div class="col-sm">
 		<form action="" method="post" name="manage_vk_groups_add">
 			<div class="card">
-				<div class="card-header">{{ lang['content_parser:ui_save_vk_group'] }}</div>
+				<div class="card-header">Сохранение VK группы</div>
 				<div class="card-body">
 					<div class="list">
-						{{ lang['content_parser:ui_new_group'] }}
-						<input type="text" class="form-control" name="new_vk_group" placeholder="{{ lang['content_parser:ui_vk_group_placeholder'] }}" value="">
+						Новая группа:
+						<input type="text" class="form-control" name="new_vk_group" placeholder="club123 или https://vk.com/public123" value="">
 					</div>
 				</div>
 				<div class="card-footer">
-					<input type="submit" name="submit" value="{{ lang['content_parser:ui_add_to_list'] }}" class="btn btn-outline-secondary">
+					<input type="submit" name="submit" value="Добавить в список" class="btn btn-outline-secondary">
 				</div>
 			</div>
 		</form>
@@ -508,10 +508,10 @@
 <div class="row mt-2">
 	<div class="col-sm">
 		<div class="card">
-			<div class="card-header">{{ lang['content_parser:ui_saved_vk_groups'] }}</div>
+			<div class="card-header">Сохранённые VK группы</div>
 			<div class="card-body">
 				{% if vk_groups|length == 0 %}
-					<p>{{ lang['content_parser:ui_empty_list'] }}</p>
+					<p>Список пуст.</p>
 				{% else %}
 					<ul class="list-group">
 						{% for g in vk_groups %}
@@ -519,7 +519,7 @@
 								<span>{{ g }}</span>
 								<form action="" method="post" name="manage_vk_groups_delete_{{ loop.index }}">
 									<input type="hidden" name="delete_vk_group" value="{{ g }}">
-									<button type="submit" class="btn btn-sm btn-outline-danger">{{ lang['content_parser:ui_delete'] }}</button>
+									<button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
 								</form>
 							</li>
 						{% endfor %}
@@ -540,35 +540,35 @@
 			<input type="hidden" name="source" value="telegram">
 			<input type="hidden" name="actionName" value="generate_news">
 			<div class="card">
-				<div class="card-header">{{ lang['content_parser:ui_telegram_posts'] }}</div>
+				<div class="card-header">Посты из Telegram</div>
 				<div class="card-body">
 					<div class="list">
-						{{ lang['content_parser:ui_tg_channel_label'] }}
-						<input type="text" class="form-control" name="tg_channel" placeholder="{{ lang['content_parser:ui_tg_channel_placeholder'] }}" required>
+						Канал Telegram (имя или URL):
+						<input type="text" class="form-control" name="tg_channel" placeholder="@channel или https://t.me/channel" required>
 						<small class="form-text text-muted">
-							{{ lang['content_parser:ui_tg_public_hint'] }}
+							Работает только с публичными каналами. Примеры: @durov, t.me/channel_name, https://t.me/s/channel_name
 						</small>
 					</div>
 					<div class="list">
-						{{ lang['content_parser:ui_saved_channels'] }}:
+						Сохранённые каналы:
 						<div class="input-group">
 							<select class="form-control" name="tg_channel_select">
-								<option value="" selected>{{ lang['content_parser:ui_select_tg_channel'] }}</option>
+								<option value="" selected>— выберите канал —</option>
 								{% for ch in tg_channels %}
 									<option value="{{ ch }}">{{ ch }}</option>
 								{% endfor %}
 							</select>
-							<button type="button" class="btn btn-outline-secondary" id="useSelectedTg">{{ lang['content_parser:ui_insert'] }}</button>
+							<button type="button" class="btn btn-outline-secondary" id="useSelectedTg">Вставить</button>
 						</div>
 					</div>
 					<div class="list">
-						{{ lang['content_parser:label_count'] }}:
+						Количество постов:
 						<input type="number" class="form-control" name="count" value="{{ rss_limit }}" min="1" max="50">
 					</div>
 					<div class="list">
-						{{ lang['content_parser:label_category'] }}:
+						Категория для публикации:
 						<select class="form-control" name="category">
-							<option value="0">{{ lang['content_parser:ui_no_category'] }}</option>
+							<option value="0">— Без категории —</option>
 							{% for c in categories %}
 								<option value="{{ c.id }}">{{ c.name }}</option>
 							{% endfor %}
@@ -582,7 +582,7 @@
 					<div class="message"></div>
 				</div>
 				<div class="card-footer">
-					<input type="submit" name="submit" value="{{ lang['content_parser:ui_parse_tg'] }}" class="btn btn-outline-primary">
+					<input type="submit" name="submit" value="Парсить Telegram!" class="btn btn-outline-primary">
 				</div>
 			</div>
 		</form>
@@ -593,15 +593,15 @@
 	<div class="col-sm">
 		<form action="" method="post" name="manage_tg_channels_add">
 			<div class="card">
-				<div class="card-header">{{ lang['content_parser:ui_save_tg_channel'] }}</div>
+				<div class="card-header">Сохранение Telegram канала</div>
 				<div class="card-body">
 					<div class="list">
-						{{ lang['content_parser:ui_new_tg_channel'] }}
-						<input type="text" class="form-control" name="new_tg_channel" placeholder="{{ lang['content_parser:ui_tg_channel_placeholder'] }}" value="">
+						Новый канал:
+						<input type="text" class="form-control" name="new_tg_channel" placeholder="@channel или https://t.me/channel" value="">
 					</div>
 				</div>
 				<div class="card-footer">
-					<input type="submit" name="submit" value="{{ lang['content_parser:ui_add_to_list'] }}" class="btn btn-outline-secondary">
+					<input type="submit" name="submit" value="Добавить в список" class="btn btn-outline-secondary">
 				</div>
 			</div>
 		</form>
@@ -611,10 +611,10 @@
 <div class="row mt-2">
 	<div class="col-sm">
 		<div class="card">
-			<div class="card-header">{{ lang['content_parser:ui_saved_tg_channels'] }}</div>
+			<div class="card-header">Сохранённые Telegram каналы</div>
 			<div class="card-body">
 				{% if tg_channels|length == 0 %}
-					<p>{{ lang['content_parser:ui_empty_list'] }}</p>
+					<p>Список пуст.</p>
 				{% else %}
 					<ul class="list-group">
 						{% for ch in tg_channels %}
@@ -622,7 +622,7 @@
 								<span>@{{ ch }}</span>
 								<form action="" method="post" name="manage_tg_channels_delete_{{ loop.index }}">
 									<input type="hidden" name="delete_tg_channel" value="{{ ch }}">
-									<button type="submit" class="btn btn-sm btn-outline-danger">{{ lang['content_parser:ui_delete'] }}</button>
+									<button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
 								</form>
 							</li>
 						{% endfor %}
@@ -641,72 +641,72 @@
 	<div class="col-sm">
 		<form action="" method="post" name="telegram_api_form">
 			<div class="card">
-				<div class="card-header">{{ lang['content_parser:ui_settings_title'] }}</div>
+				<div class="card-header">Настройка Telegram API (MadelineProto)</div>
 				<div class="card-body">
 					{% if not madelineproto_installed %}
 						<div class="alert alert-warning">
-							<strong>{{ lang['content_parser:ui_mp_not_installed'] }}</strong><br>
-							{{ lang['content_parser:ui_mp_install_hint'] }}<br>
+							<strong>⚠️ MadelineProto не установлена</strong><br>
+							Для расширенного парсинга Telegram (включая приватные каналы с авторизацией) установите библиотеку:<br>
 							<code>composer require danog/madelineproto</code><br>
-							<small>{{ lang['content_parser:ui_mp_public_hint'] }}</small>
+							<small>Веб-парсинг публичных каналов работает без библиотеки.</small>
 						</div>
 					{% else %}
 						<div class="alert alert-success">
-							<strong>{{ lang['content_parser:ui_mp_installed'] }}</strong><br>
-							{{ lang['content_parser:ui_mp_ready'] }}
+							<strong>✅ MadelineProto установлена</strong><br>
+							Можно использовать расширенный парсинг с авторизацией.
 						</div>
 					{% endif %}
 
 					<div class="list">
 						<label>
 							<input type="checkbox" name="tg_use_madelineproto" value="1" {% if tg_use_madelineproto %}checked{% endif %}>
-							{{ lang['content_parser:ui_use_mp'] }}
+							Использовать MadelineProto для парсинга Telegram
 						</label>
 						<small class="form-text text-muted">
-							{{ lang['content_parser:ui_mp_enabled_hint'] }}
-							{{ lang['content_parser:ui_mp_disabled_hint'] }}
+							Если включено - будет использоваться MadelineProto (требует API credentials).
+							Если выключено или нет credentials - будет использоваться веб-парсинг публичных каналов.
 						</small>
 					</div>
 
 					<div class="list mt-2">
-						<label>{{ lang['content_parser:label_telegram_api_id'] }}:</label>
-						<input type="text" class="form-control" name="tg_api_id" value="{{ tg_api_id }}" placeholder="{{ lang['content_parser:ui_telegram_api_id_placeholder'] }}">
+						<label>Telegram API ID:</label>
+						<input type="text" class="form-control" name="tg_api_id" value="{{ tg_api_id }}" placeholder="Получите на my.telegram.org">
 						<small class="form-text text-muted">
-							<a href="https://my.telegram.org/apps" target="_blank">{{ lang['content_parser:ui_get_telegram_api'] }}</a>
+							<a href="https://my.telegram.org/apps" target="_blank">Получить API ID и Hash на my.telegram.org</a>
 						</small>
 					</div>
 
 					<div class="list mt-2">
-						<label>{{ lang['content_parser:label_telegram_api_hash'] }}:</label>
-						<input type="text" class="form-control" name="tg_api_hash" value="{{ tg_api_hash }}" placeholder="{{ lang['content_parser:ui_telegram_api_id_placeholder'] }}">
+						<label>Telegram API Hash:</label>
+						<input type="text" class="form-control" name="tg_api_hash" value="{{ tg_api_hash }}" placeholder="Получите на my.telegram.org">
 					</div>
 
 					<div class="alert alert-info mt-3">
-						<strong>{{ lang['content_parser:ui_api_credentials_help'] }}</strong>
+						<strong>ℹ️ Как получить API credentials:</strong>
 						<ol>
-							<li>{{ lang['content_parser:ui_telegram_step1'] }} <a href="https://my.telegram.org" target="_blank">my.telegram.org</a></li>
-							<li>{{ lang['content_parser:ui_telegram_step2'] }}</li>
-							<li>{{ lang['content_parser:ui_telegram_step3'] }}</li>
-							<li>{{ lang['content_parser:ui_telegram_step4'] }}</li>
-							<li>{{ lang['content_parser:ui_telegram_step5'] }}</li>
+							<li>Зайдите на <a href="https://my.telegram.org" target="_blank">my.telegram.org</a></li>
+							<li>Авторизуйтесь через свой номер телефона</li>
+							<li>Перейдите в раздел "API development tools"</li>
+							<li>Создайте новое приложение (если еще нет)</li>
+							<li>Скопируйте API ID и API Hash</li>
 						</ol>
-						<strong>{{ lang['content_parser:ui_mp_advantages'] }}</strong>
+						<strong>Преимущества MadelineProto:</strong>
 						<ul>
-							<li>{{ lang['content_parser:ui_mp_private'] }}</li>
-							<li>{{ lang['content_parser:ui_mp_metadata'] }}</li>
-							<li>{{ lang['content_parser:ui_mp_block'] }}</li>
-							<li>{{ lang['content_parser:ui_mp_download'] }}</li>
+							<li>✅ Доступ к приватным каналам (с авторизацией)</li>
+							<li>✅ Полные метаданные постов</li>
+							<li>✅ Работает даже если t.me заблокирован</li>
+							<li>✅ Скачивание всех медиафайлов</li>
 						</ul>
 					</div>
 				</div>
 				<div class="card-footer">
-					<button type="submit" name="save_tg_api" class="btn btn-outline-success">{{ lang['content_parser:ui_save_settings'] }}</button>
+					<button type="submit" name="save_tg_api" class="btn btn-outline-success">Сохранить настройки</button>
 					{% if madelineproto_installed and tg_api_id and tg_api_hash %}
 					<button type="button" id="btn-telegram-auth" class="btn btn-outline-primary ml-2">
-						<i class="fa fa-telegram"></i> {{ lang['content_parser:ui_authorize'] }}
+						<i class="fa fa-telegram"></i> Авторизоваться в Telegram
 					</button>
 					<button type="button" id="btn-check-auth" class="btn btn-outline-secondary ml-2">
-						{{ lang['content_parser:ui_check_status'] }}
+						Проверить статус
 					</button>
 					<div id="telegram-auth-status" class="mt-2"></div>
 					{% endif %}
@@ -769,7 +769,7 @@
 	<div class="modal-dialog" role="document">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h5 class="modal-title">{{ lang['content_parser:ui_auth_modal_title'] }}</h5>
+				<h5 class="modal-title">Авторизация в Telegram</h5>
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 					<span aria-hidden="true">&times;</span>
 				</button>
@@ -778,38 +778,38 @@
 				<!-- Шаг 1: Ввод номера телефона -->
 				<div id="auth-step-phone" class="auth-step">
 					<div class="form-group">
-						<label>{{ lang['content_parser:ui_phone_label'] }}</label>
+						<label>Номер телефона (международный формат):</label>
 						<input type="text" id="auth-phone" class="form-control" placeholder="+79001234567" value="">
 						<small class="form-text text-muted">
-							{{ lang['content_parser:ui_phone_hint'] }}
+							Введите номер с кодом страны (например: +79001234567)
 						</small>
 					</div>
-					<button type="button" id="btn-send-code" class="btn btn-primary">{{ lang['content_parser:ui_send_code'] }}</button>
+					<button type="button" id="btn-send-code" class="btn btn-primary">Отправить код</button>
 				</div>
 
 				<!-- Шаг 2: Ввод кода -->
 				<div id="auth-step-code" class="auth-step" style="display:none;">
 					<div class="alert alert-info">
-						{{ lang['content_parser:ui_code_sent'] }}
+						Код подтверждения отправлен в Telegram на ваш номер. Проверьте Saved Messages.
 					</div>
 					<div class="form-group">
-						<label>{{ lang['content_parser:ui_code_label'] }}</label>
+						<label>Код из Telegram:</label>
 						<input type="text" id="auth-code" class="form-control" placeholder="12345" value="">
 					</div>
-					<button type="button" id="btn-verify-code" class="btn btn-primary">{{ lang['content_parser:ui_confirm'] }}</button>
-					<button type="button" id="btn-back-phone" class="btn btn-secondary">{{ lang['content_parser:ui_back'] }}</button>
+					<button type="button" id="btn-verify-code" class="btn btn-primary">Подтвердить</button>
+					<button type="button" id="btn-back-phone" class="btn btn-secondary">Назад</button>
 				</div>
 
 				<!-- Шаг 3: Ввод 2FA пароля -->
 				<div id="auth-step-2fa" class="auth-step" style="display:none;">
 					<div class="alert alert-warning">
-						{{ lang['content_parser:ui_2fa_warning'] }}
+						У вас включена двухфакторная аутентификация. Введите пароль.
 					</div>
 					<div class="form-group">
-						<label>{{ lang['content_parser:ui_2fa_password'] }}</label>
-						<input type="password" id="auth-password" class="form-control" placeholder="{{ lang['content_parser:ui_your_password'] }}" value="">
+						<label>Пароль 2FA:</label>
+						<input type="password" id="auth-password" class="form-control" placeholder="Ваш пароль" value="">
 					</div>
-					<button type="button" id="btn-verify-2fa" class="btn btn-primary">{{ lang['content_parser:ui_confirm'] }}</button>
+					<button type="button" id="btn-verify-2fa" class="btn btn-primary">Подтвердить</button>
 				</div>
 
 				<!-- Сообщения -->
@@ -825,7 +825,6 @@
  <script src="{{ home }}/lib/jqueryui/core/jquery-ui.min.js"></script>
 <link
 rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script>
-																		const parserLang = {{ parser_lang_json|raw }};
 																		$(document).ready(function () {
 																		// Используем прямой маршрут, как в рабочем content_generator
 																	let progressbar,
@@ -844,41 +843,41 @@ rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script
 																	let hasError = false;
 																	const category = parseInt(form.find('select[name="category"]').val(), 10) || 0;
 																	if (!category || category <= 0) {
-																		alert(parserLang.js_select_category);
+																		alert('Выберите категорию для публикации');
 																		return;
 																	}
 																	if (source === 'rss') {
 																		rssUrl = form.find('input[name="rss_url"]').val();
 																		if (! rssUrl || rssUrl.trim() === '') {
-																			alert(parserLang.js_invalid_rss_url);
+																			alert('Введите корректный URL RSS-канала');
 																			return;
 																		}
 																	} else if (source === 'vk') {
 																		vkGroup = form.find('input[name="vk_group"]').val();
 																		if (! vkGroup || vkGroup.trim() === '') {
-																			alert(parserLang.js_invalid_vk_group);
+																			alert('Введите корректное имя группы VK');
 																			return;
 																		}
 																	} else if (source === 'telegram') {
 																		tgChannel = form.find('input[name="tg_channel"]').val();
 																		if (! tgChannel || tgChannel.trim() === '') {
-																			alert(parserLang.js_invalid_tg_channel);
+																			alert('Введите корректное имя канала Telegram');
 																			return;
 																		}
 																	} else if (source === 'site') {
 																		siteUrl = form.find('input[name="site_url"]').val();
 																		siteSelector = form.find('input[name="site_selector"]').val();
 																		if (! siteUrl || siteUrl.trim() === '') {
-																			alert(parserLang.js_invalid_site_url);
+																			alert('Введите корректный URL сайта');
 																			return;
 																		}
 																		if (! siteSelector || siteSelector.trim() === '') {
-																			alert(parserLang.js_missing_site_selector);
+																			alert('Укажите id или class блока новости');
 																			return;
 																		}
 																	}
 																	if (isNaN(count) || count < 1 || count > 1000) {
-																	alert(parserLang.js_invalid_count);
+																	alert('Введите корректное количество (от 1 до 1000)');
 																	return;
 																	}
 																	// Находим блок сообщений только в текущей форме
@@ -943,7 +942,7 @@ rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script
 																				progressLabel.text(`${Math.round(progressbar.progressbar("value"))}%`);
 																			},
 																			complete: function () {
-																				progressLabel.text(parserLang.js_done);
+																				progressLabel.text("Готово!");
 																			}
 																		});
 																		function processChunk(currentChunk) {
@@ -986,7 +985,7 @@ rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script
 																				},
 																				error: function (xhr, status, error) {
 																					hasError = true;
-																					showMessage('error', parserLang.js_parse_error + error);
+																					showMessage('error', `Произошла ошибка: ${error}`);
 																				},
 																				complete: function () {
 																					if (!hasError && currentChunk < chunkCount) {
@@ -1079,26 +1078,26 @@ rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script
 																				console.log('Ответ сервера (check_telegram_auth):', response);
 																				const status = $('#telegram-auth-status');
 																				if (response.authorized) {
-																					status.html('<div class="alert alert-success mt-2">✅ ' + parserLang.js_authorized + response.phone + (response.username ? ' (@' + response.username + ')' : '') + '</div>');
+																					status.html('<div class="alert alert-success mt-2">✅ Авторизован: ' + response.phone + (response.username ? ' (@' + response.username + ')' : '') + '</div>');
 																				} else {
-																					let message = response.message || response.error || parserLang.js_unknown_status;
+																					let message = response.message || response.error || 'Неизвестный статус';
 																					if (response.debug) {
 																						console.log('Отладочная информация:', response.debug);
-																						message += parserLang.js_console_details;
+																						message += ' (см. консоль для деталей)';
 																					}
 
 																					// Если требуется переавторизация
 																					if (response.action_needed === 'reauth') {
 																						status.html('<div class="alert alert-danger mt-2">❌ ' + message +
-																							'<br><button type="button" id="btn-reset-auth" class="btn btn-sm btn-danger mt-2">' + parserLang.js_reset_auth + '</button></div>');
+																							'<br><button type="button" id="btn-reset-auth" class="btn btn-sm btn-danger mt-2">🔄 Удалить сессию и переавторизоваться</button></div>');
 																					} else {
-																						status.html('<div class="alert alert-warning mt-2">' + parserLang.js_not_authorized + message + '</div>');
+																						status.html('<div class="alert alert-warning mt-2">⚠️ Не авторизован: ' + message + '</div>');
 																					}
 																				}
 																			},
 																			error: function(xhr, status, error) {
 																				console.error('Ошибка AJAX (check_telegram_auth):', {xhr: xhr, status: status, error: error, responseText: xhr.responseText});
-																				$('#telegram-auth-status').html('<div class="alert alert-danger mt-2">' + parserLang.js_auth_status_error + '</div>');
+																				$('#telegram-auth-status').html('<div class="alert alert-danger mt-2">❌ Ошибка проверки статуса. См. консоль.</div>');
 																			}
 																		});
 																	});
@@ -1107,12 +1106,12 @@ rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script
 																	$('#btn-send-code').on('click', function() {
 																		const phone = $('#auth-phone').val().trim();
 																		if (!phone) {
-																			showAuthMessage('error', parserLang.js_enter_phone);
+																			showAuthMessage('error', 'Введите номер телефона');
 																			return;
 																		}
 
 																		console.log('Отправка номера телефона:', phone);
-																		showAuthMessage('info', parserLang.js_sending_code);
+																		showAuthMessage('info', 'Отправка кода...');
 																		$(this).prop('disabled', true);
 
 																		$.ajax({
@@ -1135,14 +1134,14 @@ rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script
 																					console.log('После переключения - phone visible:', $('#auth-step-phone').is(':visible'));
 																					console.log('После переключения - code visible:', $('#auth-step-code').is(':visible'));
 
-																					showAuthMessage('success', response.message || parserLang.js_code_sent);
+																					showAuthMessage('success', response.message || 'Код отправлен!');
 																				} else {
-																					showAuthMessage('error', response.error || parserLang.js_send_code_error);
+																					showAuthMessage('error', response.error || 'Ошибка отправки кода');
 																				}
 																			},
 																			error: function(xhr, status, error) {
 																				console.error('Ошибка AJAX (start_telegram_auth):', {xhr: xhr, status: status, error: error, responseText: xhr.responseText});
-																				showAuthMessage('error', parserLang.js_connection_error_console);
+																				showAuthMessage('error', 'Ошибка соединения с сервером. См. консоль.');
 																			},
 																			complete: function() {
 																				$('#btn-send-code').prop('disabled', false);
@@ -1162,11 +1161,11 @@ rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script
 																	$('#btn-verify-code').on('click', function() {
 																		const code = $('#auth-code').val().trim();
 																		if (!code) {
-																			showAuthMessage('error', parserLang.js_enter_code);
+																			showAuthMessage('error', 'Введите код из Telegram');
 																			return;
 																		}
 
-																		showAuthMessage('info', parserLang.js_checking_code);
+																		showAuthMessage('info', 'Проверка кода...');
 																		$(this).prop('disabled', true);
 
 																		$.ajax({
@@ -1195,11 +1194,11 @@ rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script
 																					$('#auth-step-2fa').show();
 																					showAuthMessage('warning', response.message);
 																				} else {
-																					showAuthMessage('error', response.error || parserLang.js_invalid_code);
+																					showAuthMessage('error', response.error || 'Неверный код');
 																				}
 																			},
 																			error: function() {
-																				showAuthMessage('error', parserLang.js_connection_error);
+																				showAuthMessage('error', 'Ошибка соединения с сервером');
 																			},
 																			complete: function() {
 																				$('#btn-verify-code').prop('disabled', false);
@@ -1211,11 +1210,11 @@ rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script
 																	$('#btn-verify-2fa').on('click', function() {
 																		const password = $('#auth-password').val();
 																		if (!password) {
-																			showAuthMessage('error', parserLang.js_enter_2fa_password);
+																			showAuthMessage('error', 'Введите пароль 2FA');
 																			return;
 																		}
 
-																		showAuthMessage('info', parserLang.js_checking_password);
+																		showAuthMessage('info', 'Проверка пароля...');
 																		$(this).prop('disabled', true);
 
 																		$.ajax({
@@ -1240,11 +1239,11 @@ rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script
 																						$('#btn-check-auth').click();
 																					}, 1500);
 																				} else {
-																					showAuthMessage('error', response.error || parserLang.js_invalid_password);
+																					showAuthMessage('error', response.error || 'Неверный пароль');
 																				}
 																			},
 																			error: function() {
-																				showAuthMessage('error', parserLang.js_connection_error);
+																				showAuthMessage('error', 'Ошибка соединения с сервером');
 																			},
 																			complete: function() {
 																				$('#btn-verify-2fa').prop('disabled', false);
@@ -1254,12 +1253,12 @@ rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script
 
 																	// Удаление битой сессии и переавторизация
 																	$(document).on('click', '#btn-reset-auth', function() {
-																		if (!confirm(parserLang.js_confirm_reset)) {
+																		if (!confirm('Удалить текущую сессию и пройти авторизацию заново?')) {
 																			return;
 																		}
 
 																		console.log('Удаление сессии...');
-																		$(this).prop('disabled', true).text(parserLang.js_deleting);
+																		$(this).prop('disabled', true).text('Удаление...');
 
 																		$.ajax({
 																			url: '?mod=extra-config&plugin=content_parser&action=reset_telegram_auth',
@@ -1268,23 +1267,23 @@ rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script
 																			success: function(response) {
 																				console.log('Ответ reset_telegram_auth:', response);
 																				if (response.success) {
-																					$('#telegram-auth-status').html('<div class="alert alert-info mt-2">✅ ' + response.message + '<br>' + parserLang.js_authenticate_again + '</div>');
+																					$('#telegram-auth-status').html('<div class="alert alert-info mt-2">✅ ' + response.message + '<br>Теперь нажмите "Авторизоваться в Telegram"</div>');
 																				} else {
-																					let errorHtml = '<div class="alert alert-danger mt-2">' + parserLang.js_error_prefix + (response.error || parserLang.js_unknown_error);
+																					let errorHtml = '<div class="alert alert-danger mt-2">❌ Ошибка: ' + (response.error || 'Неизвестная ошибка');
 
 																					if (response.manual_path) {
-																						errorHtml += '<br><br><strong>' + parserLang.js_delete_file_manually + '</strong><br><code style="display:block;padding:8px;background:#f5f5f5;margin:5px 0;">' + response.manual_path + '</code>';
-																						errorHtml += '<button type="button" class="btn btn-sm btn-info mt-2" onclick="navigator.clipboard.writeText(\'' + response.manual_path + '\'); alert(\'' + parserLang.js_copy_path + '\');">' + parserLang.js_copy_path + '</button>';
+																						errorHtml += '<br><br><strong>Удалите файл вручную:</strong><br><code style="display:block;padding:8px;background:#f5f5f5;margin:5px 0;">' + response.manual_path + '</code>';
+																						errorHtml += '<button type="button" class="btn btn-sm btn-info mt-2" onclick="navigator.clipboard.writeText(\'' + response.manual_path + '\'); alert(\'Путь скопирован\');">📋 Скопировать путь</button>';
 
 																						if (response.hint) {
-																							errorHtml += '<br><br><strong>' + parserLang.js_run_powershell + '</strong><br><code style="display:block;padding:8px;background:#f5f5f5;margin:5px 0;word-break:break-all;">' + response.hint + '</code>';
-																							errorHtml += '<button type="button" class="btn btn-sm btn-info mt-2" onclick="navigator.clipboard.writeText(\'' + response.hint.replace(/'/g, "\\'") + '\'); alert(\'' + parserLang.js_copy_command + '\');">' + parserLang.js_copy_command + '</button>';
+																							errorHtml += '<br><br><strong>Или выполните в PowerShell:</strong><br><code style="display:block;padding:8px;background:#f5f5f5;margin:5px 0;word-break:break-all;">' + response.hint + '</code>';
+																							errorHtml += '<button type="button" class="btn btn-sm btn-info mt-2" onclick="navigator.clipboard.writeText(\'' + response.hint.replace(/'/g, "\\'") + '\'); alert(\'Команда скопирована\');">📋 Скопировать команду</button>';
 																						}
 																					}
 
 																					if (response.debug) {
 																						console.log('Отладка:', response.debug);
-																						errorHtml += '<br><small>' + parserLang.js_console_details + '</small>';
+																						errorHtml += '<br><small>См. консоль для деталей</small>';
 																					}
 
 																					errorHtml += '</div>';
@@ -1293,7 +1292,7 @@ rel="stylesheet" href="{{ home }}/lib/jqueryui/core/jquery-ui.min.css">  <script
 																			},
 																			error: function(xhr, status, error) {
 																				console.error('Ошибка удаления сессии:', error);
-																				$('#telegram-auth-status').html('<div class="alert alert-danger mt-2">' + parserLang.js_connection_error + '</div>');
+																				$('#telegram-auth-status').html('<div class="alert alert-danger mt-2">❌ Ошибка соединения с сервером</div>');
 																			}
 																		});
 																	});
