@@ -41,6 +41,15 @@ switch ($_REQUEST['action']) {
 	default:
 		main();
 }
+function ads_pro_get_documentation_vars()
+{
+	if (!function_exists('plugin_documentation_markup')) {
+		return array('documentation_button' => '', 'documentation_modal' => '');
+	}
+
+	list($button, $modal) = plugin_documentation_markup('ads_pro');
+	return array('documentation_button' => $button, 'documentation_modal' => $modal);
+}
 function main()
 {
 	global $tpl, $lang;
@@ -66,6 +75,7 @@ function main()
 	$tvars['vars']['tab_list_active'] = '';
 	$tvars['vars']['tab_add_active'] = '';
 	$tvars['vars']['lang'] = $lang;
+	$tvars['vars'] = array_merge($tvars['vars'], ads_pro_get_documentation_vars());
 	$tpl->template('conf.main', $tpath['conf.main']);
 	$tpl->vars('conf.main', $tvars);
 	print $tpl->show('conf.main');
@@ -142,6 +152,7 @@ function showlist()
 	$tvars['vars']['tab_list_active'] = 'active';
 	$tvars['vars']['tab_add_active'] = '';
 	$tvars['vars']['lang'] = $lang;
+	$tvars['vars'] = array_merge($tvars['vars'], ads_pro_get_documentation_vars());
 	$tpl->template('conf.main', $tpath['conf.main']);
 	$tpl->vars('conf.main', $tvars);
 	print $tpl->show('conf.main');
@@ -271,6 +282,7 @@ function add()
 	$tvars['vars']['tab_list_active'] = '';
 	$tvars['vars']['tab_add_active'] = 'active';
 	$tvars['vars']['lang'] = $lang;
+	$tvars['vars'] = array_merge($tvars['vars'], ads_pro_get_documentation_vars());
 	$tpl->template('conf.main', $tpath['conf.main']);
 	$tpl->vars('conf.main', $tvars);
 	print $tpl->show('conf.main');
