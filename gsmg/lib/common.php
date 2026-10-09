@@ -24,39 +24,7 @@ function create_gsmg_urls()
     $ULIB->saveConfig();
     $UHANDLER = new urlHandler();
     $UHANDLER->loadConfig();
-
-    // Handler for /gsmg/ (without .xml)
-    $UHANDLER->registerHandler(
-        0,
-        array(
-            'pluginName' => 'gsmg',
-            'handlerName' => '',
-            'flagPrimary' => true,
-            'flagFailContinue' => false,
-            'flagDisabled' => false,
-            'rstyle' => array(
-                'rcmd' => '/gsmg/',
-                'regex' => '#^/gsmg/?$#',
-                'regexMap' =>
-                array(),
-                'reqCheck' =>
-                array(),
-                'setVars' =>
-                array(),
-                'genrMAP' =>
-                array(
-                    0 =>
-                    array(
-                        0 => 0,
-                        1 => '/gsmg/',
-                        2 => 0,
-                    ),
-                ),
-            ),
-        )
-    );
-
-    // Handler for /gsmg.xml (alternative access)
+    $UHANDLER->removePluginHandlers('gsmg', '');
     $UHANDLER->registerHandler(
         0,
         array(

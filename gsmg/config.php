@@ -23,8 +23,15 @@ pluginsLoadConfig();
 // Fill configuration parameters
 $cfg = array();
 $cfgX = array();
-$pl = generatePluginLink('gsmg', null, [], [], false, true);
-array_push($cfg, array('descr' => str_replace('{link}', $pl, $lang['gsmg:description'])));
+$siteUrl = rtrim(home, '/');
+$sitemapLink = $siteUrl . '/gsmg.xml';
+$pluginLink = $siteUrl . '/plugin/gsmg/';
+$description = str_replace(
+    array('{sitemap_link}', '{plugin_link}'),
+    array($sitemapLink, $pluginLink),
+    $lang['gsmg:description']
+);
+array_push($cfg, array('descr' => $description));
 array_push($cfgX, array('name' => 'main', 'title' => $lang['gsmg:main.title'], 'descr' => $lang['gsmg:main.descr'], 'type' => 'select', 'values' => array('0' => $lang['gsmg:option.no'], '1' => $lang['gsmg:option.yes']), 'value' => intval(extra_get_param($plugin, 'main'))));
 array_push($cfgX, array('name' => 'main_pr', 'title' => $lang['gsmg:main_pr.title'], 'descr' => $lang['gsmg:main_pr.descr'], 'type' => 'input', 'value' => (extra_get_param($plugin, 'main_pr') == '') ? '1.0' : extra_get_param($plugin, 'main_pr')));
 array_push($cfgX, array('name' => 'mainp', 'title' => $lang['gsmg:mainp.title'], 'descr' => $lang['gsmg:mainp.descr'], 'type' => 'select', 'values' => array('0' => $lang['gsmg:option.no'], '1' => $lang['gsmg:option.yes']), 'value' => intval(extra_get_param($plugin, 'mainp'))));
