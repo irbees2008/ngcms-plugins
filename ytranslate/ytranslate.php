@@ -136,6 +136,8 @@ function ytranslate_provider($provider, $texts, $source, $target)
         'microsoft_region' => (string)pluginGetVariable('ytranslate', 'microsoft_region'),
         'libre_url' => trim((string)pluginGetVariable('ytranslate', 'libre_url')) ?: 'https://translate.ngcms.org',
         'libre_key' => (string)pluginGetVariable('ytranslate', 'libre_key'),
+        'ytranslate_api_key' => (string)pluginGetVariable('ytranslate', 'ytranslate_api_key'),
+        'registration_status' => (string)pluginGetVariable('ytranslate', 'registration_status'),
         'deepl_key' => (string)pluginGetVariable('ytranslate', 'deepl_key'),
         'deepl_free' => (int)pluginGetVariable('ytranslate', 'deepl_free'),
         'yandex_key' => (string)pluginGetVariable('ytranslate', 'yandex_key'),
@@ -164,6 +166,16 @@ function ytranslate_provider($provider, $texts, $source, $target)
         }
     }
     if ($provider === 'libretranslate' && $config['libre_url']) {
+        $libreKey = $config['libre_key'];
+        $libreUrlParts = parse_url($config['libre_url']);
+        if ($config['registration_status'] === 'active' && $config['ytranslate_api_key'] !== ''
+            && is_array($libreUrlParts)
+            && isset($libreUrlParts['scheme'], $libreUrlParts['host'])
+            && strtolower($libreUrlParts['scheme']) === 'https'
+            && strtolower($libreUrlParts['host']) === 'translate.ngcms.org'
+            && (!isset($libreUrlParts['port']) || (int)$libreUrlParts['port'] === 443)) {
+            $libreKey = $config['ytranslate_api_key'];
+        }
         $result = array();
         $missing = array();
         foreach (array_values($texts) as $index => $text) {
@@ -175,7 +187,7 @@ function ytranslate_provider($provider, $texts, $source, $target)
             ksort($result);
             return array_values($result);
         }
-        $batchResponse = ytranslate_libre_request($config['libre_url'], $source, $target, array_values($missing), $config['libre_key']);
+        $batchResponse = ytranslate_libre_request($config['libre_url'], $source, $target, array_values($missing), $libreKey);
         $batchTranslations = isset($batchResponse['translatedText']) && is_array($batchResponse['translatedText']) ? $batchResponse['translatedText'] : array();
         if (count($batchTranslations) === count($missing)) {
             $position = 0;
@@ -185,7 +197,7 @@ function ytranslate_provider($provider, $texts, $source, $target)
             }
         } else {
             foreach ($missing as $index => $text) {
-                $response = ytranslate_libre_request($config['libre_url'], $source, $target, array($text), $config['libre_key']);
+                $response = ytranslate_libre_request($config['libre_url'], $source, $target, array($text), $libreKey);
                 if (empty($response['translatedText']) || !is_string($response['translatedText'])) return false;
                 $result[$index] = $response['translatedText'];
                 ytranslate_cache_put(ytranslate_cache_key($provider, $source, $target, $text), $result[$index]);
