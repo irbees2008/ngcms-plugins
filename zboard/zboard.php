@@ -858,7 +858,7 @@ function zboard_upload_images($images_del, $w, $h, $quality = 100)
                                 chmod($dir_image, 0644);
                                 chmod(images_dir . 'zboard/thumb/' . $new, 0644);
                             } else {
-                                    $error_text = $lang['zboard']['ui_upload_image_save_failed'];
+                                $error_text = $lang['zboard']['ui_upload_image_save_failed'];
                             }
                         } else {
                             $error_text = str_replace(
@@ -1637,6 +1637,28 @@ function send_zboard()
     if (isset($_REQUEST['txtdes']) && intval($_REQUEST['txtdes']) > 0) {
         $sid = intval($_REQUEST['txtdes']);
     }
+    if (empty($_SESSION['zboard']['upload_token'])) {
+        try {
+            $_SESSION['zboard']['upload_token'] = bin2hex(random_bytes(32));
+        } catch (Exception $e) {
+            $strong = false;
+            $bytes = function_exists('openssl_random_pseudo_bytes') ? openssl_random_pseudo_bytes(32, $strong) : false;
+            $_SESSION['zboard']['upload_token'] = ($bytes !== false && $strong) ? bin2hex($bytes) : '';
+        }
+    }
+    if (!isset($_SESSION['zboard']['upload_sids']) || !is_array($_SESSION['zboard']['upload_sids'])) {
+        $_SESSION['zboard']['upload_sids'] = array();
+    }
+    foreach ($_SESSION['zboard']['upload_sids'] as $uploadSid => $createdAt) {
+        if ((int)$createdAt < time() - 7200) {
+            unset($_SESSION['zboard']['upload_sids'][$uploadSid]);
+        }
+    }
+    $_SESSION['zboard']['upload_sids'][$sid] = time();
+    if (count($_SESSION['zboard']['upload_sids']) > 50) {
+        asort($_SESSION['zboard']['upload_sids']);
+        $_SESSION['zboard']['upload_sids'] = array_slice($_SESSION['zboard']['upload_sids'], -50, null, true);
+    }
     //var_dump($sid);
     foreach (explode("|", pluginGetVariable('zboard', 'list_period')) as $line) {
         $list_period .= str_replace(array('{line}'), array($line), $lang['zboard']['list_period']);
@@ -1805,6 +1827,7 @@ function send_zboard()
             'tpl_home' => admin_url,
             'ext_image' => pluginGetVariable('zboard', 'ext_image'),
             'id' => intval($sid),
+            'upload_token' => $_SESSION['zboard']['upload_token'],
             'error' => $error_input,
             'entriesImg' => $entriesImgSend,
             'use_recaptcha' => pluginGetVariable('zboard', 'use_recaptcha')

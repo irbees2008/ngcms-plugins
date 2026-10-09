@@ -79,7 +79,8 @@ $('#file_upload').uploadifive({
 auto: false,
 fileObjName: 'Filedata',
 formData: {
-id: '{{ id }}'
+id: '{{ id }}',
+token: '{{ upload_token }}'
 },
 queueID: 'queue',
 uploadScript: '/engine/plugins/zboard/upload/libs/subirarchivo.php',
