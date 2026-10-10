@@ -142,7 +142,10 @@ filecleaner_register_source('gallery_images', static function (): array {
     $rows = $mysql->select('SELECT i.folder, i.name, i.storage FROM ' . prefix . '_gallery g INNER JOIN ' . prefix . '_images i ON i.folder = g.name WHERE g.if_active = 1', 1) ?: [];
     foreach ($rows as $row) {
         $path = filecleaner_db_file_path($row, 'images');
-        if ($path !== '') $records[] = ['path' => $path, 'status' => 'used', 'source' => 'gallery'];
+        if ($path !== '') {
+            $records[] = ['path' => $path, 'status' => 'used', 'source' => 'gallery'];
+            $records[] = ['path' => filecleaner_normalize(dirname($path) . '/thumb/' . basename($path)), 'status' => 'used', 'source' => 'gallery'];
+        }
     }
     return $records;
 });
@@ -249,12 +252,21 @@ function filecleaner_available_dirs(): array
     $root = realpath(filecleaner_root());
     $dirs = [];
     if ($root === false || !is_dir($root)) return $dirs;
-    $dirs['__root__'] = 'uploads/';
-    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::SELF_FIRST);
-    foreach ($iterator as $directory) {
-        if (!$directory->isDir() || $directory->isLink()) continue;
-        $relative = filecleaner_normalize(substr($directory->getPathname(), strlen($root) + 1));
-        if ($relative !== '' && filecleaner_is_allowed_relative($relative)) $dirs[$relative] = $relative . '/';
+    foreach (['avatars', 'dsn'] as $directory) {
+        $path = $root . DIRECTORY_SEPARATOR . $directory;
+        if (is_dir($path) && filecleaner_is_allowed_relative($directory)) {
+            $dirs[$directory] = $directory . '/';
+        }
+    }
+    foreach (['images', 'files'] as $directory) {
+        $path = $root . DIRECTORY_SEPARATOR . $directory;
+        if (!is_dir($path) || !filecleaner_is_allowed_relative($directory)) continue;
+        $dirs[$directory] = $directory . '/';
+        foreach (new DirectoryIterator($path) as $child) {
+            if ($child->isDot() || !$child->isDir() || $child->isLink()) continue;
+            $relative = $directory . '/' . $child->getFilename();
+            if (filecleaner_is_allowed_relative($relative)) $dirs[$relative] = $relative . '/';
+        }
     }
     ksort($dirs, SORT_NATURAL | SORT_FLAG_CASE);
     return $dirs;
@@ -344,6 +356,20 @@ function filecleaner_extract_paths(string $html): array
     return array_values($result);
 }
 
+function filecleaner_thumbnail_source_exists(string $relative): bool
+{
+    $relative = filecleaner_normalize($relative);
+    $marker = '/thumb/';
+    $markerPosition = strpos($relative, $marker);
+    if ($markerPosition === false) return false;
+    $sourceRelative = substr($relative, 0, $markerPosition) . '/' . substr($relative, $markerPosition + strlen($marker));
+    if ($sourceRelative === '' || $sourceRelative === $relative) return false;
+    $root = realpath(filecleaner_root());
+    if ($root === false) return false;
+    $sourcePath = realpath($root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $sourceRelative));
+    return $sourcePath !== false && is_file($sourcePath) && strpos($sourcePath, $root . DIRECTORY_SEPARATOR) === 0;
+}
+
 function filecleaner_is_excluded(string $relative, array $cfg): bool
 {
     $relative = filecleaner_normalize($relative);
@@ -368,7 +394,7 @@ function filecleaner_scan(): array
     if ($root !== false && is_dir($root) && filecleaner_scan_ready()) {
         foreach (filecleaner_selected_dirs() as $selected) {
             if (!isset($available[$selected])) continue;
-            $selectedRelative = $selected === '__root__' ? '' : trim(substr($available[$selected], strlen('uploads/')), '/');
+            $selectedRelative = $selected === '__root__' ? '' : trim($available[$selected], '/');
             $scanPath = $selected === '__root__' ? $root : realpath($root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $selectedRelative));
             if ($scanPath === false || strpos($scanPath, $root) !== 0 || !is_dir($scanPath)) continue;
             $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($scanPath, FilesystemIterator::SKIP_DOTS));
@@ -400,7 +426,7 @@ function filecleaner_scan(): array
     $protectBefore = $now - ($cfg['protect_days'] * 86400);
     $files = [];
     foreach ($physical as $entry) {
-        $isUsed = isset($used[$entry['path']]);
+        $isUsed = isset($used[$entry['path']]) || filecleaner_thumbnail_source_exists($entry['path']);
         $protected = filecleaner_is_excluded($entry['path'], $cfg) || $entry['mtime'] > $protectBefore;
         $entry['status'] = $isUsed
             ? 'used'
@@ -426,7 +452,7 @@ function filecleaner_scan_step(int $batchSize = 500): array
         if ($root !== false && is_dir($root) && filecleaner_scan_ready()) {
             foreach (filecleaner_selected_dirs() as $selected) {
                 if (!isset($available[$selected])) continue;
-                $selectedRelative = $selected === '__root__' ? '' : trim(substr($available[$selected], strlen('uploads/')), '/');
+                $selectedRelative = $selected === '__root__' ? '' : trim($available[$selected], '/');
                 $scanPath = $selected === '__root__' ? $root : realpath($root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $selectedRelative));
                 if ($scanPath === false || strpos($scanPath, $root) !== 0 || !is_dir($scanPath)) continue;
                 foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($scanPath, FilesystemIterator::SKIP_DOTS)) as $file) {
@@ -460,7 +486,7 @@ function filecleaner_scan_step(int $batchSize = 500): array
     $end = min(count($state['files']), (int)$state['cursor'] + $batchSize);
     for ($index = (int)$state['cursor']; $index < $end; $index++) {
         $entry = $state['files'][$index];
-        $isUsed = isset($state['used'][$entry['path']]);
+        $isUsed = isset($state['used'][$entry['path']]) || filecleaner_thumbnail_source_exists($entry['path']);
         $isRegistered = isset($state['registered'][$entry['path']]);
         $protected = filecleaner_is_excluded($entry['path'], filecleaner_config()) || $entry['mtime'] > $protectBefore;
         $entry['status'] = $isUsed ? 'used' : ($isRegistered ? 'registered' : ($protected ? 'protected' : ($state['source_errors'] ? 'insufficient' : 'unused')));
@@ -518,6 +544,9 @@ function filecleaner_delete(string $relative): array
     $cfg = filecleaner_config();
     if (filecleaner_is_excluded($relative, $cfg) || filemtime($fullPath) > time() - ($cfg['protect_days'] * 86400)) {
         return [false, $lang['filecleaner:delete_protected']];
+    }
+    if (filecleaner_thumbnail_source_exists($relative)) {
+        return [false, $lang['filecleaner:delete_in_use']];
     }
     foreach (filecleaner_get_sources() as $source) {
         try {
