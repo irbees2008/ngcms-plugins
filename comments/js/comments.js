@@ -33,14 +33,14 @@ function notify(type, msg) {
 // Безопасный парсинг JSON (учёт BOM)
 function parseJSONSafe(src) {
   if (src == null) return null;
+  var normalized = String(src)
+    .trim()
+    .replace(/^\uFEFF+|\uFEFF+$/g, "")
+    .trim();
   try {
-    return JSON.parse(src);
-  } catch (e1) {
-    try {
-      return JSON.parse(String(src).replace(/^\uFEFF/, ""));
-    } catch (e2) {
-      return null;
-    }
+    return JSON.parse(normalized);
+  } catch (e) {
+    return null;
   }
 }
 
@@ -116,13 +116,30 @@ function add_comment() {
         notify("error", "Ошибка обработки ответа");
         return;
       }
-      var nc =
-        res.rev && document.getElementById("new_comments_rev")
-          ? document.getElementById("new_comments_rev")
-          : document.getElementById("new_comments");
       if (res.status) {
         if (res.data) {
-          nc.innerHTML += res.data;
+          var anchor = document.getElementById(
+            res.rev ? "new_comments_rev" : "new_comments",
+          );
+          var commentsList = document.getElementById("comments_list");
+          if (anchor && anchor.parentNode) {
+            anchor.insertAdjacentHTML(
+              res.rev ? "beforebegin" : "afterend",
+              res.data,
+            );
+          } else if (commentsList) {
+            commentsList.insertAdjacentHTML(
+              res.rev ? "afterbegin" : "beforeend",
+              res.data,
+            );
+          } else {
+            console.error("Не найден контейнер для вставки нового комментария.");
+            notify(
+              "error",
+              "Комментарий добавлен, но не удалось обновить список без перезагрузки.",
+            );
+            return;
+          }
         }
         form.content.value = "";
         reload_ng_advanced_captcha(form);

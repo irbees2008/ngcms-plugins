@@ -180,7 +180,8 @@ class CommentsNewsFilter extends NewsFilter
 		$allowCom = $SQLnews['allow_com'];
 		if ($allowCom == 2) {
 			// `Use default` - check master category
-			$masterCat = intval(array_shift(explode(',', $SQLnews['catid'])));
+			$categories = explode(',', (string) ($SQLnews['catid'] ?? ''));
+			$masterCat = intval($categories[0] ?? 0);
 			if ($masterCat && isset($catmap[$masterCat])) {
 				$allowCom = intval($catz[$catmap[$masterCat]]['allow_com']);
 			}
@@ -223,7 +224,8 @@ class CommentsNewsFilter extends NewsFilter
 		$callingCommentsParams = array('outprint' => true, 'total' => $SQLnews['com']);
 		// Set default template path
 		$templatePath = tpl_site . 'plugins/comments';
-		$fcat = array_shift(explode(",", $SQLnews['catid']));
+		$categories = explode(',', (string) ($SQLnews['catid'] ?? ''));
+		$fcat = trim($categories[0] ?? '');
 		// Check if there is a custom mapping
 		if ($fcat && $catmap[$fcat] && ($ctname = $catz[$catmap[$fcat]]['tpl'])) {
 			// Check if directory exists
@@ -364,6 +366,7 @@ function plugin_comments_add()
 			return 1;
 		}
 		// AJAX MODE.
+		header('Content-Type: application/json; charset=utf-8');
 		// Let's print (ONLY) new comment
 		$SQLnews = $addResult[0];
 		$commentId = $addResult[1];
@@ -372,7 +375,8 @@ function plugin_comments_add()
 		// Set default template path
 		$templatePath = tpl_dir . $config['theme'];
 		// Find first category
-		$fcat = array_shift(explode(",", $SQLnews['catid']));
+		$categories = explode(',', (string) ($SQLnews['catid'] ?? ''));
+		$fcat = trim($categories[0] ?? '');
 		// Check if there is a custom mapping
 		if ($fcat && $catmap[$fcat] && ($ctname = $catz[$catmap[$fcat]]['tpl'])) {
 			// Check if directory exists
@@ -391,6 +395,7 @@ function plugin_comments_add()
 		// Some errors.
 		if (cmt_array_get($_REQUEST, 'ajax', 0)) {
 			// AJAX MODE - return error in JSON
+			header('Content-Type: application/json; charset=utf-8');
 			$output = array(
 				'status' => 0,
 				'data' => $template['vars']['mainblock'],
@@ -424,7 +429,8 @@ function plugin_comments_show()
 	$SYSTEM_FLAGS['info']['title']['item'] = $newsRow['title'];
 	$callingCommentsParams = array('noajax' => 1, 'outprint' => true);
 	$templatePath = tpl_site . 'plugins/comments';
-	$fcat = array_shift(explode(',', $newsRow['catid']));
+	$categories = explode(',', (string) ($newsRow['catid'] ?? ''));
+	$fcat = trim($categories[0] ?? '');
 	if ($fcat && $catmap[$fcat] && ($ctname = $catz[$catmap[$fcat]]['tpl'])) {
 		if (is_dir(tpl_site . 'ncustom/' . $ctname)) {
 			$callingCommentsParams['overrideTemplatePath'] = tpl_site . 'ncustom/' . $ctname;
