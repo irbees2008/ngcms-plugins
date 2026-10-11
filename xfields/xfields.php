@@ -100,6 +100,44 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
     }
     // Scan if user want to change description
     foreach ($attachList as $iRec) {
+        $fieldData = $xf[$xfGroupName][$iRec['pidentity']] ?? null;
+        if (
+            ($iRec['plugin'] ?? '') == 'xfields' &&
+            is_array($fieldData) &&
+            $fieldData['type'] == 'images' &&
+            (!empty($iRec['preview']) || !empty($fieldData['imgThumb']))
+        ) {
+            $imageBaseDir = $iRec['storage'] ? $config['attach_dir'] : $config['images_dir'];
+            $imageDir = $imageBaseDir . '/' . $iRec['folder'];
+            $imagePath = $imageDir . '/' . $iRec['name'];
+            $thumbPath = $imageDir . '/thumb/' . $iRec['name'];
+            if (is_file($imagePath) && !is_file($thumbPath)) {
+                $thumbWidth = intval($fieldData['thumbWidth']);
+                $thumbHeight = intval($fieldData['thumbHeight']);
+                if ($thumbWidth < 10) {
+                    $thumbWidth = 150;
+                }
+                if ($thumbHeight < 10) {
+                    $thumbHeight = 150;
+                }
+                $thumb = $imanager->create_thumb(
+                    $imageDir,
+                    $iRec['name'],
+                    $thumbWidth,
+                    $thumbHeight,
+                    $config['thumb_quality']
+                );
+                if (!is_array($thumb) || !is_file($thumbPath)) {
+                    xf_logger('Failed to restore preview for image ID ' . intval($iRec['id']), 'warning');
+                }
+            }
+            if (is_file($thumbPath) && is_array($previewSize = $imanager->get_size($thumbPath))) {
+                $mysql->query(
+                    'update ' . prefix . '_images set preview = 1, p_width = ' . intval($previewSize[1]) .
+                    ', p_height = ' . intval($previewSize[2]) . ' where id = ' . intval($iRec['id'])
+                );
+            }
+        }
         //print "[A:".$iRec['id']."]";
         if (isset($_REQUEST['xfields_' . $iRec['pidentity'] . '_dscr']) && is_array($_REQUEST['xfields_' . $iRec['pidentity'] . '_dscr']) && isset($_REQUEST['xfields_' . $iRec['pidentity'] . '_dscr'][$iRec['id']])) {
             // We have this field in EDIT mode
@@ -281,12 +319,34 @@ function xf_modifyAttachedImages($dsID, $newsID, $xf, $attachList)
                     }
                     // Reuse the source record's physical file instead of copying it.
                     $sourceFolder = $sourceImage['folder'];
-                    $sourcePath = $config['attach_dir'] . '/' . $sourceFolder . '/' . $sourceImage['name'];
-                    $sourceThumbPath = $config['attach_dir'] . '/' . $sourceFolder . '/thumb/' . $sourceImage['name'];
+                    $imageBaseDir = $sourceImage['storage'] ? $config['attach_dir'] : $config['images_dir'];
+                    $sourcePath = $imageBaseDir . '/' . $sourceFolder . '/' . $sourceImage['name'];
+                    $sourceThumbPath = $imageBaseDir . '/' . $sourceFolder . '/thumb/' . $sourceImage['name'];
                     if (!file_exists($sourcePath)) {
                         continue;
                     }
                     $hasPreview = file_exists($sourceThumbPath);
+                    if (!$hasPreview && (!empty($sourceImage['preview']) || !empty($data['imgThumb']))) {
+                        $thumbWidth = intval($data['thumbWidth']);
+                        $thumbHeight = intval($data['thumbHeight']);
+                        if ($thumbWidth < 10) {
+                            $thumbWidth = 150;
+                        }
+                        if ($thumbHeight < 10) {
+                            $thumbHeight = 150;
+                        }
+                        $thumb = $imanager->create_thumb(
+                            $imageBaseDir . '/' . $sourceFolder,
+                            $sourceImage['name'],
+                            $thumbWidth,
+                            $thumbHeight,
+                            $config['thumb_quality']
+                        );
+                        $hasPreview = is_array($thumb) && is_file($sourceThumbPath);
+                        if (!$hasPreview) {
+                            xf_logger('Failed to create preview for reused image ID ' . intval($eImageId), 'warning');
+                        }
+                    }
                     $previewWidth = $hasPreview ? (int)$sourceImage['p_width'] : 0;
                     $previewHeight = $hasPreview ? (int)$sourceImage['p_height'] : 0;
                     if ($hasPreview && is_array($previewSize = $imanager->get_size($sourceThumbPath))) {
