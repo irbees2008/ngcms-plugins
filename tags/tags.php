@@ -83,7 +83,12 @@ class TagsNewsfilter extends NewsFilter
         global $tpl;
         $tpath = locatePluginTemplates(array('tags_addnews'), 'tags', pluginGetVariable('tags', 'localsource'), pluginGetVariable('tags', 'skin') ? pluginGetVariable('tags', 'skin') : 'default');
         $tpl->template('tags_addnews', $tpath['tags_addnews']);
-        $tpl->vars('tags_addnews', array('vars' => array('localPrefix' => localPrefix)));
+        $tpl->vars('tags_addnews', array('vars' => array(
+            'localPrefix' => localPrefix,
+            'mode' => 'add',
+            'newsid' => 0,
+            'token' => $tvars['token'] ?? '',
+        )));
         $tvars['plugin']['tags'] = $tpl->show('tags_addnews');
         return 1;
     }
@@ -99,6 +104,9 @@ class TagsNewsfilter extends NewsFilter
         }
         // Make a resulting line
         $SQL['tags'] = count($tags) ? join(", ", array_keys($tags)) : '';
+        if (pluginGetVariable('tags', 'auto_category_tags') && isset($SQL['catid'])) {
+            $SQL['tags'] = $this->addCategoryToTags($SQL['tags'], $SQL['catid']);
+        }
         return 1;
     }
     function addNewsNotify(&$tvars, $SQL, $newsid)
@@ -110,11 +118,7 @@ class TagsNewsfilter extends NewsFilter
         if (!isset($SQL['tags']))
             return 1;
 
-        // Auto-add categories to tags if enabled
         $tags = $SQL['tags'];
-        if (pluginGetVariable('tags', 'auto_category_tags') && isset($SQL['catid'])) {
-            $tags = $this->addCategoryToTags($tags, $SQL['catid']);
-        }
 
         // New Tags
         $tagsNew = array();
@@ -124,11 +128,6 @@ class TagsNewsfilter extends NewsFilter
             if (!strlen($tag)) continue;
             $tagsNew[] = $tag;
             $tagsNewQ[] = db_squote($tag);
-        }
-
-        // Update tags field in news table if categories were added
-        if ($tags !== $SQL['tags']) {
-            $mysql->query("UPDATE " . prefix . "_news SET tags = " . db_squote($tags) . " WHERE id = " . intval($newsid));
         }
 
         // Update counters for TAGS - add
@@ -145,67 +144,47 @@ class TagsNewsfilter extends NewsFilter
     // Function to automatically add category names to tags
     private function addCategoryToTags($tags, $catid)
     {
-        global $mysql, $catmap, $config;
+        global $mysql;
 
-        // Validate input parameters
-        if (empty($catid) || !is_numeric($catid)) {
-            return $tags;
+        $categoryIds = [];
+        foreach (explode(',', (string)$catid) as $categoryId) {
+            $categoryId = intval(trim($categoryId));
+            if ($categoryId > 0 && !in_array($categoryId, $categoryIds, true)) {
+                $categoryIds[] = $categoryId;
+            }
+        }
+        if (!$categoryIds) {
+            return (string)$tags;
         }
 
-        // Ensure $tags is a string
-        if (!is_string($tags)) {
-            $tags = '';
-        }
-
-        // Load category map if not loaded
-        if (!isset($catmap) || !is_array($catmap)) {
-            if (function_exists('loadCategoryMap')) {
-                loadCategoryMap();
+        $categoryNames = [];
+        $categories = $mysql->select(
+            'SELECT name FROM ' . prefix . '_category WHERE id IN (' . implode(',', $categoryIds) . ')'
+        );
+        foreach ($categories as $category) {
+            $categoryName = tags_str_limit(trim(tags_sanitize($category['name'] ?? '', 'string')), 100);
+            if ($categoryName !== '') {
+                $categoryNames[] = $categoryName;
             }
         }
 
-        // Get category name
-        $categoryName = '';
-        if (isset($catmap[$catid])) {
-            // Check if catmap entry is array (with 'name' key) or just string
-            if (is_array($catmap[$catid]) && isset($catmap[$catid]['name'])) {
-                $categoryName = trim($catmap[$catid]['name']);
-            } else if (is_string($catmap[$catid])) {
-                // If catmap entry is just a string (category name)
-                $categoryName = trim($catmap[$catid]);
+        $tags = is_string($tags) ? $tags : '';
+        $existingTags = array_map('trim', explode(',', $tags));
+        $existingNames = [];
+        foreach ($existingTags as $tag) {
+            if ($tag !== '') {
+                $existingNames[mb_strtolower($tag, 'UTF-8')] = true;
+            }
+        }
+        foreach ($categoryNames as $categoryName) {
+            $key = mb_strtolower($categoryName, 'UTF-8');
+            if (!isset($existingNames[$key])) {
+                $existingTags[] = $categoryName;
+                $existingNames[$key] = true;
             }
         }
 
-        // Fallback: get category name from database if not found in catmap
-        if (empty($categoryName)) {
-            try {
-                $catData = $mysql->select("SELECT name FROM " . $config['prefix'] . "_category WHERE id = " . intval($catid));
-                if (is_array($catData) && count($catData) > 0 && isset($catData[0]['name'])) {
-                    $categoryName = trim($catData[0]['name']);
-                }
-            } catch (Exception $e) {
-                // Log error but don't break functionality
-                error_log("Tags plugin: Error getting category name for ID $catid: " . $e->getMessage());
-                return $tags;
-            }
-        }
-
-        if (!empty($categoryName)) {
-            // Check if category name is already in tags
-            $existingTags = array_map('trim', explode(',', $tags));
-            $existingTagsLower = array_map('mb_strtolower', $existingTags);
-
-            if (!in_array(mb_strtolower($categoryName), $existingTagsLower)) {
-                // Add category name to tags
-                if (!empty($tags)) {
-                    $tags .= ', ' . $categoryName;
-                } else {
-                    $tags = $categoryName;
-                }
-            }
-        }
-
-        return $tags;
+        return implode(', ', array_filter($existingTags, 'strlen'));
     }
 
     function editNewsForm($newsID, $SQLold, &$tvars)
@@ -213,7 +192,13 @@ class TagsNewsfilter extends NewsFilter
         global $tpl;
         $tpath = locatePluginTemplates(array('tags_editnews'), 'tags', pluginGetVariable('tags', 'localsource'), pluginGetVariable('tags', 'skin') ? pluginGetVariable('tags', 'skin') : 'default');
         $tpl->template('tags_editnews', $tpath['tags_editnews']);
-        $tpl->vars('tags_editnews', array('vars' => array('tags' => secure_html($SQLold['tags']), 'localPrefix' => localPrefix)));
+        $tpl->vars('tags_editnews', array('vars' => array(
+            'tags' => secure_html($SQLold['tags']),
+            'localPrefix' => localPrefix,
+            'mode' => 'edit',
+            'newsid' => intval($newsID),
+            'token' => $tvars['token'] ?? '',
+        )));
         $tvars['plugin']['tags'] = $tpl->show('tags_editnews');
         return 1;
     }
@@ -221,19 +206,21 @@ class TagsNewsfilter extends NewsFilter
     {
         // Scan tags, delete dups
         $tags = array();
-        // Activate only if tags parameter is passed
         if (!isset($_REQUEST['tags'])) {
-            $SQLnew['tags'] = $SQLold['tags'];
-            return 1;
+            $SQLnew['tags'] = $SQLold['tags'] ?? '';
+        } else {
+            $tagsInput = tags_sanitize($_REQUEST['tags'], 'string');
+            foreach (explode(",", $tagsInput) as $tag) {
+                $tag = tags_str_limit(trim($tag), 100);
+                if (!strlen($tag)) continue;
+                $tags[$tag] = 1;
+            }
+            $SQLnew['tags'] = count($tags) ? join(", ", array_keys($tags)) : '';
         }
-        $tagsInput = tags_sanitize($_REQUEST['tags'], 'string');
-        foreach (explode(",", $tagsInput) as $tag) {
-            $tag = tags_str_limit(trim($tag), 100); // Limit tag length to 100 chars
-            if (!strlen($tag)) continue;
-            $tags[$tag] = 1;
+        $catid = $SQLnew['catid'] ?? ($SQLold['catid'] ?? '');
+        if (pluginGetVariable('tags', 'auto_category_tags') && $catid !== '') {
+            $SQLnew['tags'] = $this->addCategoryToTags($SQLnew['tags'], $catid);
         }
-        // Make a resulting line
-        $SQLnew['tags'] = count($tags) ? join(", ", array_keys($tags)) : '';
         return 1;
     }
     // Make changes in DB after EditNews was successfully executed
@@ -243,11 +230,6 @@ class TagsNewsfilter extends NewsFilter
         // If we edit unpublished news - no action
         if ((!isset($SQLnews['approve']) || !$SQLnews['approve']) && (!isset($SQLnew['approve']) || !$SQLnew['approve']))
             return 1;
-
-        // Auto-add categories to tags if enabled
-        if (pluginGetVariable('tags', 'auto_category_tags') && isset($SQLnew['catid']) && isset($SQLnew['tags'])) {
-            $SQLnew['tags'] = $this->addCategoryToTags($SQLnew['tags'], $SQLnew['catid']);
-        }
 
         // OLD Tags
         $tagsOld = array();
