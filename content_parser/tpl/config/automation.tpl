@@ -432,7 +432,7 @@
 					</div>
 					<div class="list">
 						Количество постов:
-						<input type="number" class="form-control" name="count" value="{{ rss_limit }}" min="1" max="50">
+						<input type="number" class="form-control" name="count" value="20" min="1" max="50">
 					</div>
 					<div class="list">
 						Категория для публикации:
