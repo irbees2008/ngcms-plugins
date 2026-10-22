@@ -333,6 +333,91 @@ if (!function_exists('ai_rewriter_rewrite')) {
     }
 }
 
+if (!function_exists('ai_rewriter_generate_tags')) {
+    function ai_rewriter_generate_tags($title, $content, $categories = '')
+    {
+        pluginsLoadConfig();
+        $provider = pluginGetVariable('ai_rewriter', 'provider');
+        $apiKey = trim((string)pluginGetVariable('ai_rewriter', 'api_key'));
+        $apiBase = trim((string)pluginGetVariable('ai_rewriter', 'api_base'));
+        $model = trim((string)pluginGetVariable('ai_rewriter', 'model'));
+        $temperature = (float)pluginGetVariable('ai_rewriter', 'temperature');
+        $timeout = (int)pluginGetVariable('ai_rewriter', 'timeout');
+
+        if (!$provider) {
+            logger('Tag generation failed: provider is not configured', 'warning', 'ai_rewriter.log');
+            return [false, 'AI Rewriter: провайдер не настроен'];
+        }
+        if (!$apiKey && in_array($provider, ['openai', 'openai_compat', 'anthropic'], true)) {
+            logger('Tag generation failed: API key is missing', 'warning', 'ai_rewriter.log');
+            return [false, 'AI Rewriter: API ключ не задан'];
+        }
+        if (!in_array($provider, ['openai', 'openai_compat', 'anthropic'], true)) {
+            logger('Tag generation failed: unknown provider=' . $provider, 'error', 'ai_rewriter.log');
+            return [false, 'AI Rewriter: неизвестный провайдер'];
+        }
+
+        $modelLower = mb_strtolower($model);
+        if ($provider === 'anthropic' && preg_match('/\b(?:gpt|o1|o3)[-\w.]*/i', $modelLower)) {
+            return [false, 'AI Rewriter: модель не соответствует провайдеру Anthropic'];
+        }
+        if (in_array($provider, ['openai', 'openai_compat'], true) && str_contains($modelLower, 'claude')) {
+            return [false, 'AI Rewriter: модель Claude не соответствует провайдеру OpenAI'];
+        }
+
+        if ($temperature <= 0 || $temperature > 1) {
+            $temperature = 0.7;
+        }
+        if ($timeout <= 0) {
+            $timeout = 20;
+        }
+        if ($timeout > 50) {
+            $timeout = 50;
+        }
+        if (function_exists('set_time_limit')) {
+            @set_time_limit($timeout + 15);
+        }
+
+        $language = pluginGetVariable('ai_rewriter', 'default_language') ?: 'auto';
+        if ($language === 'auto') {
+            $language = ai_rewriter_detect_language($title . "\n" . $content);
+        }
+        $languageNames = [
+            'russian' => 'русском',
+            'ukrainian' => 'украинском',
+            'english' => 'английском',
+            'german' => 'немецком',
+            'french' => 'французском',
+            'spanish' => 'испанском',
+            'italian' => 'итальянском',
+            'portuguese' => 'португальском',
+            'polish' => 'польском',
+        ];
+        $languageName = $languageNames[$language] ?? 'языке исходной новости';
+
+        $systemPrompt = 'Ты редактор новостного сайта. Подбери точные тематические теги по заголовку, тексту и категориям новости. ' .
+            'Верни только 5–10 коротких тегов, по одному на строке, без нумерации, пояснений и хештегов. ' .
+            'Используй язык новости (' . $languageName . '), не добавляй сведения, которых нет в исходных данных.';
+        $userPrompt = "Заголовок:\n" . mb_substr(trim((string)$title), 0, 500, 'UTF-8') .
+            "\n\nКатегории:\n" . (trim((string)$categories) !== '' ? mb_substr(trim((string)$categories), 0, 1000, 'UTF-8') : 'не указаны') .
+            "\n\nТекст новости:\n" . mb_substr(trim((string)$content), 0, 20000, 'UTF-8');
+
+        logger('Tag generation started: provider=' . $provider . ', text_length=' . mb_strlen((string)$content, 'UTF-8'), 'info', 'ai_rewriter.log');
+        if ($provider === 'anthropic') {
+            $result = ai_rewriter_provider_anthropic($model, $apiKey, $systemPrompt, $userPrompt, $temperature, $timeout);
+        } else {
+            $result = ai_rewriter_provider_openai($model, $apiKey, $apiBase, $systemPrompt, $userPrompt, $temperature, $timeout);
+        }
+        if (empty($result[0])) {
+            logger('Tag generation failed: ' . ($result[1] ?? 'provider error'), 'error', 'ai_rewriter.log');
+            return [false, $result[1] ?? 'AI Rewriter: ошибка генерации тегов'];
+        }
+
+        logger('Tag generation completed: response_length=' . mb_strlen((string)$result[1], 'UTF-8'), 'info', 'ai_rewriter.log');
+        return [true, trim((string)$result[1])];
+    }
+}
+
 class AIRewriterNewsFilter extends NewsFilter
 {
     // For add form UI extension (optional)
