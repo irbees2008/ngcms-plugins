@@ -51,6 +51,18 @@ switch (array_get($_REQUEST, 'action', '')) {
     default:
         showList();
 }
+
+function feedback_render_config($templateName, array $tVars = [])
+{
+    global $twig;
+    $tVars['documentation_button'] = '';
+    if (function_exists('plugin_documentation_markup')) {
+        list($tVars['documentation_button']) = plugin_documentation_markup('feedback');
+    }
+    $xt = $twig->loadTemplate($templateName);
+    echo $xt->render($tVars);
+}
+
 // Simply create new form
 function addForm()
 {
@@ -148,8 +160,7 @@ function showList()
     }
     $tVars['entries'] = $tForms;
     $templateName = 'plugins/feedback/tpl/conf.forms.tpl';
-    $xt = $twig->loadTemplate($templateName);
-    echo $xt->render($tVars);
+    feedback_render_config($templateName, $tVars);
 }
 
 function showForm(bool $edMode = false)
@@ -161,8 +172,7 @@ function showForm(bool $edMode = false)
     $tvars = [];
     if (!is_array($frow = $mysql->record('select * from ' . prefix . '_feedback where id = ' . $id))) {
         $tVars['content'] = 'Указанная форма [' . $id . '] не существует!';
-        $xt = $twig->loadTemplate('plugins/feedback/tpl/conf.notify.tpl');
-        echo $xt->render($tVars);
+        feedback_render_config('plugins/feedback/tpl/conf.notify.tpl', $tVars);
 
         return false;
     }
@@ -237,8 +247,7 @@ function showForm(bool $edMode = false)
     $tVars['entries'] = $tEntries;
     // Show template files
     $tVars['tfiles'] = feedback_locateTemplateFiles($frow['template'], substr($frow['flags'], 2, 1) ? true : false);
-    $xt = $twig->loadTemplate('plugins/feedback/tpl/conf.form.tpl');
-    echo $xt->render($tVars);
+    feedback_render_config('plugins/feedback/tpl/conf.form.tpl', $tVars);
 }
 
 function showFormRow()
@@ -316,8 +325,7 @@ function showFormRow()
         $recordFound = 1;
     } while (0);
     $templateName = 'plugins/feedback/tpl/' . ($recordFound ? 'conf.form.editrow' : 'conf.notify') . '.tpl';
-    $xt = $twig->loadTemplate($templateName);
-    echo $xt->render($tVars);
+    feedback_render_config($templateName, $tVars);
 }
 
 function editFormRow()
@@ -425,8 +433,7 @@ function editFormRow()
         $tVars['content'] = 'Поле изменено';
     } while (0);
     // Show template
-    $xt = $twig->loadTemplate('plugins/feedback/tpl/conf.notify.tpl');
-    echo $xt->render($tVars);
+    feedback_render_config('plugins/feedback/tpl/conf.notify.tpl', $tVars);
 }
 
 //
@@ -462,8 +469,7 @@ function doUpdate()
     } while (0);
     if (!$enabled) {
         // Show template
-        $xt = $twig->loadTemplate('plugins/feedback/tpl/conf.notify.tpl');
-        echo $xt->render($tVars);
+        feedback_render_config('plugins/feedback/tpl/conf.notify.tpl', $tVars);
 
         return false;
     }

@@ -37,7 +37,7 @@
 			{% for entry in entries %}
 				<tr>
 					<td>{{ entry.id }}</td>
-					<td><a href="{{ entry.linkEdit }}">{{ entry.name }}</a></td>
+					<td>{{ entry.name }}</td>
 					<td>{{ entry.title }}</td>
 					<td>{{ lang['feedback:link_to_news_' ~ entry.link_news] }}</td>
 					<td>
@@ -49,12 +49,13 @@
 					</td>
 					<td class="text-right" nowrap>
 						<div class="btn-group btn-group-sm" role="group">
+              <a href="{{ entry.linkEdit }}" class="btn btn-outline-primary"  title="{{ lang['feedback:edit_form'] }}"><i class="fa fa-edit"></i></a>
 							{% if (entry.flags.active) %}
-								<a onclick="alert('{{ lang['feedback:msg_unable_to_delete_active_form'] }}');" class="btn btn-outline-danger">
+								<a onclick="alert('{{ lang['feedback:msg_unable_to_delete_active_form'] }}');" class="btn btn-outline-danger"  title="{{ lang['feedback:delete_form'] }}">
 									<i class="fa fa-trash"></i>
 								</a>
 							{% else %}
-								<a href="{{ entry.linkDel }}" onclick="return confirm('{{ lang['feedback:msg_you_sure'] }}');" class="btn btn-outline-danger">
+								<a href="{{ entry.linkDel }}" onclick="return confirm('{{ lang['feedback:msg_you_sure'] }}');" class="btn btn-outline-danger"  title="{{ lang['feedback:delete_form'] }}">
 									<i class="fa fa-trash"></i>
 								</a>
 							{% endif %}
@@ -67,3 +68,5 @@
 	</div>
 </div>
 {% endif %}
+</div>
+</div>

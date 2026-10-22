@@ -169,3 +169,5 @@
 		$('#type_date').toggle(mode == 'date');
 	}
 </script>
+</div>
+</div>

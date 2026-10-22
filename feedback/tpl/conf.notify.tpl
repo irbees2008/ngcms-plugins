@@ -4,3 +4,5 @@
 	<h5>{{ lang['msgi_info'] }}</h5>
 	<p class="mb-0">{{ content }}</p>
 </div>
+</div>
+</div>

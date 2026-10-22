@@ -1,9 +1,7 @@
 <div class="container-fluid">
 	<div class="row mb-2">
 		<div class="col-sm-6">
-			<h1 class="m-0 text-dark" style="padding: 20px 0 0 0;">
-				<a href="?mod=extra-config&plugin=ads_pro">feedback</a>
-			</h1>
+			<h1 class="m-0 text-dark" style="padding: 20px 0 0 0;">feedback</h1>
 		</div>
 		<!-- /.col -->
 		<div class="col-sm-6">
@@ -42,3 +40,9 @@
 	</div>
 	<!-- /.row -->
 </div>
+
+<div class="card plugin-settings-card">
+	<h5 class="card-header d-flex justify-content-between align-items-center" data-plugin-settings-header>
+		<span>feedback</span>{{ documentation_button|raw }}
+	</h5>
+	<div class="card-body plugin-settings-content">
