@@ -1,12 +1,12 @@
 <div class="container-fluid">
 	<div class="row mb-2">
-	  <div class="col-sm-6 d-none d-md-block ">
-			<h1 class="m-0 text-dark">xfields</h1>
-	  </div><!-- /.col -->
+	  <div class="col-sm-6">
+			<h1 class="m-0 text-dark" style="padding: 20px 0 0 0;">xfields</h1>
+	  </div>
 	  <div class="col-sm-6">
 		<ol class="breadcrumb float-sm-right">
-			<li class="breadcrumb-item"><a href="{{ admin_url }}"><i class="fa fa-home"></i></a></li>
-			<li class="breadcrumb-item"><a href="?mod=extras">{{ lang['extras'] }}</a></li>
+			<li class="breadcrumb-item"><a href="admin.php"><i class="fa fa-home"></i></a></li>
+			<li class="breadcrumb-item"><a href="admin.php?mod=extras">{{ lang['extras'] }}</a></li>
 			<li class="breadcrumb-item"><a href="?mod=extra-config&plugin=xfields">xfields</a></li>
 			<li class="breadcrumb-item active" aria-current="page">
 				{{ lang.xfconfig['editfield'] }} (<a href="?mod=extra-config&plugin=xfields&action=edit&section={{ sectionID }}&field={{ id }}">{{ id }}</a>)
@@ -16,8 +16,11 @@
 	</div><!-- /.row -->
 </div>
 
-<div class="card">
-	<div class="card-body">
+<div class="card plugin-settings-card">
+	<h5 class="card-header d-flex justify-content-between align-items-center" data-plugin-settings-header>
+		<span>xfields</span>{{ documentation_button|raw }}
+	</h5>
+	<div class="card-body plugin-settings-content">
 		{{ lang.xfconfig['savedone'] }}
 	</div>
 
@@ -25,3 +28,4 @@
 		<a href="admin.php?mod=extra-config&amp;plugin=xfields" class="btn btn-outline-success">xfields</a>
 	</div>
 </div>
+{{ documentation_modal|raw }}

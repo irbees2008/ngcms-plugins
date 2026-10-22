@@ -48,6 +48,15 @@ switch (array_get($_REQUEST, 'action', '')) {
     default:
         showList();
 }
+
+function xf_config_layout_vars()
+{
+    if (!function_exists('plugin_documentation_markup')) {
+        return ['documentation_button' => '', 'documentation_modal' => ''];
+    }
+    list($button, $modal) = plugin_documentation_markup('xfields');
+    return ['documentation_button' => $button, 'documentation_modal' => $modal];
+}
 //
 // Показать список полей
 function showList()
@@ -80,6 +89,7 @@ function showSectionList()
             'entries' => $v['entries'],
         ];
     }
+    $tVars = array_merge($tVars, xf_config_layout_vars());
     $xt = $twig->loadTemplate('plugins/xfields/tpl/groups.tpl');
     echo $xt->render($tVars);
 }
@@ -133,6 +143,7 @@ function showFieldList()
         'section_name' => $lang['xfconfig']['section.' . $sectionID],
         'sectionID'    => $sectionID,
     ];
+    $tVars = array_merge($tVars, xf_config_layout_vars());
     $xt = $twig->loadTemplate('plugins/xfields/tpl/config.tpl');
     echo $xt->render($tVars);
 }
@@ -250,6 +261,7 @@ function showAddEditForm($xdata = '', $eMode = null, $efield = null)
         }
     }
     $tVars['sectionID'] = $sectionID;
+    $tVars = array_merge($tVars, xf_config_layout_vars());
     $xt = $twig->loadTemplate('plugins/xfields/tpl/config_edit.tpl');
     echo $xt->render($tVars);
 }
@@ -545,6 +557,7 @@ function doAddEdit()
         ],
     ];
     $tVars['sectionID'] = $sectionID;
+    $tVars = array_merge($tVars, xf_config_layout_vars());
     $xt = $twig->loadTemplate('plugins/xfields/tpl/config_done.tpl');
     echo $xt->render($tVars);
 }
