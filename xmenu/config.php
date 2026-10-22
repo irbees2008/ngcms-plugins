@@ -1,83 +1,84 @@
 <?php
 if (!defined('NGCMS')) die('HAL');
+global $mysql, $lang;
 pluginsLoadConfig();
-LoadPluginLang('xmenu', 'config');
+LoadPluginLang('xmenu', 'config', '', '', ':');
 function showXMenuConfig()
 {
-    global $mysql, $tpl;
-    $tpath = locatePluginTemplates(['mhead', 'ehead', 'efoot'], 'xmenu', 1);
-    if (!$tpath) {
-        return 'Ошибка: не найдены шаблоны плагина';
+    global $mysql, $twig, $lang;
+
+    $tpath = locatePluginTemplates(['config.main'], 'xmenu', 1);
+    if (empty($tpath['config.main'])) {
+        return $lang['xmenu:err.no_templates'];
     }
-    // Получаем количество меню из конфига
-    $menu_count = intval(extra_get_param('xmenu', 'menu_count')) ?: 9;
-    // Получаем категории
-    $catz = $mysql->select("SELECT id, name, poslevel, xmenu FROM " . prefix . "_category ORDER BY posorder");
+
+    $menuCount = intval(extra_get_param('xmenu', 'menu_count')) ?: 9;
+    $categories = $mysql->select('SELECT id, name, poslevel, xmenu FROM ' . prefix . '_category ORDER BY posorder');
     if ($mysql->error) {
-        return 'Ошибка при получении категорий: ' . $mysql->error;
+        return $lang['xmenu:err.categories'] . ' ' . $mysql->error;
     }
-    // Получаем статические страницы
-    $static_pages = $mysql->select("SELECT id, title, alt_name, xmenu FROM " . prefix . "_static ORDER BY id");
+    $staticPages = $mysql->select('SELECT id, title, alt_name, xmenu FROM ' . prefix . '_static ORDER BY id');
     if ($mysql->error) {
-        return 'Ошибка при получении статических страниц: ' . $mysql->error;
+        return $lang['xmenu:err.static_pages'] . ' ' . $mysql->error;
     }
-    // Формируем таблицу категорий
-    $categories_html = '<div class="xmenu-section"><h3>Категории</h3>';
-    $categories_html .= '<table class="table table-striped"><thead><tr><th>Категория</th>';
-    for ($i = 1; $i <= $menu_count; $i++) {
-        $categories_html .= '<th>Меню ' . $i . '</th>';
+
+    $menuHeaders = '';
+    for ($menuId = 1; $menuId <= $menuCount; $menuId++) {
+        $menuHeaders .= '<th scope="col">' . htmlspecialchars($lang['xmenu:th.menu'], ENT_QUOTES, 'UTF-8') . ' ' . $menuId . '</th>';
     }
-    $categories_html .= '</tr></thead><tbody>';
-    foreach ($catz as $cat) {
-        $xmenu = isset($cat['xmenu']) ? $cat['xmenu'] : str_repeat('_', $menu_count);
-        $xmenu = str_pad(substr($xmenu, 0, $menu_count), $menu_count, '_');
-        $categories_html .= '<tr><td>' . str_repeat('&nbsp;&nbsp;', $cat['poslevel'] ?? 0) . htmlspecialchars($cat['name']) . '</td>';
-        for ($i = 1; $i <= $menu_count; $i++) {
-            $checked = (isset($xmenu[$i - 1]) && $xmenu[$i - 1] === '#') ? ' checked' : '';
-            $categories_html .= '<td><input type="checkbox" name="cmenu[' . $cat['id'] . '][' . $i . ']" value="1"' . $checked . '></td>';
+
+    $categoryRows = '';
+    foreach ($categories as $category) {
+        $menuFlags = str_pad(substr($category['xmenu'] ?? '', 0, $menuCount), $menuCount, '_');
+        $categoryRows .= '<tr><th scope="row">' . str_repeat('&nbsp;&nbsp;', (int)($category['poslevel'] ?? 0)) . htmlspecialchars($category['name'], ENT_QUOTES, 'UTF-8') . '</th>';
+        for ($menuId = 1; $menuId <= $menuCount; $menuId++) {
+            $checked = ($menuFlags[$menuId - 1] === '#') ? ' checked' : '';
+            $categoryRows .= '<td class="text-center"><input class="form-check-input" type="checkbox" name="cmenu[' . (int)$category['id'] . '][' . $menuId . ']" value="1"' . $checked . '></td>';
         }
-        $categories_html .= '</tr>';
+        $categoryRows .= '</tr>';
     }
-    $categories_html .= '</tbody></table></div>';
-    // Формируем таблицу статических страниц
-    $static_html = '<div class="xmenu-section"><h3>Статические страницы</h3>';
-    $static_html .= '<table class="table table-striped"><thead><tr><th>Страница</th>';
-    for ($i = 1; $i <= $menu_count; $i++) {
-        $static_html .= '<th>Меню ' . $i . '</th>';
+    if ($categoryRows === '') {
+        $categoryRows = '<tr><td colspan="' . ($menuCount + 1) . '" class="text-muted">' . htmlspecialchars($lang['xmenu:empty.categories'], ENT_QUOTES, 'UTF-8') . '</td></tr>';
     }
-    $static_html .= '</tr></thead><tbody>';
-    foreach ($static_pages as $page) {
-        $xmenu = isset($page['xmenu']) ? $page['xmenu'] : str_repeat('_', $menu_count);
-        $xmenu = str_pad(substr($xmenu, 0, $menu_count), $menu_count, '_');
-        $page_title = htmlspecialchars($page['title'] ?? 'Без названия');
-        $page_altname = isset($page['alt_name']) ? ' (' . htmlspecialchars($page['alt_name']) . ')' : '';
-        $static_html .= '<tr><td>' . $page_title . $page_altname . '</td>';
-        for ($i = 1; $i <= $menu_count; $i++) {
-            $checked = (isset($xmenu[$i - 1]) && $xmenu[$i - 1] === '#') ? ' checked' : '';
-            $static_html .= '<td><input type="checkbox" name="smenu[' . $page['id'] . '][' . $i . ']" value="1"' . $checked . '></td>';
+
+    $staticRows = '';
+    foreach ($staticPages as $page) {
+        $menuFlags = str_pad(substr($page['xmenu'] ?? '', 0, $menuCount), $menuCount, '_');
+        $pageTitle = htmlspecialchars($page['title'] ?? $lang['xmenu:no_title'], ENT_QUOTES, 'UTF-8');
+        $pageAltName = isset($page['alt_name']) && $page['alt_name'] !== '' ? ' (' . htmlspecialchars($page['alt_name'], ENT_QUOTES, 'UTF-8') . ')' : '';
+        $staticRows .= '<tr><th scope="row">' . $pageTitle . $pageAltName . '</th>';
+        for ($menuId = 1; $menuId <= $menuCount; $menuId++) {
+            $checked = ($menuFlags[$menuId - 1] === '#') ? ' checked' : '';
+            $staticRows .= '<td class="text-center"><input class="form-check-input" type="checkbox" name="smenu[' . (int)$page['id'] . '][' . $menuId . ']" value="1"' . $checked . '></td>';
         }
-        $static_html .= '</tr>';
+        $staticRows .= '</tr>';
     }
-    $static_html .= '</tbody></table></div>';
-    // Вывод интерфейса
-    $output = '';
-    if (isset($tpath['mhead'])) {
-        $tpl->template('mhead', $tpath['mhead']);
-        $tpl->vars('mhead', []);
-        $output .= $tpl->show('mhead');
+    if ($staticRows === '') {
+        $staticRows = '<tr><td colspan="' . ($menuCount + 1) . '" class="text-muted">' . htmlspecialchars($lang['xmenu:empty.static_pages'], ENT_QUOTES, 'UTF-8') . '</td></tr>';
     }
-    if (isset($tpath['ehead'])) {
-        $tpl->template('ehead', $tpath['ehead']);
-        $tpl->vars('ehead', ['id' => 0, 'display' => 'block']);
-        $output .= $tpl->show('ehead');
+
+    $localSource = intval(extra_get_param('xmenu', 'localsource'));
+    $cacheEnabled = intval(extra_get_param('xmenu', 'cache'));
+    $cacheExpire = extra_get_param('xmenu', 'cacheExpire') ?: 3600;
+    $documentationButton = '';
+    $documentationModal = '';
+    if (function_exists('plugin_documentation_markup')) {
+        list($documentationButton, $documentationModal) = plugin_documentation_markup('xmenu');
     }
-    $output .= $categories_html . $static_html;
-    if (isset($tpath['efoot'])) {
-        $tpl->template('efoot', $tpath['efoot']);
-        $tpl->vars('efoot', []);
-        $output .= $tpl->show('efoot');
-    }
-    return $output;
+
+    return $twig->render($tpath['config.main'] . 'config.main.tpl', [
+        'token' => genUToken('admin.extra-config'),
+        'lang' => $lang,
+        'documentation_button' => $documentationButton,
+        'documentation_modal' => $documentationModal,
+        'menu_count' => intval(extra_get_param('xmenu', 'menu_count')) ?: 9,
+        'cache_expire' => $cacheExpire,
+        'menu_headers' => $menuHeaders,
+        'category_rows' => $categoryRows,
+        'static_rows' => $staticRows,
+        'local_source' => $localSource,
+        'cache_enabled' => $cacheEnabled,
+    ]);
 }
 // Обработка сохранения
 if (isset($_REQUEST['action']) && $_REQUEST['action'] == 'commit') {
@@ -131,59 +132,9 @@ if (isset($_REQUEST['action']) && $_REQUEST['action'] == 'commit') {
         }
     }
     pluginsSaveConfig();
-    msg(['type' => 'info', 'text' => 'Настройки успешно сохранены']);
+    msg(['type' => 'info', 'text' => $lang['xmenu:msg.saved']]);
     header("Location: " . admin_url . "/admin.php?mod=extra-config&plugin=xmenu");
     exit;
 }
 // Формируем конфигурационную страницу
-$cfg = [
-    [
-        'type' => 'hidden',
-        'name' => 'action',
-        'value' => 'commit'
-    ],
-    [
-        'mode' => 'group',
-        'title' => 'Основные настройки',
-        'entries' => [
-            [
-                'name' => 'menu_count',
-                'title' => "Количество меню",
-                'type' => 'input',
-                'value' => intval(extra_get_param('xmenu', 'menu_count')) ?: 9,
-                'help' => 'Укажите количество различных меню, которые будут использоваться в плагине'
-            ],
-            [
-                'name' => 'localsource',
-                'title' => "Источник шаблонов",
-                'type' => 'select',
-                'values' => ['0' => 'Шаблон сайта', '1' => 'Плагин'],
-                'value' => intval(extra_get_param('xmenu', 'localsource'))
-            ]
-        ]
-    ],
-    [
-        'mode' => 'group',
-        'title' => 'Настройки кеширования',
-        'entries' => [
-            [
-                'name' => 'cache',
-                'title' => "Кеширование",
-                'type' => 'select',
-                'values' => ['1' => 'Да', '0' => 'Нет'],
-                'value' => intval(extra_get_param('xmenu', 'cache'))
-            ],
-            [
-                'name' => 'cacheExpire',
-                'title' => "Время жизни кеша (сек)",
-                'type' => 'input',
-                'value' => extra_get_param('xmenu', 'cacheExpire') ?: '3600'
-            ]
-        ]
-    ],
-    [
-        'type' => 'flat',
-        'input' => showXMenuConfig()
-    ]
-];
-generate_config_page($plugin, $cfg);
+print showXMenuConfig();
