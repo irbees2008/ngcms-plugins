@@ -17,17 +17,17 @@ elem.attachEvent("on" + type, handler)
 // DateEdit filter
 function filter_attach_DateEdit(id) {
 var field = document.getElementById(id);
-if (! field) 
+if (! field)
 return false;
 
-if (field.value == '') 
+if (field.value == '')
 field.value = 'DD.MM.YYYY';
 
 field.onfocus = function (event) {
 var ev = event ? event : window.event;
 var elem = ev.target ? ev.target : ev.srcElement;
 
-if (elem.value == 'DD.MM.YYYY') 
+if (elem.value == 'DD.MM.YYYY')
 elem.value = '';
 
 return true;
@@ -54,7 +54,7 @@ isOpera = true;
 // document.getElementById('debugWin').innerHTML = 'keyPress('+ev.keyCode+':'+ev.charCode+')['+(ev.shiftKey?'S':'.')+(ev.ctrlKey?'C':'.')+(ev.altKey?'A':'.')+']<br/>' + document.getElementById('debugWin').innerHTML;
 
 // FF - onKeyPress captures functional keys. Skip anything with charCode = 0
-if (isMozilla && ! ev.charCode) 
+if (isMozilla && ! ev.charCode)
 return true;
 
 // Opera - dumb browser, don't let us to determine some keys
@@ -62,7 +62,7 @@ if (isOpera) {
 var ek = '';
 // for (i in event) { ek = ek + '['+i+']: '+event[i]+'<br/>\n'; }
 // alert(ek);
-if (ev.keyCode < 32) 
+if (ev.keyCode < 32)
 return true;
 
 if (! ev.shiftKey && ((ev.keyCode >= 33) && (ev.keyCode<= 47))) return true;
@@ -75,7 +75,7 @@ if (! ev.shiftKey && ((ev.keyCode >= 33) && (ev.keyCode<= 47))) return true;
 				return true;
 
 			// Allow to input only digits [0..9] and dot [.]
-			if (((keyCode >= 48) && (keyCode <= 57)) || (keyCode == 46)) 
+			if (((keyCode >= 48) && (keyCode <= 57)) || (keyCode == 46))
 return true;
 
 return false;
@@ -112,8 +112,12 @@ return true;
 	<!-- /.row -->
 </div>
 
-<div class="card">
-	<h5 class="card-header">xsyslog</h5>
+
+<div class="card plugin-settings-card">
+	<h5 class="card-header d-flex justify-content-between align-items-center" data-plugin-settings-header>
+		<span>xsyslog</span>{{ documentation_button|raw }}
+	</h5>
+	<div class="card-body plugin-settings-content">
 	<div class="table-responsive">
 
 		<!-- Hidden SUGGEST div -->
@@ -160,7 +164,7 @@ return true;
 						<input name="rpp" value="{{ rpp }}" type="text" size="3" class="form-control bfstatus"/>
 
 					</div>
-					
+
 				</div>
 
 			</div>
@@ -182,6 +186,7 @@ return true;
 
 	{{ entries }}
 
+	</div>
 </div><script>
 $('#dr1, #dr2').datetimepicker({format: "d.m.Y"});</script><script>
 document.addEventListener('DOMContentLoaded', function () {
