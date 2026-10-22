@@ -2,7 +2,7 @@
 	<div class="row mb-2">
 		<div class="col-sm-6">
 			<h1 class="m-0 text-dark" style="padding: 20px 0 0 0;">
-				<a href="?mod=extra-config&plugin=ads_pro">Simple Title Pro</a>
+				<a href="?mod=extra-config&plugin=simple_title_pro">Simple Title Pro</a>
 				&#8594;
 				{{ global }}</h1>
 		</div>
@@ -26,8 +26,13 @@
 	<!-- /.row -->
 </div>
 <!-- /.container-fluid -->
-<div
-	class="container-fluid mt-3">
+
+<div class="card plugin-settings-card">
+	<h5 class="card-header d-flex justify-content-between align-items-center" data-plugin-settings-header>
+		<span>Simple Title Pro</span>{{ lang.documentation_button|raw }}
+	</h5>
+	<div class="card-body plugin-settings-content">
+	<div class="container-fluid mt-3">
 	<!-- Навигационные кнопки -->
 	<div class="card mb-4">
 		<div class="card-body p-2">
@@ -54,4 +59,6 @@
 	{% endif %}
 	<!-- Основное содержимое -->
 	{{ entries }}
+</div>
+</div>
 </div>
