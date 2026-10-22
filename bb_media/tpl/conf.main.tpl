@@ -12,6 +12,10 @@
 		</div>
 	</div>
 </div>
-<div class="container-fluid">
-	{entries}
+<div class="card plugin-settings-card">
+	<h5 class="card-header d-flex justify-content-between align-items-center" data-plugin-settings-header>
+		<span>{l_bb_media:bb_media}</span>{documentation_button}
+	</h5>
+	<div class="card-body plugin-settings-content">{entries}</div>
 </div>
+{documentation_modal}

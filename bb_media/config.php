@@ -4,65 +4,73 @@ pluginsLoadConfig();
 LoadPluginLang('bb_media', 'config', '', '', ':');
 
 switch ($_REQUEST['action']) {
-	case 'general_submit':
-		general_submit();
-		main();
-		break;
-	default:
-		main();
+    case 'general_submit':
+        general_submit();
+        main();
+        break;
+    default:
+        main();
 }
 
-function general_submit() {
+function general_submit()
+{
 
-	global $lang;
+    global $lang;
 
-	if (isset($_POST['submit'])){
-		pluginSetVariable('bb_media', 'player_name', $_POST['player_name']);
-		pluginSetVariable('bb_media', 'theme_player', $_POST['theme_player']);
+    if (isset($_POST['submit'])) {
+        pluginSetVariable('bb_media', 'player_name', $_POST['player_name']);
+        pluginSetVariable('bb_media', 'theme_player', $_POST['theme_player']);
 
-		pluginsSaveConfig();
-		msg(array('type' => 'info', 'info' => $lang['bb_media:save_general']));
-	}
+        pluginsSaveConfig();
+        msg(array('type' => 'info', 'info' => $lang['bb_media:save_general']));
+    }
 }
 
-function main() {
+function main()
+{
 
-	global $tpl, $lang;
-	$tpath = locatePluginTemplates(array('conf.main', 'conf.general.form'), 'bb_media', 1);
-	
-	function getPlayersNames($path) {
+    global $tpl, $lang;
+    $tpath = locatePluginTemplates(array('conf.main', 'conf.general.form'), 'bb_media', 1);
 
-		$dirs = array_filter(glob($path . '*'), 'is_dir');
-		$dirNames = array();
-		foreach ($dirs as $key => $dir) {
-			$basename = basename($dir);
-			$dirNames[$basename] = $basename;
-		}
+    function getPlayersNames($path)
+    {
 
-		return $dirNames;
-	}
+        $dirs = array_filter(glob($path . '*'), 'is_dir');
+        $dirNames = array();
+        foreach ($dirs as $key => $dir) {
+            $basename = basename($dir);
+            $dirNames[$basename] = $basename;
+        }
 
-	$dirNames = getPlayersNames(__DIR__ . '/players/');
+        return $dirNames;
+    }
+
+    $dirNames = getPlayersNames(__DIR__ . '/players/');
 
     $lout = '';
     foreach ($dirNames as $k => $v) {
-        $lout .= '<option value="'.$k.'"'.(pluginGetVariable('bb_media', 'player_name') == $k ? ' selected="selected"' : '').'>'.$v.'</option>';
+        $lout .= '<option value="' . $k . '"' . (pluginGetVariable('bb_media', 'player_name') == $k ? ' selected="selected"' : '') . '>' . $v . '</option>';
     }
 
-	$ttvars['vars']['player_name'] = $lout;
-	
-	$theme_player = pluginGetVariable('bb_media', 'theme_player');
-	$ttvars['vars']['theme_player'] = '<option value="default" '.($theme_player=='default'?'selected':'').'>Стандарт</option><option value="city" '.($theme_player=='city'?'selected':'').'>Город</option><option value="sea" '.($theme_player=='sea'?'selected':'').'>Море</option><option value="fantasy" '.($theme_player=='fantasy'?'selected':'').'>Фантазия</option><option value="forest" '.($theme_player=='forest'?'selected':'').'>Лес</option>';
+    $ttvars['vars']['player_name'] = $lout;
 
-	$ttvars['vars']['action'] = $lang['bb_media:settings'];
-	
-	$tpl->template('conf.general.form', $tpath['conf.general.form']);
-	$tpl->vars('conf.general.form', $ttvars);
-	
-	$tvars['vars']['entries'] = $tpl->show('conf.general.form');
-	$tvars['vars']['action'] = $lang['bb_media:settings'];
-	
-	$tpl->template('conf.main', $tpath['conf.main']);
-	$tpl->vars('conf.main', $tvars);
-	print $tpl->show('conf.main');
+    $theme_player = pluginGetVariable('bb_media', 'theme_player');
+    $ttvars['vars']['theme_player'] = '<option value="default" ' . ($theme_player == 'default' ? 'selected' : '') . '>Стандарт</option><option value="city" ' . ($theme_player == 'city' ? 'selected' : '') . '>Город</option><option value="sea" ' . ($theme_player == 'sea' ? 'selected' : '') . '>Море</option><option value="fantasy" ' . ($theme_player == 'fantasy' ? 'selected' : '') . '>Фантазия</option><option value="forest" ' . ($theme_player == 'forest' ? 'selected' : '') . '>Лес</option>';
+
+    $ttvars['vars']['action'] = $lang['bb_media:settings'];
+
+    $tpl->template('conf.general.form', $tpath['conf.general.form']);
+    $tpl->vars('conf.general.form', $ttvars);
+
+    $tvars['vars']['entries'] = $tpl->show('conf.general.form');
+    $tvars['vars']['action'] = $lang['bb_media:settings'];
+    $tvars['vars']['documentation_button'] = '';
+    $tvars['vars']['documentation_modal'] = '';
+    if (function_exists('plugin_documentation_markup')) {
+        list($tvars['vars']['documentation_button'], $tvars['vars']['documentation_modal']) = plugin_documentation_markup('bb_media');
+    }
+
+    $tpl->template('conf.main', $tpath['conf.main']);
+    $tpl->vars('conf.main', $tvars);
+    print $tpl->show('conf.main');
 }
