@@ -36,7 +36,7 @@ if (! function_exists('__')) {
     }
 }
 
-if (! function_exists('array_dotset')) {
+if (! function_exists(__NAMESPACE__ . '\\array_dotset') && ! function_exists('array_dotset')) {
     /**
      * Set an array item to a given value using "dot" notation.
      *
@@ -74,7 +74,7 @@ if (! function_exists('array_dotset')) {
     }
 }
 
-if (! function_exists('cache')) {
+if (! function_exists(__NAMESPACE__ . '\\cache') && ! function_exists('cache')) {
     /**
      * Get / set the specified cache value.
      * If an `int` as `$variety` is passed, we'll assume you want to retrieve from the cache.
@@ -88,7 +88,7 @@ if (! function_exists('cache')) {
     {
         $cacheExpire = config($plugin, 'cache') ? (int) config($plugin, 'cacheExpire', 60) : 0;
 
-        if (is_null($data) and !$cacheExpire ) {
+        if (is_null($data) and !$cacheExpire) {
             return false;
         }
 
@@ -98,7 +98,7 @@ if (! function_exists('cache')) {
     }
 }
 
-if (! function_exists('cacheRemember')) {
+if (! function_exists(__NAMESPACE__ . '\\cacheRemember') && ! function_exists('cacheRemember')) {
     /**
      * Get an item from the cache, or store the default value.
      *
@@ -117,7 +117,7 @@ if (! function_exists('cacheRemember')) {
     }
 }
 
-if (! function_exists('catz')) {
+if (! function_exists(__NAMESPACE__ . '\\catz') && ! function_exists('catz')) {
     /**
      * Get a category or an array of all categories.
      *
@@ -132,7 +132,7 @@ if (! function_exists('catz')) {
     }
 }
 
-if (! function_exists('config')) {
+if (! function_exists(__NAMESPACE__ . '\\config') && ! function_exists('config')) {
     /**
      * Get / set the specified configuration value of plugin.
      * If an array is passed as the key, we will assume you want to set an array of values.
@@ -154,7 +154,7 @@ if (! function_exists('config')) {
     }
 }
 
-if (! function_exists('database')) {
+if (! function_exists(__NAMESPACE__ . '\\database') && ! function_exists('database')) {
     /**
      * Get a current connected database.
      *
@@ -168,7 +168,7 @@ if (! function_exists('database')) {
     }
 }
 
-if (! function_exists('request')) {
+if (! function_exists(__NAMESPACE__ . '\\request') && ! function_exists('request')) {
     /**
      * Get an input item from the global $_REQUEST.
      *
@@ -186,7 +186,7 @@ if (! function_exists('request')) {
     }
 }
 
-if (! function_exists('pageInfo')) {
+if (! function_exists(__NAMESPACE__ . '\\pageInfo') && ! function_exists('pageInfo')) {
     /**
      * Set system info about the page.
      *
@@ -202,7 +202,7 @@ if (! function_exists('pageInfo')) {
     }
 }
 
-if (! function_exists('view')) {
+if (! function_exists(__NAMESPACE__ . '\\view') && ! function_exists('view')) {
     /**
      * Renders a template.
      *
@@ -218,7 +218,7 @@ if (! function_exists('view')) {
     }
 }
 
-if (! function_exists('value')) {
+if (! function_exists(__NAMESPACE__ . '\\value') && ! function_exists('value')) {
     /**
      * Return the default value of the given value.
      *
