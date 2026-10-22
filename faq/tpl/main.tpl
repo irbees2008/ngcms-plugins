@@ -23,8 +23,11 @@
 	<!-- /.row -->
 </div>
 
-<div class="card">
-	<h5 class="card-header">FAQ</h5>
+<div class="card plugin-settings-card">
+	<h5 class="card-header d-flex justify-content-between align-items-center" data-plugin-settings-header>
+		<span>FAQ</span>{{ documentation_button|raw }}
+	</h5>
+	<div class="card-body plugin-settings-content">
 	<div class="container mt-5">
 
 		<div class="btn-group" role="group" aria-label="Basic example">
@@ -37,5 +40,5 @@
 
 		{{ entries }}
 	</div>
-
+	</div>
 </div>
