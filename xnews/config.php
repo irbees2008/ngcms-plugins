@@ -19,6 +19,14 @@ array_push($cfg, array(
 for ($i = 1; $i <= $count; $i++) {
 	$cfgX = array();
 	$currentVar = "{$i}";
+	$enabledVar = "{$currentVar}_enabled";
+	$isEnabled = (string) pluginGetVariable($plugin, $enabledVar) !== '0';
+	array_push($cfgX, array(
+			'name'  => $enabledVar,
+			'type'  => 'flat',
+			'input' => ''
+		)
+	);
 	array_push($cfgX, array(
 			'name'  => "{$currentVar}_name",
 			'title' => 'Идентификатор блока<br/><small>По данному ID можно будет формировать данный блок через вызов <b>TWIG</b> функции <b>callPlugin()</b>',
@@ -156,9 +164,14 @@ for ($i = 1; $i <= $count; $i++) {
 		);
 	*/
 	$blockName = pluginGetVariable($plugin, "{$currentVar}_name") ? pluginGetVariable('xnews', "{$currentVar}_name") : '# ' . $currentVar;
+	$enabledControl = '<span class="custom-control custom-switch py-2 mr-2" style="display: inline-block; vertical-align: middle;margin: 10px 0px 0px 10px;" data-bs-toggle="tooltip" title="' . $lang['tn:block_toggle'] . '">'
+		. '<input type="hidden" name="' . $enabledVar . '" value="0" />'
+		. '<input id="xnewsBlockEnabled' . $currentVar . '" type="checkbox" class="custom-control-input" name="' . $enabledVar . '" value="1"' . ($isEnabled ? ' checked' : '') . ' aria-label="' . $lang['tn:block_toggle'] . '" />'
+		. '<label for="xnewsBlockEnabled' . $currentVar . '" class="custom-control-label"></label>'
+		. '</span>';
 	array_push($cfg, array(
 			'mode'        => 'group',
-			'title'       => $lang['tn:group'] . $blockName,
+			'title'       => $lang['tn:group'] . $blockName . $enabledControl,
 			'toggle'      => '1',
 			'toggle.mode' => 'hide',
 			'entries'     => $cfgX

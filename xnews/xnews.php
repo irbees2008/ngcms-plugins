@@ -31,10 +31,13 @@ function xNewsShowBlock($params)
 	if (isset($params['id']) && $params['id']) {
 		// Scan blocks
 		$isFound = false;
-		for ($i = 1; $i < 50; $i++) {
+		for ($i = 1; $i <= 50; $i++) {
 			if (pluginGetVariable('xnews', $i . '_name') == $params['id']) {
 				// BLOCK FOUND. MAKE PRESETS !!!
 				$isFound = true;
+				if ((string) pluginGetVariable('xnews', $i . '_enabled') === '0') {
+					return '';
+				}
 				if (pluginGetVariable('xnews', 'cache') && (!isset($params['cacheAge']))) {
 					$params['cacheAge'] = pluginGetVariable('xnews', 'cacheExpire');
 				}
