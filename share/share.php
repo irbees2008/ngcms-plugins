@@ -8,7 +8,7 @@ class ShareNewsFilter extends NewsFilter
 
     function showNews($newsID, $SQLnews, &$tvars, $mode = array())
     {
-        global $twig, $config, $template, $lang;
+        global $twig, $config, $template;
 
         LoadPluginLang('share', 'site', '', '', ':');
 
@@ -41,13 +41,6 @@ class ShareNewsFilter extends NewsFilter
             'home' => $config['home_url'],
             'css_url' => $cssUrl,
             'networks' => $networks,
-            'lang' => array(
-                'plugin_title' => $lang['share:plugin_title'],
-                'network_vk' => $lang['share:network.vk'],
-                'network_ok' => $lang['share:network.ok'],
-                'network_mailru' => $lang['share:network.mailru'],
-                'network_print' => $lang['share:network.print'],
-            ),
             'news' => array(
                 'url' => $tvars['vars']['news']['url']['full'],
                 'title' => $tvars['vars']['news']['title'],
