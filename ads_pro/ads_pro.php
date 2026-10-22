@@ -68,10 +68,11 @@ $adsPRO_cache = array(
 function plugin_ads_pro()
 {
     global $template, $config, $CurrentHandler, $catmap, $mysql, $adsPRO_cache;
-    $dataConfig = pluginGetVariable('ads_pro', 'data');
-    if (!is_array($dataConfig)) return;
-    // Синхронизация с базой данных при переносе сайта
-    $dataConfig = ads_pro_sync_with_database($dataConfig);
+    if (ads_pro_migrate_legacy_data()) {
+        $dataConfig = ads_pro_get_blocks();
+    } else {
+        $dataConfig = ads_pro_get_legacy_blocks();
+    }
     if ($CurrentHandler['params'][0] == '/') $adsPRO_cache['flag.main'] = true;
     if (isset($CurrentHandler['params']['catid'])) {
         $adsPRO_cache['flag.category'] = true;
@@ -255,16 +256,9 @@ function plugin_ads_pro()
 
                 logger('Cache MISS for block: id=' . $blockIndexNum . ', block=' . $blockID, 'debug', 'ads_pro.log');
 
-                $description = '';
-                if (is_array($row = $mysql->record('select ads_blok from ' . prefix . '_ads_pro where id=' . db_squote($blockIndexNum)))) {
-                    // Get content based on type: 0=HTML, 2=TEXT
-                    if ($blockInfo['type'] == 0) {
-                        // HTML type - output as is (admin is responsible for content)
-                        $description = $row['ads_blok'];
-                    } else {
-                        // TEXT type - escape all HTML and convert newlines
-                        $description = nl2br(sanitize($row['ads_blok'], 'string'));
-                    }
+                $description = $blockInfo['ads_blok'];
+                if ($blockInfo['type'] == 2) {
+                    $description = nl2br(sanitize($description, 'string'));
                 }
 
                 $template['vars'][$tplVarName] .= $description;
@@ -276,10 +270,7 @@ function plugin_ads_pro()
                 logger('Rendered and cached block: id=' . $blockIndexNum . ', size=' . strlen($description) . ' bytes', 'info', 'ads_pro.log');
             } else {
                 // PHP type block - execute dynamically (no caching)
-                $description = '';
-                if (is_array($row = $mysql->record('select ads_blok from ' . prefix . '_ads_pro where id=' . db_squote($blockIndexNum)))) {
-                    $description = $row['ads_blok'];
-                }
+                $description = $blockInfo['ads_blok'];
 
                 logger('Executing PHP block: id=' . $blockIndexNum . ', block=' . $blockID, 'info', 'ads_pro.log');
 
@@ -303,100 +294,145 @@ function plugin_ads_pro()
         }
     }
 }
-// Функция синхронизации данных плагина с базой данных
-function ads_pro_sync_with_database($dataConfig)
+function ads_pro_get_blocks()
 {
     global $mysql;
 
-    logger('Starting database synchronization', 'debug', 'ads_pro.log');
-
-    // Получаем все ID из базы данных
-    $dbIds = array();
-    foreach ($mysql->select('SELECT id FROM ' . prefix . '_ads_pro') as $row) {
-        $dbIds[] = intval($row['id']);
+    $blocks = array();
+    $schema = $mysql->record("SHOW COLUMNS FROM " . prefix . "_ads_pro LIKE 'sort_order'");
+    if (!is_array($schema)) {
+        return ads_pro_get_legacy_blocks();
     }
 
-    // Получаем все ID из конфигурации
-    $configIds = array();
-    foreach ($dataConfig as $blockName => $blocks) {
-        foreach ($blocks as $blockId => $blockData) {
-            $configIds[] = intval($blockId);
+    $rows = $mysql->select('SELECT id, block_name, description, ads_blok, type, state, start_view, end_view, location FROM ' . prefix . '_ads_pro WHERE block_name <> \'\' ORDER BY sort_order, id');
+    foreach ($rows as $row) {
+        $name = (string)$row['block_name'];
+        $location = @unserialize($row['location'], array('allowed_classes' => false));
+        if (!is_array($location)) {
+            $location = array(1 => array('mode' => 0, 'view' => 0));
+        }
+
+        $blocks[$name][intval($row['id'])] = array(
+            'description' => $row['description'],
+            'ads_blok' => $row['ads_blok'],
+            'type' => intval($row['type']),
+            'state' => intval($row['state']),
+            'start_view' => intval($row['start_view']) ?: null,
+            'end_view' => intval($row['end_view']) ?: null,
+            'location' => $location,
+        );
+    }
+
+    return $blocks;
+}
+
+function ads_pro_get_legacy_blocks()
+{
+    global $mysql;
+
+    $blocks = pluginGetVariable('ads_pro', 'data');
+    if (!is_array($blocks)) {
+        return array();
+    }
+
+    foreach ($blocks as $name => &$records) {
+        foreach ($records as $id => &$record) {
+            $row = $mysql->record('SELECT ads_blok FROM ' . prefix . '_ads_pro WHERE id=' . intval($id));
+            $record['ads_blok'] = is_array($row) ? $row['ads_blok'] : '';
+        }
+        unset($record);
+    }
+    unset($records);
+
+    return $blocks;
+}
+
+function ads_pro_migrate_legacy_data()
+{
+    global $mysql, $PLUGINS;
+
+    $legacyData = pluginGetVariable('ads_pro', 'data');
+    if (!is_array($legacyData)) {
+        return true;
+    }
+
+    $schema = $mysql->record("SHOW COLUMNS FROM " . prefix . "_ads_pro LIKE 'sort_order'");
+    if (!is_array($schema)) {
+        return false;
+    }
+
+    $sortOrder = 0;
+    foreach ($legacyData as $blockName => $records) {
+        if (!is_array($records)) {
+            return false;
+        }
+
+        foreach ($records as $id => $block) {
+            $id = intval($id);
+            if ($id < 1 || !is_array($block)) {
+                return false;
+            }
+
+            $name = (string)$blockName;
+            $description = isset($block['description']) ? $block['description'] : '';
+            $type = max(0, min(2, intval(isset($block['type']) ? $block['type'] : 0)));
+            $state = max(0, min(2, intval(isset($block['state']) ? $block['state'] : 0)));
+            $startView = intval(isset($block['start_view']) ? $block['start_view'] : 0);
+            $endView = intval(isset($block['end_view']) ? $block['end_view'] : 0);
+            $location = isset($block['location']) && is_array($block['location'])
+                ? $block['location']
+                : array(1 => array('mode' => 0, 'view' => 0));
+
+            if (
+                $name === 'fase'
+                && preg_match('/^Восстановленный блок(?: #\d+)?$/u', trim((string)$description))
+                && $type === 0
+                && $state === 0
+                && !$startView
+                && !$endView
+                && $location === array(1 => array('mode' => 0, 'view' => 0))
+            ) {
+                $sortOrder++;
+                continue;
+            }
+
+            $row = $mysql->record('SELECT id FROM ' . prefix . '_ads_pro WHERE id=' . $id);
+            if (is_array($row)) {
+                $queryResult = $mysql->query('UPDATE ' . prefix . '_ads_pro SET '
+                    . 'block_name=' . db_squote($name) . ', '
+                    . 'description=' . db_squote($description) . ', '
+                    . 'type=' . $type . ', state=' . $state . ', '
+                    . 'start_view=' . $startView . ', end_view=' . $endView . ', '
+                    . 'location=' . db_squote(serialize($location)) . ', '
+                    . 'sort_order=' . $sortOrder . ' WHERE id=' . $id . ' LIMIT 1');
+            } else {
+                $queryResult = $mysql->query('INSERT INTO ' . prefix . '_ads_pro '
+                    . '(id, block_name, description, ads_blok, type, state, start_view, end_view, location, sort_order) VALUES ('
+                    . $id . ', ' . db_squote($name) . ', ' . db_squote($description) . ', ' . db_squote('') . ', '
+                    . $type . ', ' . $state . ', ' . $startView . ', ' . $endView . ', '
+                    . db_squote(serialize($location)) . ', ' . $sortOrder . ')');
+            }
+
+            if ($queryResult === null) {
+                return false;
+            }
+            if (!is_array($mysql->record('SELECT id FROM ' . prefix . '_ads_pro WHERE id=' . $id))) {
+                return false;
+            }
+            $sortOrder++;
         }
     }
 
-    // Проверяем, есть ли расхождения
-    $missingInDb = array_diff($configIds, $dbIds);
-    $missingInConfig = array_diff($dbIds, $configIds);
-
-    // Если есть ID в конфиге, которых нет в БД - удаляем их из конфига
-    if (!empty($missingInDb)) {
-        logger('Sync: removing ' . count($missingInDb) . ' orphaned blocks from config, IDs=' . implode(',', $missingInDb), 'warning', 'ads_pro.log');
-
-        foreach ($dataConfig as $blockName => &$blocks) {
-            foreach ($blocks as $blockId => $blockData) {
-                if (in_array(intval($blockId), $missingInDb)) {
-                    unset($blocks[$blockId]);
-                }
-            }
-            // Удаляем пустые блоки
-            if (empty($blocks)) {
-                unset($dataConfig[$blockName]);
-            }
-        }
+    $backupFile = conf_pconfig . '.ads_pro-migration.bak';
+    if (is_file(conf_pconfig) && !is_file($backupFile) && !@copy(conf_pconfig, $backupFile)) {
+        return false;
     }
 
-    // Если есть ID в БД, которых нет в конфиге - восстанавливаем их
-    if (!empty($missingInConfig)) {
-        logger('Sync: restoring ' . count($missingInConfig) . ' blocks from database, IDs=' . implode(',', $missingInConfig), 'warning', 'ads_pro.log');
-
-        // Сначала ищем в исходной конфигурации
-        $originalConfig = pluginGetVariable('ads_pro', 'data');
-        $foundInOriginal = array();
-
-        foreach ($missingInConfig as $dbId) {
-            // Ищем этот ID в исходной конфигурации
-            foreach ($originalConfig as $blockName => $blocks) {
-                foreach ($blocks as $blockId => $blockData) {
-                    if (intval($blockId) == $dbId) {
-                        // Найден в исходной конфигурации - восстанавливаем
-                        $dataConfig[$blockName][$dbId] = $blockData;
-                        $foundInOriginal[] = $dbId;
-                        logger('Restored block ' . $dbId . ' from original config', 'info', 'ads_pro.log');
-                        break 2;
-                    }
-                }
-            }
-        }
-
-        // Для ID, которых нет в исходной конфигурации, создаем базовую структуру
-        $notFoundInOriginal = array_diff($missingInConfig, $foundInOriginal);
-
-        foreach ($notFoundInOriginal as $dbId) {
-            $row = $mysql->record('SELECT * FROM ' . prefix . '_ads_pro WHERE id = ' . intval($dbId));
-
-            if ($row) {
-                $blockName = 'fase'; // Default block name
-                $dataConfig[$blockName][$dbId] = array(
-                    'description' => $row['description'] ? sanitize($row['description'], 'string') : 'Восстановленный блок #' . $dbId,
-                    'type' => clamp(intval($row['type']), 0, 2), // 0=HTML, 1=PHP, 2=TEXT
-                    'state' => clamp(intval($row['state']), 0, 2), // 0=off, 1=on, 2=scheduled
-                    'start_view' => $row['start_view'] ? intval($row['start_view']) : null,
-                    'end_view' => $row['end_view'] ? intval($row['end_view']) : null,
-                    'location' => $row['location'] ? unserialize($row['location']) : array(1 => array('mode' => 0, 'view' => 0))
-                );
-
-                logger('Restored block ' . $dbId . ' from database with basic structure', 'info', 'ads_pro.log');
-            }
-        }
-
-        // Сохраняем обновленную конфигурацию
-        pluginSetVariable('ads_pro', 'data', $dataConfig);
-        pluginsSaveConfig();
-
-        logger('Database synchronization completed, config saved', 'info', 'ads_pro.log');
-    } else {
-        logger('Database synchronization: no changes needed', 'debug', 'ads_pro.log');
+    unset($PLUGINS['config']['ads_pro']['data']);
+    if (!pluginsSaveConfig()) {
+        $PLUGINS['config']['ads_pro']['data'] = $legacyData;
+        return false;
     }
 
-    return $dataConfig;
+    return true;
 }

@@ -125,7 +125,7 @@
 			</div>
 		</div>
 	</div>
-	<div class="card mb-4">
+	<div id="scheduleSettings" class="card mb-4{% if state != 2 %} d-none{% endif %}">
 		<div class="card-header">
 			<b>{{ lang['ads_pro:sched_legend'] }}</b>
 		</div>
@@ -190,3 +190,17 @@
 		</button>
 	</div>
 </form>
+<script>
+	(function() {
+		var stateField = document.querySelector('select[name="state"]');
+		var scheduleSettings = document.getElementById('scheduleSettings');
+		if (!stateField || !scheduleSettings) {
+			return;
+		}
+		function toggleScheduleSettings() {
+			scheduleSettings.classList.toggle('d-none', stateField.value !== '2');
+		}
+		stateField.addEventListener('change', toggleScheduleSettings);
+		toggleScheduleSettings();
+	})();
+</script>
