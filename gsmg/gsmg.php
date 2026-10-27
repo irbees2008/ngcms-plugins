@@ -82,13 +82,43 @@ function plugin_gsmg_screen()
         'content-type' => 'application/xml; charset=utf-8',
         'cache-control' => 'private',
     );
-    // Проверяем кэш (если включён)
-    if (extra_get_param('gsmg', 'cache')) {
-        $cacheData = cacheRetrieveFile($sitemapIndexCacheFile, extra_get_param('gsmg', 'cacheExpire'), 'gsmg');
+    $cacheEnabled = (bool) extra_get_param('gsmg', 'cache');
+    $cacheExpire = (int) extra_get_param('gsmg', 'cacheExpire');
+    $sitemapLock = null;
+
+    if ($cacheEnabled) {
+        $cacheData = cacheRetrieveFile($sitemapIndexCacheFile, $cacheExpire, 'gsmg');
         if ($cacheData != false) {
             gsmg_logger('Sitemap served from cache', 'info', 'gsmg.log');
             print $cacheData;
             exit;
+        }
+
+        $cacheDirectory = get_plugcache_dir('gsmg');
+        if ($cacheDirectory) {
+            $sitemapLock = @fopen($cacheDirectory . $sitemapIndexCacheFile . '.lock', 'c');
+            if ($sitemapLock === false) {
+                $sitemapLock = null;
+                gsmg_logger('Unable to open sitemap generation lock; generating without cache lock', 'error', 'gsmg.log');
+            } elseif (!flock($sitemapLock, LOCK_EX)) {
+                fclose($sitemapLock);
+                $sitemapLock = null;
+                gsmg_logger('Unable to acquire sitemap generation lock; generating without cache lock', 'error', 'gsmg.log');
+            } else {
+                register_shutdown_function(static function () use ($sitemapLock) {
+                    flock($sitemapLock, LOCK_UN);
+                    fclose($sitemapLock);
+                });
+
+                $cacheData = cacheRetrieveFile($sitemapIndexCacheFile, $cacheExpire, 'gsmg');
+                if ($cacheData != false) {
+                    gsmg_logger('Sitemap served from cache after waiting for generation lock', 'info', 'gsmg.log');
+                    print $cacheData;
+                    exit;
+                }
+            }
+        } else {
+            gsmg_logger('Unable to resolve sitemap cache directory; generating without cache lock', 'error', 'gsmg.log');
         }
     }
     // Максимальное количество URL в одном файле (50 000 по стандарту Google)
@@ -172,24 +202,35 @@ function plugin_gsmg_screen()
     }
     // ===== 3. Новости =====
     if (extra_get_param('gsmg', 'news')) {
-        $query = "select id, postdate, author, author_id, alt_name, editdate, catid from " . prefix . "_news where approve = 1 order by id desc";
-        foreach ($mysql->select($query, 1) as $rec) {
-            if ($urlCount >= $maxUrlsPerFile) {
-                $sitemapParts[$currentPart] .= "</urlset>";
-                $currentPart++;
-                $sitemapParts[$currentPart] = '<?xml version="1.0" encoding="UTF-8"?>';
-                $sitemapParts[$currentPart] .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
-                $urlCount = 0;
+        $newsBatchSize = 1000;
+        $lastNewsID = null;
+        do {
+            $idCondition = ($lastNewsID === null) ? '' : ' AND id < ' . intval($lastNewsID);
+            $query = 'SELECT id, postdate, alt_name, editdate, catid FROM ' . prefix . '_news'
+                . ' WHERE approve = 1' . $idCondition . ' ORDER BY id DESC LIMIT ' . $newsBatchSize;
+            $newsBatch = $mysql->select($query, 1);
+            if (!is_array($newsBatch)) {
+                throw new RuntimeException('Failed to fetch news while generating the GSMG sitemap.');
             }
-            $link = newsGenerateLink($rec, false, 0, true);
-            $sitemapParts[$currentPart] .= "<url>";
-            $sitemapParts[$currentPart] .= "<loc>" . gsmg_xml_escape($link) . "</loc>";
-            $sitemapParts[$currentPart] .= "<priority>" . floatval(extra_get_param('gsmg', 'news_pr')) . "</priority>";
-            $sitemapParts[$currentPart] .= "<lastmod>" . date('Y-m-d', max($rec['editdate'], $rec['postdate'])) . "</lastmod>";
-            $sitemapParts[$currentPart] .= "<changefreq>daily</changefreq>";
-            $sitemapParts[$currentPart] .= "</url>";
-            $urlCount++;
-        }
+            foreach ($newsBatch as $rec) {
+                $lastNewsID = (int) $rec['id'];
+                if ($urlCount >= $maxUrlsPerFile) {
+                    $sitemapParts[$currentPart] .= "</urlset>";
+                    $currentPart++;
+                    $sitemapParts[$currentPart] = '<?xml version="1.0" encoding="UTF-8"?>';
+                    $sitemapParts[$currentPart] .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+                    $urlCount = 0;
+                }
+                $link = newsGenerateLink($rec, false, 0, true);
+                $sitemapParts[$currentPart] .= "<url>";
+                $sitemapParts[$currentPart] .= "<loc>" . gsmg_xml_escape($link) . "</loc>";
+                $sitemapParts[$currentPart] .= "<priority>" . floatval(extra_get_param('gsmg', 'news_pr')) . "</priority>";
+                $sitemapParts[$currentPart] .= "<lastmod>" . date('Y-m-d', max($rec['editdate'], $rec['postdate'])) . "</lastmod>";
+                $sitemapParts[$currentPart] .= "<changefreq>daily</changefreq>";
+                $sitemapParts[$currentPart] .= "</url>";
+                $urlCount++;
+            }
+        } while (count($newsBatch) === $newsBatchSize);
     }
     // ===== 4. Статические страницы =====
     if (extra_get_param('gsmg', 'static')) {
@@ -240,9 +281,12 @@ function plugin_gsmg_screen()
     }
     $sitemapIndex .= "</sitemapindex>\n";
     // Сохраняем в кэш (если включён)
-    if (extra_get_param('gsmg', 'cache')) {
-        cacheStoreFile($sitemapIndexCacheFile, $sitemapIndex, 'gsmg');
-        gsmg_logger('Sitemap index cached successfully', 'info', 'gsmg.log');
+    if ($cacheEnabled) {
+        if (cacheStoreFile($sitemapIndexCacheFile, $sitemapIndex, 'gsmg')) {
+            gsmg_logger('Sitemap index cached successfully', 'info', 'gsmg.log');
+        } else {
+            gsmg_logger('Failed to cache sitemap index', 'error', 'gsmg.log');
+        }
     }
 
     // Log completion
