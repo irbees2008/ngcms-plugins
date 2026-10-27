@@ -158,16 +158,19 @@ function xNewsShowBlock($params)
 	$cacheKeys[] = '|embed=' . intval($params['extractEmbeddedItems']);
 	$cacheKeys[] = '|categoryMode=' . $params['categoryMode'];
 	$cacheKeys[] = '|categories=' . implode(",", $categoryList ?: []);
+	$categoryIDs = array();
 	if ($showAge > 0) {
-		$filterList[] = '((unix_timestamp(now()) - postdate) < ' . ($showAge * 86400) . ')';
+		$filterList[] = '(postdate > (unix_timestamp() - ' . ($showAge * 86400) . '))';
 	}
 	if ((is_array($categoryList) && count($categoryList))) {
-		//print "categoryList [".var_export($categoryList, true)."]";
-		$catFilter = array();
+		$categoryIDs = array();
 		foreach ($categoryList as $cat) {
-			$catFilter[] = "(catid regexp '\\\\b(" . trim($cat) . ")\\\\b')";
+			$cat = trim((string) $cat);
+			if ($cat !== '' && ctype_digit($cat)) {
+				$categoryIDs[] = (int) $cat;
+			}
 		}
-		$filterList[] = '(' . join(' OR ', $catFilter) . ')';
+		$categoryIDs = array_values(array_unique($categoryIDs));
 	}
 	$orderAllowed = array('rating' => 'rating desc', 'editdate' => 'editdate desc', 'viewed' => 'views desc', 'commented' => 'com desc', 'last' => 'postdate desc', 'first' => 'postdate asc', 'random' => 'rand()');
 	if ($params['order'] && isset($orderAllowed[$params['order']])) {
@@ -178,8 +181,31 @@ function xNewsShowBlock($params)
 	$cacheKeys[] = '|order=' . $orderBy;
 	// Show only published news
 	$filterList[] = '(approve > 0)';
-	// Prepare SQL query
-	$requestQuery = "SELECT * FROM " . prefix . "_news " . ((count($filterList) > 0) ? "WHERE " . implode(" AND ", $filterList) : "") . " ORDER BY {$orderBy} LIMIT {$showSkip}, {$showCount}";
+	$categoryJoin = '';
+	$categoryFilter = '';
+	$newsIndexHint = '';
+	if ($categoryIDs) {
+		if (in_array($orderBy, ['postdate desc', 'postdate asc'], true)) {
+			$categoryFilter = ' AND EXISTS (SELECT 1 FROM ' . prefix . '_news_map NM FORCE INDEX (newsmap_category_news) WHERE NM.categoryID IN ('
+				. implode(', ', $categoryIDs) . ') AND NM.newsID = ' . prefix . '_news.id)';
+			$newsIndexHint = ' FORCE INDEX (postdate)';
+		} else {
+			$categoryJoin = ' JOIN (SELECT DISTINCT NM.newsID FROM ' . prefix . '_news_map NM WHERE NM.categoryID IN ('
+				. implode(', ', $categoryIDs) . ')) AS XNM ON XNM.newsID = ' . prefix . '_news.id';
+		}
+	}
+	// Select and sort only IDs before loading the full news rows for the requested page.
+	$isRandomOrder = ($orderBy === 'rand()');
+	$innerOrderBy = $isRandomOrder ? 'xnews_random' : $orderBy;
+	$outerOrderBy = $isRandomOrder ? 'XNP.xnews_random' : $orderBy;
+	$randomOrderColumn = $isRandomOrder ? ', RAND() AS xnews_random' : '';
+	$filteredNewsQuery = 'SELECT ' . prefix . '_news.id' . $randomOrderColumn
+		. ' FROM ' . prefix . '_news' . $newsIndexHint . $categoryJoin . ' '
+		. ((count($filterList) > 0) ? 'WHERE ' . implode(' AND ', $filterList) . ' ' : '')
+		. $categoryFilter . ' ORDER BY ' . $innerOrderBy . ' LIMIT ' . $showSkip . ', ' . $showCount;
+	$requestQuery = 'SELECT ' . prefix . '_news.* FROM ' . prefix . '_news JOIN ('
+		. $filteredNewsQuery . ') AS XNP ON XNP.id = ' . prefix . '_news.id '
+		. 'ORDER BY ' . $outerOrderBy;
 	// Check if template directory is specified and exists
 	$templateDir = '';
 	if (isset($params['template'])) {
