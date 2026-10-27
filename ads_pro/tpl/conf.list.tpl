@@ -28,6 +28,16 @@
 				<td>{{ item.online }}</td>
 				<td class="text-right">
 					<div class="btn-group btn-group-sm">
+						<form method="post" action="admin.php?mod=extra-config&amp;plugin=ads_pro" class="d-inline">
+							<input type="hidden" name="action" value="toggle">
+							<input type="hidden" name="id" value="{{ item.id }}">
+							<input type="hidden" name="token" value="{{ token }}">
+							<a type="submit" class="btn {{ item.enabled ? 'btn-outline-success' : 'btn-outline-secondary' }}" title="{{ item.toggle_title }}" aria-label="{{ item.toggle_title }}">
+								<i class="fa fa-power-off"></i>
+							</a>
+						</form>
+            </div>
+					<div class="btn-group btn-group-sm">
 						<a href="admin.php?mod=extra-config&plugin=ads_pro&action=edit&id={{ item.id }}" class="btn btn-outline-primary" title="{{ lang['ads_pro:button_edit'] }}">
 							<i class="fa fa-pencil"></i>
 						</a>

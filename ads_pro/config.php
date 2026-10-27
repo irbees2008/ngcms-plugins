@@ -29,6 +29,9 @@ switch ($_REQUEST['action']) {
     case 'dell':
         delete();
         break;
+    case 'toggle':
+        ads_pro_toggle_block();
+        break;
     case 'main_submit':
         main_submit();
         break;
@@ -129,13 +132,16 @@ function showlist()
                 'description' => $vv['description'],
                 'type' => $t_type[$vv['type']],
                 'state' => $t_state[$vv['state']],
-                'online' => ($if_view || $vv['state'] == 1) ? $lang['ads_pro:online_on'] : $lang['ads_pro:online_off']
+                'online' => ($if_view || $vv['state'] == 1) ? $lang['ads_pro:online_on'] : $lang['ads_pro:online_off'],
+                'enabled' => $vv['state'] > 0,
+                'toggle_title' => $vv['state'] > 0 ? $lang['ads_pro:button_disable'] : $lang['ads_pro:button_enable'],
             ];
         }
     }
 
     $ttvars['vars']['items'] = $items;
     $ttvars['vars']['lang'] = $lang;
+    $ttvars['vars']['token'] = htmlspecialchars((string)genUToken('admin.extra-config'), ENT_QUOTES, 'UTF-8');
     $tpl->template('conf.list', $tpath['conf.list']);
     $tpl->vars('conf.list', $ttvars);
     $tvars['vars']['entries'] = $tpl->show('conf.list');
@@ -379,6 +385,39 @@ function delete()
     $title = is_array($row) ? $row['description'] : '';
     $mysql->query('DELETE FROM ' . prefix . '_ads_pro WHERE id=' . $id . ' LIMIT 1');
     msg(array('type' => 'info', 'info' => sprintf($lang['ads_pro:info_delete'], $title)));
+    clear_cash();
+    showlist();
+}
+
+function ads_pro_toggle_block()
+{
+    global $mysql, $lang;
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST'
+        || !isset($_POST['token'])
+        || !is_string($_POST['token'])
+        || !hash_equals((string)genUToken('admin.extra-config'), $_POST['token'])) {
+        throw new RuntimeException('Invalid ads_pro block toggle request token.');
+    }
+
+    $id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT);
+    if ($id === false || $id < 1) {
+        throw new RuntimeException('Invalid ads_pro block ID for toggle.');
+    }
+    $row = $mysql->record(
+        'SELECT state, start_view, end_view FROM ' . prefix . '_ads_pro WHERE id=' . db_squote($id) . ' LIMIT 1'
+    );
+    if (!is_array($row)) {
+        throw new RuntimeException('Ads_pro block not found for toggle: #' . $id);
+    }
+
+    if ((int)$row['state'] > 0) {
+        $newState = 0;
+    } else {
+        $newState = ((int)$row['start_view'] > 0 || (int)$row['end_view'] > 0) ? 2 : 1;
+    }
+    $mysql->query(
+        'UPDATE ' . prefix . '_ads_pro SET state=' . $newState . ' WHERE id=' . db_squote($id) . ' LIMIT 1'
+    );
     clear_cash();
     showlist();
 }
