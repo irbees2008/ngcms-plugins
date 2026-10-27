@@ -31,6 +31,7 @@ $db_update = [
 if ($_REQUEST['action'] == 'commit') {
     // If submit requested, do config save
     global $mysql, $config;
+    $installError = '';
 
     // MySQL 8 strict mode (NO_ZERO_DATE) блокирует UPDATE/ALTER на строках с '0000-00-00 00:00:00',
     // а при ALTER c пересборкой таблицы проверяются вообще все datetime-поля строки
@@ -58,10 +59,32 @@ if ($_REQUEST['action'] == 'commit') {
     }
 
     if (fixdb_plugin_install($plugin, $db_update, 'install', '')) {
-        plugin_mark_installed($plugin);
+        $newsTable = '`' . $config['prefix'] . '_news`';
+        $indexName = 'idx_news_approve_nsched_deactivate';
+        $indexRows = $mysql->select("SHOW INDEX FROM $newsTable WHERE Key_name = '$indexName'");
+        $indexColumns = array_column($indexRows ?: [], 'Column_name');
+
+        if (!$indexColumns) {
+            if (!$mysql->query("ALTER TABLE $newsTable ADD INDEX `$indexName` (`approve`, `nsched_deactivate`)")) {
+                $installError = 'Failed to create the NSched deactivation index.';
+                if (!empty($mysql->error)) {
+                    $installError .= ' ' . $mysql->error;
+                }
+            }
+        } elseif ($indexColumns !== ['approve', 'nsched_deactivate']) {
+            $installError = "The index `$indexName` exists with an unexpected definition.";
+        }
+
+        if ($installError === '') {
+            plugin_mark_installed($plugin);
+        }
     }
 
     $mysql->query("SET SESSION sql_mode = '" . $originalSqlMode . "'");
+
+    if ($installError !== '') {
+        msg(['type' => 'error', 'text' => $installError]);
+    }
 } else {
     generate_install_page($plugin, $lang[$plugin . ':description']);
 }

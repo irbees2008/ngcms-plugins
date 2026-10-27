@@ -78,9 +78,11 @@ array_push($cfg, [
 if ($_REQUEST['action'] == 'commit') {
     // If submit requested, do config save
     //commit_plugin_config_changes($plugin, $cfg);
-    $regRun = [];
+    $regRun = null;
 
-    switch ($_REQUEST['period']) {
+    switch ($_REQUEST['period'] ?? '') {
+        case '0':
+            break;
         case '5m':
             $regRun = ['0,5,10,15,20,25,30,35,40,45,50,55', '*'];
             break;
@@ -121,7 +123,9 @@ if ($_REQUEST['action'] == 'commit') {
 
     /** @var cronManager $cron */
     $cron->unregisterTask($plugin);
-    $cron->registerTask($plugin, 'run', $regRun[0], $regRun[1], '*', '*', '*');
+    if ($regRun !== null) {
+        $cron->registerTask($plugin, 'run', $regRun[0], $regRun[1], '*', '*', '*');
+    }
 
     commit_plugin_config_changes($plugin, $cfg);
     print_commit_complete($plugin);
