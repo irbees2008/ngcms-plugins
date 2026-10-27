@@ -1,43 +1,155 @@
 <?php
-// Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
-//
-// Configuration file for plugin
-//
-pluginsLoadConfig();
-LoadPluginLang($plugin, 'main', '', 'similar', ':');
-include_once('inc/similar.php');
-$cfg = array();
-array_push($cfg, array('name' => 'rebuild', 'title' => $lang['similar:rebuild'], 'descr' => $lang['similar:rebuild_desc'], 'type' => 'select', 'value' => 0, 'values' => array(0 => $lang['noa'], 1 => $lang['yesa']), 'nosave' => 1));
-$cfgX = array();
-array_push($cfgX, array('name' => 'localsource', 'title' => $lang['similar:localsource'], 'descr' => $lang['simiar_localsource'], 'type' => 'select', 'values' => array('0' => $lang['similar:lsrc_site'], '1' => $lang['similar:lsrc_plugin']), 'value' => intval(extra_get_param($plugin, 'localsource'))));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>' . $lang['similar:cfg_display'] . '</b>', 'entries' => $cfgX));
-$cfgX = array();
-array_push($cfgX, array('name' => 'similar_enabled', 'title' => $lang['similar:similar_enabled'], 'descr' => $lang['similar:similar_enabled_desc'], 'type' => 'select', 'values' => array(0 => $lang['noa'], 1 => $lang['yesa']), 'value' => extra_get_param($plugin, 'similar_enabled')));
-array_push($cfgX, array('name' => 'count', 'title' => $lang['similar:similar_count'], 'descr' => $lang['similar:similar_count_desc'], 'type' => 'input', 'html_flags' => 'size="4"', 'value' => extra_get_param($plugin, 'count')));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>' . $lang['similar:cfg_similar'] . '</b>', 'entries' => $cfgX));
-//$cfgX = array();
-//array_push($cfgX, array('name' => 'samecat_enabled', 'title' => $lang['similar:samecat_enabled'], 'descr' => $lang['similar:samecat_enabled_desc'], 'type' => 'select', 'values' => array(0 => $lang['noa'], 1 => $lang['yesa']), 'value' => extra_get_param($plugin, 'samecat_enabled')));
-//array_push($cfgX, array('name' => 'samecat_count', 'title' => $lang['similar:samecat_count'], 'descr' => $lang['similar:samecat_count_desc'], 'type' => 'input', 'html_flags' => 'size="4"', 'value' => extra_get_param($plugin, 'samecat_count')));
-//array_push($cfg,  array('mode' => 'group', 'title' => '<b>'.$lang['similar:cfg_samecateg'].'</b>', 'entries' => $cfgX));
-$cfgX = array();
-array_push($cfgX, array('name' => 'pcall', 'title' => "Интеграция с новостными плагинами<br /><small><b>Да</b> - в плагине появится возможность испольвать переменные других плагинов<br /><b>Нет</b> - переменные других плагинов использовать нельзя</small>", 'type' => 'select', 'values' => array('1' => 'Да', '0' => 'Нет'), 'value' => intval(extra_get_param($plugin, 'pcall'))));
-array_push($cfgX, array('name' => 'pcall_mode', 'title' => "Режим вызова", 'descr' => "Вам необходимо выбрать какой из режимов отображения новостей будет эмулироваться<br/><b>экспорт</b> - экспорт данных в другие плагины (<font color=\"red\">рекомендуется</font>)<br /><b>короткая</b> - короткая новость<br><b>полная</b> - полная новость</small>", 'type' => 'select', 'values' => array('0' => 'экспорт', '1' => 'короткая', '2' => 'полная'), 'value' => intval(extra_get_param($plugin, 'pcall_mode'))));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>Интеграция</b>', 'entries' => $cfgX));
-$cfgX = array();
-array_push($cfgX, array('name' => 'countX', 'title' => $lang['similar:similarity']));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>' . $lang['similar:cfg_similarity'] . '</b>', 'entries' => $cfgX));
-if (!$_REQUEST['action']) {
-	generate_config_page($plugin, $cfg);
-} elseif ($_REQUEST['action'] == 'commit') {
-	commit_plugin_config_changes($plugin, $cfg);
-	if ($_REQUEST['rebuild']) {
-		// Rebuild index table
-		// * Truncate index
-		$mysql->query("truncate table " . prefix . "_similar_index");
-		// * Mark all news to have broken index
-		$mysql->query("update " . prefix . "_news set similar_status = 0");
-		print $lang['tags_rebuild_done'] . "<br/>";
-	}
-	print_commit_complete($plugin);
+if (!defined('NGCMS')) {
+    die('HAL');
 }
+
+pluginsLoadConfig();
+LoadPluginLang('similar', 'config', '', 'similar', '#');
+
+global $lang, $twig, $mysql;
+$similarLang = isset($lang['similar']) && is_array($lang['similar'])
+    ? $lang['similar']
+    : [];
+$requiredLangKeys = [
+    'config_title',
+    'action_settings',
+    'config_description',
+    'enabled',
+    'yes_label',
+    'no_label',
+    'count',
+    'count_help',
+    'template_source',
+    'site_template',
+    'plugin_template',
+    'template_source_help',
+    'integration',
+    'integration_enabled',
+    'integration_mode',
+    'integration_help',
+    'mode_export',
+    'mode_short',
+    'mode_full',
+    'save',
+    'rebuild',
+    'rebuild_help',
+    'clear_cache',
+    'cache_cleared',
+    'rebuild_done',
+    'config_saved',
+    'config_invalid',
+];
+foreach ($requiredLangKeys as $key) {
+    if (!isset($similarLang[$key]) || !is_string($similarLang[$key]) || $similarLang[$key] === '') {
+        throw new RuntimeException('Missing similar plugin configuration translation: ' . $key);
+    }
+}
+
+function similar_config_value($key, $default)
+{
+    $value = pluginGetVariable('similar', $key);
+    return $value === null || $value === false || $value === '' ? $default : $value;
+}
+
+function similar_config_clear_cache_or_fail()
+{
+    include_once __DIR__ . '/inc/similar.php';
+    if (!plugin_similar_clear_cache()) {
+        throw new RuntimeException('Unable to clear similar plugin output cache.');
+    }
+}
+
+$settings = [
+    'localsource' => (int) similar_config_value('localsource', 1),
+    'similar_enabled' => (int) similar_config_value('similar_enabled', 1),
+    'count' => (int) similar_config_value('count', 5),
+    'pcall' => (int) similar_config_value('pcall', 0),
+    'pcall_mode' => (int) similar_config_value('pcall_mode', 0),
+];
+$settings['localsource'] = $settings['localsource'] === 0 ? 0 : 1;
+$settings['similar_enabled'] = $settings['similar_enabled'] === 1 ? 1 : 0;
+$settings['count'] = $settings['count'] >= 1 && $settings['count'] <= 20 ? $settings['count'] : 5;
+$settings['pcall'] = $settings['pcall'] === 1 ? 1 : 0;
+$settings['pcall_mode'] = in_array($settings['pcall_mode'], [0, 1, 2], true) ? $settings['pcall_mode'] : 0;
+
+$toasts = [];
+if (isset($_POST['operation'])) {
+    if (!isset($_REQUEST['action'], $_POST['token'])
+        || $_REQUEST['action'] !== 'commit'
+        || !is_string($_POST['token'])
+        || !hash_equals((string) genUToken('admin.extra-config'), $_POST['token'])) {
+        throw new RuntimeException('Invalid similar plugin configuration request token.');
+    }
+    if (!is_string($_POST['operation'])) {
+        throw new RuntimeException('Invalid similar plugin configuration operation.');
+    }
+
+    if ($_POST['operation'] === 'save_settings') {
+        $localsource = filter_var($_POST['localsource'] ?? null, FILTER_VALIDATE_INT);
+        $enabled = filter_var($_POST['similar_enabled'] ?? null, FILTER_VALIDATE_INT);
+        $count = filter_var($_POST['count'] ?? null, FILTER_VALIDATE_INT);
+        $pcall = filter_var($_POST['pcall'] ?? '0', FILTER_VALIDATE_INT);
+        $pcallMode = filter_var($_POST['pcall_mode'] ?? null, FILTER_VALIDATE_INT);
+
+        if (!in_array($localsource, [0, 1], true)
+            || !in_array($enabled, [0, 1], true)
+            || $count === false || $count < 1 || $count > 20
+            || !in_array($pcall, [0, 1], true)
+            || !in_array($pcallMode, [0, 1, 2], true)) {
+            $toasts[] = ['type' => 'error', 'message' => $similarLang['config_invalid']];
+        } else {
+            $settings = [
+                'localsource' => $localsource,
+                'similar_enabled' => $enabled,
+                'count' => $count,
+                'pcall' => $pcall,
+                'pcall_mode' => $pcallMode,
+            ];
+            foreach ($settings as $key => $value) {
+                pluginSetVariable('similar', $key, $value);
+            }
+            if (!pluginsSaveConfig()) {
+                throw new RuntimeException('Unable to save similar plugin settings.');
+            }
+            similar_config_clear_cache_or_fail();
+            $toasts[] = ['type' => 'success', 'message' => $similarLang['config_saved']];
+        }
+    } elseif ($_POST['operation'] === 'rebuild') {
+        $mysql->query('truncate table ' . prefix . '_similar_index');
+        $mysql->query('update ' . prefix . '_news set similar_status = 0');
+        similar_config_clear_cache_or_fail();
+        $toasts[] = ['type' => 'success', 'message' => $similarLang['rebuild_done']];
+    } elseif ($_POST['operation'] === 'clear_cache') {
+        similar_config_clear_cache_or_fail();
+        $toasts[] = ['type' => 'success', 'message' => $similarLang['cache_cleared']];
+    } else {
+        throw new RuntimeException('Unknown similar plugin configuration operation.');
+    }
+}
+
+$templatePaths = locatePluginTemplates(['config'], 'similar', 1, '', 'config');
+if (empty($templatePaths['config'])) {
+    throw new RuntimeException('The similar plugin configuration template could not be located.');
+}
+
+$view = $twig->loadTemplate($templatePaths['config'] . 'config.tpl');
+$documentationButton = '';
+$documentationModal = '';
+if (function_exists('plugin_documentation_markup')) {
+    list($documentationButton, $documentationModal) = plugin_documentation_markup('similar');
+}
+$toastJson = json_encode($toasts, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+if ($toastJson === false) {
+    throw new RuntimeException('Unable to encode similar plugin toast notifications.');
+}
+print $view->render([
+    'settings' => $settings,
+    'toast_json' => $toastJson,
+    'token' => htmlspecialchars((string) genUToken('admin.extra-config'), ENT_QUOTES, 'UTF-8'),
+    'lang' => $similarLang,
+    'plugin_id' => 'similar',
+    'action' => $similarLang['action_settings'],
+    'extras_label' => isset($lang['extras']) ? $lang['extras'] : 'Plugins',
+    'documentation_button' => $documentationButton,
+    'documentation_modal' => $documentationModal,
+]);

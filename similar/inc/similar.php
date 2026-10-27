@@ -2,6 +2,31 @@
 //
 // Recover SIMILAR data for selected news
 // [ RECOVER is called directly before news is showed ]
+function plugin_similar_clear_cache()
+{
+	$directory = get_plugcache_dir('similar');
+	if (!$directory || !is_dir($directory)) {
+		return true;
+	}
+
+	$files = scandir($directory);
+	if ($files === false) {
+		return false;
+	}
+
+	$success = true;
+	foreach ($files as $file) {
+		if (preg_match('/^similar_news_[0-9]+\.txt$/D', $file)) {
+			$path = rtrim($directory, '\\/') . DIRECTORY_SEPARATOR . $file;
+			if (is_file($path) && !unlink($path)) {
+				$success = false;
+			}
+		}
+	}
+
+	return $success;
+}
+
 function plugin_similar_recover($newsID, $count)
 {
 
