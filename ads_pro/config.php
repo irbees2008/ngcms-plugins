@@ -301,7 +301,7 @@ function add_submit()
     $state = max(0, min(2, intval($_REQUEST['state'])));
     $start_view = GetTimeStamp(trim($_REQUEST['start_view'] ?? '')) ?: 0;
     $end_view = GetTimeStamp(trim($_REQUEST['end_view'] ?? '')) ?: 0;
-    $ads_blok = $_REQUEST['ads_blok'] ?? '';
+    $ads_blok = isset($_POST['ads_blok']) && is_string($_POST['ads_blok']) ? $_POST['ads_blok'] : '';
     $fields = 'block_name=' . db_squote($name)
         . ', description=' . db_squote($description)
         . ', ads_blok=' . db_squote($ads_blok)
@@ -424,6 +424,13 @@ function ads_pro_toggle_block()
 
 function clear_cash()
 {
+    global $mysql;
+    foreach ($mysql->select('SELECT id, block_name, type FROM ' . prefix . '_ads_pro') as $row) {
+        if (function_exists('Plugins\\cache_forget')) {
+            $cacheKey = 'ads_pro:' . $row['block_name'] . ':' . intval($row['id']) . ':' . intval($row['type']);
+            \Plugins\cache_forget($cacheKey);
+        }
+    }
 
     if (($dir = get_plugcache_dir('ads_pro'))) {
         if ($handle = opendir($dir)) {

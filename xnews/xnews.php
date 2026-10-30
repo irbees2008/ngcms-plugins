@@ -5,6 +5,7 @@
 if (!defined('NGCMS')) die('HAL');
 // Load shared library
 include_once root . 'includes/inc/libnews.php';
+include_once __DIR__ . '/storage.php';
 //
 // Show data block for xnews plugin
 // Params:
@@ -29,28 +30,55 @@ function xNewsShowBlock($params)
 {
 	global $CurrentHandler, $twig, $config;
 	if (isset($params['id']) && $params['id']) {
-		// Scan blocks
-		$isFound = false;
-		for ($i = 1; $i <= 50; $i++) {
-			if (pluginGetVariable('xnews', $i . '_name') == $params['id']) {
-				// BLOCK FOUND. MAKE PRESETS !!!
-				$isFound = true;
-				if ((string) pluginGetVariable('xnews', $i . '_enabled') === '0') {
-					return '';
+		$profile = null;
+		if ((string)pluginGetVariable('xnews', 'storage_version') === '1') {
+			$profile = xnews_storage_profile_to_params(xnews_storage_get_by_name($params['id']));
+		} else {
+			$profileCount = (int)pluginGetVariable('xnews', 'count');
+			if ($profileCount < 1 || $profileCount > 50) {
+				$profileCount = 1;
+			}
+			for ($i = 1; $i <= $profileCount; $i++) {
+				if ((string)pluginGetVariable('xnews', $i . '_name') === (string)$params['id']) {
+					$profile = array(
+						'enabled' => (string)pluginGetVariable('xnews', $i . '_enabled') !== '0' ? 1 : 0,
+						'name' => pluginGetVariable('xnews', $i . '_name'),
+						'template' => pluginGetVariable('xnews', $i . '_template'),
+						'categoryMode' => pluginGetVariable('xnews', $i . '_categoryMode'),
+						'categories' => pluginGetVariable('xnews', $i . '_categories'),
+						'visibilityMode' => pluginGetVariable('xnews', $i . '_visibilityMode'),
+						'visibilityCList' => pluginGetVariable('xnews', $i . '_visibilityCList'),
+						'mainMode' => pluginGetVariable('xnews', $i . '_mainMode'),
+						'pinMode' => pluginGetVariable('xnews', $i . '_pinMode'),
+						'favMode' => pluginGetVariable('xnews', $i . '_favMode'),
+						'skipCurrent' => pluginGetVariable('xnews', $i . '_skipCurrent'),
+						'extractEmbeddedItems' => pluginGetVariable('xnews', $i . '_extractEmbeddedItems'),
+						'showNoNews' => pluginGetVariable('xnews', $i . '_showNoNews'),
+						'count' => pluginGetVariable('xnews', $i . '_count'),
+						'skip' => pluginGetVariable('xnews', $i . '_skip'),
+						'maxAge' => pluginGetVariable('xnews', $i . '_maxAge'),
+						'order' => pluginGetVariable('xnews', $i . '_order'),
+					);
+					break;
 				}
-				if (pluginGetVariable('xnews', 'cache') && (!isset($params['cacheAge']))) {
-					$params['cacheAge'] = pluginGetVariable('xnews', 'cacheExpire');
-				}
-				foreach (array('categoryMode', 'categories', 'visibilityMode', 'visibilityCList', 'mainMode', 'pinMode', 'favMode', 'count', 'skip', 'maxAge', 'order', 'showNoNews', 'skipCurrent', 'extractEmbeddedItems') as $k)
-					if (!isset($params[$k])) $params[$k] = pluginGetVariable('xnews', $i . '_' . $k);
-				// Load template only if it's defined
-				if (!isset($params['template']) && (pluginGetVariable('xnews', $i . '_template') != ''))
-					$params['template'] = pluginGetVariable('xnews', $i . '_template');
-				break;
 			}
 		}
-		if (!$isFound) {
+		if (!is_array($profile)) {
 			return '[XNEWS: No profile found "' . $params['id'] . '"]';
+		}
+		if (!$profile['enabled']) {
+			return '';
+		}
+		if (pluginGetVariable('xnews', 'cache') && (!isset($params['cacheAge']))) {
+			$params['cacheAge'] = pluginGetVariable('xnews', 'cacheExpire');
+		}
+		foreach (array('categoryMode', 'categories', 'visibilityMode', 'visibilityCList', 'mainMode', 'pinMode', 'favMode', 'count', 'skip', 'maxAge', 'order', 'showNoNews', 'skipCurrent', 'extractEmbeddedItems') as $key) {
+			if (!isset($params[$key])) {
+				$params[$key] = $profile[$key];
+			}
+		}
+		if (!isset($params['template']) && $profile['template'] !== '') {
+			$params['template'] = $profile['template'];
 		}
 	}
 	// Convert category list into array
@@ -181,16 +209,14 @@ function xNewsShowBlock($params)
 	$cacheKeys[] = '|order=' . $orderBy;
 	// Show only published news
 	$filterList[] = '(approve > 0)';
-	$categoryJoin = '';
-	$categoryFilter = '';
-	$newsIndexHint = '';
+	$newsFrom = ' FROM ' . prefix . '_news';
 	if ($categoryIDs) {
 		if (in_array($orderBy, ['postdate desc', 'postdate asc'], true)) {
-			$categoryFilter = ' AND EXISTS (SELECT 1 FROM ' . prefix . '_news_map NM FORCE INDEX (newsmap_category_news) WHERE NM.categoryID IN ('
-				. implode(', ', $categoryIDs) . ') AND NM.newsID = ' . prefix . '_news.id)';
-			$newsIndexHint = ' FORCE INDEX (postdate)';
+			$newsFrom = ' FROM ' . prefix . '_news FORCE INDEX (postdate)';
+			$filterList[] = '(SELECT NM.newsID FROM ' . prefix . '_news_map NM FORCE INDEX (idx_news_category) WHERE NM.newsID = '
+				. prefix . '_news.id AND NM.categoryID IN (' . implode(', ', $categoryIDs) . ') LIMIT 1) IS NOT NULL';
 		} else {
-			$categoryJoin = ' JOIN (SELECT DISTINCT NM.newsID FROM ' . prefix . '_news_map NM WHERE NM.categoryID IN ('
+			$newsFrom .= ' JOIN (SELECT DISTINCT NM.newsID FROM ' . prefix . '_news_map NM WHERE NM.categoryID IN ('
 				. implode(', ', $categoryIDs) . ')) AS XNM ON XNM.newsID = ' . prefix . '_news.id';
 		}
 	}
@@ -200,9 +226,9 @@ function xNewsShowBlock($params)
 	$outerOrderBy = $isRandomOrder ? 'XNP.xnews_random' : $orderBy;
 	$randomOrderColumn = $isRandomOrder ? ', RAND() AS xnews_random' : '';
 	$filteredNewsQuery = 'SELECT ' . prefix . '_news.id' . $randomOrderColumn
-		. ' FROM ' . prefix . '_news' . $newsIndexHint . $categoryJoin . ' '
+		. $newsFrom . ' '
 		. ((count($filterList) > 0) ? 'WHERE ' . implode(' AND ', $filterList) . ' ' : '')
-		. $categoryFilter . ' ORDER BY ' . $innerOrderBy . ' LIMIT ' . $showSkip . ', ' . $showCount;
+		. 'ORDER BY ' . $innerOrderBy . ' LIMIT ' . $showSkip . ', ' . $showCount;
 	$requestQuery = 'SELECT ' . prefix . '_news.* FROM ' . prefix . '_news JOIN ('
 		. $filteredNewsQuery . ') AS XNP ON XNP.id = ' . prefix . '_news.id '
 		. 'ORDER BY ' . $outerOrderBy;

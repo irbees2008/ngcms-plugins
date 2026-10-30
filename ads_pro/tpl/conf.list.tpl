@@ -32,9 +32,9 @@
 							<input type="hidden" name="action" value="toggle">
 							<input type="hidden" name="id" value="{{ item.id }}">
 							<input type="hidden" name="token" value="{{ token }}">
-							<a type="submit" class="btn {{ item.enabled ? 'btn-outline-success' : 'btn-outline-secondary' }}" title="{{ item.toggle_title }}" aria-label="{{ item.toggle_title }}">
+							<button type="submit" class="btn {{ item.enabled ? 'btn-outline-success' : 'btn-outline-secondary' }}" title="{{ item.toggle_title }}" aria-label="{{ item.toggle_title }}">
 								<i class="fa fa-power-off"></i>
-							</a>
+							</button>
 						</form>
             </div>
 					<div class="btn-group btn-group-sm">

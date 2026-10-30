@@ -173,11 +173,7 @@
 					<pre class="bg-light p-2 mt-1 mb-0"><code>{{ lang['ads_pro:example_text_code']|e }}</code></pre>
 				</div>
 			</div>
-			<textarea class="form-control font-monospace" name="ads_blok" rows="30">
-				{% if mode == 'edit' %}
-					{{ ads_blok }}
-				{% endif %}
-			</textarea>
+			<textarea class="form-control font-monospace" name="ads_blok" rows="30">{% if mode == 'edit' -%}{{ ads_blok|e('html') }}{%- endif %}</textarea>
 		</div>
 	</div>
 	<div class="text-center mb-4">
