@@ -4,6 +4,7 @@ if (!defined('NGCMS')) die('HAL');
 
 // Инициализация
 pluginsLoadConfig();
+global $PLUGINS;
 
 // Описание операций для удаления таблиц
 $db_update = array(
@@ -16,6 +17,9 @@ $db_update = array(
 if ($_REQUEST['action'] == 'commit') {
     // Основной процесс удаления
     if (fixdb_plugin_install('ads_pro', $db_update, 'deinstall')) {
+        unset($PLUGINS['config']['ads_pro']);
+        pluginsSaveConfig();
+
         // Удаление конфигурации плагина
         $mysql->query("DELETE FROM " . prefix . "_config WHERE module = 'plugin.ads_pro'");
         $mysql->query("DELETE FROM " . prefix . "_config_cat WHERE module = 'plugin.ads_pro'");

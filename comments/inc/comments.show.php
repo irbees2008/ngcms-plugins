@@ -1,12 +1,52 @@
 <?php
 //
-// Copyright (C) 2006-2011 Next Generation CMS (http://ngcms.ru/)
+// Copyright (C) 2006-2011 Next Generation CMS (http://ngcms.org/)
 // Name: comments.show.php
 // Description: Routines for showing comments
 // Author: Vitaly Ponomarev, Alexey Zinchenko
 //
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
+
+// Wrapper functions for ng-helpers compatibility
+function cmtshow_time_ago($timestamp)
+{
+	if (function_exists('Plugins\\time_ago')) {
+		return \Plugins\time_ago($timestamp);
+	}
+	$diff = time() - $timestamp;
+	if ($diff < 60) return $diff . ' сек. назад';
+	if ($diff < 3600) return floor($diff / 60) . ' мин. назад';
+	if ($diff < 86400) return floor($diff / 3600) . ' ч. назад';
+	return floor($diff / 86400) . ' дн. назад';
+}
+
+function cmtshow_excerpt($text, $length = 150)
+{
+	if (function_exists('Plugins\\excerpt')) {
+		return \Plugins\excerpt($text, $length);
+	}
+	$text = strip_tags($text);
+	if (strlen($text) <= $length) return $text;
+	return substr($text, 0, $length) . '...';
+}
+
+function cmtshow_array_get($array, $key, $default = null)
+{
+	if (function_exists('Plugins\\array_get')) {
+		return \Plugins\array_get($array, $key, $default);
+	}
+	return $array[$key] ?? $default;
+}
+
+function cmtshow_sanitize($data, $type = 'string')
+{
+	if (function_exists('Plugins\\sanitize')) {
+		return \Plugins\sanitize($data, $type !== 'html');
+	}
+	return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+}
+
 //
 // Show comments for a news
 // $newsID - [required] ID of the news for that comments should be showed
@@ -20,7 +60,8 @@ if (!defined('NGCMS')) die ('HAL');
 //		'limitCount' => number of comments to show (for pagination)
 //		'outprint'	 => flag: if set, output will be returned, elsewhere - will be added to mainblock
 //		'total'		=> total number of comments in this news
-function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams = array()) {
+function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams = array())
+{
 
 	global $mysql, $tpl, $template, $config, $userROW, $parse, $lang, $PFILTERS, $TemplateCache;
 	// Preload template configuration variables
@@ -55,7 +96,8 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 			}
 		}
 	//print "ARRAY CFG: <pre>".var_export($joinFilter, true)."</pre>";
-	function _cs_am($k) {
+	function _cs_am($k)
+	{
 
 		return 'u.' . $k . ' as `users_' . $k . '`';
 	}
@@ -68,7 +110,22 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 	} else {
 		$sql = "select c.* from " . prefix . "_comments c WHERE c.post=" . db_squote($newsID) . ' and c.moderated=1' . ($commID ? (" and c.id=" . db_squote($commID)) : '');
 	}
+
+	// Filter by module if specified (for gallery images)
+	if (isset($callingParams['module']) && $callingParams['module']) {
+		$sql .= " and c.module=" . db_squote($callingParams['module']);
+	} else {
+		// For backward compatibility: show only comments without module or with empty module (news comments)
+		$sql .= " and (c.module IS NULL or c.module='')";
+	}
+
 	$sql .= " order by c.id" . (pluginGetVariable('comments', 'backorder') ? ' desc' : '');
+
+	// Debug log
+	if (function_exists('Plugins\logger') && isset($callingParams['module'])) {
+		\Plugins\logger('SQL for comments_show: ' . $sql, 'info', 'comments.log');
+	}
+
 	// Comments counter
 	$comnum = 0;
 	// Check if we need to use limits
@@ -82,7 +139,15 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 	if (!$timestamp)
 		$timestamp = 'j.m.Y - H:i';
 	$output = '';
-	foreach ($mysql->select($sql) as $row) {
+
+	$comments = $mysql->select($sql);
+
+	// Debug: log number of comments found
+	if (function_exists('Plugins\logger') && isset($callingParams['module'])) {
+		\Plugins\logger('Comments found: ' . count($comments) . ' for post=' . $newsID . ', module=' . $callingParams['module'], 'info', 'comments.log');
+	}
+
+	foreach ($comments as $row) {
 		$comnum++;
 		$tvars['vars']['id'] = $row['id'];
 		$tvars['vars']['delete_token'] = genUToken($row['id']);
@@ -95,6 +160,7 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 			$tvars['vars']['edit_info'] = '';
 		}
 		$tvars['vars']['date'] = LangDate($timestamp, $row['postdate']);
+		$tvars['vars']['time_ago'] = cmtshow_time_ago($row['postdate']);
 		if ($row['reg'] && getPluginStatusActive('uprofile')) {
 			$tvars['vars']['profile_link'] = checkLinkAvailable('uprofile', 'show') ?
 				generateLink('uprofile', 'show', array('name' => $row['author'], 'id' => $row['author_id'])) :
@@ -125,7 +191,9 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 			$tvars['regx']["'\[comment_full\](.*?)\[/comment_full\]'si"] = '$1';
 		} else {
 		*/
+		$tvars['vars']['text'] = $text;
 		$tvars['vars']['comment-short'] = $text;
+		$tvars['vars']['comment_preview'] = cmtshow_excerpt($text, 150);
 		$tvars['regx']["'\[comment_full\](.*?)\[/comment_full\]'si"] = '';
 		/* } */
 		if ($commID && $commDisplayNum) {
@@ -194,14 +262,14 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 				$canDelete = true;
 			}
 		}
-		
+
 		$tvars['vars']['can_edit'] = $canEdit;
 		$tvars['vars']['can_delete'] = $canDelete;
 		$tvars['vars']['can_admin_reply'] = $canAdminReply;
 		$tvars['vars']['text'] = $tvars['vars']['comment-short'];
 		$tvars['vars']['newsid'] = $newsID;
 		$tvars['vars']['admin_url'] = admin_url;
-		
+
 		if (is_array($userROW) && (($userROW['status'] == 1) || ($userROW['status'] == 2))) {
 			$edit_link = admin_url . "/admin.php?mod=editcomments&amp;newsid=" . $newsID . "&amp;comid=" . $row['id'];
 			$delete_link = generateLink('core', 'plugin', array('plugin' => 'comments', 'handler' => 'delete'), array('id' => $row['id'], 'uT' => genUToken($row['id'])), true);
@@ -242,6 +310,12 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 			$output .= $tpl->show($templateName);
 		}
 	}
+
+	// Debug: log output length
+	if (function_exists('Plugins\logger') && isset($callingParams['module'])) {
+		\Plugins\logger('Comments output generated, length: ' . strlen($output) . ' bytes', 'info', 'comments.log');
+	}
+
 	if ($callingParams['outprint']) {
 		return $output;
 	}
@@ -254,7 +328,8 @@ function comments_show($newsID, $commID = 0, $commDisplayNum = 0, $callingParams
 //		'overrideTemplatePath'	=> alternative path for searching of template
 //		'noajax'		=> DISABLE AJAX mode
 //		'outprint'	 	=> flag: if set, output will be returned, elsewhere - will be added to mainblock
-function comments_showform($newsID, $callingParams = array()) {
+function comments_showform($newsID, $callingParams = array())
+{
 
 	global $mysql, $config, $template, $tpl, $userROW, $PFILTERS;
 	// -> desired template path
@@ -307,6 +382,15 @@ function comments_showform($newsID, $callingParams = array()) {
 	$tvars['vars']['skins_url'] = skins_url;
 	$tvars['vars']['newsid'] = $newsID . '#' . genUToken('comment.add.' . $newsID);
 	$tvars['vars']['request_uri'] = secure_html($_SERVER['REQUEST_URI']);
+	// Pass module parameter for non-news comments (e.g., gallery images)
+	$moduleParam = isset($callingParams['module']) ? $callingParams['module'] : '';
+	$tvars['vars']['module'] = $moduleParam;
+
+	// Debug log
+	if (function_exists('Plugins\logger') && $moduleParam) {
+		\Plugins\logger('Showform called: newsID=' . $newsID . ', module=' . $moduleParam, 'info', 'comments.log');
+	}
+
 	// Generate request URL
 	$link = generateLink('core', 'plugin', array('plugin' => 'comments', 'handler' => 'add'));
 	$tvars['vars']['post_url'] = $link;
@@ -331,6 +415,12 @@ function comments_showform($newsID, $callingParams = array()) {
 		$tvars['vars']['noajax'] = $callingParams['noajax'] ? true : false;
 		$tvars['vars']['use_moderation'] = pluginGetVariable('comments', 'moderation') ? true : false;
 		$tvars['vars']['lang'] = $lang;
+
+		// Debug: log module value
+		if (function_exists('Plugins\logger')) {
+			\Plugins\logger('Before render: module=' . (isset($tvars['vars']['module']) ? $tvars['vars']['module'] : 'NOT SET'), 'info', 'comments.log');
+		}
+
 		$xt = $twig->loadTemplate('plugins/comments/comments.form.tpl');
 		$output = $xt->render($tvars['vars']);
 	} else {

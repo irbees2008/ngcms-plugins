@@ -5,56 +5,110 @@
 // # Разрешено к использованию с: Next Generation CMS                                   #
 // # Автор: Vitaly A Ponomarev, vp7@mail.ru                                             #
 // #====================================================================================#
-// #====================================================================================#
-// # Инсталл скрипт плагина                                                             #
-// #====================================================================================#
 
-// Protect against hack attempts
-if (! defined('NGCMS')) {
+if (!defined('NGCMS')) {
     die('HAL');
 }
 
-pluginsLoadConfig();
-LoadPluginLang($plugin, 'install', '', '', ':');
+function plugin_nsched_install($action)
+{
+    global $lang, $mysql, $config;
 
-$db_update = [
-    [
-        'table' => 'news',
-        'action' => 'modify',
-        'fields' => [
-            ['action' => 'cmodify', 'name' => 'nsched_activate', 'type' => 'int(10)', 'params' => 'not null default "0"'],
-            ['action' => 'cmodify', 'name' => 'nsched_deactivate', 'type' => 'int(10)', 'params' => 'not null default "0"'],
+    pluginsLoadConfig();
+    LoadPluginLang('nsched', 'install', '', '', ':');
+
+    $db_update = [
+        [
+            'table' => 'news',
+            'action' => 'modify',
+            'fields' => [
+                ['action' => 'cmodify', 'name' => 'nsched_activate', 'type' => 'int(10)', 'params' => 'not null default "0"'],
+                ['action' => 'cmodify', 'name' => 'nsched_deactivate', 'type' => 'int(10)', 'params' => 'not null default "0"'],
+            ],
         ],
-    ],
-];
+    ];
 
-if ($_REQUEST['action'] == 'commit') {
-    // If submit requested, do config save
-    global $mysql, $config;
+    if ($action !== 'apply' && $action !== 'autoapply') {
+        generate_install_page('nsched', $lang['nsched:description']);
+        return true;
+    }
 
-    // Сначала очищаем проблемные datetime значения перед изменением структуры (только если поля существуют)
-    try {
-        // Проверяем существование полей
-        $columns = $mysql->select("SHOW COLUMNS FROM `" . $config['prefix'] . "_news` WHERE Field IN ('nsched_activate', 'nsched_deactivate')");
-
-        if ($columns && count($columns) > 0) {
-            $existingFields = array_column($columns, 'Field');
-
-            // Очищаем только существующие поля
-            if (in_array('nsched_activate', $existingFields)) {
-                $mysql->query("UPDATE `" . $config['prefix'] . "_news` SET `nsched_activate` = NULL WHERE `nsched_activate` IN ('0000-00-00 00:00:00', '0')");
+    $installError = '';
+    $originalSqlMode = $mysql->result('SELECT @@SESSION.sql_mode');
+    if (!is_string($originalSqlMode)) {
+        $installError = 'Unable to read the current MySQL SQL mode.';
+    } elseif ($mysql->query("SET SESSION sql_mode = ''") === null) {
+        $installError = 'Unable to disable strict SQL mode for the NSched update.';
+    } else {
+        try {
+            $newsTable = '`' . $config['prefix'] . '_news`';
+            $columns = $mysql->select("SHOW COLUMNS FROM $newsTable WHERE Field IN ('nsched_activate', 'nsched_deactivate')");
+            if (!is_array($columns)) {
+                $installError = 'Unable to inspect the NSched fields in the news table.';
+            } else {
+                $existingFields = array_column($columns, 'Field');
+                foreach (['nsched_activate', 'nsched_deactivate'] as $field) {
+                    if (in_array($field, $existingFields, true)
+                        && $mysql->query("UPDATE $newsTable SET `$field` = NULL WHERE `$field` IN ('0000-00-00 00:00:00', '0')") === null) {
+                        $installError = 'Unable to clean existing values in the ' . $field . ' field.';
+                        break;
+                    }
+                }
             }
-            if (in_array('nsched_deactivate', $existingFields)) {
-                $mysql->query("UPDATE `" . $config['prefix'] . "_news` SET `nsched_deactivate` = NULL WHERE `nsched_deactivate` IN ('0000-00-00 00:00:00', '0')");
+
+            if ($installError === '') {
+                fixdb_plugin_install('nsched', $db_update, 'install');
+
+                $columns = $mysql->select("SHOW COLUMNS FROM $newsTable WHERE Field IN ('nsched_activate', 'nsched_deactivate')");
+                $fieldTypes = [];
+                foreach (is_array($columns) ? $columns : [] as $column) {
+                    $fieldTypes[$column['Field']] = strtolower($column['Type']);
+                }
+                foreach (['nsched_activate', 'nsched_deactivate'] as $field) {
+                    if (!isset($fieldTypes[$field]) || strpos($fieldTypes[$field], 'int') !== 0) {
+                        $installError = 'The NSched field ' . $field . ' was not created with an integer type.';
+                        break;
+                    }
+                }
+            }
+
+            if ($installError === '' && !plugin_mark_installed('nsched')) {
+                $installError = 'The database was updated, but NSched installation status could not be saved.';
+            }
+
+            if ($installError === '') {
+                $indexName = 'idx_news_approve_nsched_deactivate';
+                $indexRows = $mysql->select("SHOW INDEX FROM $newsTable WHERE Key_name = '$indexName'");
+                if (!is_array($indexRows)) {
+                    $installError = 'Unable to inspect the NSched deactivation index.';
+                } else {
+                    $indexColumns = array_column($indexRows, 'Column_name');
+                    if (!$indexColumns) {
+                        if ($mysql->query("ALTER TABLE $newsTable ADD INDEX `$indexName` (`approve`, `nsched_deactivate`)") === null) {
+                            $installError = 'Failed to create the NSched deactivation index.';
+                            if (!empty($mysql->error)) {
+                                $installError .= ' ' . $mysql->error;
+                            }
+                        }
+                    } elseif ($indexColumns !== ['approve', 'nsched_deactivate']) {
+                        $installError = "The index `$indexName` exists with an unexpected definition.";
+                    }
+                }
+            }
+        } finally {
+            if ($mysql->query("SET SESSION sql_mode = " . db_squote($originalSqlMode)) === null
+                && $installError === '') {
+                $installError = 'NSched was installed, but the original MySQL SQL mode could not be restored.';
             }
         }
-    } catch (Exception $e) {
-        // Игнорируем ошибки при проверке/очистке полей
     }
 
-    if (fixdb_plugin_install($plugin, $db_update, 'install', '')) {
-        plugin_mark_installed($plugin);
+    if ($installError !== '') {
+        msg(['type' => 'error', 'text' => $installError]);
+    } else {
+        header('Location: ' . admin_url . '/admin.php?mod=extras');
+        exit;
     }
-} else {
-    generate_install_page($plugin, $lang[$plugin . ':description']);
+
+    return $installError === '';
 }

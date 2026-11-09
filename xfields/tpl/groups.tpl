@@ -378,3 +378,6 @@
 	</script>
 </div>
 {% endif %}
+	</div>
+</div>
+{{ documentation_modal|raw }}

@@ -1,13 +1,29 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
-LoadPluginLang('faq', 'main', '', 'faq', ':');
+
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	}
+}
+
+// Modified with ng-helpers v0.2.0 functions (2026)
+// - Replaced cacheRetrieveFile/cacheStoreFile with cache_get/cache_put
+// - Added truncate_html for answer previews
+// - Added logging support
+
+// Import ng-helpers functions
+use function Plugins\{cache_get, cache_put, truncate_html, logger, array_get};
+
 register_plugin_page('faq', '', 'plugin_faq');
 function plugin_faq()
 {
 
 	global $catz, $twig, $catmap, $mysql, $config, $userROW, $tpl, $parse, $template, $lang, $PFILTERS, $SYSTEM_FLAGS, $CurrentHandler;
-	$title_plg = $lang['faq:public.title'] ?? 'Вопросы и ответы';
+	$title_plg = 'Вопросы и ответы';
 	$SYSTEM_FLAGS['info']['title']['group'] = isset($title_plg) ? $title_plg : $SYSTEM_FLAGS['info']['title']['group'];
 	$tpath = locatePluginTemplates(array('faq_page'), 'faq', 1);
 	$xt = $twig->loadTemplate($tpath['faq_page'] . 'faq_page.tpl');
@@ -20,12 +36,12 @@ function plugin_faq()
 			'id'       => $row['id'],
 			'question' => $row['question'],
 			'answer'   => $row['answer'],
+			'answer_preview' => truncate_html($row['answer'], 200),
 		);
 	}
 	$tVars = array(
-		'entries' => isset($tEntry) ? $tEntry : array(),
+		'entries' => isset($tEntry) ? $tEntry : '',
 		'home'    => home,
-		'lang'    => $lang,
 	);
 	$template['vars']['mainblock'] = $xt->render($tVars);
 }
@@ -44,30 +60,31 @@ function plug_faq($maxnum, $overrideTemplateName, $order, $cacheExpire)
 		$order = 'DESC';
 	}
 	// Generate cache file name [ we should take into account SWITCHER plugin ]
-	$cacheFileName = md5('faq' . $config['theme'] . $templateName . $config['default_lang']) . '.txt';
+	$cacheKey = 'faq:' . md5($config['theme'] . $templateName . $config['default_lang'] . $order);
 	if ($cacheExpire > 0) {
-		$cacheData = cacheRetrieveFile($cacheFileName, $cacheExpire, 'faq');
-		if ($cacheData != false) {
+		$cacheData = cache_get($cacheKey);
+		if ($cacheData !== null) {
 			// We got data from cache. Return it and stop
 			return $cacheData;
 		}
 	}
 	foreach ($mysql->select("SELECT * FROM " . prefix . "_faq WHERE active = '1' ORDER BY id " . $order . " limit $maxnum") as $row) {
 		$tEntries[] = array(
-			'id'       => $row['id'],
+			'id'       => $row['cnt'],
 			'question' => $row['question'],
 			'answer'   => $row['answer'],
+			'answer_preview' => truncate_html($row['answer'], 150),
 		);
 	}
-	$tVars['entries'] = isset($tEntries) ? $tEntries : array();
+	$tVars['entries'] = $tEntries;
 	$tVars['tpl_url'] = tpl_url;
-	$tVars['lang'] = $lang;
 	// Determine paths for all template files
 	$tpath = locatePluginTemplates(array($templateName), 'faq', pluginGetVariable('faq', 'localsource'));
 	$xt = $twig->loadTemplate($tpath[$templateName] . $templateName . '.tpl');
 	$output = $xt->render($tVars);
 	if ($cacheExpire > 0) {
-		cacheStoreFile($cacheFileName, $output, 'faq');
+		cache_put($cacheKey, $output, $cacheExpire);
+		logger('FAQ block cached: ' . count($tEntries) . ' entries, order: ' . $order . ', expire: ' . $cacheExpire . 's', 'info', 'faq.log');
 	}
 
 	return $output;

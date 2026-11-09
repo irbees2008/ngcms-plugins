@@ -2,13 +2,13 @@
 	<a href="{{ link }}" title="{{ link_title }}" onclick="bookmarks('{{ url }}', '{{ news }}', '{{ action }}', {{ isFullNews ? 'true' : 'false' }}); return false;">
 		{% if found %}
 			{% if isFullNews %}
-				{{ lang.act_delete }}
+				удалить закладку
 			{% else %}
 				-
 			{% endif %}
 		{% else %}
 			{% if isFullNews %}
-				{{ lang.act_add }}
+				добавить закладку
 			{% else %}
 				+
 			{% endif %}

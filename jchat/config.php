@@ -1,6 +1,15 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	}
+}
+
 // Modernized with ng-helpers v0.2.2 (2026)
 // - Added array_get for safe REQUEST access
 // - Added sanitize for input cleaning
@@ -54,14 +63,14 @@ if (array_get($_REQUEST, 'action', '') == 'commit') {
 		// Delete all extra records
 		$dc = $jcRowCount - intval(array_get($_REQUEST, 'purge_save', 0));
 		if ((array_get($_REQUEST, 'purge_save', '') != '') && ($dc > 0)) {
-			logger('jchat', 'Purging old messages: deleting ' . $dc . ' records');
+			logger('Purging old messages: deleting ' . $dc . ' records', 'info', 'jchat.log');
 			$mysql->query("delete from " . prefix . "_jchat order by id limit " . $dc);
-			logger('jchat', 'Purge completed: ' . $dc . ' messages deleted');
+			logger('Purge completed: ' . $dc . ' messages deleted', 'info', 'jchat.log');
 		}
 	}
 	// Check if we need to reload page
 	if (array_get($_REQUEST, 'reload', 0)) {
-		logger('jchat', 'Reload event triggered by admin');
+		logger('Reload event triggered by admin', 'info', 'jchat.log');
 		$mysql->query("insert into " . prefix . "_jchat_events (chatid, postdate, type) values (1, unix_timestamp(now()), 3)");
 		$lid = $mysql->result("select LAST_INSERT_ID()");
 		$mysql->query("delete from " . prefix . "_jchat_events where type=3 and id <> " . db_squote($lid));

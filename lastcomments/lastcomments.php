@@ -1,12 +1,34 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
-define('lastcomments_version', '0.10');
+if (!defined('NGCMS')) die('HAL');
+
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	} else {
+		die('ng-helpers plugin is required for lastcomments plugin');
+	}
+}
+
+// Modernized with ng-helpers v0.2.2 (2026)
+// - Using cache_get/cache_put for caching
+// - Added time_ago for human-readable timestamps
+// - Added excerpt for better text truncation
+// - Added logger for operations tracking
+// - Added sanitize for data cleaning
+// - Added array_get for safe access
+// Import ng-helpers functions
+use function Plugins\{cache_get, cache_put, time_ago, excerpt, logger, sanitize, array_get};
+
+define('lastcomments_version', '0.11');
 loadPluginLang('lastcomments', 'main', '', '', ':');
 // ==============================================
 // Side bar widget
 // ==============================================
-function lastcomments_block() {
+function lastcomments_block()
+{
 	global $template;
 	// Action if sidepanel is enabled
 	if (pluginGetVariable('lastcomments', 'sidepanel')) {
@@ -20,12 +42,13 @@ registerActionHandler('index', 'lastcomments_block');
 // ==============================================
 // Plugin page
 // ==============================================
-function lastcomments_page() {
+function lastcomments_page()
+{
 	loadPluginLang('lastcomments', 'main', '', '', ':');
 	global $SYSTEM_FLAGS, $template, $lang, $CurrentHandler;
 	// Action if ppage is enabled
 	if (pluginGetVariable('lastcomments', 'ppage') && ($CurrentHandler['handlerParams']['value']['pluginName'] == 'core')) {
-				$SYSTEM_FLAGS['info']['title']['group'] = $lang['lastcomments:lastcomments'];
+		$SYSTEM_FLAGS['info']['title']['group'] = $lang['lastcomments:lastcomments'];
 		$template['vars']['mainblock'] = lastcomments(1);
 	} else {
 		error404();
@@ -36,7 +59,8 @@ register_plugin_page('lastcomments', '', 'lastcomments_page', 0);
 // ==============================================
 // Rss feed
 // ==============================================
-function lastcomments_rssfeed() {
+function lastcomments_rssfeed()
+{
 	global $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $CurrentHandler;
 	// Action if rssfeed is enabled
 	if (pluginGetVariable('lastcomments', 'rssfeed') && !(checkLinkAvailable('lastcomments', 'rss') && $CurrentHandler['handlerParams']['value']['pluginName'] == 'core')) {
@@ -58,7 +82,8 @@ register_plugin_page('lastcomments', 'rss', 'lastcomments_rssfeed', 0);
 // ==============================================
 // Some magic
 // ==============================================
-function lastcomments($mode = 0) {
+function lastcomments($mode = 0)
+{
 	global $config, $mysql, $twig, $twigLoader, $parse, $TemplateCache;
 	switch ($mode) {
 		case 1:
@@ -72,11 +97,15 @@ function lastcomments($mode = 0) {
 			$tpl_prefix = "";        // sidepanel widget
 			break;
 	}
-	// Generate cache file name
-	$cacheFileName = md5('lastcomments' . $config['theme'] . $config['default_lang'] . $tpl_prefix . (isset($_REQUEST['page']) ? intval($_REQUEST['page']) : 0)) . '.txt';
+	// Generate cache key
+	$page = array_get($_REQUEST, 'page', 0, 'int');
+	$cacheKey = "lastcomments_{$config['theme']}_{$config['default_lang']}_{$tpl_prefix}_{$page}";
 	if (pluginGetVariable('lastcomments', 'cache')) {
-		$cacheData = cacheRetrieveFile($cacheFileName, pluginGetVariable('lastcomments', 'cacheExpire'), 'lastcomments');
-		if ($cacheData != false) {
+		$cacheExpire = intval(pluginGetVariable('lastcomments', 'cacheExpire')) ?: 30;
+		// Try to get from cache
+		$cacheData = cache_get($cacheKey);
+		if ($cacheData !== null) {
+			logger('[lastcomments] Cache hit: ' . $cacheKey, 'debug', 'lastcomments.log');
 			return $cacheData;
 		}
 	}
@@ -91,12 +120,19 @@ function lastcomments($mode = 0) {
 	$comm_num = 0;
 	$number = intval(pluginGetVariable('lastcomments', $tpl_prefix . 'number'));
 	$comm_length = intval(pluginGetVariable('lastcomments', $tpl_prefix . 'comm_length'));
-	if (($number < 1) || ($number > 50)) {
+	// Set defaults if values are empty or invalid
+	if (!$number || $number <= 0) {
 		$number = $tpl_prefix ? 30 : 10;
 	}
-	if (($comm_length < 10) || ($comm_length > ($tpl_prefix ? 500 : 100))) {
+	if (!$comm_length || $comm_length <= 0) {
 		$comm_length = $tpl_prefix ? 500 : 50;
 	}
+	// Ensure values are within valid ranges
+	$number = max(1, min(50, $number));
+	$comm_length = max(10, min(500, $comm_length));
+	logger('[lastcomments] Mode: ' . $mode . ', prefix: "' . $tpl_prefix . '", number: ' . $number . ', length: ' . $comm_length, 'debug', 'lastcomments.log');
+
+	$old_locale = null;
 	if ($mode == 2) {
 		$old_locale = setlocale(LC_TIME, 0);
 		setlocale(LC_TIME, 'en_EN');
@@ -118,8 +154,9 @@ function lastcomments($mode = 0) {
 		if ($config['use_smilies']) {
 			$text = $parse->smilies($text);
 		}
+		// Use ng-helpers excerpt for better truncation
 		if (strlen($text) > $comm_length) {
-			$text = $parse->truncateHTML($text, $comm_length);
+			$text = excerpt($text, $comm_length, '...');
 		}
 		$comm_num++;
 		// gen answer
@@ -142,16 +179,24 @@ function lastcomments($mode = 0) {
 		// gen avatar
 		if ($config['use_avatars']) {
 			if ($row['users_avatar']) {
-				$avatar = "<img src=\"" . avatars_url . "/" . $row['users_avatar'] . "\" alt=\"" . $row['author'] . "\" />";
 				$avatar_url = avatars_url . "/" . $row['users_avatar'];
+				// Исправление протокола на HTTPS если страница загружена через HTTPS
+				if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+					$avatar_url = preg_replace('/^http:\/\//i', 'https://', $avatar_url);
+				}
+				$avatar = "<img src=\"" . $avatar_url . "\" alt=\"" . $row['author'] . "\" />";
 			} else {
 				// If gravatar integration is active, show avatar from GRAVATAR.COM
 				if ($config['avatars_gravatar']) {
-					$avatar = '<img src="http://www.gravatar.com/avatar/' . md5(strtolower($row['mail'])) . '?s=' . $config['avatar_wh'] . '&amp;d=' . urlencode($noAvatarURL) . '" alt=""/>';
-					$avatar_url = 'http://www.gravatar.com/avatar/' . md5(strtolower($row['mail'])) . '?s=' . $config['avatar_wh'] . '&amp;d=' . urlencode($noAvatarURL);
+					$avatar_url = 'https://www.gravatar.com/avatar/' . md5(strtolower($row['mail'])) . '?s=' . $config['avatar_wh'] . '&amp;d=' . urlencode($noAvatarURL);
+					$avatar = '<img src="' . $avatar_url . '" alt=""/>';
 				} else {
-					$avatar = "<img src=\"" . $noAvatarURL . "\" alt=\"\" />";
 					$avatar_url = $noAvatarURL;
+					// Исправление протокола на HTTPS если страница загружена через HTTPS
+					if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+						$avatar_url = preg_replace('/^http:\/\//i', 'https://', $avatar_url);
+					}
+					$avatar = "<img src=\"" . $avatar_url . "\" alt=\"\" />";
 				}
 			}
 		} else {
@@ -165,9 +210,26 @@ function lastcomments($mode = 0) {
 		} else {
 			$author_link = '';
 		}
+		// Simple time_ago implementation
+		$diff = time() - $row['postdate'];
+		if ($diff < 60) {
+			$time_ago_str = 'только что';
+		} elseif ($diff < 3600) {
+			$mins = floor($diff / 60);
+			$time_ago_str = $mins . ' ' . ($mins == 1 ? 'минуту' : ($mins < 5 ? 'минуты' : 'минут')) . ' назад';
+		} elseif ($diff < 86400) {
+			$hours = floor($diff / 3600);
+			$time_ago_str = $hours . ' ' . ($hours == 1 ? 'час' : ($hours < 5 ? 'часа' : 'часов')) . ' назад';
+		} elseif ($diff < 604800) {
+			$days = floor($diff / 86400);
+			$time_ago_str = $days . ' ' . ($days == 1 ? 'день' : ($days < 5 ? 'дня' : 'дней')) . ' назад';
+		} else {
+			$time_ago_str = langdate('d.m.Y', $row['postdate']);
+		}
 		$data[] = array(
 			'link'          => newsGenerateLink(array('id' => $row['nid'], 'alt_name' => $row['alt_name'], 'catid' => $row['catid'], 'postdate' => $row['npostdate'])),
 			'date'          => langdate('d.m.Y H:i', $row['postdate']),
+			'time_ago'      => $time_ago_str,
 			'author'        => str_replace('<', '&lt;', $row['author']),
 			'author_id'     => $row['author_id'],
 			'title'         => str_replace('<', '&lt;', $row['title']),
@@ -179,7 +241,7 @@ function lastcomments($mode = 0) {
 			'avatar_url'    => $avatar_url,
 			'answer'        => $answer,
 			'name'          => $name,
-			'alternating'   => ($comnum % 2) ? "lastcomments_even" : "lastcomments_odd",
+			'alternating'   => ($comm_num % 2) ? "lastcomments_even" : "lastcomments_odd",
 			'rsslink'       => home . "?id=" . $row['nid'],
 			'rssdate'       => gmstrftime('%a, %d %b %Y %H:%M:%S GMT', $row['postdate']),
 		);
@@ -197,6 +259,7 @@ function lastcomments($mode = 0) {
 		'{tpl_url}'       => '{{ tpl_url }}',
 		'{link}'          => '{{ entry.link }}',
 		'{date}'          => '{{ entry.date }}',
+		'{time_ago}'      => '{{ entry.time_ago }}',
 		'{author}'        => '{{ entry.author }}',
 		'{author_id}'     => '{{ entry.author_id }}',
 		'{title}'         => '{{ entry.title }}',
@@ -227,9 +290,14 @@ function lastcomments($mode = 0) {
 	$tVars['lastcomments_url'] = generatePluginLink('lastcomments', null);
 	$tVars['lastcomments_url_rss'] = generatePluginLink('lastcomments', 'rss');
 	$output = $xt->render($tVars);
-	if ($mode == 2) setlocale(LC_TIME, $old_locale);
+	if ($mode == 2 && $old_locale !== null) {
+		setlocale(LC_TIME, $old_locale);
+	}
+	// Cache the output
 	if (pluginGetVariable('lastcomments', 'cache')) {
-		cacheStoreFile($cacheFileName, $output, 'lastcomments');
+		$cacheExpire = intval(pluginGetVariable('lastcomments', 'cacheExpire')) ?: 30;
+		cache_put($cacheKey, $output, $cacheExpire);
+		logger('[lastcomments] Generated and cached: ' . strlen($output) . ' bytes, ' . $comm_num . ' comments', 'info', 'lastcomments.log');
 	}
 	return $output;
 }

@@ -416,7 +416,7 @@ function jchatProcessAreaClick(event) {
 </script>
 <!-- SCRIPTS INTERNALS END -->
 	<!-- Display data definition (( YOU CAN CHANGE IT )) --> <div class="jchat_container"><div class="jchat_header">
-		<span>{{ lang.jchat.header.title }}</span>
+		<span>💬 Чат</span>
 	</div>
 	<div id="jChatMessages" class="jchat_messages_area" onclick="jchatProcessAreaClick(event);">
 		<table id="jChatTable" style="width: 100%; border: 0; border-spacing: 0;">
@@ -433,7 +433,7 @@ function jchatProcessAreaClick(event) {
 				{% if not logged %}
 					<input type="text" name="name" maxlength="20" style="margin-bottom: 8px;" placeholder="{{ lang.jchat.input.username }}" value="{{ lang.jchat.input.username }}" onfocus="if(!jChatInputUsernameDefault){this.value='';jChatInputUsernameDefault=1;}"/>
 				{% endif %}
-				<textarea id="jChatText" name="text" rows="3" placeholder="{{ lang.jchat.input.placeholder }}" onfocus="jchatCalculateMaxLen(this,'jchatWLen', {{ maxlen }});" onkeyup="jchatCalculateMaxLen(this,'jchatWLen', {{ maxlen }});"></textarea>
+				<textarea id="jChatText" name="text" rows="3" placeholder="Введите сообщение..." onfocus="jchatCalculateMaxLen(this,'jchatWLen', {{ maxlen }});" onkeyup="jchatCalculateMaxLen(this,'jchatWLen', {{ maxlen }});"></textarea>
 				<div class="jchat_bottom_controls">
 					<div class="jchat_emoji_picker">
 						<button type="button" id="jchatEmojiBtn" class="jchat_emoji_btn" onclick="jchatToggleEmojiPanel(); return false;">😊</button>
@@ -447,7 +447,7 @@ function jchatProcessAreaClick(event) {
 						{{ maxlen }}
 					</div>
 				</div>
-				<input id="jChatSubmit" type="submit" value="{{ lang.jchat.button.post }}"/>
+				<input id="jChatSubmit" type="submit" value="Отправить"/>
 			</form>
 		</div>
 	{% endif %}

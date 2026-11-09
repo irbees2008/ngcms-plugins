@@ -25,6 +25,21 @@ $db_update = [
     ],
 ];
 
+// Delete comments for gallery images before removing tables
+if ('commit' == $action && getPluginStatusActive('comments')) {
+    // Get all image IDs
+    $imageIds = $mysql->select("SELECT id FROM " . prefix . "_images WHERE folder != ''");
+    if (is_array($imageIds) && count($imageIds) > 0) {
+        $ids = array_map(function ($row) {
+            return (int)$row['id'];
+        }, $imageIds);
+        if (!empty($ids)) {
+            // Delete all comments for gallery images in one query
+            $mysql->query("DELETE FROM " . prefix . "_comments WHERE module='images' AND id IN (" . implode(',', $ids) . ")");
+        }
+    }
+}
+
 if ('commit' == $action) {
     if (fixdb_plugin_install('gallery', $db_update, 'deinstall')) {
         $ULIB = new UrlLibrary();

@@ -16,9 +16,13 @@
 	<!-- /.row -->
 </div>
 
-<div class="card">
-	<div class="card-header">{{global}}
+
+<div class="card plugin-settings-card">
+	<div class="card-header d-flex justify-content-between align-items-center" data-plugin-settings-header>
+		<span>{{global}}</span>{{documentation_button|raw}}
 		<div style="margin-right: auto;float: right;">{{header}}</div>
 	</div>
+	<div class="card-body plugin-settings-content">
 		{{entries}}
+	</div>
 </div>

@@ -17,35 +17,55 @@ LoadPluginLang($plugin, 'config', '', '', ':');
 $cfg = [];
 
 array_push($cfg, [
-    'descr' => $lang[$plugin.':description'],
+    'descr' => $lang[$plugin . ':description'],
 ]);
+
+// Проверяем, что поля даты в таблице news имеют правильный тип (int), а не datetime/timestamp
+$nschedFieldsMismatch = [];
+foreach (['nsched_activate', 'nsched_deactivate'] as $nschedField) {
+    $nschedFieldType = get_mysql_field_type(prefix . '_news', $nschedField);
+    if ($nschedFieldType && stripos($nschedFieldType, 'int') === false) {
+        $nschedFieldsMismatch[] = $nschedField;
+    }
+}
+
+if ($nschedFieldsMismatch) {
+    array_push($cfg, [
+        'type' => 'flat',
+        'input' => '<div class="alert alert-danger">'
+            . 'Структура БД не соответствует плагину: поля <b>' . implode(', ', $nschedFieldsMismatch) . '</b> '
+            . 'имеют тип DATETIME вместо INT. Это приводит к ошибкам при сохранении даты публикации/снятия с публикации.<br>'
+            . '<a href="admin.php?mod=extra-config&amp;plugin=' . $plugin . '&amp;stype=install&amp;action=commit" class="btn btn-danger btn-sm mt-2">Исправить структуру БД</a>'
+            . '</div>',
+    ]);
+}
 
 array_push($cfg, [
     'name' => 'period',
-    'title' => $lang[$plugin.':period'],
-    'descr' => $lang[$plugin.':period_descr'],
+    'title' => $lang[$plugin . ':period'],
+    'descr' => $lang[$plugin . ':period_descr'],
     'type' => 'select',
     'values' => [
-        '0' => $lang[$plugin.':period_value_0'],
-        '5m' => $lang[$plugin.':period_value_5m'],
-        '10m' => $lang[$plugin.':period_value_10m'],
-        '15m' => $lang[$plugin.':period_value_15m'],
-        '30m' => $lang[$plugin.':period_value_30m'],
-        '1h' => $lang[$plugin.':period_value_1h'],
-        '2h' => $lang[$plugin.':period_value_2h'],
-        '3h' => $lang[$plugin.':period_value_3h'],
-        '4h' => $lang[$plugin.':period_value_4h'],
-        '6h' => $lang[$plugin.':period_value_6h'],
-        '8h' => $lang[$plugin.':period_value_8h'],
-        '12h' => $lang[$plugin.':period_value_12h'],
+        '0' => $lang[$plugin . ':period_value_0'],
+        '5m' => $lang[$plugin . ':period_value_5m'],
+        '10m' => $lang[$plugin . ':period_value_10m'],
+        '15m' => $lang[$plugin . ':period_value_15m'],
+        '30m' => $lang[$plugin . ':period_value_30m'],
+        '1h' => $lang[$plugin . ':period_value_1h'],
+        '2h' => $lang[$plugin . ':period_value_2h'],
+        '3h' => $lang[$plugin . ':period_value_3h'],
+        '4h' => $lang[$plugin . ':period_value_4h'],
+        '6h' => $lang[$plugin . ':period_value_6h'],
+        '8h' => $lang[$plugin . ':period_value_8h'],
+        '12h' => $lang[$plugin . ':period_value_12h'],
     ],
     'value' => pluginGetVariable($plugin, 'period'),
 ]);
 
 array_push($cfg, [
     'name' => 'sync_dates',
-    'title' => $lang[$plugin.':sync_dates'],
-    'descr' => $lang[$plugin.':sync_dates_descr'],
+    'title' => $lang[$plugin . ':sync_dates'],
+    'descr' => $lang[$plugin . ':sync_dates_descr'],
     'type' => 'select',
     'values' => [
         $lang['noa'],
@@ -58,9 +78,11 @@ array_push($cfg, [
 if ($_REQUEST['action'] == 'commit') {
     // If submit requested, do config save
     //commit_plugin_config_changes($plugin, $cfg);
-    $regRun = [];
+    $regRun = null;
 
-    switch ($_REQUEST['period']) {
+    switch ($_REQUEST['period'] ?? '') {
+        case '0':
+            break;
         case '5m':
             $regRun = ['0,5,10,15,20,25,30,35,40,45,50,55', '*'];
             break;
@@ -101,7 +123,9 @@ if ($_REQUEST['action'] == 'commit') {
 
     /** @var cronManager $cron */
     $cron->unregisterTask($plugin);
-    $cron->registerTask($plugin, 'run', $regRun[0], $regRun[1], '*', '*', '*');
+    if ($regRun !== null) {
+        $cron->registerTask($plugin, 'run', $regRun[0], $regRun[1], '*', '*', '*');
+    }
 
     commit_plugin_config_changes($plugin, $cfg);
     print_commit_complete($plugin);

@@ -2,13 +2,26 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
 
+global $lang;
+LoadPluginLang('ai_rewriter', 'main', '', '', ':');
+
+use function Plugins\{logger, sanitize, benchmark, cache_get, cache_put, validate_url};
+
 // Simple HTTP client using cURL
 if (!function_exists('ai_rewriter_http_post_json')) {
     function ai_rewriter_http_post_json($url, $headers, $payload, $timeout = 20)
     {
         if (!function_exists('curl_init')) {
+            logger('HTTP error: cURL not available', 'error', 'ai_rewriter.log');
             return [false, 'PHP cURL extension is not available', 0, null];
         }
+
+        // Validate URL
+        if (!validate_url($url)) {
+            logger('HTTP error: invalid URL=' . $url, 'error', 'ai_rewriter.log');
+            return [false, 'Invalid URL provided', 0, null];
+        }
+
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -18,14 +31,22 @@ if (!function_exists('ai_rewriter_http_post_json')) {
         curl_setopt($ch, CURLOPT_TIMEOUT, $t);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, min($t, 15));
         // Follow redirects off by default for APIs
+
+        $startTime = microtime(true);
         $resp = curl_exec($ch);
+        $duration = round((microtime(true) - $startTime) * 1000, 2);
+
         $errno = curl_errno($ch);
         $errmsg = curl_error($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+
         if ($errno) {
+            logger('HTTP error: ' . $errmsg . ', code=' . $code . ', time=' . $duration . 'ms', 'error', 'ai_rewriter.log');
             return [false, 'cURL error: ' . $errmsg, $code, null];
         }
+
+        logger('HTTP success: code=' . $code . ', time=' . $duration . 'ms, size=' . strlen($resp) . ' bytes', 'info', 'ai_rewriter.log');
         return [true, null, $code, $resp];
     }
 }
@@ -36,6 +57,8 @@ if (!function_exists('ai_rewriter_provider_openai')) {
     {
         $base = rtrim($apiBase ?: 'https://api.openai.com/v1', '/');
         $url = $base . '/chat/completions';
+
+        logger('OpenAI request: model=' . $model . ', temp=' . $temperature . ', timeout=' . $timeout, 'info', 'ai_rewriter.log');
         $payload = [
             'model' => $model ?: 'gpt-4o-mini',
             'messages' => [
@@ -49,19 +72,27 @@ if (!function_exists('ai_rewriter_provider_openai')) {
         ];
         list($ok, $err, $code, $resp) = ai_rewriter_http_post_json($url, $headers, $payload, $timeout);
         if (!$ok) {
+            logger('OpenAI error: ' . $err, 'error', 'ai_rewriter.log');
             return [false, $err];
         }
         $data = json_decode($resp, true);
         if (!is_array($data)) {
+            logger('OpenAI error: invalid JSON', 'error', 'ai_rewriter.log');
             return [false, 'Invalid JSON from provider'];
         }
         if (isset($data['error'])) {
-            return [false, 'API error: ' . (is_array($data['error']) ? ($data['error']['message'] ?? 'unknown') : $data['error'])];
+            $errorMsg = is_array($data['error']) ? ($data['error']['message'] ?? 'unknown') : $data['error'];
+            logger('OpenAI API error: ' . $errorMsg, 'error', 'ai_rewriter.log');
+            return [false, 'API error: ' . $errorMsg];
         }
         $text = $data['choices'][0]['message']['content'] ?? '';
         if (!$text) {
+            logger('OpenAI error: empty response', 'error', 'ai_rewriter.log');
             return [false, 'Empty response from provider'];
         }
+        // Decode HTML entities that AI might have encoded
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        logger('OpenAI success: length=' . mb_strlen($text) . ' chars', 'info', 'ai_rewriter.log');
         return [true, $text];
     }
 }
@@ -71,6 +102,8 @@ if (!function_exists('ai_rewriter_provider_anthropic')) {
     function ai_rewriter_provider_anthropic($model, $apiKey, $systemPrompt, $userPrompt, $temperature = 0.7, $timeout = 20)
     {
         $url = 'https://api.anthropic.com/v1/messages';
+
+        logger('Anthropic request: model=' . $model . ', temp=' . $temperature . ', timeout=' . $timeout, 'info', 'ai_rewriter.log');
         $payload = [
             'model' => $model ?: 'claude-3-haiku-20240307',
             'max_tokens' => 4096,
@@ -91,20 +124,84 @@ if (!function_exists('ai_rewriter_provider_anthropic')) {
         ];
         list($ok, $err, $code, $resp) = ai_rewriter_http_post_json($url, $headers, $payload, $timeout);
         if (!$ok) {
+            logger('Anthropic error: ' . $err, 'error', 'ai_rewriter.log');
             return [false, $err];
         }
         $data = json_decode($resp, true);
         if (!is_array($data)) {
+            logger('Anthropic error: invalid JSON', 'error', 'ai_rewriter.log');
             return [false, 'Invalid JSON from provider'];
         }
         if (isset($data['error'])) {
-            return [false, 'API error: ' . (is_array($data['error']) ? ($data['error']['message'] ?? 'unknown') : $data['error'])];
+            $errorMsg = is_array($data['error']) ? ($data['error']['message'] ?? 'unknown') : $data['error'];
+            logger('Anthropic API error: ' . $errorMsg, 'error', 'ai_rewriter.log');
+            return [false, 'API error: ' . $errorMsg];
         }
         $parts = $data['content'][0]['text'] ?? '';
         if (!$parts) {
+            logger('Anthropic error: empty response', 'error', 'ai_rewriter.log');
             return [false, 'Empty response from provider'];
         }
+        // Decode HTML entities that AI might have encoded
+        $parts = html_entity_decode($parts, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        logger('Anthropic success: length=' . mb_strlen($parts) . ' chars', 'info', 'ai_rewriter.log');
         return [true, $parts];
+    }
+}
+
+// Detect language of text
+if (!function_exists('ai_rewriter_detect_language')) {
+    function ai_rewriter_detect_language($text)
+    {
+        // Remove HTML/BBCode tags for analysis
+        $cleanText = strip_tags($text);
+        $cleanText = preg_replace('/\[.*?\]/s', '', $cleanText);
+        $cleanText = trim($cleanText);
+
+        // Get first 500 characters for language detection
+        $sample = mb_substr($cleanText, 0, 500);
+
+        // Language patterns with specific characters
+        $patterns = [
+            'ukrainian' => '/[ієїґІЄЇҐ]/u',  // Ukrainian-specific letters (check first!)
+            'russian' => '/[а-яёА-ЯЁ]/u',
+            'english' => '/[a-zA-Z]/',
+            'german' => '/[äöüßÄÖÜẞ]/u',
+            'french' => '/[àâæçéèêëïîôùûüÿœÀÂÆÇÉÈÊËÏÎÔÙÛÜŸŒ]/u',
+            'spanish' => '/[áéíóúüñ¿¡ÁÉÍÓÚÜÑ]/u',
+            'italian' => '/[àèéìíòóùúÀÈÉÌÍÒÓÙÚ]/u',
+            'portuguese' => '/[ãáàâçéêíóôõúÃÁÀÂÇÉÊÍÓÔÕÚ]/u',
+            'polish' => '/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/u',
+        ];
+
+        $scores = [];
+        foreach ($patterns as $lang => $pattern) {
+            preg_match_all($pattern, $sample, $matches);
+            $scores[$lang] = count($matches[0]);
+        }
+
+        // Special handling: Ukrainian has unique letters, check first
+        if ($scores['ukrainian'] > 0) {
+            logger('Language detected: ukrainian (unique letters found)', 'info', 'ai_rewriter.log');
+            return 'ukrainian';
+        }
+
+        // Get language with highest score
+        arsort($scores);
+        $detectedLang = key($scores);
+
+        // If no specific characters found, check for basic Latin
+        if ($scores[$detectedLang] == 0) {
+            if (preg_match('/[a-zA-Z]/', $sample)) {
+                logger('Language detected: english (default Latin)', 'info', 'ai_rewriter.log');
+                return 'english';
+            }
+            logger('Language detected: unknown', 'warning', 'ai_rewriter.log');
+            return 'unknown';
+        }
+
+        logger('Language detected: ' . $detectedLang . ' (score: ' . $scores[$detectedLang] . ')', 'info', 'ai_rewriter.log');
+        return $detectedLang;
     }
 }
 
@@ -112,6 +209,10 @@ if (!function_exists('ai_rewriter_provider_anthropic')) {
 if (!function_exists('ai_rewriter_rewrite')) {
     function ai_rewriter_rewrite($text)
     {
+        // Decode HTML entities before sending to AI
+        // This converts &nbsp; &quot; etc. to normal characters
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
         // Load config
         pluginsLoadConfig();
         $provider = pluginGetVariable('ai_rewriter', 'provider');
@@ -128,36 +229,93 @@ if (!function_exists('ai_rewriter_rewrite')) {
         if ($timeout <= 0) {
             $timeout = 20;
         }
+        // Nginx/PHP-FPM в OpenServer по умолчанию рвёт соединение через 60 сек
+        // (504 Gateway Timeout), поэтому не даём HTTP-запросу превысить безопасный запас
+        if ($timeout > 50) {
+            logger('Timeout capped from ' . $timeout . ' to 50s to avoid 504 Gateway Timeout', 'warning', 'ai_rewriter.log');
+            $timeout = 50;
+        }
+        // Поднимаем лимит выполнения PHP, чтобы он не оборвал запрос раньше, чем curl
+        if (function_exists('set_time_limit')) {
+            @set_time_limit($timeout + 15);
+        }
 
         if (!$provider) {
+            logger('Rewrite skipped: provider not configured', 'info', 'ai_rewriter.log');
             return [true, $text]; // disabled
         }
         if (!$apiKey && in_array($provider, ['openai', 'openai_compat', 'anthropic'])) {
+            logger('Rewrite error: API key missing for provider=' . $provider, 'error', 'ai_rewriter.log');
             return [false, 'AI Rewriter: API ключ не задан'];
         }
+
+        logger('Rewrite started: provider=' . $provider . ', length=' . mb_strlen($text) . ' chars', 'info', 'ai_rewriter.log');
 
         // Basic model/provider sanity checks for clearer errors
         $m = mb_strtolower($model);
         if ($provider === 'anthropic') {
             if ((strpos($m, 'gpt') !== false) || (strpos($m, 'o1') !== false) || (strpos($m, 'o3') !== false)) {
-                return [false, 'AI Rewriter: выбран провайдер Anthropic, но указана модель OpenAI (' . $model . '). Задайте модель Claude, например: claude-3-5-sonnet-20240620 или claude-3-haiku-20240307.'];
+                $error = 'AI Rewriter: выбран провайдер Anthropic, но указана модель OpenAI (' . $model . '). Задайте модель Claude, например: claude-3-5-sonnet-20240620 или claude-3-haiku-20240307.';
+                logger('Config error: ' . $error, 'error', 'ai_rewriter.log');
+                return [false, $error];
             }
         }
         if (in_array($provider, ['openai', 'openai_compat'])) {
             if (strpos($m, 'claude') !== false) {
-                return [false, 'AI Rewriter: выбран провайдер OpenAI, но указана модель Anthropic (' . $model . '). Укажите GPT-модель, например: gpt-4o-mini.'];
+                $error = 'AI Rewriter: выбран провайдер OpenAI, но указана модель Anthropic (' . $model . '). Укажите GPT-модель, например: gpt-4o-mini.';
+                logger('Config error: ' . $error, 'error', 'ai_rewriter.log');
+                return [false, $error];
             }
         }
 
-        // Build prompts (keep structure/markup intact)
-        $sys = 'Ты профессиональный редактор и копирайтер. ' .
-            'Переписывай текст сохраняя смысл, факты, структуру и разметку. ' .
-            'Строго сохраняй HTML, BBCode, URLы, номера, теги и спецсимволы. ' .
-            'Не добавляй фактов, не удаляй важный смысл. Язык исходника сохраняй.';
+        // Get configured default language
+        $defaultLang = pluginGetVariable('ai_rewriter', 'default_language') ?: 'auto';
 
+        if ($defaultLang !== 'auto') {
+            // If specific language is set in config, always use it (ignore auto-detection)
+            $detectedLang = $defaultLang;
+            logger('Using configured language: ' . $defaultLang, 'info', 'ai_rewriter.log');
+        } else {
+            // Auto-detect language only when "auto" is selected
+            $detectedLang = ai_rewriter_detect_language($text);
+            logger('Auto-detected language: ' . $detectedLang, 'info', 'ai_rewriter.log');
+        }
+
+        // Language names for prompts
+        $langNames = [
+            'russian' => 'русском',
+            'ukrainian' => 'украинском',
+            'english' => 'английском',
+            'german' => 'немецком',
+            'french' => 'французском',
+            'spanish' => 'испанском',
+            'italian' => 'итальянском',
+            'portuguese' => 'португальском',
+            'polish' => 'польском',
+            'unknown' => 'исходном'
+        ];
+
+        $langName = $langNames[$detectedLang] ?? 'исходном';
+
+        // Get system prompt from config (with default)
+        $defaultPrompt = 'Ты профессиональный редактор и копирайтер. ' .
+            'Переписывай текст сохраняя смысл, факты, структуру и разметку. ' .
+            'Строго сохраняй HTML-теги, BBCode, ссылки, URL, кавычки, номера и знаки препинания. ' .
+            'Если исходный текст дан сплошным блоком без абзацев, раздели его на логические абзацы по 2–4 предложения, отделяя их пустой строкой. Не возвращай весь текст одним абзацем. ' .
+            'НЕ используй HTML-сущности типа &nbsp; &quot; &amp; - используй обычные символы. ' .
+            'Не добавляй фактов, не удаляй важный смысл. ' .
+            'ВАЖНО: Переписанный текст должен быть на {язык} языке, сохраняя язык оригинала.';
+
+        $systemPromptTemplate = pluginGetVariable('ai_rewriter', 'system_prompt') ?: $defaultPrompt;
+
+        // Replace {язык} placeholder with detected language
+        $sys = str_replace('{язык}', $langName, $systemPromptTemplate);
+
+        // Build user prompt
         $req = 'Перепиши следующий текст с целевой уникальностью ~' . max(0, min(100, $orig ?: 60)) . '%. ' .
             ($tone ? ('Тон: ' . $tone . '. ') : '') .
-            'Сохрани разметку (HTML/BBCode), заголовки, абзацы и ссылки без изменений. ' .
+            'Сохрани существующие HTML/BBCode-теги, ссылки и заголовки. Сохрани существующие границы абзацев, но если исходный текст идет сплошным блоком, обязательно раздели его на смысловые абзацы по 2–4 предложения, отделяя абзацы пустой строкой. Не возвращай весь текст одним абзацем и не добавляй новые HTML/BBCode-теги. ' .
+            'Текст должен остаться на ' . $langName . ' языке. ' .
             'Ничего не комментируй, верни только итоговый текст.
 
 === ТЕКСТ ДЛЯ РЕРАЙТА ===
@@ -172,6 +330,91 @@ if (!function_exists('ai_rewriter_rewrite')) {
             default:
                 return [false, 'AI Rewriter: неизвестный провайдер'];
         }
+    }
+}
+
+if (!function_exists('ai_rewriter_generate_tags')) {
+    function ai_rewriter_generate_tags($title, $content, $categories = '')
+    {
+        pluginsLoadConfig();
+        $provider = pluginGetVariable('ai_rewriter', 'provider');
+        $apiKey = trim((string)pluginGetVariable('ai_rewriter', 'api_key'));
+        $apiBase = trim((string)pluginGetVariable('ai_rewriter', 'api_base'));
+        $model = trim((string)pluginGetVariable('ai_rewriter', 'model'));
+        $temperature = (float)pluginGetVariable('ai_rewriter', 'temperature');
+        $timeout = (int)pluginGetVariable('ai_rewriter', 'timeout');
+
+        if (!$provider) {
+            logger('Tag generation failed: provider is not configured', 'warning', 'ai_rewriter.log');
+            return [false, 'AI Rewriter: провайдер не настроен'];
+        }
+        if (!$apiKey && in_array($provider, ['openai', 'openai_compat', 'anthropic'], true)) {
+            logger('Tag generation failed: API key is missing', 'warning', 'ai_rewriter.log');
+            return [false, 'AI Rewriter: API ключ не задан'];
+        }
+        if (!in_array($provider, ['openai', 'openai_compat', 'anthropic'], true)) {
+            logger('Tag generation failed: unknown provider=' . $provider, 'error', 'ai_rewriter.log');
+            return [false, 'AI Rewriter: неизвестный провайдер'];
+        }
+
+        $modelLower = mb_strtolower($model);
+        if ($provider === 'anthropic' && preg_match('/\b(?:gpt|o1|o3)[-\w.]*/i', $modelLower)) {
+            return [false, 'AI Rewriter: модель не соответствует провайдеру Anthropic'];
+        }
+        if (in_array($provider, ['openai', 'openai_compat'], true) && str_contains($modelLower, 'claude')) {
+            return [false, 'AI Rewriter: модель Claude не соответствует провайдеру OpenAI'];
+        }
+
+        if ($temperature <= 0 || $temperature > 1) {
+            $temperature = 0.7;
+        }
+        if ($timeout <= 0) {
+            $timeout = 20;
+        }
+        if ($timeout > 50) {
+            $timeout = 50;
+        }
+        if (function_exists('set_time_limit')) {
+            @set_time_limit($timeout + 15);
+        }
+
+        $language = pluginGetVariable('ai_rewriter', 'default_language') ?: 'auto';
+        if ($language === 'auto') {
+            $language = ai_rewriter_detect_language($title . "\n" . $content);
+        }
+        $languageNames = [
+            'russian' => 'русском',
+            'ukrainian' => 'украинском',
+            'english' => 'английском',
+            'german' => 'немецком',
+            'french' => 'французском',
+            'spanish' => 'испанском',
+            'italian' => 'итальянском',
+            'portuguese' => 'португальском',
+            'polish' => 'польском',
+        ];
+        $languageName = $languageNames[$language] ?? 'языке исходной новости';
+
+        $systemPrompt = 'Ты редактор новостного сайта. Подбери точные тематические теги по заголовку, тексту и категориям новости. ' .
+            'Верни только 5–10 коротких тегов, по одному на строке, без нумерации, пояснений и хештегов. ' .
+            'Используй язык новости (' . $languageName . '), не добавляй сведения, которых нет в исходных данных.';
+        $userPrompt = "Заголовок:\n" . mb_substr(trim((string)$title), 0, 500, 'UTF-8') .
+            "\n\nКатегории:\n" . (trim((string)$categories) !== '' ? mb_substr(trim((string)$categories), 0, 1000, 'UTF-8') : 'не указаны') .
+            "\n\nТекст новости:\n" . mb_substr(trim((string)$content), 0, 20000, 'UTF-8');
+
+        logger('Tag generation started: provider=' . $provider . ', text_length=' . mb_strlen((string)$content, 'UTF-8'), 'info', 'ai_rewriter.log');
+        if ($provider === 'anthropic') {
+            $result = ai_rewriter_provider_anthropic($model, $apiKey, $systemPrompt, $userPrompt, $temperature, $timeout);
+        } else {
+            $result = ai_rewriter_provider_openai($model, $apiKey, $apiBase, $systemPrompt, $userPrompt, $temperature, $timeout);
+        }
+        if (empty($result[0])) {
+            logger('Tag generation failed: ' . ($result[1] ?? 'provider error'), 'error', 'ai_rewriter.log');
+            return [false, $result[1] ?? 'AI Rewriter: ошибка генерации тегов'];
+        }
+
+        logger('Tag generation completed: response_length=' . mb_strlen((string)$result[1], 'UTF-8'), 'info', 'ai_rewriter.log');
+        return [true, trim((string)$result[1])];
     }
 }
 
@@ -211,7 +454,9 @@ class AIRewriterNewsFilter extends NewsFilter
         list($ok, $res) = ai_rewriter_rewrite($joined);
         if ($ok) {
             $SQL['content'] = $res;
+            logger('News add: rewritten successfully', 'info', 'ai_rewriter.log');
         } else {
+            logger('News add: rewrite failed - ' . $res, 'error', 'ai_rewriter.log');
             // Non-blocking: keep original, show admin message
             if (function_exists('msg')) {
                 msg(['type' => 'error', 'text' => $res]);
@@ -238,7 +483,9 @@ class AIRewriterNewsFilter extends NewsFilter
         list($ok, $res) = ai_rewriter_rewrite($content);
         if ($ok) {
             $SQLnew['content'] = $res;
+            logger('News edit: newsID=' . $newsID . ', rewritten successfully', 'info', 'ai_rewriter.log');
         } else {
+            logger('News edit: newsID=' . $newsID . ', rewrite failed - ' . $res, 'error', 'ai_rewriter.log');
             if (function_exists('msg')) {
                 msg(['type' => 'error', 'text' => $res]);
             }
@@ -253,20 +500,29 @@ register_filter('news', 'ai_rewriter', new AIRewriterNewsFilter);
 // RPC: rewrite preview (no save)
 function ai_rewriter_rpc_rewrite($params = null)
 {
+    global $lang;
+
+    // Security: rpcRegisterFunction(..., true) требует авторизации администратора
+    // Дополнительная проверка не требуется - встроенная защита NGCMS
+
     // Text can come as POST variable or as `$params['text']`
     $text = '';
     if (is_array($params) && isset($params['text'])) {
-        $text = (string)$params['text'];
+        $text = sanitize((string)$params['text'], 'html');
     } elseif (isset($_POST['text'])) {
-        $text = (string)$_POST['text'];
+        $text = sanitize((string)$_POST['text'], 'html');
     }
     if (!mb_strlen(trim($text))) {
-        return ['status' => 0, 'errorCode' => 100, 'errorText' => 'Пустой текст'];
+        logger('RPC error: empty text', 'warning', 'ai_rewriter.log');
+        return ['status' => 0, 'errorCode' => 100, 'errorText' => $lang['ai_rewriter:empty_text']];
     }
+    logger('RPC rewrite request: length=' . mb_strlen($text) . ' chars', 'info', 'ai_rewriter.log');
     list($ok, $res) = ai_rewriter_rewrite($text);
     if ($ok) {
+        logger('RPC success: result length=' . mb_strlen($res) . ' chars', 'info', 'ai_rewriter.log');
         return ['status' => 1, 'errorCode' => 0, 'text' => $res];
     }
+    logger('RPC error: ' . $res, 'error', 'ai_rewriter.log');
     return ['status' => 0, 'errorCode' => 101, 'errorText' => $res];
 }
 

@@ -1,5 +1,15 @@
 <?php
 
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\formatBytes')) {
+    $ngHelpersPath = __DIR__ . '/../../ng-helpers/ng-helpers.php';
+    if (file_exists($ngHelpersPath)) {
+        require_once $ngHelpersPath;
+    }
+}
+
+// Import ng-helpers functions
+use function Plugins\{cache_get, cache_put, formatBytes, logger, get_ip, notify, sanitize};
 
 /*
  * Class PluginGallery
@@ -73,6 +83,11 @@ class PluginGallery
     {
         global $twig, $mysql, $template;
 
+        // Register skin assets
+        if (function_exists('gallery_register_skin_assets')) {
+            gallery_register_skin_assets(pluginGetVariable('gallery', 'skin'), 'category');
+        }
+
         if ($this->params['cache']) {
             $cacheFileName = md5('gallery' . 'category') . '.txt';
             $cacheData = cacheRetrieveFile($cacheFileName, (int) $this->params['cache_expire'], 'gallery');
@@ -87,7 +102,14 @@ class PluginGallery
             0,
             pluginGetVariable('gallery', 'skin')
         );
-
+        if (empty($tPath['category'])) {
+            $template['vars']['plugin_gallery_category'] = '';
+            return;
+        }
+        // Register skin assets
+        if (function_exists('gallery_register_skin_assets')) {
+            gallery_register_skin_assets(pluginGetVariable('gallery', 'skin'), 'page_index');
+        }
         $tVars = [
             'plugin_title' => $this->pluginTitle,
             'url_tpl' => $tPath['url:category'],
@@ -134,7 +156,7 @@ class PluginGallery
             $limit = 'limit ' . $widget['images_count'];
             if ($widget['if_rand'] == 1) {
                 $image_key = $mysql->select('select id from ' . prefix . '_images ' . $where);
-                if (count($image_key)) {
+                if (is_array($image_key) && count($image_key)) {
                     shuffle($image_key);
                     if ($limit) {
                         $image_key = array_slice($image_key, 0, $widget['images_count']);
@@ -180,6 +202,10 @@ class PluginGallery
             }
 
             $tPath = locatePluginTemplates(['widget'], 'gallery', 0, $widget['skin']);
+            // Register skin assets
+            if (function_exists('gallery_register_skin_assets')) {
+                gallery_register_skin_assets($widget['skin'], 'widget');
+            }
             $tVars = [
                 'url_tpl' => $tPath['url:widget'],
                 'url_main' => generatePluginLink('gallery', null),
@@ -223,7 +249,7 @@ class PluginGallery
         $galleries = $this->galleries;
 
         $pagesss = '';
-        if ($this->params['galleries_count']) {
+        if ($this->params['galleries_count'] && is_array($galleries) && count($galleries) > 0) {
             $pagesCount = ceil(count($galleries) / $this->params['galleries_count']);
             if ($pagesCount > 1) {
                 $galleries = array_slice($galleries, ($page - 1) * $this->params['galleries_count'], $this->params['galleries_count']);
@@ -242,6 +268,12 @@ class PluginGallery
             0,
             pluginGetVariable('gallery', 'skin')
         );
+
+        // Register skin assets
+        if (function_exists('gallery_register_skin_assets')) {
+            gallery_register_skin_assets(pluginGetVariable('gallery', 'skin'), 'page_index');
+        }
+
         $tVars = [
             'plugin_title' => $this->pluginTitle,
             'url_tpl' => $tPath['url:page_index'],
@@ -267,12 +299,12 @@ class PluginGallery
         $gallery['name'] = ! empty($params['name']) ? secure_html($params['name']) : (! empty($_REQUEST['name']) ? secure_html($_REQUEST['name']) : false);
 
         if (! $gallery['name']) {
-            msg(['type' => 'danger', 'message' => 'Не все параметры заданы']);
+            notify('danger', 'Не все параметры заданы');
             return false;
         }
 
         if (! is_array($gallery = $this->galleries[$gallery['name']])) {
-            msg(['type' => 'danger', 'message' => 'Не все параметры заданы']);
+            notify('danger', 'Не все параметры заданы');
             return false;
         }
 
@@ -312,12 +344,12 @@ class PluginGallery
                 'views' => (int) $row['views'],
                 'width' => (int) $row['width'],
                 'height' => (int) $row['height'],
-                'size' => is_readable($fname = images_dir . '/' . $folder . '/' . $name) ? formatSize(filesize($fname)) : '-',
+                'size' => is_readable($fname = images_dir . '/' . $folder . '/' . $name) ? formatBytes(filesize($fname)) : '-',
                 'description' => secure_html($row['description']),
                 'url' => generatePluginLink('gallery', 'image', ['gallery' => $folder, 'id' => $id, 'name' => $name]),
                 'src' => images_url . '/' . $folder . '/' . $name,
                 'src_thumb' => file_exists(images_url . '/' . $folder . '/thumb/' . $name)
-                    ? images_url . '/' . $folder . '/thumb/' . $folder
+                    ? images_url . '/' . $folder . '/thumb/' . $name
                     : images_url . '/' . $folder . '/' . $name,
             ];
         }
@@ -340,6 +372,12 @@ class PluginGallery
         }
 
         $tPath = locatePluginTemplates(['page_gallery'], 'gallery', 0, $gallery['skin']);
+
+        // Register skin assets
+        if (function_exists('gallery_register_skin_assets')) {
+            gallery_register_skin_assets($gallery['skin'], 'page_gallery');
+        }
+
         $tVars = [
             'plugin_title' => $this->pluginTitle,
             'url_tpl' => $tPath['url:page_gallery'],
@@ -365,24 +403,52 @@ class PluginGallery
         global $userROW, $template, $tpl, $twig, $lang, $mysql, $TemplateCache, $SYSTEM_FLAGS;
         global $galleries;
 
+        // Debug logging
+        $debugFile = root . 'engine/cache/gallery_debug.txt';
+        file_put_contents($debugFile, date('Y-m-d H:i:s') . " - imagePageAction called\n", FILE_APPEND);
+        file_put_contents($debugFile, "Params: " . print_r($params, true) . "\n", FILE_APPEND);
+
         $imageName = ! empty($params['name']) ? secure_html($params['name']) : false;
-        $gallery['name'] = ! empty($params['gallery']) ? secure_html($params['gallery']) : false;
+        $galleryName = ! empty($params['gallery']) ? secure_html($params['gallery']) : false;
 
-        if (! $imageName or ! $gallery['name']) {
+        file_put_contents($debugFile, "Image: $imageName, Gallery: $galleryName\n", FILE_APPEND);
+
+        if (! $imageName or ! $galleryName) {
+            file_put_contents($debugFile, "ERROR: Missing image or gallery name\n", FILE_APPEND);
             error404();
             return false;
         }
 
-        if (! is_array($gallery = $this->galleries[$gallery['name']])) {
-            error404();
-            return false;
-        }
+        // Try to get gallery from cache first
+        if (isset($this->galleries[$galleryName]) && is_array($this->galleries[$galleryName])) {
+            $gallery = $this->galleries[$galleryName];
+            file_put_contents($debugFile, "Gallery found in cache: {$galleryName}\n", FILE_APPEND);
+        } else {
+            file_put_contents($debugFile, "Gallery NOT in cache, loading from DB: {$galleryName}\n", FILE_APPEND);
+            // If not in cache, try to load from database
+            $galleryRow = $mysql->record('SELECT * FROM ' . prefix . '_gallery WHERE name=' . db_squote($galleryName) . ' AND if_active=1 LIMIT 1');
+            if (!is_array($galleryRow) || empty($galleryRow)) {
+                file_put_contents($debugFile, "ERROR: Gallery not found in DB: {$galleryName}\n", FILE_APPEND);
+                if (function_exists('Plugins\\logger')) {
+                    logger('Gallery not found or inactive: ' . $galleryName, 'error', 'gallery.log');
+                }
+                error404();
+                return false;
+            }
 
-        $gallery['id'] = (int) $gallery['id'];
-        $gallery['name'] = secure_html($gallery['name']); // Reload name of gallery
-        $gallery['title'] = secure_html($gallery['title']);
-        $gallery['description'] = secure_html($gallery['description']);
-        $gallery['keywords'] = secure_html($gallery['keywords']);
+            $gallery = [
+                'id' => (int) $galleryRow['id'],
+                'name' => secure_html($galleryRow['name']),
+                'title' => secure_html($galleryRow['title']),
+                'description' => secure_html($galleryRow['description']),
+                'keywords' => secure_html($galleryRow['keywords']),
+            ];
+
+            file_put_contents($debugFile, "Gallery loaded from DB successfully\n", FILE_APPEND);
+            if (function_exists('Plugins\\logger')) {
+                logger('Gallery loaded from DB: ' . $galleryName, 'info', 'gallery.log');
+            }
+        }
 
         $SYSTEM_FLAGS['info']['title']['group'] = $this->pluginTitle . ' ' . $gallery['title'];
         $SYSTEM_FLAGS['info']['title']['item'] = $imageName;
@@ -398,9 +464,6 @@ class PluginGallery
             ['link' => generatePluginLink('gallery', 'image', ['gallery' => $gallery['name'], 'name' => $imageName]), 'text' => $imageName],
         ];
 
-        // Need to update count views
-        $mysql->query('UPDATE ' . prefix . '_images SET views=views+1 WHERE name=' . db_squote($imageName));
-
         // Temporaly disabled cached
         if ($this->params['cache']) {
             //$havePerm = (is_array($userROW) and (($userROW['status'] == 1) or ($userROW['status'] == 2) or ($row['author_id'] == $userROW['id'])));
@@ -411,7 +474,25 @@ class PluginGallery
             }
         }
 
-        $row = $mysql->record('SELECT * FROM ' . prefix . '_images WHERE folder=' . db_squote($gallery['name']) . ' and name=' . db_squote($imageName) . ' ORDER BY date LIMIT 1');
+        $row = $mysql->record('SELECT * FROM ' . prefix . '_images WHERE folder=' . db_squote($gallery['name']) . ' AND name=' . db_squote($imageName) . ' ORDER BY date LIMIT 1');
+
+        $debugFile = root . 'engine/cache/gallery_debug.txt';
+        file_put_contents($debugFile, "SQL query executed for image\n", FILE_APPEND);
+        file_put_contents($debugFile, "Result: " . print_r($row, true) . "\n", FILE_APPEND);
+
+        if (!is_array($row) || empty($row)) {
+            file_put_contents($debugFile, "ERROR: Image not found in DB\n", FILE_APPEND);
+            if (function_exists('Plugins\\logger')) {
+                logger('Image not found in DB: gallery=' . $gallery['name'] . ', name=' . $imageName, 'error', 'gallery.log');
+            }
+            error404();
+            return false;
+        }
+
+        file_put_contents($debugFile, "SUCCESS: Image found in DB, ID=" . $row['id'] . "\n", FILE_APPEND);
+
+        // Update views count AFTER confirming image exists
+        $mysql->query('UPDATE ' . prefix . '_images SET views=views+1 WHERE folder=' . db_squote($gallery['name']) . ' AND name=' . db_squote($imageName));
 
         $row['id'] = (int) $row['id'];
         $row['com'] = (int) $row['com'];
@@ -462,43 +543,57 @@ class PluginGallery
             $nextlink = '';
         }
 
-        // Комментарии не тронуты
-        // Вернуться и доделать. Эй, куда пошел
+        // Комментарии
+        $commentsOutput = '';
         if (getPluginStatusActive('comments')) {
-            // Prepare params for call
-            // module - DB table images
-            $callingCommentsParams = ['outprint' => true, 'total' => $row['com'], 'module' => 'images'];
+            $commentsFile = root . 'plugins/comments/inc/comments.show.php';
+            if (file_exists($commentsFile)) {
+                include_once $commentsFile;
 
-            include_once root . '/plugins/comments/inc/comments.show.php';
+                if (function_exists('comments_show') && function_exists('comments_showform')) {
+                    // Prepare params for call - module 'images' for gallery images
+                    $callingCommentsParams = ['outprint' => true, 'total' => $row['com'], 'module' => 'images'];
 
-            $tcvars = [];
-            // Show comments [ if not skipped ]
-            $tcvars['vars']['entries'] = comments_show($row['id'], 0, 0, $callingCommentsParams);
-            $tcvars['vars']['comnum'] = $row['com'];
+                    // Capture output with buffering
+                    ob_start();
 
-            $tcvars['vars']['more_comments'] = '';
-            $tcvars['regx']['#\[more_comments\](.*?)\[\/more_comments\]#is'] = '';
+                    // Show comments list
+                    echo comments_show($row['id'], 0, 0, $callingCommentsParams);
 
-            // Show form for adding comments
-            if (! pluginGetVariable('comments', 'regonly') or is_array($userROW)) {
-                $tcvars['vars']['form'] = comments_showform($row['id'], $callingCommentsParams);
-                $tcvars['regx']['#\[regonly\](.*?)\[\/regonly\]#is'] = '';
-                $tcvars['regx']['#\[commforbidden\](.*?)\[\/commforbidden\]#is'] = '';
+                    echo "\n";
+
+                    // Show comment form (check if user can add comments)
+                    if (!pluginGetVariable('comments', 'regonly') || is_array($userROW)) {
+                        // Call comments_showform with proper parameters
+                        $formParams = ['module' => 'images', 'outprint' => true];
+                        echo comments_showform($row['id'], $formParams);
+                    } else {
+                        echo '<div class="alert alert-info">Для добавления комментариев необходимо авторизоваться.</div>';
+                    }
+
+                    $commentsOutput = ob_get_clean();
+
+                    // Log for debugging
+                    if (function_exists('Plugins\logger')) {
+                        \Plugins\logger('Comments output for image #' . $row['id'] . ', length: ' . strlen($commentsOutput), 'info', 'gallery.log');
+                    }
+                } else {
+                    $commentsOutput = '<!-- Comments functions not found -->';
+                }
             } else {
-                $tcvars['vars']['form'] = '';
-                $tcvars['regx']['#\[regonly\](.*?)\[\/regonly\]#is'] = '$1';
-                $tcvars['regx']['#\[commforbidden\](.*?)\[\/commforbidden\]#is'] = '';
+                $commentsOutput = '<!-- Comments file not found: ' . $commentsFile . ' -->';
             }
-            $tcvars['regx']['#\[comheader\](.*)\[/comheader\]#is'] = ($row['com']) ? '$1' : '';
-
-            $tPath = locatePluginTemplates(['comments.internal'], 'comments');
-
-            $tpl->template('comments.internal', $tPath['comments.internal']);
-            $tpl->vars('comments.internal', $tcvars);
-            //$tvars['vars']['plugin_comments'] = $tpl->show('comments.internal');
+        } else {
+            $commentsOutput = '<!-- Comments plugin not active -->';
         }
 
         $tPath = locatePluginTemplates(['page_image'], 'gallery', 0, $gallery['skin']);
+
+        // Register skin assets
+        if (function_exists('gallery_register_skin_assets')) {
+            gallery_register_skin_assets($gallery['skin'], 'page_image');
+        }
+
         $tVars = [
             'plugin_title' => $this->pluginTitle,
             'url_tpl' => $tPath['url:page_image'],
@@ -520,12 +615,12 @@ class PluginGallery
                 'views' => $row['views'],
                 'width' => $row['width'],
                 'height' => $row['height'],
-                'size' => is_readable($fname = images_dir . '/' . $gallery['name'] . '/' . $row['name']) ? formatSize(filesize($fname)) : '-',
+                'size' => is_readable($fname = images_dir . '/' . $gallery['name'] . '/' . $row['name']) ? formatBytes(filesize($fname)) : '-',
             ],
             'nextlink' => $nextlink,
             'gallerylink' => str_replace('%page%', $gallery['title'], str_replace('%link%', generatePluginLink('gallery', 'gallery', ['name' => $gallery['name']]), $nav['link_page'])),
             'prevlink' => $prevlink,
-            'plugin_comments' => $tpl->show('comments.internal'),
+            'plugin_comments' => $commentsOutput,
         ];
 
         $template['vars']['mainblock'] .= $output = $twig->render($tPath['page_image'] . 'page_image.tpl', $tVars);

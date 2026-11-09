@@ -177,7 +177,7 @@ final class XFilter
     protected function loadParams()
     {
         foreach ($this->params as $param => $default) {
-            $this->params[$param] = config($this->plugin, $param, $default);
+            $this->params[$param] = setting($this->plugin, $param, $default);
         }
 
         $this->params = array_merge($this->params, [
@@ -230,11 +230,6 @@ final class XFilter
     protected function loadXFieldsConfig()
     {
         $xarray = xf_configLoad();
-
-        // Check if xfields config is loaded and has news array
-        if (!is_array($xarray) || !isset($xarray['news']) || !is_array($xarray['news'])) {
-            return [];
-        }
 
         return array_filter($xarray['news'], function ($v, $k) {
             return $v['storage'] == 1;

@@ -10,14 +10,14 @@
 			<div class="card-body">
 				<div class="row align-items-center mb-3">
 					<div class="col-md-6">
-						<label class="form-label">Заголовок новости</label>
+						<label class="form-label">{{ lang['form.news_title'] }}</label>
 						<small class="text-muted d-block">
-							Текст поля &lt;title&gt;&lt;/title&gt; в полной новости (разрешено %cat%, %title%, %home%, %num%)
+							{{ lang['help.news_title'] }}
 						</small>
 					</div>
 					<div class="col-md-6">
 						<div class="input-group">
-							<input type="text" class="form-control" name="title" value="{{ title }}" placeholder="Введите заголовок новости">
+							<input type="text" class="form-control" name="title" value="{{ title }}" placeholder="{{ lang['input.news_title_placeholder'] }}">
 							<select class="form-select" name="id">
 								{{ options }}
 							</select>
@@ -29,7 +29,7 @@
 
 		<div class="text-center">
 			<button type="submit" name="submit" class="btn btn-primary px-4">
-				Добавить
+				{{ lang['btn.add'] }}
 			</button>
 		</div>
 	</form>

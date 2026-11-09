@@ -1,6 +1,6 @@
 <?php
 /*
- * Plugin's "Private message" configuration file for NextGeneration CMS (http://ngcms.ru/)
+ * Plugin's "Private message" configuration file for NextGeneration CMS (http://ngcms.org/)
  * Copyright (C) 2011 Alexey N. Zhukov (http://digitalplace.ru)
  * http://digitalplace.ru
  *

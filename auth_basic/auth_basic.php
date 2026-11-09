@@ -1,9 +1,20 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
+// Загружаем ng-helpers если еще не загружен
+if (!function_exists('Plugins\\logger')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	}
+}
+
 //
 // Регистрация модуля аутентификации
 //
+
+use function Plugins\{logger, sanitize, get_ip, validate_email};
 
 global $AUTH_METHOD;
 
@@ -29,8 +40,11 @@ class auth_basic extends CoreAuthPlugin
 		}
 		// Проверка пароля. Все типы регистрации сохраняют пароль либо сразу, либо после активации.
 		if ($row['pass'] != EncodePassword($password)) {
+			logger('Failed login attempt: user=' . sanitize($username) . ', ip=' . get_ip(), 'warning', 'auth_basic.log');
 			return 'ERR:NOT_ENTERED';
 		}
+
+		logger('Successful login: user=' . sanitize($username) . ', id=' . $row['id'] . ', ip=' . get_ip(), 'info', 'auth_basic.log');
 		return $row;
 	}
 
@@ -61,6 +75,8 @@ class auth_basic extends CoreAuthPlugin
 		]);
 		// На всякий случай кладём в сессию ID пользователя
 		$_SESSION['auth_user_id'] = $dbrow['id'];
+
+		logger('Auth session saved: user_id=' . $dbrow['id'] . ', ip=' . get_ip() . ', remember=' . ($config['remember'] ? 'yes' : 'no'), 'info', 'auth_basic.log');
 		return true;
 	}
 
@@ -109,6 +125,8 @@ class auth_basic extends CoreAuthPlugin
 			]);
 		}
 		unset($_SESSION['auth_user_id']);
+
+		logger('User logged out: user_id=' . ($userROW['id'] ?? 'unknown') . ', ip=' . get_ip(), 'info', 'auth_basic.log');
 		return true;
 	}
 	// Вернуть массив параметров для формы регистрации
@@ -219,7 +237,7 @@ class auth_basic extends CoreAuthPlugin
 		}
 
 		// Email
-		if ((strlen($values['email']) > 70) || (!preg_match("/^[\.A-z0-9_\-]+[@][A-z0-9_\-]+([.][A-z0-9_\-]+)+[A-z]{1,4}$/", $values['email']))) {
+		if (strlen($values['email']) > 70 || !validate_email($values['email'], true)) {
 			$msg = $lang['auth_email_wrong'];
 			return 0;
 		}
@@ -438,6 +456,10 @@ class auth_basic extends CoreAuthPlugin
 				);
 		}
 
+		if ($userid > 0) {
+			logger('User registered: login=' . sanitize($values['login']) . ', email=' . sanitize($values['email']) . ', id=' . $userid . ', type=' . $config['register_type'] . ', ip=' . get_ip(), 'info', 'auth_basic.log');
+		}
+
 		return ($userid > 0) ? $userid : 1;
 	}
 
@@ -470,11 +492,8 @@ class auth_basic extends CoreAuthPlugin
 		$values['email'] = trim($values['email']);
 		LoadPluginLang('auth_basic', 'auth', '', 'auth');
 		$mode = pluginGetVariable('auth_basic', 'restorepw');
-		$logFile = root . 'engine/trash/restorepw.log';
-		@file_put_contents($logFile, date('Y-m-d H:i:s') . "\tMODE=" . var_export($mode, true) . "\tLOGIN=" . ($values['login'] ?? '') . "\tEMAIL=" . ($values['email'] ?? '') . "\n", FILE_APPEND);
 		if (!$mode) {
 			$msg = $lang['auth_norestore'];
-			@file_put_contents($logFile, date('Y-m-d H:i:s') . "\tERROR=RESTORE_DISABLED\n", FILE_APPEND);
 			$_SESSION['flash_notify'] = array(
 				'text' => $lang['auth_norestore'],
 				'type' => 'error',
@@ -485,7 +504,6 @@ class auth_basic extends CoreAuthPlugin
 		if ($mode != 'email') {
 			if (!$values['login']) {
 				$msg = $lang['auth_login_require'];
-				@file_put_contents($logFile, date('Y-m-d H:i:s') . "\tERROR=LOGIN_REQUIRED\n", FILE_APPEND);
 				$_SESSION['flash_notify'] = array(
 					'text' => $lang['auth_login_require'],
 					'type' => 'error',
@@ -497,7 +515,6 @@ class auth_basic extends CoreAuthPlugin
 		if ($mode != 'login') {
 			if (!$values['email']) {
 				$msg = $lang['auth_email_require'];
-				@file_put_contents($logFile, date('Y-m-d H:i:s') . "\tERROR=EMAIL_REQUIRED\n", FILE_APPEND);
 				$_SESSION['flash_notify'] = array(
 					'text' => $lang['auth_email_require'],
 					'type' => 'error',
@@ -508,7 +525,6 @@ class auth_basic extends CoreAuthPlugin
 		}
 		$query = 'select * from ' . uprefix . '_users where ' . implode(' and ', $px);
 		$row = $mysql->record($query);
-		@file_put_contents($logFile, date('Y-m-d H:i:s') . "\tQUERY=" . $query . "\tFOUND=" . (is_array($row) ? '1' : '0') . "\n", FILE_APPEND);
 		if (is_array($row)) {
 			$newpassword = MakeRandomPassword();
 			$mysql->query('UPDATE ' . uprefix . '_users SET newpw=' . db_squote(EncodePassword($newpassword)) . ' WHERE id=' . $row['id']);
@@ -526,11 +542,11 @@ class auth_basic extends CoreAuthPlugin
 				'text' => $lang['msgo_sent'],
 				'type' => 'success',
 			);
-			@file_put_contents($logFile, date('Y-m-d H:i:s') . "\tSENT_TO=" . $row['mail'] . "\n", FILE_APPEND);
+
+			logger('Password restore sent: user=' . sanitize($row['name']) . ', email=' . sanitize($row['mail']) . ', ip=' . get_ip(), 'info', 'auth_basic.log');
 			return 1;
 		} else {
 			$msg = $lang['auth_nouser'];
-			@file_put_contents($logFile, date('Y-m-d H:i:s') . "\tERROR=USER_NOT_FOUND\n", FILE_APPEND);
 			$_SESSION['flash_notify'] = array(
 				'text' => $lang['auth_nouser'],
 				'type' => 'error',
@@ -593,7 +609,7 @@ class auth_basic extends CoreAuthPlugin
 				$results['email'] = 2;
 				goto endEmailCheck;
 			}
-			if (!preg_match("/^[\.A-z0-9_\-]+[@][A-z0-9_\-]+([.][A-z0-9_\-]+)+[A-z]{1,4}$/", $params['email'])) {
+			if (!validate_email($params['email'], true)) {
 				$results['email'] = 3;
 				goto endEmailCheck;
 			}

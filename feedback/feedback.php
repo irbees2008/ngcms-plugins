@@ -3,11 +3,114 @@
 if (!defined('NGCMS')) {
     die('HAL');
 }
+
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+    $ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+    if (file_exists($ngHelpersPath)) {
+        require_once $ngHelpersPath;
+    }
+}
+
+// Modified with ng-helpers v0.2.0 functions (2026)
+// - Added CSRF protection
+// - Added email/phone validation
+// - Added data sanitization
+// - Added logging support
+// - Added IP tracking
+
+// Import ng-helpers functions
+use function Plugins\{validate_email, validate_phone, sanitize, csrf_field, validate_csrf, logger, get_ip, is_post, array_get};
+
+// Wrapper functions for ng-helpers compatibility
+if (!function_exists('fb_array_get')) {
+    function fb_array_get($array, $key, $default = null)
+    {
+        if (function_exists('Plugins\\array_get')) {
+            return \Plugins\array_get($array, $key, $default);
+        }
+        return $array[$key] ?? $default;
+    }
+}
+
+if (!function_exists('fb_sanitize')) {
+    function fb_sanitize($data, $type = 'string')
+    {
+        if (function_exists('Plugins\\sanitize')) {
+            return \Plugins\sanitize($data, $type);
+        }
+        if ($type === 'html') {
+            return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+        }
+        return strip_tags($data);
+    }
+}
+
+if (!function_exists('fb_logger')) {
+    function fb_logger($message, $level = 'info', $file = '')
+    {
+        if (function_exists('Plugins\\logger')) {
+            return \Plugins\logger($message, $level, $file);
+        }
+        error_log("[$level] $message");
+    }
+}
+
+if (!function_exists('fb_get_ip')) {
+    function fb_get_ip()
+    {
+        if (function_exists('Plugins\\get_ip')) {
+            return \Plugins\get_ip();
+        }
+        return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    }
+}
+
+if (!function_exists('fb_is_post')) {
+    function fb_is_post()
+    {
+        if (function_exists('Plugins\\is_post')) {
+            return \Plugins\is_post();
+        }
+        return $_SERVER['REQUEST_METHOD'] === 'POST';
+    }
+}
+
+if (!function_exists('fb_validate_csrf')) {
+    function fb_validate_csrf()
+    {
+        if (function_exists('Plugins\\validate_csrf')) {
+            return \Plugins\validate_csrf();
+        }
+        return true; // Skip validation if ng-helpers not loaded
+    }
+}
+
+if (!function_exists('fb_csrf_field')) {
+    function fb_csrf_field()
+    {
+        if (function_exists('Plugins\\csrf_field')) {
+            return \Plugins\csrf_field();
+        }
+        return '';
+    }
+}
+
+if (!function_exists('fb_validate_email')) {
+    function fb_validate_email($email)
+    {
+        if (function_exists('Plugins\\validate_email')) {
+            return \Plugins\validate_email($email);
+        }
+        return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+    }
+}
+
 register_plugin_page('feedback', '', 'plugin_feedback_screen', 0);
 register_plugin_page('feedback', 'post', 'plugin_feedback_post', 0);
 loadPluginLang('feedback', 'main', '', '', ':');
 // Load library
-include_once root.'/plugins/feedback/lib/common.php';
+include_once root . '/plugins/feedback/lib/common.php';
 //
 // Show feedback form
 function plugin_feedback_screen()
@@ -19,19 +122,20 @@ function plugin_feedback_screen()
 // Mode:
 // * 0 - initial show
 // * 1 - show filled earlier values (error filling some fields)
-function plugin_feedback_showScreen($mode = 0, $errorText = '')
+// * 2 - show with success notification (after form submission)
+function plugin_feedback_showScreen($mode = 0, $errorText = '', $successText = '')
 {
     global $template, $lang, $mysql, $userROW, $PFILTERS, $twig, $SYSTEM_FLAGS;
     $output = '';
     $hiddenFields = [];
-    $ptpl_url = admin_url.'/plugins/feedback/tpl';
+    $ptpl_url = admin_url . '/plugins/feedback/tpl';
     // Determine paths for all template files
     $tpath = locatePluginTemplates(['site.form', 'site.notify'], 'feedback', pluginGetVariable('feedback', 'localsource'));
     $SYSTEM_FLAGS['info']['title']['group'] = $lang['feedback:header.title'];
-    $form_id = intval($_REQUEST['id']);
-    $xt = $twig->loadTemplate($tpath['site.notify'].'site.notify.tpl', $conversionConfig);
+    $form_id = intval(fb_array_get($_REQUEST, 'id', 0));
+    $xt = $twig->loadTemplate($tpath['site.notify'] . 'site.notify.tpl', $conversionConfig);
     // Get form data
-    if (!is_array($frow = $mysql->record('select * from '.prefix.'_feedback where active = 1 and id = '.$form_id))) {
+    if (!is_array($frow = $mysql->record('select * from ' . prefix . '_feedback where active = 1 and id = ' . $form_id))) {
         $tVars = [
             'title'    => $lang['feedback:form.no.title'],
             'ptpl_url' => $ptpl_url,
@@ -61,7 +165,7 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '')
     $xfValues = [];
     if ($link_news > 0) {
         $linked_id = intval($_REQUEST['linked_id']);
-        if (!$linked_id || !is_array($nrow = $mysql->record('select * from '.prefix.'_news where (id = '.db_squote($linked_id).') and (approve = 1)'))) {
+        if (!$linked_id || !is_array($nrow = $mysql->record('select * from ' . prefix . '_news where (id = ' . db_squote($linked_id) . ') and (approve = 1)'))) {
             // No link is provided, but link if required
             if ($link_news == 2) {
                 $tVars = [
@@ -121,7 +225,7 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '')
     $FBF_DATA = [];
     foreach ($fData as $fName => $fInfo) {
         $tEntry = [
-            'name'  => 'fld_'.$fInfo['name'],
+            'name'  => 'fld_' . $fInfo['name'],
             'title' => $fInfo['title'],
             'type'  => $fInfo['type'],
         ];
@@ -130,13 +234,13 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '')
         $setValue = '';
         if ($mode && (!$fInfo['block'])) {
             // FILLED EARLIER
-            $setValue = secure_html(($isUTF && $flagsUTF) ?  $_REQUEST['fld_'.$fInfo['name']] : $_REQUEST['fld_'.$fInfo['name']]);
+            $setValue = secure_html(($isUTF && $flagsUTF) ?  fb_array_get($_REQUEST, 'fld_' . $fInfo['name'], '') : fb_array_get($_REQUEST, 'fld_' . $fInfo['name'], ''));
         } else {
             // INITIAL SHOW
             $setValue = secure_html($fInfo['default']);
             // If 'by parameter' mode is set, check if this variable was passed in GET
-            if (($fInfo['auto'] == 1) && isset($_REQUEST['v_'.$fInfo['name']])) {
-                $setValue = secure_html(($isUTF && $flagsUTF) ? $_REQUEST['v_'.$fInfo['name']] : $_REQUEST['v_'.$fInfo['name']]);
+            if (($fInfo['auto'] == 1) && isset($_REQUEST['v_' . $fInfo['name']])) {
+                $setValue = secure_html(($isUTF && $flagsUTF) ? fb_array_get($_REQUEST, 'v_' . $fInfo['name'], '') : fb_array_get($_REQUEST, 'v_' . $fInfo['name'], ''));
             } elseif ($fInfo['auto'] == 2) {
                 $setValue = secure_html($xfValues[$fInfo['name']]);
             } elseif ($fInfo['auto'] == 3) {
@@ -155,32 +259,32 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '')
                 $setValueMonth = $fInfo['default:vars']['month'];
                 $setValueYear = $fInfo['default:vars']['year'];
                 if ($mode) {
-                    if ((intval($_REQUEST['fld_'.$fInfo['name'].':day']) >= 1) &&
-                        (intval($_REQUEST['fld_'.$fInfo['name'].':day']) <= 31) &&
-                        (intval($_REQUEST['fld_'.$fInfo['name'].':month']) >= 1) &&
-                        (intval($_REQUEST['fld_'.$fInfo['name'].':month']) <= 12) &&
-                        (intval($_REQUEST['fld_'.$fInfo['name'].':year']) >= 1970) &&
-                        (intval($_REQUEST['fld_'.$fInfo['name'].':year']) <= 2020)
+                    if ((intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':day', 0)) >= 1) &&
+                        (intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':day', 0)) <= 31) &&
+                        (intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':month', 0)) >= 1) &&
+                        (intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':month', 0)) <= 12) &&
+                        (intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':year', 0)) >= 1970) &&
+                        (intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':year', 0)) <= 2020)
                     ) {
-                        $setValueDay = intval($_REQUEST['fld_'.$fInfo['name'].':day']);
-                        $setValueMonth = intval($_REQUEST['fld_'.$fInfo['name'].':month']);
-                        $setValueYear = intval($_REQUEST['fld_'.$fInfo['name'].':year']);
+                        $setValueDay = intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':day', 0));
+                        $setValueMonth = intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':month', 0));
+                        $setValueYear = intval(fb_array_get($_REQUEST, 'fld_' . $fInfo['name'] . ':year', 0));
                     }
                 }
                 $opts = $fInfo['required'] ? '' : '<option value="">--</option>';
                 for ($di = 1; $di <= 31; $di++) {
-                    $opts .= '<option value="'.$di.'"'.($di == $setValueDay ? ' selected="selected"' : '').'>'.sprintf('%02u', $di).'</option>';
+                    $opts .= '<option value="' . $di . '"' . ($di == $setValueDay ? ' selected="selected"' : '') . '>' . sprintf('%02u', $di) . '</option>';
                 }
                 $tEntry['options']['day'] = $opts;
                 $opts = $fInfo['required'] ? '' : '<option value="">--</option>';
                 for ($di = 1; $di <= 12; $di++) {
-                    $opts .= '<option value="'.$di.'"'.($di == $setValueMonth ? ' selected="selected"' : '').'>'.sprintf('%02u', $di).'</option>';
+                    $opts .= '<option value="' . $di . '"' . ($di == $setValueMonth ? ' selected="selected"' : '') . '>' . sprintf('%02u', $di) . '</option>';
                 }
                 $tEntry['options']['month'] = $opts;
                 $opts = $fInfo['required'] ? '' : '<option value="">--</option>';
                 $yearLimit = date('Y');
                 for ($di = 1970; $di <= $yearLimit; $di++) {
-                    $opts .= '<option value="'.$di.'"'.($di == $setValueYear ? ' selected="selected"' : '').'>'.$di.'</option>';
+                    $opts .= '<option value="' . $di . '"' . ($di == $setValueYear ? ' selected="selected"' : '') . '>' . $di . '</option>';
                 }
                 $tEntry['options']['year'] = $opts;
                 break;
@@ -188,7 +292,7 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '')
                 $opts = '';
                 if (is_array($fInfo['options'])) {
                     foreach ($fInfo['options'] as $k => $v) {
-                        $opts .= '<option value="'.secure_html($v).'"'.($v == $setValue ? ' selected="selected"' : '').'>'.secure_html($v).'</option>';
+                        $opts .= '<option value="' . secure_html($v) . '"' . ($v == $setValue ? ' selected="selected"' : '') . '>' . secure_html($v) . '</option>';
                     }
                 }
                 $tEntry['options']['select'] = $opts;
@@ -209,13 +313,13 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '')
     if (substr($frow['flags'], 0, 1)) {
         $tVars['flags']['jcheck'] = 1;
     }
-    // Check if we need captcha
-    if (substr($frow['flags'], 1, 1)) {
-        $tVars['flags']['captcha'] = 1;
-        $tVars['captcha_url'] = admin_url.'/captcha.php?id=feedback';
-        $tVars['captcha_rand'] = rand(00000, 99999);
-        $_SESSION['captcha.feedback'] = rand(00000, 99999);
-    }
+    // OLD captcha system - deprecated, now handled by ng-advanced-captcha plugin
+    // if (substr($frow['flags'], 1, 1)) {
+    //     $tVars['flags']['captcha'] = 1;
+    //     $tVars['captcha_url'] = admin_url . '/captcha.php?id=feedback';
+    //     $tVars['captcha_rand'] = rand(00000, 99999);
+    //     $_SESSION['captcha.feedback'] = rand(00000, 99999);
+    // }
     // Check if we need to show `select destination notification address` menu
     $em = unserialize($frow['emails']);
     if ($em === false) {
@@ -225,37 +329,65 @@ function plugin_feedback_showScreen($mode = 0, $errorText = '')
         $tVars['flags']['recipients'] = 1;
         $options = '';
         foreach ($em as $er) {
-            $options .= '<option value="'.$er[0].'">'.(($er[1] == '') ? (implode(', ', $er[2])) : $er[1]).'</option>';
+            $options .= '<option value="' . $er[0] . '">' . (($er[1] == '') ? (implode(', ', $er[2])) : $er[1]) . '</option>';
         }
         $tVars['recipients_list'] = $options;
     }
     // Prepare hidden fields
     $hF = '';
     foreach ($hiddenFields as $k => $v) {
-        $hF .= '<input type="hidden" name="'.$k.'" value="'.secure_html($v).'"/>'."\n";
+        $hF .= '<input type="hidden" name="' . $k . '" value="' . secure_html($v) . '"/>' . "\n";
     }
+    // Add CSRF protection
+    $hF .= fb_csrf_field() . "\n";
     $tVars['hidden_fields'] = $hF;
     // Process filters (if any)
     if (is_array($PFILTERS['feedback'])) {
         foreach ($PFILTERS['feedback'] as $k => $v) {
-            $v->onShow($form_id, $frow, $fData, $tVars);
+            if (method_exists($v, 'onShow')) {
+                $v->onShow($form_id, $frow, $fData, $tVars);
+            }
         }
     }
     $template['vars']['mainblock'] = $xt->render($tVars);
+
+    // Show success notification if provided
+    if ($successText) {
+        $template['vars']['mainblock'] .= "\n<script>
+        (function() {
+            if (typeof showToast !== 'undefined') {
+                showToast(" . json_encode($successText) . ", { type: 'success', duration: 5000 });
+            }
+        })();
+        </script>";
+    }
 }
 //
 // Post feedback message
 function plugin_feedback_post()
 {
     global $template, $lang, $mysql, $userROW, $SYSTEM_FLAGS, $PFILTERS, $twig, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW;
+
+    // Check if request method is POST
+    if (!fb_is_post()) {
+        return;
+    }
+
+    // Validate CSRF token
+    if (!fb_validate_csrf()) {
+        fb_logger('CSRF validation failed from IP: ' . fb_get_ip(), 'warning', 'feedback_security.log');
+        http_response_code(403);
+        die('CSRF validation failed');
+    }
+
     // Determine paths for all template files
     $tpath = locatePluginTemplates(['site.form', 'site.notify', 'mail.html', 'mail.text'], 'feedback', pluginGetVariable('feedback', 'localsource'));
-    $ptpl_url = admin_url.'/plugins/feedback/tpl';
-    $form_id = intval($_REQUEST['id']);
+    $ptpl_url = admin_url . '/plugins/feedback/tpl';
+    $form_id = intval(fb_array_get($_REQUEST, 'id', 0));
     $SYSTEM_FLAGS['info']['title']['group'] = $lang['feedback:header.title'];
-    $xt = $twig->loadTemplate($tpath['site.notify'].'site.notify.tpl');
+    $xt = $twig->loadTemplate($tpath['site.notify'] . 'site.notify.tpl');
     // Get form data
-    if (!is_array($frow = $mysql->record('select * from '.prefix.'_feedback where active = 1 and id = '.$form_id))) {
+    if (!is_array($frow = $mysql->record('select * from ' . prefix . '_feedback where active = 1 and id = ' . $form_id))) {
         $tVars = [
             'title'    => $lang['feedback:form.no.title'],
             'ptpl_url' => $ptpl_url,
@@ -276,7 +408,7 @@ function plugin_feedback_post()
     $xfValues = [];
     if ($link_news > 0) {
         $linked_id = intval($_REQUEST['linked_id']);
-        if (!$linked_id || !is_array($nrow = $mysql->record('select * from '.prefix.'_news where (id = '.db_squote($linked_id).') and (approve = 1)'))) {
+        if (!$linked_id || !is_array($nrow = $mysql->record('select * from ' . prefix . '_news where (id = ' . db_squote($linked_id) . ') and (approve = 1)'))) {
             // No link is provided, but link if required
             if ($link_news == 2) {
                 $tVars = [
@@ -294,20 +426,20 @@ function plugin_feedback_post()
             }
         }
     }
-    // Check if captcha check if needed
-    if (substr($frow['flags'], 1, 1)) {
-        $vcode = $_REQUEST['vcode'];
-        if ((!$vcode) || ($vcode != $_SESSION['captcha.feedback'])) {
-            // Wrong CAPTCHA code (!!!)
-            plugin_feedback_showScreen(1, $lang['feedback:sform.captcha.badcode']);
-            return;
-        }
-    }
+    // OLD captcha check - deprecated, now handled by filters
+    // if (substr($frow['flags'], 1, 1)) {
+    //     $vcode = fb_array_get($_REQUEST, 'vcode', '');
+    //     if ((!$vcode) || ($vcode != $_SESSION['captcha.feedback'])) {
+    //         // Wrong CAPTCHA code (!!!)
+    //         plugin_feedback_showScreen(1, $lang['feedback:sform.captcha.badcode']);
+    //         return;
+    //     }
+    // }
     // Check if user requested HTML message format
     $flagHTML = substr($frow['flags'], 2, 1) ? true : false;
     $flagSubj = substr($frow['flags'], 4, 1) ? true : false;
     $flagsUTF = substr($frow['flags'], 5, 1) ? true : false;
-    $mailTN = 'mail.'.($flagHTML ? 'html' : 'text');
+    $mailTN = 'mail.' . ($flagHTML ? 'html' : 'text');
     // Scan all fields and fill data. Prepare outgoing email.
     $output = '';
     $tVars = [
@@ -343,13 +475,13 @@ function plugin_feedback_post()
         $fieldValue = '';
         switch ($fInfo['type']) {
             case 'date':
-                $fieldValue = $_REQUEST['fld_'.$fName.':day'].'.'.$_REQUEST['fld_'.$fName.':month'].'.'.$_REQUEST['fld_'.$fName.':year'];
+                $fieldValue = fb_array_get($_REQUEST, 'fld_' . $fName . ':day', '') . '.' . fb_array_get($_REQUEST, 'fld_' . $fName . ':month', '') . '.' . fb_array_get($_REQUEST, 'fld_' . $fName . ':year', '');
                 break;
             default:
                 if ($isUTF && $flagsUTF) {
-                    $fieldValue = $_REQUEST['fld_'.$fName];
+                    $fieldValue = fb_array_get($_REQUEST, 'fld_' . $fName, '');
                 } else {
-                    $fieldValue = $_REQUEST['fld_'.$fName];
+                    $fieldValue = fb_array_get($_REQUEST, 'fld_' . $fName, '');
                 }
         }
         // Check if required field is filled
@@ -358,6 +490,8 @@ function plugin_feedback_post()
             plugin_feedback_showScreen(1, str_replace(['{name}', '{title}'], [$fName, $fInfo['title']], $lang['feedback:sform.reqfld']));
             return;
         }
+        // Sanitize field value for security
+        $fieldValue = fb_sanitize($fieldValue);
         $fieldValues[$fName] = str_replace("\n", "<br/>\n", secure_html($fieldValue));
         $tEntry = [
             'id'    => $fName,
@@ -382,7 +516,7 @@ function plugin_feedback_post()
                 if ($tResult['rawmsg']) {
                     $msg = $tResult['rawmsg'];
                 } else {
-                    $msg = str_replace(['{plugin}', '{error}', '{field}'], [$k, $tResult['msg'], $tResult['field']], $lang['feedback:sform.plugin'.($tResult['field'] ? '.field' : '')]);
+                    $msg = str_replace(['{plugin}', '{error}', '{field}'], [$k, $tResult['msg'], $tResult['field']], $lang['feedback:sform.plugin' . ($tResult['field'] ? '.field' : '')]);
                 }
                 plugin_feedback_showScreen(1, $msg);
                 return;
@@ -395,8 +529,8 @@ function plugin_feedback_post()
     if ($em === false) {
         $em[1] = [1, '', preg_split("# *(\r\n|\n) *#", $frow['emails'])];
     }
-    $elist = (isset($em[intval($_POST['recipient'])])) ? $em[intval($_POST['recipient'])][2] : $em[1][2];
-    $eGroupName = (isset($em[intval($_POST['recipient'])])) ? $em[intval($_POST['recipient'])][1] : $em[1][1];
+    $elist = (isset($em[intval(fb_array_get($_POST, 'recipient', 0))])) ? $em[intval(fb_array_get($_POST, 'recipient', 0))][2] : $em[1][2];
+    $eGroupName = (isset($em[intval(fb_array_get($_POST, 'recipient', 0))])) ? $em[intval(fb_array_get($_POST, 'recipient', 0))][1] : $em[1][1];
     // Prepare EMAIL content
     $mailSubject = str_replace(['{name}', '{title}'], [$frow['name'], $frow['title']], $flagSubj ? $frow['subj'] : $lang['feedback:mail.subj']);
     // Load template for ADMIN notification
@@ -409,7 +543,7 @@ function plugin_feedback_post()
         'recipient'   => $elist,
         'subject'     => $mailSubject,
         'body'        => $mailBody,
-        'contentType' => 'text/'.($flagHTML ? 'html' : 'plain'),
+        'contentType' => 'text/' . ($flagHTML ? 'html' : 'plain'),
     ];
     // Try to SEND via PLUGIN
     $isSentViaPlugin = false;
@@ -421,6 +555,8 @@ function plugin_feedback_post()
         }
     }
     $mailCount = 0;
+    $eSendList = []; // Initialize email send list
+
     if (!$isSentViaPlugin) {
         // PLUGINS DIDN'T SENT MESSAGE, use LEGACY MODE
         foreach ($elist as $email) {
@@ -428,25 +564,53 @@ function plugin_feedback_post()
                 continue;
             }
             $mailCount++;
-            sendEmailMessage($email, $mailSubject, $mailBody, false, false, 'text/'.($flagHTML ? 'html' : 'plain'));
+            sendEmailMessage($email, $mailSubject, $mailBody, false, false, 'text/' . ($flagHTML ? 'html' : 'plain'));
         }
+
+        // Log successful form submission
+        $userIP = fb_get_ip();
+        $userName = $userROW['name'] ?? 'Guest';
+        fb_logger("Feedback form #{$form_id} '{$frow['title']}' submitted by {$userName} from IP: {$userIP}. Sent to {$mailCount} recipients.", 'info', 'feedback.log');
+
+        // Telegram notification
+        if (getPluginStatusActive('jchat_tgnotify')) {
+            @include_once(root . 'plugins/jchat_tgnotify/jchat_tgnotify.php');
+            if (function_exists('ngcms_tg_notify')) {
+                // Собираем текст из всех полей формы
+                $feedbackText = '';
+                foreach ($tEntries as $entry) {
+                    $feedbackText .= $entry['title'] . ': ' . strip_tags($entry['value']) . "\n";
+                }
+
+                ngcms_tg_notify('feedback', [
+                    'title'    => 'Форма: ' . $frow['title'],
+                    'author'   => $userName,
+                    'text'     => trim($feedbackText),
+                    'url'      => home . '/admin.php?mod=extra-config&plugin=feedback',
+                    'datetime' => date('Y-m-d H:i:s'),
+                ]);
+            }
+        }
+
         // Check if we need to send notification to user
-        // -- list of user's email
-        $eSendList = [];
         foreach ($fData as $fName => $fInfo) {
             // FIELD TYPE == Email + NOTIFICATION REQUEST is SET
             if (($fInfo['type'] == 'email') && ($fInfo['template'] != '')) {
                 $tfiles = feedback_locateTemplateFiles($fInfo['template'], $flagHTML);
                 $tfn = $tfiles['mail']['file'];
-                if ((filter_var($fieldValues[$fName], FILTER_VALIDATE_EMAIL) !== false) && file_exists($tfn)) {
+                // Use ng-helpers email validation
+                if (fb_validate_email($fieldValues[$fName]) && file_exists($tfn)) {
                     $eSendList[] = $fieldValues[$fName];
                     $xtu = $twig->loadTemplate($tfn);
                     // Render USER email body
                     $umailBody = $xtu->render($tVars);
-                    sendEmailMessage($fieldValues[$fName], $mailSubject, $umailBody, false, false, 'text/'.($flagHTML ? 'html' : 'plain'));
+                    sendEmailMessage($fieldValues[$fName], $mailSubject, $umailBody, false, false, 'text/' . ($flagHTML ? 'html' : 'plain'));
                 }
             }
         }
+    } else {
+        // Log plugin-handled submission
+        fb_logger("Feedback form #{$form_id} '{$frow['title']}' submitted and handled by plugin from IP: " . fb_get_ip(), 'info', 'feedback.log');
     }
     // Do post processing notification
     if (is_array($PFILTERS['feedback'])) {
@@ -464,7 +628,7 @@ function plugin_feedback_post()
         if ($tResult['redirect']) {
             $SUPRESS_TEMPLATE_SHOW = true;
             $SUPRESS_MAINBLOCK_SHOW = true;
-            header('Location: '.$tResult['redirect']);
+            header('Location: ' . $tResult['redirect']);
             return;
         }
         if ($tResult['notify.raw']) {
@@ -478,16 +642,7 @@ function plugin_feedback_post()
         }
     }
     $notifyMessage = ($isSentViaPlugin && $tResult['notify.msg']) ? $tResult['notify.msg'] : str_replace('{ecount}', $mailCount, $lang['feedback:confirm.message']);
-    // Prepare user's notification
-    $xt = $twig->loadTemplate($tpath['site.notify'].'site.notify.tpl');
-    $tVars = [
-        'title'    => $frow['title'],
-        'ptpl_url' => $ptpl_url,
-        'entries'  => $notifyMessage,
-        'usermail' => [
-            'count' => count($eSendList),
-            'list'  => $eSendList,
-        ],
-    ];
-    $template['vars']['mainblock'] = $xt->render($tVars);
+
+    // Show success notification via toast and display empty form again
+    plugin_feedback_showScreen(2, '', $notifyMessage);
 }

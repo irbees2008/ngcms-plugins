@@ -3,12 +3,12 @@
 	<!-- Настройки админки -->
 	<div class="card mb-4">
 		<div class="card-header bg-light">
-			<h5 class="mb-0">Настройки админки</h5>
+			<h5 class="mb-0">{{ lang['form.admin_settings'] }}</h5>
 		</div>
 		<div class="card-body">
 			<div class="row mb-3">
 				<div class="col-md-4">
-					<label for="num_cat" class="form-label">Количество записей в категории</label>
+					<label for="num_cat" class="form-label">{{ lang['form.num_cat'] }}</label>
 				</div>
 				<div class="col-md-8">
 					{{ num_cat.error }}
@@ -17,7 +17,7 @@
 			</div>
 			<div class="row mb-3">
 				<div class="col-md-4">
-					<label for="num_news" class="form-label">Количество записей в новостях</label>
+					<label for="num_news" class="form-label">{{ lang['form.num_news'] }}</label>
 				</div>
 				<div class="col-md-8">
 					{{ num_news.error }}
@@ -26,7 +26,7 @@
 			</div>
 			<div class="row">
 				<div class="col-md-4">
-					<label for="num_static" class="form-label">Количество записей в статике</label>
+					<label for="num_static" class="form-label">{{ lang['form.num_static'] }}</label>
 				</div>
 				<div class="col-md-8">
 					{{ num_static.error }}
@@ -39,13 +39,13 @@
 	<!-- Настройки <title> -->
 	<div class="card mb-4">
 		<div class="card-header bg-light">
-			<h5 class="mb-0">Настройки &lt;title&gt;&lt;/title&gt;</h5>
+			<h5 class="mb-0">{{ lang['form.title_settings'] }}</h5>
 		</div>
 		<div class="card-body">
 			<div class="row mb-3">
 				<div class="col-md-4">
-					<label for="c_title" class="form-label">Заголовок в категории</label>
-					<small class="text-muted d-block">Разрешено %cat%, %num% и %home%</small>
+					<label for="c_title" class="form-label">{{ lang['form.category_title'] }}</label>
+					<small class="text-muted d-block">{{ lang['help.category_title'] }}</small>
 				</div>
 				<div class="col-md-8">
 					{{ c_title.error }}
@@ -55,8 +55,8 @@
 
 			<div class="row mb-3">
 				<div class="col-md-4">
-					<label for="n_title" class="form-label">Заголовок в полной новости</label>
-					<small class="text-muted d-block">Разрешено %cat%, %title%, %home%, %num%</small>
+					<label for="n_title" class="form-label">{{ lang['form.news_title'] }}</label>
+					<small class="text-muted d-block">{{ lang['help.news_title'] }}</small>
 				</div>
 				<div class="col-md-8">
 					{{ n_title.error }}
@@ -66,8 +66,8 @@
 
 			<div class="row mb-3">
 				<div class="col-md-4">
-					<label for="m_title" class="form-label">Заголовок главной страницы</label>
-					<small class="text-muted d-block">Разрешено %home% %num%</small>
+					<label for="m_title" class="form-label">{{ lang['form.home_title'] }}</label>
+					<small class="text-muted d-block">{{ lang['help.home_title'] }}</small>
 				</div>
 				<div class="col-md-8">
 					{{ m_title.error }}
@@ -77,8 +77,8 @@
 
 			<div class="row mb-3">
 				<div class="col-md-4">
-					<label for="static_title" class="form-label">Заголовок статической страницы</label>
-					<small class="text-muted d-block">Разрешено %home% и %static%</small>
+					<label for="static_title" class="form-label">{{ lang['form.static_title'] }}</label>
+					<small class="text-muted d-block">{{ lang['help.static_title'] }}</small>
 				</div>
 				<div class="col-md-8">
 					{{ static_title.error }}
@@ -88,8 +88,8 @@
 
 			<div class="row mb-3">
 				<div class="col-md-4">
-					<label for="o_title" class="form-label">Заголовок остальных страниц</label>
-					<small class="text-muted d-block">Разрешено %home%, %other%, %html% и %num%</small>
+					<label for="o_title" class="form-label">{{ lang['form.other_title'] }}</label>
+					<small class="text-muted d-block">{{ lang['help.other_title'] }}</small>
 				</div>
 				<div class="col-md-8">
 					{{ o_title.error }}
@@ -99,8 +99,8 @@
 
 			<div class="row mb-3">
 				<div class="col-md-4">
-					<label for="html_secure" class="form-label">Дополнительная информация для страницы</label>
-					<small class="text-muted d-block">Передаётся в переменную %html%</small>
+					<label for="html_secure" class="form-label">{{ lang['form.additional_info'] }}</label>
+					<small class="text-muted d-block">{{ lang['help.additional_info'] }}</small>
 				</div>
 				<div class="col-md-8">
 					{{ html_secure.error }}
@@ -110,7 +110,7 @@
 
 			<div class="row mb-3">
 				<div class="col-md-4">
-					<label for="e_title" class="form-label">Страница ошибки 404</label>
+					<label for="e_title" class="form-label">{{ lang['form.not_found'] }}</label>
 				</div>
 				<div class="col-md-8">
 					{{ e_title.error }}
@@ -120,8 +120,8 @@
 
 			<div class="row mb-3">
 				<div class="col-md-4">
-					<label for="p_title" class="form-label">Плагины исключения</label>
-					<small class="text-muted d-block">Список плагинов через запятую</small>
+					<label for="p_title" class="form-label">{{ lang['form.excluded_plugins'] }}</label>
+					<small class="text-muted d-block">{{ lang['help.plugins'] }}</small>
 				</div>
 				<div class="col-md-8">
 					{{ p_title.error }}
@@ -131,8 +131,8 @@
 
 			<div class="row">
 				<div class="col-md-4">
-					<label for="num_title" class="form-label">Номер страницы</label>
-					<small class="text-muted d-block">Используйте %count% для номера страницы</small>
+					<label for="num_title" class="form-label">{{ lang['form.page_number'] }}</label>
+					<small class="text-muted d-block">{{ lang['help.page_number'] }}</small>
 				</div>
 				<div class="col-md-8">
 					{{ num_title.error }}
@@ -145,25 +145,25 @@
 	<!-- Справка по ключам -->
 	<div class="card mb-4">
 		<div class="card-header bg-light">
-			<h5 class="mb-0">Ключи для заголовков</h5>
+			<h5 class="mb-0">{{ lang['form.title_keys'] }}</h5>
 		</div>
 		<div class="card-body">
 			<ul class="list-unstyled">
 				<li>
 					<strong>%cat%</strong>
-					- имя категории</li>
+					- {{ lang['help.key_category'] }}</li>
 				<li>
 					<strong>%title%</strong>
-					- имя новости</li>
+					- {{ lang['help.key_news'] }}</li>
 				<li>
 					<strong>%home%</strong>
-					- заголовок сайта</li>
+					- {{ lang['help.key_home'] }}</li>
 				<li>
 					<strong>%static%</strong>
-					- заголовок статической страницы</li>
+					- {{ lang['help.key_static'] }}</li>
 				<li>
 					<strong>%other%</strong>
-					- заголовок любой другой страницы</li>
+					- {{ lang['help.key_other'] }}</li>
 			</ul>
 		</div>
 	</div>
@@ -171,13 +171,13 @@
 	<!-- Настройка кэша -->
 	<div class="card mb-4">
 		<div class="card-header bg-light">
-			<h5 class="mb-0">Настройка кэша</h5>
+			<h5 class="mb-0">{{ lang['form.cache_settings'] }}</h5>
 		</div>
 		<div class="card-body">
 			<div class="row">
 				<div class="col-md-4">
-					<label for="cache" class="form-label">Время жизни кэша</label>
-					<small class="text-muted d-block">Указывать в днях</small>
+					<label for="cache" class="form-label">{{ lang['form.cache_lifetime'] }}</label>
+					<small class="text-muted d-block">{{ lang['form.cache_days'] }}</small>
 				</div>
 				<div class="col-md-8">
 					{{ cache.error }}
@@ -189,6 +189,6 @@
 
 	<!-- Кнопка отправки -->
 	<div class="text-center mb-4">
-		<button name="submit" type="submit" class="btn btn-primary px-4">Сохранить</button>
+		<button name="submit" type="submit" class="btn btn-primary px-4">{{ lang['btn.save'] }}</button>
 	</div>
 </form>

@@ -8,9 +8,9 @@
 					<thead class="table-light">
 						<tr>
 							<th scope="col" style="width: 10%;" class="text-nowrap">#</th>
-							<th scope="col" style="width: 40%;">Название</th>
-							<th scope="col" style="width: 60%;">Заголовок</th>
-							<th scope="col" style="width: 80%;">Действие</th>
+							<th scope="col" style="width: 40%;">{{ lang['list.name'] }}</th>
+							<th scope="col" style="width: 60%;">{{ lang['list.title'] }}</th>
+							<th scope="col" style="width: 80%;">{{ lang['list.action'] }}</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -22,7 +22,7 @@
 			<!-- Кнопка добавления статической страницы -->
 			<div class="card-footer bg-transparent border-0 d-flex justify-content-end py-3">
 				<button onclick="window.location.href='{{ admin_url }}/admin.php?mod=extra-config&plugin=simple_title_pro&action=send_title&do=static'" class="btn btn-primary">
-					Добавить статик
+					{{ lang['list.add_static'] }}
 				</button>
 			</div>
 

@@ -1,6 +1,6 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 //
 // Configuration file for plugin
 //
@@ -11,7 +11,8 @@ if (!defined('NGCMS')) die ('HAL');
 //	apply		- apply installation, with handy confirmation
 //	autoapply       - apply installation in automatic mode [INSTALL script]
 //
-function plugin_comments_install($action) {
+function plugin_comments_install($action)
+{
 
 	global $lang;
 	if ($action != 'autoapply')
@@ -36,7 +37,7 @@ function plugin_comments_install($action) {
 		array(
 			'table'  => 'comments',
 			'action' => 'cmodify',
-			'key'    => 'primary key(id), KEY `c_post` (`post`)',
+			'key'    => 'primary key(id), KEY `c_post` (`post`), KEY `idx_post_module` (`post`, `module`)',
 			'fields' => array(
 				array('action' => 'cmodify', 'name' => 'id', 'type' => 'int', 'params' => 'not null auto_increment'),
 				array('action' => 'cmodify', 'name' => 'postdate', 'type' => 'int', 'params' => "default '0'"),
@@ -49,6 +50,7 @@ function plugin_comments_install($action) {
 				array('action' => 'cmodify', 'name' => 'answer', 'type' => 'text'),
 				array('action' => 'cmodify', 'name' => 'ip', 'type' => 'char(15)', 'params' => "default ''"),
 				array('action' => 'cmodify', 'name' => 'reg', 'type' => 'tinyint(1)', 'params' => "default '0'"),
+				array('action' => 'cmodify', 'name' => 'module', 'type' => 'varchar(50)', 'params' => "default ''"),
 				array('action' => 'cmodify', 'name' => 'moderated', 'type' => 'tinyint(1)', 'params' => "default '1'"),
 				array('action' => 'cmodify', 'name' => 'edit_date', 'type' => 'int', 'params' => "default '0'"),
 			)

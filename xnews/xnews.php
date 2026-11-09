@@ -2,9 +2,10 @@
 // Plugin `xnews` (c) Vitaly Ponomarev
 // Redesined original plugin top_news by Alexey N. Zhukov (http://digitalplace.ru) [ email: zhukov.alexei@gmail.com ]
 # Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 // Load shared library
 include_once root . 'includes/inc/libnews.php';
+include_once __DIR__ . '/storage.php';
 //
 // Show data block for xnews plugin
 // Params:
@@ -25,29 +26,98 @@ include_once root . 'includes/inc/libnews.php';
 // * template - ID/directory of template to use (directory from engine/plugins/xnews/tpl/
 // * extractEmbeddedItems - flag if news engine should extract embedded (via <img src=".."/>) images into array news.embed.images
 // * cacheAge - age of cache [in seconds]
-function xNewsShowBlock($params) {
-	global $CurrentHandler, $twig, $config;
+function xNewsShowBlock($params)
+{
+	global $CurrentHandler, $twig, $config, $mysql;
 	if (isset($params['id']) && $params['id']) {
-		// Scan blocks
-		$isFound = false;
-		for ($i = 1; $i < 50; $i++) {
-			if (pluginGetVariable('xnews', $i . '_name') == $params['id']) {
-				// BLOCK FOUND. MAKE PRESETS !!!
-				$isFound = true;
-				if (pluginGetVariable('xnews', 'cache') && (!isset($params['cacheAge']))) {
-					$params['cacheAge'] = pluginGetVariable('xnews', 'cacheExpire');
+		$profile = null;
+		$storageVersion = (string)pluginGetVariable('xnews', 'storage_version') === '1';
+		if ($storageVersion) {
+			$profile = xnews_storage_profile_to_params(xnews_storage_get_by_name($params['id']));
+		} else {
+			static $profilesTableExists = null;
+			if ($profilesTableExists === null) {
+				$tables = $mysql->select('SHOW TABLES LIKE ' . db_squote(xnews_storage_table()));
+				if (!is_array($tables)) {
+					throw new RuntimeException('Unable to check whether the Xnews profiles table exists.');
 				}
-				foreach (array('categoryMode', 'categories', 'visibilityMode', 'visibilityCList', 'mainMode', 'pinMode', 'favMode', 'count', 'skip', 'maxAge', 'order', 'showNoNews', 'skipCurrent', 'extractEmbeddedItems') as $k)
-					if (!isset($params[$k])) $params[$k] = pluginGetVariable('xnews', $i . '_' . $k);
-				// Load template only if it's defined
-				if (!isset($params['template']) && (pluginGetVariable('xnews', $i . '_template') != ''))
-					$params['template'] = pluginGetVariable('xnews', $i . '_template');
-				break;
+				$profilesTableExists = count($tables) > 0;
+			}
+			if ($profilesTableExists) {
+				$profile = xnews_storage_profile_to_params(xnews_storage_get_by_name($params['id']));
+			}
+			if (!is_array($profile)) {
+				$profileCount = (int)pluginGetVariable('xnews', 'count');
+				if ($profileCount < 1 || $profileCount > 50) {
+					$profileCount = 1;
+				}
+				for ($i = 1; $i <= $profileCount; $i++) {
+					if ((string)pluginGetVariable('xnews', $i . '_name') === (string)$params['id']) {
+						$profile = array(
+							'enabled' => (string)pluginGetVariable('xnews', $i . '_enabled') !== '0' ? 1 : 0,
+							'name' => pluginGetVariable('xnews', $i . '_name'),
+							'template' => pluginGetVariable('xnews', $i . '_template'),
+							'categoryMode' => pluginGetVariable('xnews', $i . '_categoryMode'),
+							'categories' => pluginGetVariable('xnews', $i . '_categories'),
+							'visibilityMode' => pluginGetVariable('xnews', $i . '_visibilityMode'),
+							'visibilityCList' => pluginGetVariable('xnews', $i . '_visibilityCList'),
+							'mainMode' => pluginGetVariable('xnews', $i . '_mainMode'),
+							'pinMode' => pluginGetVariable('xnews', $i . '_pinMode'),
+							'favMode' => pluginGetVariable('xnews', $i . '_favMode'),
+							'skipCurrent' => pluginGetVariable('xnews', $i . '_skipCurrent'),
+							'extractEmbeddedItems' => pluginGetVariable('xnews', $i . '_extractEmbeddedItems'),
+							'showNoNews' => pluginGetVariable('xnews', $i . '_showNoNews'),
+							'count' => pluginGetVariable('xnews', $i . '_count'),
+							'skip' => pluginGetVariable('xnews', $i . '_skip'),
+							'maxAge' => pluginGetVariable('xnews', $i . '_maxAge'),
+							'order' => pluginGetVariable('xnews', $i . '_order'),
+						);
+						break;
+					}
+				}
 			}
 		}
-		if (!$isFound) {
+		if (!is_array($profile)) {
 			return '[XNEWS: No profile found "' . $params['id'] . '"]';
 		}
+		if (!$profile['enabled']) {
+			return '';
+		}
+		foreach (array('categoryMode', 'categories', 'visibilityMode', 'visibilityCList', 'mainMode', 'pinMode', 'favMode', 'count', 'skip', 'maxAge', 'order', 'showNoNews', 'skipCurrent', 'extractEmbeddedItems') as $key) {
+			if (!isset($params[$key])) {
+				$params[$key] = $profile[$key];
+			}
+		}
+		if (!isset($params['template']) && $profile['template'] !== '') {
+			$params['template'] = $profile['template'];
+		}
+	}
+	$defaults = array(
+		'categoryMode' => 0,
+		'categories' => '',
+		'visibilityMode' => 0,
+		'visibilityCList' => '',
+		'mainMode' => 0,
+		'pinMode' => 0,
+		'favMode' => 0,
+		'count' => 0,
+		'skip' => 0,
+		'maxAge' => 0,
+		'order' => '',
+		'showNoNews' => null,
+		'skipCurrent' => 0,
+		'extractEmbeddedItems' => 0,
+		'template' => 'example',
+	);
+	foreach ($defaults as $key => $value) {
+		if (!isset($params[$key])) {
+			$params[$key] = $value;
+		}
+	}
+	if (!isset($params['cacheAge'])) {
+		$params['cacheAge'] = pluginGetVariable('xnews', 'cache')
+			? pluginGetVariable('xnews', 'cacheExpire')
+			: 0;
 	}
 	// Convert category list into array
 	if (isset($params['categories']) && (!is_array($params['categories']))) {
@@ -114,7 +184,7 @@ function xNewsShowBlock($params) {
 		case 2:
 			$categoryList = $params['categories'];
 			if (is_array($currentCategory) && !array_search($currentCategory[1], $categoryList))
-				$categoryList [] = $currentCategory[1];
+				$categoryList[] = $currentCategory[1];
 			break;
 	}
 	// Prepare filters
@@ -124,46 +194,49 @@ function xNewsShowBlock($params) {
 	$cacheDisabled = false;
 	// mainMode
 	if ($params['mainMode'] > 0) {
-		$filterList [] = '(mainpage = ' . (($params['mainMode'] > 1) ? '0' : '1') . ')';
-		$cacheKeys [] = '|mainMode=' . $params['mainMode'];
+		$filterList[] = '(mainpage = ' . (($params['mainMode'] > 1) ? '0' : '1') . ')';
+		$cacheKeys[] = '|mainMode=' . $params['mainMode'];
 	}
 	// pinMode
 	if (isset($params['pinMode']) && ($params['pinMode'] > 0)) {
-		$filterList [] = '(pinned = ' . (($params['pinMode'] > 1) ? '0' : '1') . ')';
-		$cacheKeys [] = '|pinMode=' . $params['pinMode'];
+		$filterList[] = '(pinned = ' . (($params['pinMode'] > 1) ? '0' : '1') . ')';
+		$cacheKeys[] = '|pinMode=' . $params['pinMode'];
 	}
 	// favMode
 	if (isset($params['favMode']) && ($params['favMode'] > 0)) {
-		$filterList [] = '(favorite = ' . (($params['favMode'] > 1) ? '0' : '1') . ')';
-		$cacheKeys [] = '|favMode=' . $params['favMode'];
+		$filterList[] = '(favorite = ' . (($params['favMode'] > 1) ? '0' : '1') . ')';
+		$cacheKeys[] = '|favMode=' . $params['favMode'];
 	}
 	// skipCurrent
 	if (isset($params['skipCurrent']) && $params['skipCurrent'] && (($CurrentHandler['handlerName'] == 'news') || ($CurrentHandler['handlerName'] == 'print'))) {
 		list($xm, $null, $xi) = getCurrentNewsCategory();
 		if (($xm == 'full') && ($xi > 0)) {
-			$filterList [] = '(id <> ' . intval($xi) . ')';
+			$filterList[] = '(id <> ' . intval($xi) . ')';
 			$cacheDisabled = true;
 		}
 	}
 	$showCount = ($params['count'] > 0) ? intval($params['count']) : 10;
 	$showSkip = ($params['skip'] > 0) ? intval($params['skip']) : 0;
 	$showAge = ($params['maxAge'] > 0) ? intval($params['maxAge']) : 0;
-	$cacheKeys [] = '|count=' . $showCount;
-	$cacheKeys [] = '|skip=' . $showSkip;
-	$cacheKeys [] = '|maxAge=' . $showAge;
-	$cacheKeys [] = '|embed=' . intval($params['extractEmbeddedItems']);
-	$cacheKeys [] = '|categoryMode=' . $params['categoryMode'];
-	$cacheKeys [] = '|categories=' . implode(",", $categoryList ?: []);
+	$cacheKeys[] = '|count=' . $showCount;
+	$cacheKeys[] = '|skip=' . $showSkip;
+	$cacheKeys[] = '|maxAge=' . $showAge;
+	$cacheKeys[] = '|embed=' . intval($params['extractEmbeddedItems']);
+	$cacheKeys[] = '|categoryMode=' . $params['categoryMode'];
+	$cacheKeys[] = '|categories=' . implode(",", $categoryList ?: []);
+	$categoryIDs = array();
 	if ($showAge > 0) {
-		$filterList [] = '((unix_timestamp(now()) - postdate) < ' . ($showAge * 86400) . ')';
+		$filterList[] = '(postdate > (unix_timestamp() - ' . ($showAge * 86400) . '))';
 	}
 	if ((is_array($categoryList) && count($categoryList))) {
-		//print "categoryList [".var_export($categoryList, true)."]";
-		$catFilter = array();
+		$categoryIDs = array();
 		foreach ($categoryList as $cat) {
-			$catFilter[] = "(catid regexp '\\\\b(" . trim($cat) . ")\\\\b')";
+			$cat = trim((string) $cat);
+			if ($cat !== '' && ctype_digit($cat)) {
+				$categoryIDs[] = (int) $cat;
+			}
 		}
-		$filterList [] = '(' . join(' OR ', $catFilter) . ')';
+		$categoryIDs = array_values(array_unique($categoryIDs));
 	}
 	$orderAllowed = array('rating' => 'rating desc', 'editdate' => 'editdate desc', 'viewed' => 'views desc', 'commented' => 'com desc', 'last' => 'postdate desc', 'first' => 'postdate asc', 'random' => 'rand()');
 	if ($params['order'] && isset($orderAllowed[$params['order']])) {
@@ -171,16 +244,41 @@ function xNewsShowBlock($params) {
 	} else {
 		$orderBy = $orderAllowed['viewed'];
 	}
-	$cacheKeys [] = '|order=' . $orderBy;
+	$cacheKeys[] = '|order=' . $orderBy;
 	// Show only published news
-	$filterList [] = '(approve > 0)';
-	// Prepare SQL query
-	$requestQuery = "SELECT * FROM " . prefix . "_news " . ((count($filterList) > 0) ? "WHERE " . implode(" AND ", $filterList) : "") . " ORDER BY {$orderBy} LIMIT {$showSkip}, {$showCount}";
+	$filterList[] = '(approve > 0)';
+	$newsFrom = ' FROM ' . prefix . '_news';
+	if ($categoryIDs) {
+		if (in_array($orderBy, ['postdate desc', 'postdate asc'], true)) {
+			$newsFrom = ' FROM ' . prefix . '_news FORCE INDEX (postdate)';
+			$filterList[] = '(SELECT NM.newsID FROM ' . prefix . '_news_map NM FORCE INDEX (idx_news_category) WHERE NM.newsID = '
+				. prefix . '_news.id AND NM.categoryID IN (' . implode(', ', $categoryIDs) . ') LIMIT 1) IS NOT NULL';
+		} else {
+			$newsFrom .= ' JOIN (SELECT DISTINCT NM.newsID FROM ' . prefix . '_news_map NM WHERE NM.categoryID IN ('
+				. implode(', ', $categoryIDs) . ')) AS XNM ON XNM.newsID = ' . prefix . '_news.id';
+		}
+	}
+	// Select and sort only IDs before loading the full news rows for the requested page.
+	$isRandomOrder = ($orderBy === 'rand()');
+	$innerOrderBy = $isRandomOrder ? 'xnews_random' : $orderBy;
+	$outerOrderBy = $isRandomOrder ? 'XNP.xnews_random' : $orderBy;
+	$randomOrderColumn = $isRandomOrder ? ', RAND() AS xnews_random' : '';
+	$filteredNewsQuery = 'SELECT ' . prefix . '_news.id' . $randomOrderColumn
+		. $newsFrom . ' '
+		. ((count($filterList) > 0) ? 'WHERE ' . implode(' AND ', $filterList) . ' ' : '')
+		. 'ORDER BY ' . $innerOrderBy . ' LIMIT ' . $showSkip . ', ' . $showCount;
+	$requestQuery = 'SELECT ' . prefix . '_news.* FROM ' . prefix . '_news JOIN ('
+		. $filteredNewsQuery . ') AS XNP ON XNP.id = ' . prefix . '_news.id '
+		. 'ORDER BY ' . $outerOrderBy;
 	// Check if template directory is specified and exists
 	$templateDir = '';
 	if (isset($params['template'])) {
-		if (is_dir(tpl_site . 'plugins/xnews/' . $params['template']) && file_exists(tpl_site . 'plugins/xnews/' . $params['template'] . '/entries.tpl') && file_exists(tpl_site . 'plugins/xnews/' . $params['template'] . '/xnews.tpl')) {
-			// TEMPLATE FOUND: SITE
+		$_xnActiveTplSite = site_root . 'templates/' . ($config['theme'] ?? 'default') . '/';
+		if (is_dir($_xnActiveTplSite . 'plugins/xnews/' . $params['template']) && file_exists($_xnActiveTplSite . 'plugins/xnews/' . $params['template'] . '/entries.tpl') && file_exists($_xnActiveTplSite . 'plugins/xnews/' . $params['template'] . '/xnews.tpl')) {
+			// TEMPLATE FOUND: SITE (active theme)
+			$templateDir = $_xnActiveTplSite . 'plugins/xnews/' . $params['template'];
+		} else if (is_dir(tpl_site . 'plugins/xnews/' . $params['template']) && file_exists(tpl_site . 'plugins/xnews/' . $params['template'] . '/entries.tpl') && file_exists(tpl_site . 'plugins/xnews/' . $params['template'] . '/xnews.tpl')) {
+			// TEMPLATE FOUND: SITE (original tpl_site fallback)
 			$templateDir = tpl_site . 'plugins/xnews/' . $params['template'];
 		} else if (is_dir(extras_dir . '/xnews/tpl/' . $params['template']) && file_exists(extras_dir . '/xnews/tpl/' . $params['template'] . '/entries.tpl') && file_exists(extras_dir . '/xnews/tpl/' . $params['template'] . '/xnews.tpl')) {
 			// TEMPLATE FOUND: PLUGIN
@@ -198,7 +296,7 @@ function xNewsShowBlock($params) {
 			return '[XNEWS: NO TEMPLATE "example"]';
 		}
 	}
-	$cacheKeys [] = '|template=' . $params['template'];
+	$cacheKeys[] = '|template=' . $params['template'];
 	//print "CACHE [AGE:".$params['cacheAge']."][".($cacheDisabled?'DISA':'ok')."][".join('', $cacheKeys)."]<br/>";
 	// Generate cache file name [ we should take into account SWITCHER plugin ]
 	$cacheFileName = md5('xnews' . $config['theme'] . $config['default_lang'] . join('', $cacheKeys)) . '.txt';

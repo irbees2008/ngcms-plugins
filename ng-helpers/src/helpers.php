@@ -351,7 +351,10 @@ if (! function_exists(__NAMESPACE__ . '\session')) {
     function session($key = null, $default = null)
     {
         if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+            if (!ensureSessionStarted()) {
+                // Если это бот, возвращаем дефолтное значение
+                return is_null($key) ? [] : value($default);
+            }
         }
         if (is_null($key)) {
             return $_SESSION;
@@ -955,7 +958,10 @@ if (! function_exists(__NAMESPACE__ . '\csrf_token')) {
     function csrf_token(): string
     {
         if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+            if (!ensureSessionStarted()) {
+                // Для ботов возвращаем временный токен
+                return bin2hex(random_bytes(32));
+            }
         }
         if (!isset($_SESSION['_token'])) {
             $_SESSION['_token'] = bin2hex(random_bytes(32));
@@ -2229,7 +2235,10 @@ if (! function_exists(__NAMESPACE__ . '\csrf_token')) {
     function csrf_token(): string
     {
         if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+            if (!ensureSessionStarted()) {
+                // Для ботов возвращаем временный токен
+                return bin2hex(random_bytes(32));
+            }
         }
 
         if (!isset($_SESSION['csrf_token'])) {
@@ -2260,7 +2269,10 @@ if (! function_exists(__NAMESPACE__ . '\validate_csrf')) {
     function validate_csrf(): bool
     {
         if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+            if (!ensureSessionStarted()) {
+                // Для ботов CSRF валидация не проходит
+                return false;
+            }
         }
 
         $token = $_POST['csrf_token'] ?? $_REQUEST['csrf_token'] ?? '';

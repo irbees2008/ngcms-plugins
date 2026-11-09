@@ -1,30 +1,94 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
-function plugin_rating_update() {
+if (!defined('NGCMS')) die('HAL');
+
+// Modified with ng-helpers v0.2.0 functions (2026)
+// - Added is_ajax() for AJAX request detection
+// - Added get_ip() for IP tracking
+// - Added percentage() for rating calculations
+// - Added clamp() for value validation
+// - Added logger() for vote logging
+// - Added cache_forget() for cache management
+
+// Import ng-helpers functions
+use function Plugins\{is_ajax, get_ip, percentage, clamp, logger, cache_forget, array_get, notify};
+
+function plugin_rating_update()
+{
 
 	global $mysql, $tpl, $userROW;
 	LoadPluginLang('rating', 'site');
+
 	// Security protection - limit rating values between 1..5
-	$rating = intval($_REQUEST['rating']);
-	$post_id = intval($_REQUEST['post_id']);
-	if (($rating < 1) || ($rating > 5)) {
+	$rating = intval(array_get($_REQUEST, 'rating', 0));
+	$post_id = intval(array_get($_REQUEST, 'post_id', 0));
+
+	// Use clamp to ensure rating is within valid range
+	$rating = clamp($rating, 1, 5);
+	if (!$rating) {
+		logger('Invalid rating value attempted from IP: ' . get_ip(), 'warning', 'rating.log');
+		if (is_ajax()) {
+			return json_encode([
+				'status' => 'error',
+				'notify' => [
+					'type' => 'error',
+					'message' => 'Некорректное значение рейтинга'
+				]
+			]);
+		}
 		return 'incorrect rating';
 	}
 	// Check if referred news exists
 	if (!is_array($row = $mysql->record("select * from " . prefix . "_news where id = " . db_squote($post_id)))) {
+		if (is_ajax()) {
+			return json_encode([
+				'status' => 'error',
+				'notify' => [
+					'type' => 'error',
+					'message' => 'Новость не найдена'
+				]
+			]);
+		}
 		return 'referred news not found';
 	}
 	// Check if we try to make a duplicated rate
-	if ($_COOKIE['rating' . $row['id']])
+	if ($_COOKIE['rating' . $row['id']]) {
+		if (is_ajax()) {
+			return json_encode([
+				'status' => 'error',
+				'notify' => [
+					'type' => 'warning',
+					'message' => 'Вы уже проголосовали за эту новость'
+				]
+			]);
+		}
 		return 'you already made your rate';
+	}
 	// Check if we feet "register only" limitation
 	if (extra_get_param('rating', 'regonly') && !is_array($userROW)) {
+		if (is_ajax()) {
+			return json_encode([
+				'status' => 'error',
+				'notify' => [
+					'type' => 'warning',
+					'message' => 'Только зарегистрированные пользователи могут голосовать'
+				]
+			]);
+		}
 		return 'only registered users can rate news';
 	}
 	// Ok, everything is fine. Let's update rating.
 	@setcookie('rating' . $post_id, 'voted', (time() + 31526000), '/');
 	$mysql->query("update " . prefix . "_news set rating=rating+" . $rating . ", votes=votes+1 where id = " . db_squote($post_id));
+
+	// Log successful vote with IP
+	$userIP = get_ip();
+	$userName = $userROW['name'] ?? 'Guest';
+	logger("User {$userName} voted {$rating}/5 for news #{$post_id} from IP: {$userIP}", 'info', 'rating.log');
+
+	// Clear cache for this news
+	cache_forget("news_{$post_id}");
+
 	$data = $mysql->record("select rating, votes from " . prefix . "_news where id = " . db_squote($post_id));
 	$localskin = extra_get_param('rating', 'localskin');
 	if (!$localskin) $localskin = 'basic';
@@ -32,15 +96,32 @@ function plugin_rating_update() {
 	register_stylesheet($tpath['url::rating.css'] . '/rating.css');
 	$tvars['vars']['tpl_url'] = $tpath['url::rating.css'];
 	$tvars['vars']['home'] = home;
+	// Use percentage helper for rating calculation
 	$tvars['vars']['rating'] = ($data['rating'] == 0) ? 0 : round(($data['rating'] / $data['votes']), 0);
+	$tvars['vars']['rating_percent'] = percentage($data['rating'], $data['votes'] * 5); // Out of 5 stars
 	$tvars['vars']['votes'] = $data['votes'];
 	$tpl->template('rating', $tpath['rating']);
 	$tpl->vars('rating', $tvars);
 
-	return $tpl->show('rating');
+	$html = $tpl->show('rating');
+
+	// Для AJAX возвращаем JSON с уведомлением
+	if (is_ajax()) {
+		return json_encode([
+			'status' => 'success',
+			'html' => $html,
+			'notify' => [
+				'type' => 'success',
+				'message' => 'Спасибо за вашу оценку!'
+			]
+		]);
+	}
+
+	return $html;
 }
 
-function rating_show($newsID, $rating, $votes) {
+function rating_show($newsID, $rating, $votes)
+{
 
 	global $tpl, $userROW;
 	LoadPluginLang('rating', 'site');
@@ -53,6 +134,7 @@ function rating_show($newsID, $rating, $votes) {
 	$tvars['vars']['ajax_url'] = generateLink('core', 'plugin', array('plugin' => 'rating'), array());
 	$tvars['vars']['post_id'] = $newsID;
 	$tvars['vars']['rating'] = (!$rating || !$votes) ? 0 : round(($rating / $votes), 0);
+	$tvars['vars']['rating_percent'] = percentage(floatval($rating), floatval($votes * 5)); // Out of 5 stars
 	$tvars['vars']['votes'] = $votes;
 	if ((isset($_COOKIE['rating' . $newsID]) && $_COOKIE['rating' . $newsID]) || (extra_get_param('rating', 'regonly') && !is_array($userROW))) {
 		// Show
@@ -71,11 +153,19 @@ function rating_show($newsID, $rating, $votes) {
 	return;
 }
 
-function plugin_rating_screen() {
+function plugin_rating_screen()
+{
 
 	global $SUPRESS_TEMPLATE_SHOW, $template;
-	@header('Content-type: text/html; charset="utf-8"');
-	if ($_REQUEST['post_id']) {
+
+	// Check if this is an AJAX request
+	if (is_ajax()) {
+		@header('Content-type: application/json; charset=utf-8');
+	} else {
+		@header('Content-type: text/html; charset="utf-8"');
+	}
+
+	if (array_get($_REQUEST, 'post_id')) {
 		$template['vars']['mainblock'] = plugin_rating_update();
 		$SUPRESS_TEMPLATE_SHOW = 1;
 	} else {
@@ -86,9 +176,11 @@ function plugin_rating_screen() {
 //
 // Фильтр новостей (для показа рейтинга)
 //
-class RatingNewsFilter extends NewsFilter {
+class RatingNewsFilter extends NewsFilter
+{
 
-    public function showNews($newsID, $SQLnews, &$tvars, $mode = []) {
+	public function showNews($newsID, $SQLnews, &$tvars, $mode = [])
+	{
 
 		global $tpl, $mysql, $userROW;
 		$tvars['vars']['plugin_rating'] = rating_show($SQLnews['id'], $SQLnews['rating'], $SQLnews['votes']);

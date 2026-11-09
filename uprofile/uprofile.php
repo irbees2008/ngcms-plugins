@@ -1,6 +1,6 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 //LoadPluginLang('uprofile', 'main', '', '', ':');
 LoadPluginLang('uprofile', 'main', '', 'uprofile', '#');
 register_plugin_page('uprofile', 'edit', 'uprofile_editProfile', 0);
@@ -10,7 +10,8 @@ LoadPluginLibrary('uprofile', 'lib');
 // =============================================================
 // External functions of plugin
 // =============================================================
-function uprofile_showProfile($params) {
+function uprofile_showProfile($params)
+{
 	global $mysql, $userROW, $config, $lang, $twig, $twigLoader, $template, $SYSTEM_FLAGS, $PFILTERS;
 	//LoadPluginLang('uprofile', 'users', '', '', ':');
 	// Check if valid user identity is specified
@@ -40,7 +41,39 @@ function uprofile_showProfile($params) {
 	$status = (($urow['status'] >= 1) && ($urow['status'] <= 4)) ? $lang['uprofile']['st_' . $urow['status']] : $lang['uprofile:st_unknown'];
 	// Get user's  and avatar
 	$userAvatar = userGetAvatar($urow);
-	$bookmarksCount = $mysql->result("SELECT COUNT(*) FROM " . prefix . "_bookmarks WHERE user_id = " . intval($urow['id']));
+
+	// Проверяем существование таблицы bookmarks перед запросом
+	$bookmarksCount = 0;
+	if (getPluginStatusActive('bookmarks')) {
+		try {
+			$bookmarksCount = $mysql->result("SELECT COUNT(*) FROM " . prefix . "_bookmarks WHERE user_id = " . intval($urow['id']));
+		} catch (Exception $e) {
+			// Таблица не существует, используем 0
+			$bookmarksCount = 0;
+		}
+	}
+
+	// Проверяем статус удаления профиля
+	$deletionInfo = array(
+		'is_pending' => false,
+		'days_remaining' => 0,
+		'cancel_link' => '',
+	);
+
+	if ($urow['user_act'] == 1 && isset($urow['user_del_date']) && $urow['user_del_date'] > 0 && getPluginStatusActive('uprofile_del')) {
+		$day_period = intval(pluginGetVariable('uprofile_del', 'day_period'));
+		$days_since_request = round((time() - $urow['user_del_date']) / 86400);
+		$days_remaining = max(0, $day_period - $days_since_request);
+
+		if ($days_remaining > 0) {
+			$deletionInfo = array(
+				'is_pending' => true,
+				'days_remaining' => $days_remaining,
+				'cancel_link' => generatePluginLink('uprofile_del', 'res_ok', array('id' => $urow['id']), array(), false, true),
+			);
+		}
+	}
+
 	$tVars = array(
 		'userRec' => $urow,
 		'user'    => array(
@@ -61,6 +94,7 @@ function uprofile_showProfile($params) {
 			'write_pm_link' => generatePluginLink('pm', null, array('action' => 'write', 'name' => $urow['name'])),
 			'bookmarks_count' => $bookmarksCount,
 			'bookmarks_link' => generatePluginLink('bookmarks', null),
+			'deletion' => $deletionInfo,
 			//'edit_profile' => generateLink('uprofile', 'edit', array(), array(), false, true),
 		),
 		'edit_profile' => generateLink('uprofile', 'edit', array(), array(), false, true),
@@ -153,11 +187,13 @@ function uprofile_showProfile($params) {
 	$xt = $twig->loadTemplate($tpath['users'] . 'users.tpl');
 	$template['vars']['mainblock'] .= $xt->render($tVars);
 }
-function uprofile_editProfile() {
+function uprofile_editProfile()
+{
 	// Call editForm routine
 	uprofile_editForm();
 }
-function uprofile_applyProfile() {
+function uprofile_applyProfile()
+{
 	global $template, $userROW, $lang;
 	// Check if user is logged in
 	if (!is_array($userROW)) {
@@ -179,7 +215,8 @@ function uprofile_applyProfile() {
 // Internal functions of plugin
 // =============================================================
 // Show EDIT FORM for current user's profile
-function uprofile_editForm($ajaxMode = false) {
+function uprofile_editForm($ajaxMode = false)
+{
 	global $mysql, $userROW, $lang, $config, $tpl, $template, $twig, $twigLoader, $SYSTEM_FLAGS, $PFILTERS, $DSlist;
 	$SYSTEM_FLAGS['info']['title']['group'] = $lang['uprofile']['header.edit'];
 	// Check if user is logged in
@@ -225,7 +262,7 @@ function uprofile_editForm($ajaxMode = false) {
 			'php_self'    => $PHP_SELF,
 			'flags'       => array(
 				'hasAvatar' => $config['use_avatars'] && $userAvatar[0],
-							),
+			),
 		),
 		'flags'               => array(
 			'avatarAllowed' => $config['use_avatars'] ? 1 : 0,
@@ -268,7 +305,8 @@ function uprofile_editForm($ajaxMode = false) {
 		return $render;
 	$template['vars']['mainblock'] .= $render;
 }
-function uprofile_editApply() {
+function uprofile_editApply()
+{
 	global $mysql, $tpl, $lang, $template, $userROW, $auth_db, $config, $PFILTERS, $DSlist;
 	// Load required library
 	@include_once root . 'includes/classes/upload.class.php';
@@ -363,7 +401,8 @@ function uprofile_editApply() {
 		}
 	return true;
 }
-function uprofile_manageDelete($type, $userID) {
+function uprofile_manageDelete($type, $userID)
+{
 	global $mysql, $userROW;
 	// Load required library
 	@include_once root . 'includes/classes/upload.class.php';
@@ -389,7 +428,8 @@ function uprofile_manageDelete($type, $userID) {
 	$mysql->query("update " . uprefix . "_users set avatar = '' where id = " . $userID);
 	if ($localUpdate) $userROW[$type] = '';
 }
-function uprofile_rpc_manage($params) {
+function uprofile_rpc_manage($params)
+{
 	$uprofileOutput = uprofile_editForm(true);
 	return array('status' => 1, 'errorCode' => 0, 'data' => arrayCharsetConvert(0, $uprofileOutput));
 }

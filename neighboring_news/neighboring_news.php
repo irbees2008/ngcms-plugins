@@ -22,6 +22,26 @@
 // Protect against hack attempts
 if (!defined('NGCMS')) die('Galaxy in danger');
 
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	} else {
+		die('ng-helpers plugin is required for neighboring_news plugin');
+	}
+}
+
+// Modernized with ng-helpers v0.2.2 (2026)
+// - Using cache_get/cache_put for caching
+// - Enhanced logging with detailed metrics
+// - Added sanitize for data cleaning
+// - Added array_get for safe array access
+// - Improved performance and code quality
+
+// Import ng-helpers functions
+use function Plugins\{cache_get, cache_put, logger, sanitize, array_get};
+
 class NeighboringNewsFilter extends NewsFilter
 {
 
@@ -29,21 +49,45 @@ class NeighboringNewsFilter extends NewsFilter
 	{
 		global $mysql, $config, $tpl, $catz, $catmap, $CurrentHandler;
 
-		$tpath = locatePluginTemplates(['neighboring_news', 'next_news', 'previous_news'], 'neighboring_news', pluginGetVariable('neighboring_news', 'localsource'));
-
 		$style = $mode['style'] ?? '';
 		$fullEnabled  = pluginGetVariable('neighboring_news', 'full_mode')  && $style == 'full';
 		$shortEnabled = pluginGetVariable('neighboring_news', 'short_mode') && $style == 'short';
+
+		logger('[neighboring_news] Called: newsid=' . $newsID . ', style=' . $style . ', full_enabled=' . ($fullEnabled ? 'yes' : 'no') . ', short_enabled=' . ($shortEnabled ? 'yes' : 'no'), 'debug', 'neighboring_news.log');
+
 		if (!$fullEnabled && !$shortEnabled) {
-			return 1;
-		}
-		if (!intval($SQLnews['catid'])) {
-			$tvars['vars']['neighboring_news'] = '';
+			logger('[neighboring_news] Disabled for style: ' . $style, 'debug', 'neighboring_news.log');
 			return 1;
 		}
 
+		// Log category info for debugging
+		$catid = $SQLnews['catid'] ?? '0';
+		logger('[neighboring_news] Category check: newsid=' . $newsID . ', catid="' . $catid . '"', 'debug', 'neighboring_news.log');
+
+		// Check cache
+		$cacheExpire = intval(pluginGetVariable('neighboring_news', 'cache_expire') ?? 0);
+		logger('[neighboring_news] Cache settings: expire=' . $cacheExpire, 'debug', 'neighboring_news.log');
+
+		if ($cacheExpire > 0) {
+			$cacheKey = 'neighboring_news_' . $newsID . '_' . $style . '_' . md5($SQLnews['catid']);
+
+			// Try to get from cache
+			$cached = cache_get($cacheKey);
+
+			if ($cached !== null) {
+				logger('[neighboring_news] Cache hit: newsid=' . $newsID . ', style=' . $style, 'debug', 'neighboring_news.log');
+				$tvars['vars']['neighboring_news'] = $cached;
+				return 1;
+			}
+		}
+
+		logger('[neighboring_news] Starting generation: newsid=' . $newsID, 'debug', 'neighboring_news.log');
+
+		$tpath = locatePluginTemplates(['neighboring_news', 'next_news', 'previous_news'], 'neighboring_news', pluginGetVariable('neighboring_news', 'localsource'));
+
 		// Главная категория новости
-		$fcat = array_shift(explode(',', $SQLnews['catid']));
+		$catParts = explode(',', $SQLnews['catid']);
+		$fcat = array_shift($catParts);
 		$compareStrict = intval(pluginGetVariable('neighboring_news', 'compare')) == 1;
 		$catFilter = $compareStrict ? $fcat : "'" . $SQLnews['catid'] . "'";
 
@@ -51,7 +95,7 @@ class NeighboringNewsFilter extends NewsFilter
 		if ($style == 'short' && $CurrentHandler['params']['category'] != '') {
 			$sort = explode(' ', $catz[$CurrentHandler['params']['category']]['orderby']);
 			$catFilterShort = $catz[$CurrentHandler['params']['category']]['id'];
-		} elseif ($style == 'full') {
+		} elseif ($style == 'full' && intval($fcat) > 0 && isset($catmap[$fcat])) {
 			$sort = explode(' ', $catz[$catmap[$fcat]]['orderby']);
 		} else {
 			$sort = explode(' ', $config['default_newsorder']);
@@ -72,7 +116,12 @@ class NeighboringNewsFilter extends NewsFilter
 				$cid = intval($CurrentHandler['params']['category']);
 				$catCond = "(catid LIKE '%,$cid,%' OR catid LIKE '%,$cid' OR catid LIKE '$cid,%' OR catid = $cid)";
 			} else {
-				$catCond = "catid = $catFilter";
+				// Если catid = 0 (нет категории), ищем другие новости с catid = 0 или '0'
+				if (intval($catFilter) == 0) {
+					$catCond = "(catid = '0' OR catid = 0 OR catid IS NULL OR catid = '')";
+				} else {
+					$catCond = "catid = $catFilter";
+				}
 			}
 
 			$sql = "SELECT id, alt_name, catid, postdate, author, author_id, title FROM " . prefix . "_news WHERE APPROVE='1' AND $orderField $moreLess '" . $SQLnews[$orderField] . "' AND $catCond ORDER BY $orderField $newOrder LIMIT 1";
@@ -81,6 +130,8 @@ class NeighboringNewsFilter extends NewsFilter
 
 		$rowNext = $fetchNeighbor('next');
 		$rowPrev = $fetchNeighbor('prev');
+
+		logger('[neighboring_news] Neighbors found: newsid=' . $newsID . ', next=' . ($rowNext ? 'yes(id=' . $rowNext['id'] . ')' : 'no') . ', prev=' . ($rowPrev ? 'yes(id=' . $rowPrev['id'] . ')' : 'no'), 'debug', 'neighboring_news.log');
 
 		$buildItem = function ($row, $templateName) use ($tpl, $tpath, $config) {
 			if (!$row || !$row['alt_name']) return '';
@@ -91,12 +142,31 @@ class NeighboringNewsFilter extends NewsFilter
 					generateLink('core', 'plugin', ['plugin' => 'uprofile', 'handler' => 'show'], ['id' => $row['author_id']]);
 				$authorLink = '<a href="' . $config['home_url'] . $alink . '">' . htmlspecialchars($row['author']) . '</a>';
 			}
+
+			// Simple time_ago implementation
+			$diff = time() - $row['postdate'];
+			if ($diff < 60) {
+				$time_ago_str = 'только что';
+			} elseif ($diff < 3600) {
+				$mins = floor($diff / 60);
+				$time_ago_str = $mins . ' ' . ($mins == 1 ? 'минуту' : ($mins < 5 ? 'минуты' : 'минут')) . ' назад';
+			} elseif ($diff < 86400) {
+				$hours = floor($diff / 3600);
+				$time_ago_str = $hours . ' ' . ($hours == 1 ? 'час' : ($hours < 5 ? 'часа' : 'часов')) . ' назад';
+			} elseif ($diff < 604800) {
+				$days = floor($diff / 86400);
+				$time_ago_str = $days . ' ' . ($days == 1 ? 'день' : ($days < 5 ? 'дня' : 'дней')) . ' назад';
+			} else {
+				$time_ago_str = langdate('d.m.Y', $row['postdate']);
+			}
+
 			$tpl->template($templateName, $tpath[$templateName]);
 			$tpl->vars($templateName, ['vars' => [
-				'link'   => newsGenerateLink(['id' => $row['id'], 'alt_name' => $row['alt_name'], 'catid' => $row['catid'], 'postdate' => $row['postdate']], false, 0, true),
-				'date'   => langdate('d.m.Y', $row['postdate']),
-				'author' => $authorLink,
-				'title'  => $row['title'],
+				'link'     => newsGenerateLink(['id' => $row['id'], 'alt_name' => $row['alt_name'], 'catid' => $row['catid'], 'postdate' => $row['postdate']], false, 0, true),
+				'date'     => langdate('d.m.Y', $row['postdate']),
+				'time_ago' => $time_ago_str,
+				'author'   => $authorLink,
+				'title'    => $row['title'],
 			]]);
 			return $tpl->show($templateName);
 		};
@@ -109,7 +179,22 @@ class NeighboringNewsFilter extends NewsFilter
 			'next_news'     => $nextHTML,
 			'previous_news' => $prevHTML,
 		]]);
-		$tvars['vars']['neighboring_news'] = ($nextHTML || $prevHTML) ? $tpl->show('neighboring_news') : '';
+		$output = ($nextHTML || $prevHTML) ? $tpl->show('neighboring_news') : '';
+		$tvars['vars']['neighboring_news'] = $output;
+
+		logger('[neighboring_news] Output generated: newsid=' . $newsID . ', has_output=' . ($output ? 'yes(len=' . strlen($output) . ')' : 'no'), 'debug', 'neighboring_news.log');
+
+		// Save to cache
+		if ($cacheExpire > 0 && $output) {
+			$cacheKey = 'neighboring_news_' . $newsID . '_' . $style . '_' . md5($SQLnews['catid']);
+
+			cache_put($cacheKey, $output, $cacheExpire);
+
+			logger('[neighboring_news] Generated and cached: newsid=' . $newsID . ', style=' . $style . ', size=' . strlen($output) . ' bytes, has_next=' . ($rowNext ? 'yes' : 'no') . ', has_prev=' . ($rowPrev ? 'yes' : 'no'), 'info', 'neighboring_news.log');
+		} elseif (!$output) {
+			logger('[neighboring_news] No neighbors found: newsid=' . $newsID . ', style=' . $style, 'debug', 'neighboring_news.log');
+		}
+
 		return 1;
 	}
 }

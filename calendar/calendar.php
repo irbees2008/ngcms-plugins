@@ -1,24 +1,27 @@
 <?php
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
 
+// Modified with ng-helpers v0.2.0 functions (2026)
+// - Replaced cacheRetrieveFile/cacheStoreFile with cache_get/cache_put
+// - Added logging support for cache operations
+
+// Import ng-helpers functions
+use function Plugins\{cache_get, cache_put, logger, array_get, sanitize, clamp, get_ip};
 
 function plugin_calendar()
 {
     global $CurrentHandler, $template;
 
     // Determine MONTH and YEAR for current show process
-    if (($CurrentHandler['pluginName'] == 'news') &&
-        (in_array($CurrentHandler['handlerName'], array('by.day', 'by.month', 'by.year')))
+    if ((array_get($CurrentHandler, 'pluginName', '') == 'news') &&
+        (in_array(array_get($CurrentHandler, 'handlerName', ''), array('by.day', 'by.month', 'by.year')))
     ) {
-        $year = isset($CurrentHandler['params']['year']) ? $CurrentHandler['params']['year'] : $_REQUEST['year'];
-        $month = isset($CurrentHandler['params']['month']) ? $CurrentHandler['params']['month'] : $_REQUEST['month'];
-        if (($month < 1) || ($month > 12))
-            $month = 1;
-        if (($year < 1970) || ($year > 2100)) {
-            $tm = localtime();
-            $year = $tm[5];
-        }
+        $params = array_get($CurrentHandler, 'params', []);
+        $year = isset($params['year']) ? $params['year'] : array_get($_REQUEST, 'year', date('Y'));
+        $month = isset($params['month']) ? $params['month'] : array_get($_REQUEST, 'month', date('m'));
+        $month = clamp(intval($month), 1, 12);
+        $year = clamp(intval($year), 1970, 2100);
     } else {
         $lt = time();
         $month = date('m', $lt);
@@ -33,12 +36,13 @@ function plug_calgen($month, $year, $overrideTemplateName = false, $categoryList
 
     // Add leading zeroes to month (if needed)
     $month = sprintf('%02s', $month);
-    // Generate cache file name [ we should take into account SWITCHER plugin ]
-    $cacheFileName = md5('calendar' . $config['theme'] . '|' . join(",", $categoryList) . $overrideTemplateName . $config['default_lang'] . $year . $month) . '.txt';
+    // Generate cache key [ we should take into account SWITCHER plugin ]
+    $cacheKey = 'calendar:' . md5($config['theme'] . '|' . join(",", $categoryList) . $overrideTemplateName . $config['default_lang'] . $year . $month);
     if ($cacheExpire > 0) {
-        $cacheData = cacheRetrieveFile($cacheFileName, $cacheExpire, 'calendar');
-        if ($cacheData != false) {
+        $cacheData = cache_get($cacheKey);
+        if ($cacheData !== null) {
             // We got data from cache. Return it and stop
+            logger('Calendar served from cache: ' . $year . '-' . $month . ', categories: ' . join(',', $categoryList) . ', IP=' . get_ip(), 'debug', 'calendar.log');
             return $cacheData;
         }
     }
@@ -56,7 +60,7 @@ function plug_calgen($month, $year, $overrideTemplateName = false, $categoryList
         $sqlList = array();
         foreach ($categoryList as $c) {
             if (intval($c) > 0)
-                $sqlList [] = intval($c);
+                $sqlList[] = intval($c);
         }
         $sql = "SELECT day(dt) as day, to_days(dt) as to_days, count(newsID) as count FROM " . prefix . "_news_map WHERE categoryID in (" . join(",", $sqlList) . ") AND (dt >= '" . $year . "-" . $month . "-01 00:00:00') AND dt < (date_add('" . $year . "-" . $month . "-01 00:00:00', interval 1 month)) group by to_days, day";
     }
@@ -196,7 +200,8 @@ function plug_calgen($month, $year, $overrideTemplateName = false, $categoryList
     $xt = $twig->loadTemplate($tpath['calendar'] . 'calendar.tpl');
     $output = $xt->render($tVars);
     if ($cacheExpire > 0) {
-        cacheStoreFile($cacheFileName, $output, 'calendar');
+        cache_put($cacheKey, $output, $cacheExpire / 60);
+        logger('Calendar cached: ' . $year . '-' . $month . ', categories: ' . join(',', $categoryList) . ', expire: ' . $cacheExpire . 's, IP=' . get_ip(), 'info', 'calendar.log');
     }
 
     return $output;
@@ -223,21 +228,18 @@ function plugin_calendar_showTwig($params)
 
     // Check if month/year are set
     if (isset($params['year']) && isset($params['month'])) {
-        $month = intval($params['month']);
-        $year = intval($params['year']);
+        $month = clamp(intval(array_get($params, 'month', 1)), 1, 12);
+        $year = clamp(intval(array_get($params, 'year', date('Y'))), 1970, 2100);
     } else {
         // Month/year is not set. Try to check current month/year from URL
-        if (($CurrentHandler['pluginName'] == 'news') &&
-            (in_array($CurrentHandler['handlerName'], array('by.day', 'by.month', 'by.year')))
+        if ((array_get($CurrentHandler, 'pluginName', '') == 'news') &&
+            (in_array(array_get($CurrentHandler, 'handlerName', ''), array('by.day', 'by.month', 'by.year')))
         ) {
-            $year = isset($CurrentHandler['params']['year']) ? $CurrentHandler['params']['year'] : $_REQUEST['year'];
-            $month = isset($CurrentHandler['params']['month']) ? $CurrentHandler['params']['month'] : $_REQUEST['month'];
-            if (($month < 1) || ($month > 12))
-                $month = 1;
-            if (($year < 1970) || ($year > 2100)) {
-                $tm = localtime();
-                $year = $tm[5];
-            }
+            $chParams = array_get($CurrentHandler, 'params', []);
+            $year = isset($chParams['year']) ? $chParams['year'] : array_get($_REQUEST, 'year', date('Y'));
+            $month = isset($chParams['month']) ? $chParams['month'] : array_get($_REQUEST, 'month', date('m'));
+            $month = clamp(intval($month), 1, 12);
+            $year = clamp(intval($year), 1970, 2100);
         }
     }
 

@@ -59,8 +59,11 @@ function plugin_similar_install($action) {
 			}
 			// Now we need to set some default params
 			$params = array(
-				'count'         => 5,
-				'samecat_count' => 5,
+				'count'          => 5,
+				'localsource'    => 1,
+				'similar_enabled' => 1,
+				'pcall'          => 0,
+				'pcall_mode'     => 0,
 			);
 			foreach ($params as $k => $v) {
 				extra_set_param('similar', $k, $v);
@@ -71,4 +74,3 @@ function plugin_similar_install($action) {
 
 	return true;
 }
-

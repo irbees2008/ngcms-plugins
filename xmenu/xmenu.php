@@ -1,5 +1,12 @@
 <?php
 if (!defined('NGCMS')) die('HAL');
+
+// Modernized with ng-helpers v0.2.2 (2026)
+// - Added logger for menu operations
+// - Requires PHP 8.0+
+
+use function Plugins\{logger};
+
 global $template;
 $template['vars']['plugin_xmenu'] = '';
 twigRegisterFunction('xmenu', 'show', 'plugin_xmenu_showTwig');

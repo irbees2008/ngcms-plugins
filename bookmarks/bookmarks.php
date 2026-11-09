@@ -1,6 +1,6 @@
 <?php
 /*
- * bookmarks for NextGeneration CMS (http://ngcms.ru/)
+ * bookmarks for NextGeneration CMS (http://ngcms.org/)
  * Copyright (C) 2010 Alexey N. Zhukov (http://digitalplace.ru)
  * http://digitalplace.ru
  *
@@ -23,54 +23,47 @@
  */
 # protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	}
+}
+
+use function Plugins\{cache_get, cache_put, logger, sanitize, get_ip, str_limit, array_get, clamp};
+
 add_act('index', 'bookmarks_view');
 register_plugin_page('bookmarks', 'modify', 'bookmarks_t', 0);
 register_plugin_page('bookmarks', '', 'bookmarksPage', 0);
 global $lang;
 LoadPluginLang('bookmarks', 'main', '', '', ':');
-$bookmarks_script = <<<HTML
+$bookmarks_script = '
 <script type="text/javascript">
-(function () {
-	function bookmarksToast(message, type, sticky) {
-		if (window.showToast) {
-			window.showToast(message, {
-				title: "{$lang['bookmarks:msg_title']}",
-				type: type || "info",
-				sticked: !!sticky,
-				timeout: sticky ? 6000 : 3500
-			});
-		} else if (typeof window.alert === "function") {
-			window.alert(message);
-		}
-	}
-
-	window.bookmarks = function (url, news, action, isFullNews) {
+	function bookmarks(url, news, action, isFullNews) {
 		var ajaxBookmarks = new sack();
 		ajaxBookmarks.onShow("");
-		ajaxBookmarks.onComplete = function () {
-			var response = ajaxBookmarks.response || "";
-			if (response === "limit") {
-				bookmarksToast("{$lang['bookmarks:err_add_limit']}", "warning", true);
-				return;
+		ajaxBookmarks.onComplete = function() {
+			if(ajaxBookmarks.response == "limit") {
+				showToast("' . addslashes($lang['bookmarks:err_add_limit']) . '", {type: "warning", title: "' . addslashes($lang['bookmarks:msg_title']) . '"});
 			}
-			if (response === "notlogged") {
-				bookmarksToast("{$lang['bookmarks:err_notlogged']}", "error", true);
-				return;
+			else if(ajaxBookmarks.response == "notlogged"){
+				showToast("' . addslashes($lang['bookmarks:err_notlogged']) . '", {type: "error", title: "' . addslashes($lang['bookmarks:msg_title']) . '"});
 			}
-			if (response === "err_add") {
-				bookmarksToast("{$lang['bookmarks:err_add']}", "error", true);
-				return;
-			}
-			var linksContainer = document.getElementById("bookmarks_" + news);
-			if (linksContainer) {
-				linksContainer.innerHTML = response;
-			}
-			var isAdded = response.indexOf("<!-- add -->") !== -1;
-			var isDeleted = response.indexOf("<!-- delete -->") !== -1;
-			if (isAdded) {
-				bookmarksToast("{$lang['bookmarks:msg_add']}", "success", false);
-			} else if (isDeleted) {
-				bookmarksToast("{$lang['bookmarks:msg_delete']}", "success", false);
+			else if(ajaxBookmarks.response == "err_add"){
+				showToast("' . addslashes($lang['bookmarks:err_add']) . '", {type: "error", title: "' . addslashes($lang['bookmarks:msg_title']) . '"});
+			} else {
+				var elementObj = document.getElementById("bookmarks_" + news);
+				if(elementObj) {
+					elementObj.innerHTML = ajaxBookmarks.response;
+				}
+				if(ajaxBookmarks.response.indexOf("<!-- add -->") != -1){
+					showToast("' . addslashes($lang['bookmarks:msg_add']) . '", {type: "success", title: "' . addslashes($lang['bookmarks:msg_title']) . '", timeout: 3000});
+				}
+				else if(ajaxBookmarks.response.indexOf("<!-- delete -->") != -1){
+					showToast("' . addslashes($lang['bookmarks:msg_delete']) . '", {type: "success", title: "' . addslashes($lang['bookmarks:msg_title']) . '", timeout: 3000});
+				}
 			}
 		};
 		ajaxBookmarks.setVar("news", news);
@@ -80,11 +73,11 @@ $bookmarks_script = <<<HTML
 		ajaxBookmarks.requestFile = url;
 		ajaxBookmarks.method = "GET";
 		ajaxBookmarks.runAJAX();
-	};
-})();
-</script>
-HTML;
+	}
+</script>';
 register_htmlvar('plain', $bookmarks_script);
+$tpath = locatePluginTemplates(array(':bookmarks.css'), 'bookmarks', intval(pluginGetVariable('bookmarks', 'localsource')));
+register_stylesheet($tpath['url::bookmarks.css'] . '/bookmarks.css');
 /* declare variables to be global
  * bookmarksLoaded - flag is bookmarks already loaded
  * bookmarksList   - result of $mysql -> select
@@ -140,11 +133,7 @@ class BookmarksNewsFilter extends NewsFilter
 			'url' => $url,
 			'link_title' => ($found ? $lang['bookmarks:title_delete'] : $lang['bookmarks:title_add']),
 			'isFullNews' => $isFullNews,
-			'isShortNews' => $isShortNews,
-			'lang' => array(
-				'act_add' => $lang['bookmarks:act_add'],
-				'act_delete' => $lang['bookmarks:act_delete'],
-			),
+			'isShortNews' => $isShortNews
 		);
 		# генерируем счетчик
 		if (pluginGetVariable('bookmarks', 'counter')) {
@@ -189,16 +178,16 @@ function bookmarks_view()
 		$template['vars']['plugin_bookmarks'] = '';
 		return;
 	}
-	$cacheFileName = md5('bookmarks' . $config['theme'] . $config['default_lang']) . $userROW['id'] . '.txt';
+	$cacheKey = 'bookmarks:' . $config['theme'] . ':' . $config['default_lang'] . ':' . $userROW['id'];
 	if (pluginGetVariable('bookmarks', 'cache')) {
-		$cacheData = cacheRetrieveFile($cacheFileName, pluginGetVariable('bookmarks', 'cacheExpire'), 'bookmarks');
-		if ($cacheData != false) {
+		$cacheData = cache_get($cacheKey);
+		if ($cacheData !== null) {
 			$template['vars']['plugin_bookmarks'] = $cacheData;
 			return;
 		}
 	}
 	$tpath = locatePluginTemplates(array('entries', 'bookmarks'), 'bookmarks', pluginGetVariable('bookmarks', 'localsource'));
-	$maxlength = intval(pluginGetVariable('bookmarks', 'maxlength')) ?: 100;
+	$maxlength = clamp(intval(pluginGetVariable('bookmarks', 'maxlength')), 10, 500) ?: 100;
 	if (!$bookmarksLoaded && pluginGetVariable('bookmarks', 'sidebar'))
 		bookmarks_sql();
 	$result = array();
@@ -226,7 +215,7 @@ function bookmarks_view()
 	}
 	if ((!$count) && pluginGetVariable('bookmarks', 'hide_empty')) {
 		if (pluginGetVariable('bookmarks', 'cache')) {
-			cacheStoreFile($cacheFileName, ' ', 'bookmarks');
+			cache_put($cacheKey, ' ', pluginGetVariable('bookmarks', 'cacheExpire'));
 		}
 		$template['vars']['plugin_bookmarks'] = '';
 		return;
@@ -235,18 +224,14 @@ function bookmarks_view()
 		'tpl_url' => tpl_url,
 		'entries' => $result,
 		'bookmarks_page' => generatePluginLink('bookmarks', null),
-		'count' => $count,
-		'lang' => array(
-			'title' => $lang['bookmarks:bookmarks'],
-			'view_all' => $lang['bookmarks:view_all'],
-			'empty_hint' => $lang['bookmarks:empty_hint'],
-		),
+		'count' => $count
 	);
 	$xt = $twig->loadTemplate($tpath['bookmarks'] . 'bookmarks.tpl');
 	$output = $xt->render($tVars);
 	if (pluginGetVariable('bookmarks', 'cache')) {
-		cacheStoreFile($cacheFileName, $output, 'bookmarks');
+		cache_put($cacheKey, $output, pluginGetVariable('bookmarks', 'cacheExpire'));
 	}
+	logger('View sidebar: userID=' . $userROW['id'] . ', count=' . $count . ', IP=' . get_ip(), 'info', 'bookmarks.log');
 	$template['vars']['plugin_bookmarks'] = $output;
 }
 # personal plugin pages for add/remove bookmarks
@@ -254,10 +239,10 @@ function bookmarks_t()
 {
 	global $mysql, $config, $userROW, $HTTP_REFERER, $SUPRESS_TEMPLATE_SHOW, $tpl, $lang, $bookmarksList, $bookmarksLoaded, $template, $twig, $handler;
 	# news ID
-	$newsID = intval($_GET['news']);
-	$ajax = $_GET['ajax'];
+	$newsID = clamp(intval(sanitize(array_get($_GET, 'news', 0), 'int')), 0, 999999999);
+	$ajax = array_get($_GET, 'ajax', false);
 	# при определении $isFullNews используйте:
-	$isFullNews = isset($_GET['isFullNews']) ? intval($_GET['isFullNews']) : 0;
+	$isFullNews = intval(array_get($_GET, 'isFullNews', 0));
 	# process bookmarks only for logged in users
 	if (!is_array($userROW)) {
 		if ($ajax) die('notlogged');
@@ -295,16 +280,18 @@ function bookmarks_t()
 			# ok, bookmark it
 			$mysql->query("INSERT INTO `" . prefix . "_bookmarks` (`user_id`,`news_id`) VALUES (" . db_squote($userROW['id']) . "," . db_squote($newsID) . ")");
 			$action = 'delete';
+			logger('Add bookmark: userID=' . $userROW['id'] . ', newsID=' . $newsID . ', IP=' . get_ip(), 'info', 'bookmarks.log');
 		} else die('err_add');
 		# delete action
 	} elseif ($_GET['action'] == 'delete') {
 		$mysql->query("DELETE FROM `" . prefix . "_bookmarks` WHERE `user_id`=" . db_squote($userROW['id']) . " AND `news_id`=" . db_squote($newsID));
 		$action = 'add';
+		logger('Delete bookmark: userID=' . $userROW['id'] . ', newsID=' . $newsID . ', IP=' . get_ip(), 'info', 'bookmarks.log');
 	}
 	# if cache is activated - truncate cache file [ to clear cache ]
 	if (pluginGetVariable('bookmarks', 'cache')) {
-		$cacheFileName = md5('bookmarks' . $config['theme'] . $config['default_lang']) . $userROW['id'] . '.txt';
-		cacheStoreFile($cacheFileName, '', 'bookmarks');
+		$cacheKey = 'bookmarks:' . $config['theme'] . ':' . $config['default_lang'] . ':' . $userROW['id'];
+		cache_put($cacheKey, '', pluginGetVariable('bookmarks', 'cacheExpire'));
 	}
 	# make redirection back if not-ajax mode
 	if (!$ajax) {
@@ -325,11 +312,7 @@ function bookmarks_t()
 		'link_title' => ($action == 'delete' ? $lang['bookmarks:title_delete'] : $lang['bookmarks:title_add']),
 		'isFullNews' => $isFullNews,
 		'isShortNews' => !$isFullNews,
-		'counter' => pluginGetVariable('bookmarks', 'counter') ? $mysql->result('SELECT COUNT(*) FROM ' . prefix . '_bookmarks WHERE news_id=' . $newsID) : '',
-		'lang' => array(
-			'act_add' => $lang['bookmarks:act_add'],
-			'act_delete' => $lang['bookmarks:act_delete'],
-		),
+		'counter' => pluginGetVariable('bookmarks', 'counter') ? $mysql->result('SELECT COUNT(*) FROM ' . prefix . '_bookmarks WHERE news_id=' . $newsID) : ''
 	);
 	$isFullNews = isset($_GET['isFullNews']) ? intval($_GET['isFullNews']) : (isHandler('news:news') ? 1 : 0);
 	$tVars['isFullNews'] = $isFullNews;
@@ -403,11 +386,9 @@ function bookmarksPage()
 	$tVars = array(
 		'all_bookmarks' => $newslist,
 		'count' => count($bookmarksList),
-		'tpl_url' => tpl_url,
-		'lang' => array(
-			'noentries' => $lang['bookmarks:noentries'],
-		),
+		'tpl_url' => tpl_url
 	);
+	logger('View page: userID=' . $userROW['id'] . ', count=' . count($bookmarksList) . ', IP=' . get_ip(), 'info', 'bookmarks.log');
 	$xt = $twig->loadTemplate($tpath['bookmarks.page'] . 'bookmarks.page.tpl');
 	$template['vars']['mainblock'] = $xt->render($tVars);
 }

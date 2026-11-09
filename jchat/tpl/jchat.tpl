@@ -388,9 +388,9 @@ document.addEventListener('click', function(e) {
 </script>
 <!-- SCRIPTS INTERNALS END -->
 	<!-- Display data definition (( YOU CAN CHANGE IT )) --> <div class="jchat_container"><div class="jchat_header">
-		<span>{{ lang.jchat.header.title.panel }}</span>
+		<span>💬 Чатик</span>
 		{% if selfwin %}
-			<a href="{{ link_selfwin }}" target="_blank" style="color: white; text-decoration: none; font-size: 14px;" title="{{ lang.jchat.header.open }}">⛶</a>
+			<a href="{{ link_selfwin }}" target="_blank" style="color: white; text-decoration: none; font-size: 14px;" title="Открыть чат на странице">⛶</a>
 		{% endif %}
 	</div>
 	<div id="jChatMessages" class="jchat_messages_area" style="max-height: 300px;" onclick="jchatProcessAreaClick(event);">
@@ -408,7 +408,7 @@ document.addEventListener('click', function(e) {
 				{% if not logged %}
 					<input type="text" name="name" maxlength="20" style="margin-bottom: 8px;" placeholder="{{ lang.jchat.input.username }}" value="{{ lang.jchat.input.username }}" onfocus="if(!jChatInputUsernameDefault){this.value='';jChatInputUsernameDefault=1;}"/>
 				{% endif %}
-				<textarea id="jChatText" name="text" rows="2" placeholder="{{ lang.jchat.input.placeholder }}" onfocus="jchatCalculateMaxLen(this,'jchatWLen', {{ maxlen }});" onkeyup="jchatCalculateMaxLen(this,'jchatWLen', {{ maxlen }});"></textarea>
+				<textarea id="jChatText" name="text" rows="2" placeholder="Введите сообщение..." onfocus="jchatCalculateMaxLen(this,'jchatWLen', {{ maxlen }});" onkeyup="jchatCalculateMaxLen(this,'jchatWLen', {{ maxlen }});"></textarea>
 				<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
 					<div class="jchat_emoji_picker">
 						<button type="button" id="jchatEmojiBtn" class="jchat_emoji_btn" onclick="jchatToggleEmojiPanel(); return false;" title="Добавить эмодзи">😊</button>

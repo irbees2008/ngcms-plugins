@@ -1,11 +1,13 @@
 <?php
 if (!defined('NGCMS')) die('HAL');
 
+LoadPluginLang('simple_title_pro', 'main', '', '', ':');
+
 add_act('index_post', 'simple_title_pro');
 
 function simple_title_pro()
 {
-	global $template, $SYSTEM_FLAGS, $CurrentHandler, $mysql, $config, $catz, $catmap;
+	global $template, $SYSTEM_FLAGS, $CurrentHandler, $mysql, $config, $catz, $catmap, $lang;
 
 	$pageNo = !empty($CurrentHandler['params']['page']) ? str_replace('%count%', intval($CurrentHandler['params']['page']), pluginGetVariable('simple_title_pro', 'num_title')) : '';
 
@@ -23,7 +25,7 @@ function simple_title_pro()
 					}
 					$cat_name = implode(" / ", $cat_name);
 				} else {
-					$cat_name = 'Нет категории';
+					$cat_name = $lang['simple_title_pro:category_missing'];
 				}
 
 				$cacheFileName = md5('block_directory_sites_cat' . $SYSTEM_FLAGS['news']['currentCategory.id'] . $config['default_lang']) . '.txt';
@@ -54,7 +56,7 @@ function simple_title_pro()
 					}
 					$cat_name = implode(" / ", $cat_name);
 				} else {
-					$cat_name = 'Нет категории';
+					$cat_name = $lang['simple_title_pro:category_missing'];
 				}
 
 				$cacheFileName = md5('block_directory_sites_news' . $SYSTEM_FLAGS['news']['db.id'] . $config['default_lang']) . '.txt';

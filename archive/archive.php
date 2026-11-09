@@ -1,7 +1,16 @@
 <?php
 
 // Protect against hack attempts
-if (!defined('NGCMS')) die ('HAL');
+if (!defined('NGCMS')) die('HAL');
+
+// Integrated with ng-helpers v0.2.2 (2026-01-29)
+// - cache_get/cache_put for caching archive data
+// - logger for operation tracking
+// - clamp for parameter validation
+// - sanitize for input data safety
+
+// Import ng-helpers functions
+use function Plugins\{cache_get, cache_put, logger, clamp, sanitize};
 
 // Check execution mode
 if (!pluginGetVariable('archive', 'mode')) {
@@ -12,31 +21,43 @@ if (!pluginGetVariable('archive', 'mode')) {
 }
 // Load lang file
 LoadPluginLang('archive', 'main', '', '', ':');
-function plugin_archive() {
+function plugin_archive()
+{
 
 	global $template, $config;
 	$template['vars']['plugin_archive'] = plug_arch(pluginGetVariable('archive', 'maxnum') ? pluginGetVariable('archive', 'maxnum') : 12, pluginGetVariable('archive', 'counter') ? pluginGetVariable('archive', 'counter') : 0, pluginGetVariable('archive', 'tcounter') ? pluginGetVariable('archive', 'tcounter') : 0, false, pluginGetVariable('archive', 'cache') ? pluginGetVariable('archive', 'cacheExpire') : 0);
 }
 
-function plug_arch($maxnum, $counter, $tcounter, $overrideTemplateName, $cacheExpire) {
+function plug_arch($maxnum, $counter, $tcounter, $overrideTemplateName, $cacheExpire)
+{
 
 	global $config, $mysql, $tpl, $template, $twig, $twigLoader, $langMonths, $lang;
-	//	$maxnum    = intval(pluginGetVariable('archive','maxnum'));
-	//	$counter   = intval(pluginGetVariable('archive','counter'));
-	if (($maxnum < 1) || ($maxnum > 50)) $maxnum = 12;
+
+	// Валидация параметров с помощью clamp()
+	$maxnum = clamp(intval($maxnum), 1, 50);
+	$counter = intval($counter);
+	$tcounter = intval($tcounter);
+	$cacheExpire = clamp(intval($cacheExpire), 0, 86400); // 0 до 24 часов
+
+	logger('Generating archive: maxnum=' . $maxnum . ', cache=' . ($cacheExpire > 0 ? $cacheExpire . 's' : 'disabled') . ', called_from=' . basename($_SERVER['PHP_SELF'] ?? 'unknown'), 'info', 'archive.log');
+
 	if ($overrideTemplateName) {
-		$templateName = $overrideTemplateName;
+		$templateName = sanitize($overrideTemplateName);
 	} else {
 		$templateName = 'archive';
 	}
+
 	// Generate cache file name [ we should take into account SWITCHER plugin ]
-	$cacheFileName = md5('archive' . $config['theme'] . $templateName . $config['default_lang']) . '.txt';
+	$cacheKey = 'archive_' . $config['theme'] . '_' . $templateName . '_' . $config['default_lang'];
+
 	if ($cacheExpire > 0) {
-		$cacheData = cacheRetrieveFile($cacheFileName, $cacheExpire, 'archive');
-		if ($cacheData != false) {
+		$cacheData = cache_get($cacheKey, false);
+		if ($cacheData !== false) {
 			// We got data from cache. Return it and stop
+			logger('Cache HIT: ' . $cacheKey, 'info', 'archive.log');
 			return $cacheData;
 		}
+		logger('Cache MISS: ' . $cacheKey, 'info', 'archive.log');
 	}
 	// Determine paths for all template files
 	$tpath = locatePluginTemplates(array($templateName, 'entries'), 'archive', pluginGetVariable('archive', 'localsource'));
@@ -72,7 +93,7 @@ function plug_arch($maxnum, $counter, $tcounter, $overrideTemplateName, $cacheEx
 		} else {
 			$ctext = '';
 		}
-		$tEntries [] = array(
+		$tEntries[] = array(
 			'link'    => $month_link,
 			'title'   => $langMonths[$row['month'] - 1] . ' ' . $row['year'],
 			'cnt'     => $row['cnt'],
@@ -104,8 +125,10 @@ function plug_arch($maxnum, $counter, $tcounter, $overrideTemplateName, $cacheEx
 
 	$xt = $twig->loadTemplate($tpath[$templateName] . $templateName . '.tpl');
 	$output = $xt->render($tVars);
+
 	if ($cacheExpire > 0) {
-		cacheStoreFile($cacheFileName, $output, 'archive');
+		cache_put($cacheKey, $output, $cacheExpire);
+		logger('Cache saved: ' . $cacheKey . ' (TTL: ' . $cacheExpire . 's)', 'info', 'archive.log');
 	}
 
 	return $output;
@@ -114,13 +137,20 @@ function plug_arch($maxnum, $counter, $tcounter, $overrideTemplateName, $cacheEx
 //
 // Show data block for xnews plugin
 // Params:
-// * maxnum		- Max num entries for archive
+// * maxnum		- Max num entries for archive (1-50)
 // * counter		- Show counter in the entries
 // * tcounter		- Show text counter in the entries
 // * template	- Personal template for plugin
-// * cacheExpire		- age of cache [in seconds]
-function plugin_archive_showTwig($params) {
-	return plug_arch(isset($params['maxnum']) ? $params['maxnum'] : pluginGetVariable('archive', 'maxnum'), isset($params['counter']) ? $params['counter'] : false, isset($params['tcounter']) ? $params['tcounter'] : false, isset($params['template']) ? $params['template'] : false, isset($params['cacheExpire']) ? $params['cacheExpire'] : 0);
+// * cacheExpire		- age of cache [in seconds, 0-86400]
+function plugin_archive_showTwig($params)
+{
+	$maxnum = isset($params['maxnum']) ? intval($params['maxnum']) : pluginGetVariable('archive', 'maxnum');
+	$counter = isset($params['counter']) ? intval($params['counter']) : false;
+	$tcounter = isset($params['tcounter']) ? intval($params['tcounter']) : false;
+	$template = isset($params['template']) ? sanitize($params['template']) : false;
+	$cacheExpire = isset($params['cacheExpire']) ? intval($params['cacheExpire']) : 0;
+
+	return plug_arch($maxnum, $counter, $tcounter, $template, $cacheExpire);
 }
 
 twigRegisterFunction('archive', 'show', 'plugin_archive_showTwig');

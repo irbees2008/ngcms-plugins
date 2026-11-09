@@ -1,7 +1,9 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
-LoadPluginLang('category_access', 'main', '', '', ':');
+
+use function Plugins\{logger, get_ip, sanitize, array_get};
+
 class CategoryAccessNewsFilter extends NewsFilter
 {
 	public $flag;
@@ -56,7 +58,7 @@ class CategoryAccessNewsFilter extends NewsFilter
 				}
 				$users = pluginGetVariable('category_access', 'users');
 				$user = '';
-				if (is_array($userROW)) $user = $userROW['name'];
+				if (is_array($userROW)) $user = array_get($userROW, 'name', '');
 				if (is_array($users) && array_key_exists($user, $users) && in_array($users[$user], $cur_cats)) $if_view = true;
 				break;
 			case 2:
@@ -73,42 +75,47 @@ class CategoryAccessNewsFilter extends NewsFilter
 			$mode['overrideTemplatePath'] = extras_dir . '/category_access/tpl/';
 			// Отмечаем, что хотя бы одна новость была скрыта
 			$this->hiddenCount++;
+			$userName = is_array($userROW) ? array_get($userROW, 'name', 'unknown') : 'guest';
+			logger('Access denied: newsID=' . $newsID . ', user=' . sanitize($userName, 'string') . ', catid=' . $SQLnews['catid'] . ', IP=' . get_ip(), 'warning', 'category_access.log');
 		} else $this->flag2 = true;
 		return 1;
 	}
 	function onAfterShow($mode)
 	{
-		global $template, $lang;
+		global $template;
 		if ($this->flag && !$this->flag2) {
 			$message = pluginGetVariable('category_access', 'message');
 			if (!$message) {
-				$message = $lang['category_access:message_full_default'];
+				$message = 'Доступ к материалам ограничен';
 			}
 			if (!$this->notified) {
 				msg(array('type' => 'error', 'text' => $message));
 				$this->notified = true;
+				logger('Full access denied notification shown, IP=' . get_ip(), 'warning', 'category_access.log');
 			}
 			$template['vars']['mainblock'] = $message;
 		} else if ($this->hiddenCount > 0 && !$this->notified) {
 			// Частичный запрет: показываем мягкое уведомление, контент страницы не трогаем
 			$pm = pluginGetVariable('category_access', 'message');
-			$txt = $pm ? $pm : $lang['category_access:message_partial_default'];
+			$txt = $pm ? $pm : 'Доступ к части материалов ограничен';
 			msg(array('type' => 'info', 'text' => $txt));
 			$this->notified = true;
+			logger('Partial access: hidden=' . $this->hiddenCount . ' items, IP=' . get_ip(), 'info', 'category_access.log');
 		}
 		return 1;
 	}
 	function onAfterNewsShow($newsID, $SQLnews, $mode = array())
 	{
-		global $template, $lang;
+		global $template;
 		if ($this->flag && !$this->flag2) {
 			$message = pluginGetVariable('category_access', 'message');
 			if (!$message) {
-				$message = $lang['category_access:message_full_default'];
+				$message = 'Доступ к материалам ограничен';
 			}
 			if (!$this->notified) {
 				msg(array('type' => 'error', 'text' => $message));
 				$this->notified = true;
+				logger('News access denied: newsID=' . $newsID . ', IP=' . get_ip(), 'warning', 'category_access.log');
 			}
 			$template['vars']['mainblock'] = $message;
 		}

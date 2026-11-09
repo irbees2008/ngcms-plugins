@@ -1,6 +1,17 @@
 <?php
 // Protect against hack attempts
 if (!defined('NGCMS')) die('HAL');
+
+// Ensure ng-helpers is loaded
+if (!function_exists('Plugins\\logger')) {
+	$ngHelpersPath = __DIR__ . '/../ng-helpers/ng-helpers.php';
+	if (file_exists($ngHelpersPath)) {
+		require_once $ngHelpersPath;
+	}
+}
+
+use function Plugins\{array_get, logger, get_ip};
+
 //
 // Configuration file for plugin
 //
@@ -32,9 +43,10 @@ $cfgX = array();
 array_push($cfgX, array('name' => 'cache', 'title' => $lang['complain:cache.title'], 'descr' => $lang['complain:cache.descr'], 'type' => 'select', 'values' => array('1' => $lang['complain:option.yes'], '0' => $lang['complain:option.no']), 'value' => intval(pluginGetVariable($plugin, 'cache'))));
 array_push($cfg, array('mode' => 'group', 'title' => $lang['complain:group.cache'], 'entries' => $cfgX));
 // RUN
-if ($_REQUEST['action'] == 'commit') {
+if (array_get($_REQUEST, 'action', '') == 'commit') {
 	// If submit requested, do config save
 	commit_plugin_config_changes($plugin, $cfg);
+	logger('Complain plugin config saved, IP=' . get_ip(), 'info', 'complain.log');
 	print_commit_complete($plugin);
 } else {
 	generate_config_page($plugin, $cfg);

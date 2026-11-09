@@ -1,5 +1,5 @@
 {% for entry in entries %}
-    {% include localPath(0) ~ 'entries.tpl' %}
+    {% include entries_template %}
 {% endfor %}
 <style>
 	.shortits img {
