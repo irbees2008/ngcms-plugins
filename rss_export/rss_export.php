@@ -44,6 +44,98 @@ function plugin_rss_export_category($params)
 	}
 	plugin_rss_export_generate($cat);
 }
+function rss_export_accepts_gzip($acceptEncoding)
+{
+	$gzipQuality = null;
+	$wildcardQuality = null;
+	foreach (explode(',', $acceptEncoding) as $encoding) {
+		$parts = explode(';', $encoding);
+		$name = strtolower(trim(array_shift($parts)));
+		if ($name !== 'gzip' && $name !== '*') {
+			continue;
+		}
+		$quality = 1.0;
+		foreach ($parts as $parameter) {
+			if (preg_match('/^\s*q\s*=\s*(.*?)\s*$/i', $parameter, $match)) {
+				$quality = is_numeric($match[1]) ? (float)$match[1] : 0.0;
+				if ($quality < 0 || $quality > 1) {
+					$quality = 0.0;
+				}
+				break;
+			}
+		}
+		if ($name === 'gzip') {
+			$gzipQuality = $quality;
+		} else {
+			$wildcardQuality = $quality;
+		}
+	}
+	return ($gzipQuality ?? $wildcardQuality ?? 0) > 0;
+}
+function rss_export_cached_last_modified($cacheFileName)
+{
+	$cacheDir = get_plugcache_dir('rss_export');
+	$cachePath = $cacheDir . $cacheFileName;
+	$lastModified = @filemtime($cachePath);
+	return ($lastModified === false) ? time() : (int)$lastModified;
+}
+function rss_export_image_mime_type($fileName)
+{
+	$mimeTypes = array(
+		'avif' => 'image/avif',
+		'bmp' => 'image/bmp',
+		'gif' => 'image/gif',
+		'heic' => 'image/heic',
+		'heif' => 'image/heif',
+		'ico' => 'image/vnd.microsoft.icon',
+		'jpeg' => 'image/jpeg',
+		'jpg' => 'image/jpeg',
+		'png' => 'image/png',
+		'svg' => 'image/svg+xml',
+		'tif' => 'image/tiff',
+		'tiff' => 'image/tiff',
+		'webp' => 'image/webp',
+	);
+	$extension = strtolower(pathinfo((string)$fileName, PATHINFO_EXTENSION));
+	return $mimeTypes[$extension] ?? 'application/octet-stream';
+}
+function rss_export_send_response($output, $lastModified)
+{
+	$etagHash = hash('sha256', $output);
+	$etag = 'W/"' . $etagHash . '"';
+	$lastModified = gmdate('D, d M Y H:i:s', max(0, (int)$lastModified)) . ' GMT';
+	header('ETag: ' . $etag);
+	header('Last-Modified: ' . $lastModified);
+	header('Vary: Accept-Encoding', false);
+
+	$notModified = false;
+	if (isset($_SERVER['HTTP_IF_NONE_MATCH'])) {
+		$ifNoneMatch = trim((string)$_SERVER['HTTP_IF_NONE_MATCH']);
+		$notModified = ($ifNoneMatch === '*')
+			|| (bool)preg_match('/(?:^|,)\s*(?:W\/)?"' . preg_quote($etagHash, '/') . '"\s*(?:,|$)/', $ifNoneMatch);
+	} elseif (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
+		$ifModifiedSince = strtotime((string)$_SERVER['HTTP_IF_MODIFIED_SINCE']);
+		$lastModifiedTime = strtotime($lastModified);
+		$notModified = ($ifModifiedSince !== false && $lastModifiedTime !== false && $ifModifiedSince >= $lastModifiedTime);
+	}
+	if ($notModified) {
+		http_response_code(304);
+		exit;
+	}
+
+	if (extension_loaded('zlib') && function_exists('gzencode')
+		&& rss_export_accepts_gzip((string)($_SERVER['HTTP_ACCEPT_ENCODING'] ?? ''))) {
+		$compressed = gzencode($output, 6, FORCE_GZIP);
+		if ($compressed !== false) {
+			header('Content-Encoding: gzip');
+			$output = $compressed;
+		}
+	}
+	if (strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'HEAD') {
+		echo $output;
+	}
+	exit;
+}
 function plugin_rss_export_generate($catname = '')
 {
 	global $lang, $PFILTERS, $template, $config, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $mysql, $catz, $parse, $userROW;
@@ -63,7 +155,7 @@ function plugin_rss_export_generate($catname = '')
 		exit;
 	}
 	$xcat = (($catname != '') && isset($catz[$catname])) ? $catz[$catname] : '';
-	$cacheFileName = md5('rss_export' . $config['theme'] . $config['home_url'] . $config['default_lang'] . (is_array($xcat) ? $xcat['id'] : '') . pluginGetVariable('rss_export', 'use_hide') . is_array($userROW)) . '.txt';
+	$cacheFileName = md5('rss_export_xml_v3' . $config['theme'] . $config['home_url'] . $config['default_lang'] . (is_array($xcat) ? $xcat['id'] : '') . pluginGetVariable('rss_export', 'use_hide') . is_array($userROW)) . '.txt';
 	// Start benchmark
 	$startTime = microtime(true);
 	if (pluginGetVariable('rss_export', 'cache')) {
@@ -72,8 +164,7 @@ function plugin_rss_export_generate($catname = '')
 		if ($cached !== false) {
 			// Убираем возможный BOM из кеша
 			$cached = preg_replace('/^\xEF\xBB\xBF/', '', $cached);
-			echo $cached;
-			exit;
+			rss_export_send_response($cached, rss_export_cached_last_modified($cacheFileName));
 		}
 	}
 	// Нормализация URL (коллапс двойных слешей в пути)
@@ -278,12 +369,14 @@ function plugin_rss_export_generate($catname = '')
 		$content = htmlspecialchars($content, ENT_NOQUOTES, 'UTF-8');
 		// Обработка enclosure
 		$enclosure = '';
+		$enclosureType = 'application/octet-stream';
 		if (pluginGetVariable('rss_export', 'xfEnclosureEnabled') && getPluginStatusActive('xfields')) {
 			include_once(root . "/plugins/xfields/xfields.php");
 			if (is_array($xfd = xf_decode($row['xfields'])) && isset($xfd[pluginGetVariable('rss_export', 'xfEnclosure')])) {
 				if ($enclosureIsImages) {
 					if (isset($encImages[$row['id']])) {
 						$enclosure = ($encImages[$row['id']]['storage'] ? $config['attach_url'] : $config['images_url']) . '/' . $encImages[$row['id']]['folder'] . '/' . $encImages[$row['id']]['name'];
+						$enclosureType = rss_export_image_mime_type($encImages[$row['id']]['name']);
 					}
 				} else {
 					$enclosure = $xfd[pluginGetVariable('rss_export', 'xfEnclosure')];
@@ -296,11 +389,13 @@ function plugin_rss_export_generate($catname = '')
 			$enclosure = preg_replace('/^https?:\/\//i', $siteProtocol, $enclosure);
 		}
 		echo "  <item>\n";
-		echo "   <title><![CDATA[" . ((pluginGetVariable('rss_export', 'news_title') == 1) && GetCategories($row['catid'], true) ? GetCategories($row['catid'], true) . ' :: ' : '') . $row['title'] . "]]></title>\n";
+		$rssTitle = ((pluginGetVariable('rss_export', 'news_title') == 1) && GetCategories($row['catid'], true) ? GetCategories($row['catid'], true) . ' :: ' : '') . $row['title'];
+		$rssTitle = strip_tags(html_entity_decode($rssTitle, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+		echo '   <title>' . htmlspecialchars($rssTitle, ENT_XML1 | ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</title>\n";
 		echo "   <link>" . htmlspecialchars(newsGenerateLink($row, false, 0, true), ENT_QUOTES, 'UTF-8') . "</link>\n";
 		echo "   <description><![CDATA[" . $content . "]]></description>\n";
 		if ($enclosure != '') {
-			echo '   <enclosure url="' . htmlspecialchars($enclosure, ENT_QUOTES, 'UTF-8') . '" length="0" type="' . ($enclosureIsImages ? 'image/jpeg' : 'application/octet-stream') . '" />' . "\n";
+			echo '   <enclosure url="' . htmlspecialchars($enclosure, ENT_QUOTES, 'UTF-8') . '" length="0" type="' . $enclosureType . '" />' . "\n";
 		}
 		$__catTitle = trim(strval(GetCategories($row['catid'], true)));
 		if ($__catTitle !== '') {
@@ -321,9 +416,10 @@ function plugin_rss_export_generate($catname = '')
 	$output = ltrim($output);
 	$itemCount = count($sqlData);
 	$elapsed = round((microtime(true) - $startTime) * 1000, 2);
+	$lastModified = time();
 	if (pluginGetVariable('rss_export', 'cache')) {
 		cacheStoreFile($cacheFileName, $output, 'rss_export');
+		$lastModified = rss_export_cached_last_modified($cacheFileName);
 	}
-	echo $output;
-	exit;
+	rss_export_send_response($output, $lastModified);
 }

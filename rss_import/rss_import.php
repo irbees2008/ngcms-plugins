@@ -19,44 +19,114 @@ if (!function_exists('Plugins\\logger')) {
 
 use function Plugins\{cache_get, cache_put, logger};
 
+include_once __DIR__ . '/storage.php';
+
 LoadPluginLang('rss_import', 'main', '', '', ':');
 
 add_act('index', 'rss_import_block');
-// Рендер одного блока RSS (rss1, rss2, ... ) через Twig
-function rss_import_render_block($index)
+
+function rss_import_legacy_profile($index)
 {
-    global $config, $template, $parse, $twig, $lang;
-    $vv = 'rss' . intval($index);
-    $number     = intval(extra_get_param('rss_import', $vv . '_number'));
-    $maxlength  = intval(extra_get_param('rss_import', $vv . '_maxlength'));
-    $newslength = intval(extra_get_param('rss_import', $vv . '_newslength'));
-    if ($number < 1) {
-        $number = 10;
+    $vv = 'rss' . (int)$index;
+    return array(
+        'profile_id' => $vv,
+        'title' => (string)extra_get_param('rss_import', $vv . '_name'),
+        'enabled' => 1,
+        'feed_url' => (string)extra_get_param('rss_import', $vv . '_url'),
+        'template' => $vv,
+        'item_count' => (int)extra_get_param('rss_import', $vv . '_number') ?: 10,
+        'title_length' => (int)extra_get_param('rss_import', $vv . '_maxlength') ?: 100,
+        'short_length' => (int)extra_get_param('rss_import', $vv . '_newslength') ?: 100,
+        'include_content' => (int)extra_get_param('rss_import', $vv . '_content'),
+        'show_image' => extra_get_param('rss_import', $vv . '_showImage') === null
+            || extra_get_param('rss_import', $vv . '_showImage') === ''
+            ? 1
+            : (int)extra_get_param('rss_import', $vv . '_showImage'),
+        'image_source' => (string)extra_get_param('rss_import', $vv . '_imageSource') ?: 'enclosure',
+    );
+}
+
+function rss_import_resolve_template($template)
+{
+    global $config;
+
+    if (!preg_match('/^[A-Za-z0-9_-]+$/', (string)$template)) {
+        return null;
     }
-    if ($maxlength < 1) {
-        $maxlength = 100;
+    $theme = $config['theme'] ?? 'default';
+    $directories = array(
+        site_root . 'templates/' . $theme . '/plugins/rss_import/' . $template,
+        tpl_site . 'plugins/rss_import/' . $template,
+        extras_dir . '/rss_import/tpl/' . $template,
+    );
+    foreach (array_unique($directories) as $directory) {
+        if (is_file($directory . '/rss.tpl') && is_file($directory . '/entries.tpl')) {
+            return $directory;
+        }
     }
-    if ($newslength < 1) {
-        $newslength = 100;
+    return null;
+}
+
+function rss_import_profiles_installed()
+{
+    static $installed = null;
+    if ($installed === null) {
+        $installed = rss_import_storage_table_exists();
     }
-    // Пути шаблонов через локатор (учитываем подкаталог rssN как block)
-    $tpath = locatePluginTemplates(array('rss', 'entries'), 'rss_import', intval(extra_get_param('rss_import', 'localsource')), '', $vv);
-    // Кэш на блок
-    $cacheFileName = md5($vv . $config['theme'] . $config['default_lang']) . '.txt';
-    $cacheExpire = extra_get_param('rss_import', 'cache') ? intval(extra_get_param('rss_import', 'cacheExpire')) * 60 : 0;
+    return $installed;
+}
+
+function rss_import_render_profile($profile)
+{
+    global $config, $parse, $twig, $lang;
+
+    if ((int)$profile['enabled'] !== 1) {
+        return '';
+    }
+    $templateDir = rss_import_resolve_template($profile['template']);
+    if ($templateDir === null) {
+        return '[RSS_IMPORT: NO TEMPLATE "' . htmlspecialchars((string)$profile['template'], ENT_QUOTES, 'UTF-8') . '"]';
+    }
+
+    $number = max(1, (int)$profile['item_count']);
+    $maxlength = max(1, (int)$profile['title_length']);
+    $newslength = max(1, (int)$profile['short_length']);
+    $url = trim((string)$profile['feed_url']);
+    $cacheExpire = pluginGetVariable('rss_import', 'cache')
+        ? max(0, (int)pluginGetVariable('rss_import', 'cacheExpire')) * 60
+        : 0;
+    $cacheFileName = md5(implode('|', array(
+        (string)$profile['profile_id'],
+        (string)$profile['title'],
+        (string)$profile['template'],
+        (string)$profile['feed_url'],
+        (string)$config['theme'],
+        (string)$config['default_lang'],
+        (string)$profile['item_count'],
+        (string)$profile['title_length'],
+        (string)$profile['short_length'],
+        (string)$profile['include_content'],
+        (string)$profile['show_image'],
+        (string)$profile['image_source'],
+    ))) . '.txt';
     if ($cacheExpire > 0) {
         $cacheKey = 'rss_import_' . $cacheFileName;
         $cached = cache_get($cacheKey);
         if ($cached !== null) {
-            logger('[rss_import] Cache hit: block=' . $vv, 'debug', 'rss_import.log');
+            logger('[rss_import] Cache hit: profile=' . $profile['profile_id'], 'debug', 'rss_import.log');
             return $cached;
         }
     }
-    $url = extra_get_param('rss_import', $vv . '_url');
-    // Проверка наличия URL
-    if (empty($url)) {
+
+    if ($url === '') {
         return $lang['rss_import:error.no_url'];
     }
+    $urlParts = parse_url($url);
+    if (!is_array($urlParts) || !in_array(strtolower($urlParts['scheme'] ?? ''), array('http', 'https'), true)) {
+        return $lang['rss_import:error.load_failed'] . htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
+    }
+
+    $vv = (string)$profile['profile_id'];
     // Загружаем содержимое с таймаутом
     $context = stream_context_create([
         'http' => [
@@ -104,7 +174,7 @@ function rss_import_render_block($index)
         return $errorMsg;
     }
     $entries = array();
-    $imageSource = extra_get_param('rss_import', $vv . '_imageSource');
+    $imageSource = (string)$profile['image_source'];
     if (!$imageSource) {
         $imageSource = 'enclosure';
     }
@@ -150,7 +220,7 @@ function rss_import_render_block($index)
             // ignore
         }
         // Короткая новость
-        if (extra_get_param('rss_import', $vv . '_content')) {
+        if ((int)$profile['include_content']) {
             $short_news = strip_tags((string)$item->description, '<p><a><br><strong><em><ul><ol><li>');
             if ($config['blocks_for_reg']) {
                 $short_news = $parse->userblocks($short_news);
@@ -177,9 +247,7 @@ function rss_import_render_block($index)
             $entry['pic'] = $entry['image'];
         }
         // Глобальный флаг показа изображения для блока (по умолчанию — показывать)
-        $showImage = extra_get_param('rss_import', $vv . '_showImage');
-        $showImage = ($showImage === null || $showImage === '') ? 1 : intval($showImage);
-        if (!$showImage) {
+        if (!(int)$profile['show_image']) {
             $entry['pic'] = '';
         }
         $entries[] = $entry;
@@ -190,24 +258,46 @@ function rss_import_render_block($index)
     }
     $tVars = array(
         'entries' => $entries,
+        'entries_template' => $templateDir . '/entries.tpl',
         'tpl_url' => tpl_url,
-        'author'  => extra_get_param('rss_import', $vv . '_name'),
+        'author'  => (string)$profile['title'],
     );
     // Рендер Twig шаблона блока
-    $xt = $twig->loadTemplate($tpath['rss'] . 'rss.tpl');
+    $xt = $twig->loadTemplate($templateDir . '/rss.tpl');
     $output = $xt->render($tVars);
     if ($cacheExpire > 0) {
         $cacheKey = 'rss_import_' . $cacheFileName;
         cache_put($cacheKey, $output, $cacheExpire / 60);
-        logger('[rss_import] Cached: block=' . $vv . ', size=' . strlen($output), 'info', 'rss_import.log');
+        logger('[rss_import] Cached: profile=' . $vv . ', size=' . strlen($output), 'info', 'rss_import.log');
     }
     return $output;
 }
-// Автоматическая вставка блоков как раньше: {rss1}, {rss2}, ...
+
+function rss_import_render_block($index)
+{
+    $index = (int)$index;
+    if ($index < 1) {
+        return '';
+    }
+    if (rss_import_profiles_installed()) {
+        $profile = rss_import_storage_get_by_legacy_index($index);
+        return is_array($profile) ? rss_import_render_profile($profile) : '';
+    }
+    return rss_import_render_profile(rss_import_legacy_profile($index));
+}
+
 function rss_import_block()
 {
     global $template;
-    $count = intval(extra_get_param('rss_import', 'count'));
+    if (rss_import_profiles_installed()) {
+        foreach (rss_import_storage_get_all() as $profile) {
+            if ($profile['legacy_index'] !== null) {
+                $template['vars']['rss' . (int)$profile['legacy_index']] = rss_import_render_profile($profile);
+            }
+        }
+        return;
+    }
+    $count = (int)extra_get_param('rss_import', 'count');
     if ($count < 1 || $count > 20) {
         $count = 1;
     }
@@ -215,13 +305,17 @@ function rss_import_block()
         $template['vars']['rss' . $i] = rss_import_render_block($i);
     }
 }
-// Вызов из Twig: {{ rss_import.show({ index: 1 }) }}
+
 function plugin_rss_import_showTwig($params)
 {
-    $idx = isset($params['index']) ? intval($params['index']) : 1;
-    if ($idx < 1) {
-        $idx = 1;
+    if (isset($params['id']) && is_string($params['id']) && $params['id'] !== '') {
+        if (!rss_import_profiles_installed()) {
+            return '[RSS_IMPORT: PROFILES NOT INSTALLED]';
+        }
+        $profile = rss_import_storage_get_by_profile_id($params['id']);
+        return is_array($profile) ? rss_import_render_profile($profile) : '[RSS_IMPORT: NO PROFILE "' . htmlspecialchars($params['id'], ENT_QUOTES, 'UTF-8') . '"]';
     }
+    $idx = isset($params['index']) ? (int)$params['index'] : 1;
     return rss_import_render_block($idx);
 }
 twigRegisterFunction('rss_import', 'show', 'plugin_rss_import_showTwig');

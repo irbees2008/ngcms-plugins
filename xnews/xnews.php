@@ -28,38 +28,52 @@ include_once __DIR__ . '/storage.php';
 // * cacheAge - age of cache [in seconds]
 function xNewsShowBlock($params)
 {
-	global $CurrentHandler, $twig, $config;
+	global $CurrentHandler, $twig, $config, $mysql;
 	if (isset($params['id']) && $params['id']) {
 		$profile = null;
-		if ((string)pluginGetVariable('xnews', 'storage_version') === '1') {
+		$storageVersion = (string)pluginGetVariable('xnews', 'storage_version') === '1';
+		if ($storageVersion) {
 			$profile = xnews_storage_profile_to_params(xnews_storage_get_by_name($params['id']));
 		} else {
-			$profileCount = (int)pluginGetVariable('xnews', 'count');
-			if ($profileCount < 1 || $profileCount > 50) {
-				$profileCount = 1;
+			static $profilesTableExists = null;
+			if ($profilesTableExists === null) {
+				$tables = $mysql->select('SHOW TABLES LIKE ' . db_squote(xnews_storage_table()));
+				if (!is_array($tables)) {
+					throw new RuntimeException('Unable to check whether the Xnews profiles table exists.');
+				}
+				$profilesTableExists = count($tables) > 0;
 			}
-			for ($i = 1; $i <= $profileCount; $i++) {
-				if ((string)pluginGetVariable('xnews', $i . '_name') === (string)$params['id']) {
-					$profile = array(
-						'enabled' => (string)pluginGetVariable('xnews', $i . '_enabled') !== '0' ? 1 : 0,
-						'name' => pluginGetVariable('xnews', $i . '_name'),
-						'template' => pluginGetVariable('xnews', $i . '_template'),
-						'categoryMode' => pluginGetVariable('xnews', $i . '_categoryMode'),
-						'categories' => pluginGetVariable('xnews', $i . '_categories'),
-						'visibilityMode' => pluginGetVariable('xnews', $i . '_visibilityMode'),
-						'visibilityCList' => pluginGetVariable('xnews', $i . '_visibilityCList'),
-						'mainMode' => pluginGetVariable('xnews', $i . '_mainMode'),
-						'pinMode' => pluginGetVariable('xnews', $i . '_pinMode'),
-						'favMode' => pluginGetVariable('xnews', $i . '_favMode'),
-						'skipCurrent' => pluginGetVariable('xnews', $i . '_skipCurrent'),
-						'extractEmbeddedItems' => pluginGetVariable('xnews', $i . '_extractEmbeddedItems'),
-						'showNoNews' => pluginGetVariable('xnews', $i . '_showNoNews'),
-						'count' => pluginGetVariable('xnews', $i . '_count'),
-						'skip' => pluginGetVariable('xnews', $i . '_skip'),
-						'maxAge' => pluginGetVariable('xnews', $i . '_maxAge'),
-						'order' => pluginGetVariable('xnews', $i . '_order'),
-					);
-					break;
+			if ($profilesTableExists) {
+				$profile = xnews_storage_profile_to_params(xnews_storage_get_by_name($params['id']));
+			}
+			if (!is_array($profile)) {
+				$profileCount = (int)pluginGetVariable('xnews', 'count');
+				if ($profileCount < 1 || $profileCount > 50) {
+					$profileCount = 1;
+				}
+				for ($i = 1; $i <= $profileCount; $i++) {
+					if ((string)pluginGetVariable('xnews', $i . '_name') === (string)$params['id']) {
+						$profile = array(
+							'enabled' => (string)pluginGetVariable('xnews', $i . '_enabled') !== '0' ? 1 : 0,
+							'name' => pluginGetVariable('xnews', $i . '_name'),
+							'template' => pluginGetVariable('xnews', $i . '_template'),
+							'categoryMode' => pluginGetVariable('xnews', $i . '_categoryMode'),
+							'categories' => pluginGetVariable('xnews', $i . '_categories'),
+							'visibilityMode' => pluginGetVariable('xnews', $i . '_visibilityMode'),
+							'visibilityCList' => pluginGetVariable('xnews', $i . '_visibilityCList'),
+							'mainMode' => pluginGetVariable('xnews', $i . '_mainMode'),
+							'pinMode' => pluginGetVariable('xnews', $i . '_pinMode'),
+							'favMode' => pluginGetVariable('xnews', $i . '_favMode'),
+							'skipCurrent' => pluginGetVariable('xnews', $i . '_skipCurrent'),
+							'extractEmbeddedItems' => pluginGetVariable('xnews', $i . '_extractEmbeddedItems'),
+							'showNoNews' => pluginGetVariable('xnews', $i . '_showNoNews'),
+							'count' => pluginGetVariable('xnews', $i . '_count'),
+							'skip' => pluginGetVariable('xnews', $i . '_skip'),
+							'maxAge' => pluginGetVariable('xnews', $i . '_maxAge'),
+							'order' => pluginGetVariable('xnews', $i . '_order'),
+						);
+						break;
+					}
 				}
 			}
 		}
@@ -69,9 +83,6 @@ function xNewsShowBlock($params)
 		if (!$profile['enabled']) {
 			return '';
 		}
-		if (pluginGetVariable('xnews', 'cache') && (!isset($params['cacheAge']))) {
-			$params['cacheAge'] = pluginGetVariable('xnews', 'cacheExpire');
-		}
 		foreach (array('categoryMode', 'categories', 'visibilityMode', 'visibilityCList', 'mainMode', 'pinMode', 'favMode', 'count', 'skip', 'maxAge', 'order', 'showNoNews', 'skipCurrent', 'extractEmbeddedItems') as $key) {
 			if (!isset($params[$key])) {
 				$params[$key] = $profile[$key];
@@ -80,6 +91,33 @@ function xNewsShowBlock($params)
 		if (!isset($params['template']) && $profile['template'] !== '') {
 			$params['template'] = $profile['template'];
 		}
+	}
+	$defaults = array(
+		'categoryMode' => 0,
+		'categories' => '',
+		'visibilityMode' => 0,
+		'visibilityCList' => '',
+		'mainMode' => 0,
+		'pinMode' => 0,
+		'favMode' => 0,
+		'count' => 0,
+		'skip' => 0,
+		'maxAge' => 0,
+		'order' => '',
+		'showNoNews' => null,
+		'skipCurrent' => 0,
+		'extractEmbeddedItems' => 0,
+		'template' => 'example',
+	);
+	foreach ($defaults as $key => $value) {
+		if (!isset($params[$key])) {
+			$params[$key] = $value;
+		}
+	}
+	if (!isset($params['cacheAge'])) {
+		$params['cacheAge'] = pluginGetVariable('xnews', 'cache')
+			? pluginGetVariable('xnews', 'cacheExpire')
+			: 0;
 	}
 	// Convert category list into array
 	if (isset($params['categories']) && (!is_array($params['categories']))) {
