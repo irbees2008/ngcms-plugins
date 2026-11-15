@@ -20,6 +20,16 @@ global $AUTH_METHOD;
 
 class auth_basic extends CoreAuthPlugin
 {
+	private function sessionCondition($cookie)
+	{
+		global $mysql;
+		$condition = 'authcookie = ' . db_squote($cookie);
+		if ($mysql->getDbType() === 'sqlite') {
+			return 'rowid IN (SELECT rowid FROM ' . uprefix . '_users_sessions WHERE ' . $condition . ' LIMIT 1)';
+		}
+		return $condition . ' LIMIT 1';
+	}
+
 	// Авторизация пользователя
 	public function login($auto_scan = 1, $username = '', $password = '')
 	{
@@ -58,7 +68,7 @@ class auth_basic extends CoreAuthPlugin
 		$auth_cookie = substr(md5(uniqid(mt_rand(), true)), 0, 16);
 		// Удаляем старую сессию если была
 		if (isset($_COOKIE['zz_auth']) && $_COOKIE['zz_auth']) {
-			$mysql->query('DELETE FROM ' . uprefix . '_users_sessions WHERE authcookie = ' . db_squote($_COOKIE['zz_auth']) . ' LIMIT 1');
+			$mysql->query('DELETE FROM ' . uprefix . '_users_sessions WHERE ' . $this->sessionCondition($_COOKIE['zz_auth']));
 		}
 		// Пишем новую сессию
 		$mysql->query('INSERT INTO ' . uprefix . '_users_sessions (userID, ip, last, authcookie) VALUES (' . db_squote($dbrow['id']) . ', ' . db_squote($ip) . ', ' . db_squote(time()) . ', ' . db_squote($auth_cookie) . ')');
@@ -91,7 +101,7 @@ class auth_basic extends CoreAuthPlugin
 			if (is_array($srow)) {
 				$userID = intval($srow['userID']);
 				// Обновляем таймстамп последней активности
-				$mysql->query('UPDATE ' . uprefix . '_users_sessions SET last = ' . db_squote(time()) . ' WHERE authcookie = ' . db_squote($auth_cookie) . ' LIMIT 1');
+				$mysql->query('UPDATE ' . uprefix . '_users_sessions SET last = ' . db_squote(time()) . ' WHERE ' . $this->sessionCondition($auth_cookie));
 			}
 		}
 		if (!$userID && isset($_SESSION['auth_user_id'])) {
@@ -113,7 +123,7 @@ class auth_basic extends CoreAuthPlugin
 	{
 		global $mysql, $userROW, $ngCookieDomain;
 		if (isset($_COOKIE['zz_auth']) && $_COOKIE['zz_auth']) {
-			$mysql->query('DELETE FROM ' . uprefix . '_users_sessions WHERE authcookie = ' . db_squote($_COOKIE['zz_auth']) . ' LIMIT 1');
+			$mysql->query('DELETE FROM ' . uprefix . '_users_sessions WHERE ' . $this->sessionCondition($_COOKIE['zz_auth']));
 			$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
 			@setcookie('zz_auth', '', [
 				'expires'  => time() - 3600 * 24 * 365,
