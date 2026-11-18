@@ -81,9 +81,13 @@ function lazy_load_init()
             $imageIndex = 0;
 
             $result = preg_replace_callback(
-                '~<img\b(?:[^>"\']|"[^"]*"|\'[^\']*\')*>~is',
+                '~<!--.*?-->|<script\b(?:[^>"\']|"[^"]*"|\'[^\']*\')*>.*?</script\s*>|<style\b(?:[^>"\']|"[^"]*"|\'[^\']*\')*>.*?</style\s*>|<img\b(?:[^>"\']|"[^"]*"|\'[^\']*\')*>~is',
                 function ($match) use (&$imageIndex, $skipFirst, $excludeClasses, $excludeUrls) {
                     $tag = $match[0];
+                    if (stripos($tag, '<img') !== 0) {
+                        return $tag;
+                    }
+
                     $imageIndex++;
 
                     // Первые N изображений оставляем без изменений.
